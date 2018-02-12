@@ -31,3 +31,7 @@ This project is an implementation of a system that can be used to verify large a
  We use the [Go](https://golang.org) programming language and environment as described in their  [documentation](https://golang.org/doc/code.html)
  
  
+ ## Testing http api
+ 
+ Document [here](http://blog.questionable.services/article/testing-http-handlers-go/)
+ 
