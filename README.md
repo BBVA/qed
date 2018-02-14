@@ -35,3 +35,13 @@ This project is an implementation of a system that can be used to verify large a
  
  Document [here](http://blog.questionable.services/article/testing-http-handlers-go/)
  
+ 
+ ## Guide
+ 
+ go test verifiabledata/util
+ go test verifiabledata/store
+ go test verifiabledata/tree
+ go test verifiabledata/tree/history
+ go test verifiabledata/store/memory
+ 
+ 
