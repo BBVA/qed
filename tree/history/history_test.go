@@ -6,7 +6,6 @@ package history
 
 import (
 	"testing"
-	"verifiabledata/store"
 	"verifiabledata/store/memory"
 )
 
@@ -19,8 +18,8 @@ var eventTable = []struct {
 }
 
 func TestAddEvent(t *testing.T) {
-	s := NewMemoryStore()
-	tree := NewHistoryTree(s)
+	s := memory.NewMemoryStore()
+	ht := NewHistoryTree(s)
 
 	for e := range eventTable {
 		commitment, err := tree.AddEvent(e.event)

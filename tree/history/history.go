@@ -4,6 +4,17 @@
 
 package history
 
+import (
+	"verifiabledata/store"
+)
+
 var prefixZero = []byte{0x0}
 var prefixOne = []byte{0x1}
 
+type HistoryTree struct {
+
+}
+
+func NewHistoryTree(s *store.Store) *HistoryTree {
+	return &HistoryTree{}
+}
