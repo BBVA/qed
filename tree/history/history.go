@@ -29,15 +29,15 @@ var One = []byte{0x1}
 // http://tamperevident.cs.rice.edu/papers/paper-treehist.pdf
 //
 // For example, a tree with 5 leaf hashes x0, x1, x2, x3, x4
-//	version 4
+//    version 4
 //
-//	layer 3        			____________ h(0,3)____________
-//	              			|         				  	  |
-//	layer 2   	________ h(0,2)______				  __h(4,2)__
-//	          	|        			|				  |		   |
-//	layer 1  __ h(0,1)_   		_ h(2,1)_			_h(4,1)_   ▢
-//	         |   	  |   		|   	|			|	   |
-//	layer 0  x0(0,0) x1(1,0)   x2(2,0) x3(3,0)	x4(4,0)    ▢
+//    layer 3                 ____________ h(0,3)_____________
+//                           |                               |
+//    layer 2       _______h(0,2)_______                 __h(4,2)__
+//                  |                  |                 |        |
+//    layer 1   __h(0,1)__         __h(2,1)__         __h(4,1)__  ▢
+//              |        |         |        |         |        |
+//    layer 0  x0(0,0) x1(1,0) x2(2,0)   x3(3,0)    x4(4,0)    ▢
 //
 //
 // Each a is a pair of index and layer (a position). The index starts in 0.
