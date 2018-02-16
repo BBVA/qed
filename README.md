@@ -46,4 +46,4 @@ This project is an implementation of a system that can be used to verify large a
      go test verifiabledata/tree/history
      go test verifiabledata/store/memory
  
- 
+     go test -bench="." verifiabledata/tree/history
