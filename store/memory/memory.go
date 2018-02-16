@@ -21,17 +21,20 @@ type MemoryStore struct {
 }
 
 // Implements Add store interface to add tree.Node to the store
-func (m *MemoryStore) Add(n tree.Node) error {
-	m.store.Store(n.Pos,n)
+func (m *MemoryStore) Add(n *tree.Node) error {
+	_, loaded := m.store.LoadOrStore(*n.Pos,*n)
+	if loaded {
+		return fmt.Errorf("Node already in pos: %v",n.Pos)
+	}
 	return nil
 }
 
 // Implements Get store interface to get tree.Node from the store
 // given a tree.Position
-func (m *MemoryStore) Get(p tree.Position) (*tree.Node, error) {
-	v, ok := m.store.Load(p)
+func (m *MemoryStore) Get(p *tree.Position) (*tree.Node, error) {
+	v, ok := m.store.Load(*p)
 	if ! ok {
-		return nil, fmt.Errorf("Key not found")
+		return nil, fmt.Errorf("Node with pos %v not found in storage", p)
 	}
 	node, ok := v.(tree.Node)
 	if ok {
