@@ -78,68 +78,51 @@ func NewHistoryTree(frozen, events store.Store) *HistoryTree {
 }
 
 // Returns the current layer or depth of the tree
-func (ht *HistoryTree) currentLayer(index uint64) uint64 {
+func (ht *HistoryTree) getDepth(index uint64) uint64 {
 	if index == 0 {
 		return 0
 	}
 	return uint64(math.Ceil(math.Log2(float64(index))))
 }
 
-// Returns the current position of the tree
-func (ht *HistoryTree) currentPosition() *tree.Position {
-	return &tree.Position{ht.size, ht.currentLayer(ht.size)}
-}
-
-// Returns the current version of the tree
-func (ht *HistoryTree) currentVersion() uint64 {
-	return ht.size - 1
-}
-
 // Recursively traverses the tree computing the root node
-func (ht *HistoryTree) getNode(pos *tree.Position, version uint64) (*tree.Node, error) {
+// using the algorithm documented above.
+func (ht *HistoryTree) getNode(i, r, v uint64) (*tree.Node, error) {
 	var node *tree.Node
-
-	// 	whenever v >= i + pow(2,r) - 1
-	// 		A_v(i,r) = FH(i,r)
-	if version >= util.Pow(2, pos.Layer)-1 {
+	pos := newpos(i, r)
+	// try to unfroze first
+	if v >= i+pow(2, r)-1 {
 		node, err := ht.frozen.Get(pos)
 		if err == nil {
 			return node, nil
 		}
 	}
-
+	
 	switch {
-	// if v >= i
-	// 	A_v(i,0) = H(0||X_i)
-	case pos.Layer == 0 && version >= pos.Index:
-		X_i, err := ht.events.Get(pos)
+	case r == 0 && v >= i:
+		a, err := ht.events.Get(pos)
 		if err != nil {
 			return nil, err
 		}
-		digest := util.Hash(Zero, X_i.Digest)
-		node = &tree.Node{X_i.Pos, digest}
+		digest := util.Hash(Zero, a.Digest)
+		node = &tree.Node{pos, digest}
 		break
 
-	// if v < i + pow(2,r-1)
-	// 	A_v(i,r) = H(1||A_v(i,r-1)||▢)
-	case version < pos.Index+util.Pow(2, pos.Layer-1):
-		X_i, err := ht.getNode(pos.SetLayer(pos.Layer-1), version)
+	case v < i+pow(2, r-1):
+		a, err := ht.getNode(i, r-1, v)
 		if err != nil {
 			return nil, err
 		}
-		digest := util.Hash(One, X_i.Digest, Zero)
-		node = &tree.Node{X_i.Pos, digest}
+		digest := util.Hash(One, a.Digest, Zero)
+		node = &tree.Node{pos, digest}
 		break
 
-	// if v >= i + pow(2,r-1)
-	// 	H(1||A_v(i,r-1)||A_v(i+pow(2,r-1),r-1))
-	case version >= pos.Index+util.Pow(2, pos.Layer-1):
-		new_pos := pos.SetLayer(pos.Layer - 1)
-		A_v1, err := ht.getNode(new_pos, version)
+	case v >= i+pow(2, r-1):
+		A_v1, err := ht.getNode(i, r-1, v)
 		if err != nil {
 			return nil, err
 		}
-		A_v2, err := ht.getNode(new_pos.SetIndex(pos.Index+util.Pow(2, pos.Layer-1)), version)
+		A_v2, err := ht.getNode(i+pow(2, r-1), r-1, v)
 		if err != nil {
 			return nil, err
 		}
@@ -148,8 +131,8 @@ func (ht *HistoryTree) getNode(pos *tree.Position, version uint64) (*tree.Node, 
 		break
 	}
 
-	// froze the node
-	if version >= util.Pow(2, pos.Layer)-1 {
+	// froze the node with its new digest
+	if v >= i+pow(2, r)-1 {
 		err := ht.frozen.Add(node)
 		if err != nil {
 			// if it was already frozen nothing happens
@@ -159,16 +142,13 @@ func (ht *HistoryTree) getNode(pos *tree.Position, version uint64) (*tree.Node, 
 	return node, nil
 }
 
-// Given an event e the system appends it to the history tree H as
-// the i:th event and then outputs a commitment
+// Given an event the system appends it to the history tree as
+// the i:th entry and then outputs a commitment
 // https://eprint.iacr.org/2015/007.pdf
 func (ht *HistoryTree) Add(data []byte) (*tree.Node, error) {
 
-	// tree version
-	version := ht.size
-
 	node := &tree.Node{
-		ht.currentPosition().SetLayer(0),
+		&tree.Position{ht.size, 0},
 		util.Hash(data),
 	}
 
@@ -181,10 +161,9 @@ func (ht *HistoryTree) Add(data []byte) (*tree.Node, error) {
 	ht.size += 1
 
 	// calculate commitment as C_n = A_n(0,d)
-	d := ht.currentLayer(ht.size)
-	A_n := &tree.Position{0, d}
-
-	C_n, err := ht.getNode(A_n, version)
+	d := ht.getDepth(ht.size)
+	v := ht.size - 1
+	C_n, err := ht.getNode(0, d, v)
 	if err != nil {
 		// TODO: rollback inclusion in storage if we cannot calculate a commitment
 		return nil, err
@@ -192,4 +171,14 @@ func (ht *HistoryTree) Add(data []byte) (*tree.Node, error) {
 
 	return C_n, nil
 
+}
+
+// Utility to calculate arbitraty pow and return an int64
+func pow(x, y uint64) uint64 {
+	return uint64(math.Pow(float64(x), float64(y)))
+}
+
+// Utility to allocate a new tree.Position
+func newpos(i, l uint64) *tree.Position {
+	return &tree.Position{i, l}
 }
