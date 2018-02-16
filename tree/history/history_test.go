@@ -12,13 +12,13 @@ import (
 
 var eventTable = []struct {
 	index  uint64
-	digest string
+	commitment string
 	event  string
 }{
 	{0, "5cd26c62ee55c4a327fc7ec1eae97a232e7355f4340adfb0b3ca25b8d94135bd", "Hello World1"},
-	{1, "975ab94d40843da8109a5e4c7d9577188fad3278dc4bc7ee576690171b8688f4", "Hello World2"},
-	{2, "c15432da2b21261edf1c348b7cc290677aa58784de268fee4ab97e63689601ea", "Hello World3"},
-	{3, "pepe", "Hello World4"},
+	{0, "81d3aa6da152370015e028ef97e9d303ffbf7ae121e362059e66bd217d5e09ce", "Hello World2"},
+	{0, "0871c0d34eb2311a101cf1de957d15103c014885b1c306354766fbca2bc3d10e", "Hello World3"},
+	{0, "0871c0d34eb2311a101cf1de957d15103c014885b1c306354766fbca2bc3d10e", "Hello World4"},
 }
 
 func TestAdd(t *testing.T) {
@@ -37,8 +37,8 @@ func TestAdd(t *testing.T) {
 			t.Fatal("Incorrect index: ", e.index, " != ", node.Pos.Index)
 		}
 		commitment := fmt.Sprintf("%x", node.Digest)
-		if e.digest != commitment {
-			t.Fatal("Incorrect commitment: ", e.digest, " != ", commitment)
+		if e.commitment != commitment {
+			t.Fatal("Incorrect commitment: ", e.commitment, " != ", commitment)
 		}
 	}
 }
