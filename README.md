@@ -38,10 +38,12 @@ This project is an implementation of a system that can be used to verify large a
  
  ## Guide
  
- go test verifiabledata/util
- go test verifiabledata/store
- go test verifiabledata/tree
- go test verifiabledata/tree/history
- go test verifiabledata/store/memory
+     $ godoc -http=:6060
+     
+     go test verifiabledata/util
+     go test verifiabledata/store
+     go test verifiabledata/tree
+     go test verifiabledata/tree/history
+     go test verifiabledata/store/memory
  
  
