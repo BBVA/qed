@@ -5,34 +5,40 @@
 package history
 
 import (
+	"fmt"
 	"testing"
 	"verifiabledata/store/memory"
 )
 
 var eventTable = []struct {
-	index  int
+	index  uint64
 	digest string
 	event  string
 }{
-	{0, "6d1103674f29502c873de14e48e9e432ec6cf6db76272c7b0dad186bb92c9a9a", "Hello World1"},
+	{0, "5cd26c62ee55c4a327fc7ec1eae97a232e7355f4340adfb0b3ca25b8d94135bd", "Hello World1"},
+	{1, "975ab94d40843da8109a5e4c7d9577188fad3278dc4bc7ee576690171b8688f4", "Hello World2"},
+	{2, "c15432da2b21261edf1c348b7cc290677aa58784de268fee4ab97e63689601ea", "Hello World3"},
+	{3, "pepe", "Hello World4"},
 }
 
-func TestAddEvent(t *testing.T) {
-	s := memory.NewMemoryStore()
-	ht := NewHistoryTree(s)
+func TestAdd(t *testing.T) {
+	frozen := memory.NewMemoryStore()
+	events := memory.NewMemoryStore()
+	ht := NewHistoryTree(frozen, events)
 
-	for e := range eventTable {
-		commitment, err := tree.AddEvent(e.event)
+	for _, e := range eventTable {
+		t.Log("Testing event: ", e.event)
+		node, err := ht.Add([]byte(e.event))
 		if err != nil {
-			t.Fatal("Error in AddEvent call: ", e, err)
+			t.Fatal("Error in Add call: ", err)
 		}
 
-		if index != e.version {
-			t.Fatal("Error in AddEvent call: ", index)
+		if e.index != node.Pos.Index {
+			t.Fatal("Incorrect index: ", e.index, " != ", node.Pos.Index)
 		}
-
-		if e.digest != fmt.Sprintf("%x", commitment.Digest) {
-			t.Fatal("Error in AddEvent call: ", commitment, c)
+		commitment := fmt.Sprintf("%x", node.Digest)
+		if e.digest != commitment {
+			t.Fatal("Incorrect commitment: ", e.digest, " != ", commitment)
 		}
 	}
 }
