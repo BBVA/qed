@@ -10,7 +10,6 @@
 package history
 
 import (
-	"fmt"
 	"math"
 	"verifiabledata/store"
 	"verifiabledata/tree"
@@ -26,7 +25,7 @@ var Zero = []byte{0x0}
 var One = []byte{0x1}
 
 // A History tree is a tree structure with a version metadata.
-// As described in the pag. 6-7 of the paper: 
+// As described in the pag. 6-7 of the paper:
 // http://tamperevident.cs.rice.edu/papers/paper-treehist.pdf
 //
 // For example, a tree with 5 leaf hashes x0, x1, x2, x3, x4
@@ -98,66 +97,66 @@ func (ht *HistoryTree) currentVersion() uint64 {
 
 // Recursively traverses the tree computing the root node
 func (ht *HistoryTree) getNode(pos *tree.Position, version uint64) (*tree.Node, error) {
+	var node *tree.Node
 
 	// 	whenever v >= i + pow(2,r) - 1
 	// 		A_v(i,r) = FH(i,r)
 	if version >= util.Pow(2, pos.Layer)-1 {
-		fmt.Println("DEBUG: get frozen node in: ", pos)
 		node, err := ht.frozen.Get(pos)
 		if err == nil {
 			return node, nil
 		}
 	}
 
-
+	switch {
 	// if v >= i
-	// 	A_v(i,0) = H(0||X_i)   
-	if pos.Layer == 0 && version >= pos.Index {
-		fmt.Println("DEBUG: get node in: ", pos, version)
-		// check if d is in events
+	// 	A_v(i,0) = H(0||X_i)
+	case pos.Layer == 0 && version >= pos.Index:
 		X_i, err := ht.events.Get(pos)
 		if err != nil {
 			return nil, err
 		}
 		digest := util.Hash(Zero, X_i.Digest)
-		return &tree.Node{X_i.Pos, digest}, nil	
-	}
-	
-	// if v < i + pow(2,r-1) 
-	// 	A_v(i,r) = H(1||A_v(i,r-1)||▢) 
-	if version <  pos.Index + util.Pow(2, pos.Layer-1) {
-		fmt.Println("DEBUG: get node in: ", pos.SetLayer(pos.Layer-1))
+		node = &tree.Node{X_i.Pos, digest}
+		break
+
+	// if v < i + pow(2,r-1)
+	// 	A_v(i,r) = H(1||A_v(i,r-1)||▢)
+	case version < pos.Index+util.Pow(2, pos.Layer-1):
 		X_i, err := ht.getNode(pos.SetLayer(pos.Layer-1), version)
 		if err != nil {
 			return nil, err
 		}
 		digest := util.Hash(One, X_i.Digest, Zero)
-		return &tree.Node{X_i.Pos, digest}, nil		
-	}
-	
+		node = &tree.Node{X_i.Pos, digest}
+		break
+
 	// if v >= i + pow(2,r-1)
-	// 	H(1||A_v(i,r-1)||A_v(i+pow(2,r-1),r-1))  
-	if version >= pos.Index + util.Pow(2, pos.Layer-1) {	
+	// 	H(1||A_v(i,r-1)||A_v(i+pow(2,r-1),r-1))
+	case version >= pos.Index+util.Pow(2, pos.Layer-1):
 		new_pos := pos.SetLayer(pos.Layer - 1)
 		A_v1, err := ht.getNode(new_pos, version)
 		if err != nil {
 			return nil, err
 		}
-		A_v2, err := ht.getNode(new_pos.SetIndex(pos.Index + util.Pow(2, pos.Layer-1)), version)
+		A_v2, err := ht.getNode(new_pos.SetIndex(pos.Index+util.Pow(2, pos.Layer-1)), version)
 		if err != nil {
 			return nil, err
 		}
 		digest := util.Hash(One, A_v1.Digest, A_v2.Digest)
-		node := &tree.Node{pos, digest}
-		
-		// froze the node
-		ht.frozen.Add(node)
-		
-		return node, nil	
+		node = &tree.Node{pos, digest}
+		break
 	}
-	
 
-	panic("Unable to calculate tree")
+	// froze the node
+	if version >= util.Pow(2, pos.Layer)-1 {
+		err := ht.frozen.Add(node)
+		if err != nil {
+			// if it was already frozen nothing happens
+		}
+	}
+
+	return node, nil
 }
 
 // Given an event e the system appends it to the history tree H as
@@ -166,15 +165,14 @@ func (ht *HistoryTree) getNode(pos *tree.Position, version uint64) (*tree.Node, 
 func (ht *HistoryTree) Add(data []byte) (*tree.Node, error) {
 
 	// tree version
-	v := ht.size
-	
+	version := ht.size
+
 	node := &tree.Node{
 		ht.currentPosition().SetLayer(0),
 		util.Hash(data),
 	}
 
 	// add event to storage
-	fmt.Println("DEBUG: adding node to storage: ", node)
 	if err := ht.events.Add(node); err != nil {
 		return nil, err
 	}
@@ -184,9 +182,9 @@ func (ht *HistoryTree) Add(data []byte) (*tree.Node, error) {
 
 	// calculate commitment as C_n = A_n(0,d)
 	d := ht.currentLayer(ht.size)
-	A_n := &tree.Position{0,d}
-	
-	C_n, err := ht.getNode(A_n, v)
+	A_n := &tree.Position{0, d}
+
+	C_n, err := ht.getNode(A_n, version)
 	if err != nil {
 		// TODO: rollback inclusion in storage if we cannot calculate a commitment
 		return nil, err
