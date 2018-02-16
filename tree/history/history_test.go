@@ -47,6 +47,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+// BenchmarkAdd-4   	  200000	      8166 ns/op
 func BenchmarkAdd(b *testing.B) {
 	frozen := memory.NewMemoryStore()
 	events := memory.NewMemoryStore()
@@ -54,9 +55,6 @@ func BenchmarkAdd(b *testing.B) {
 	data := make([]byte, 64)
 	rand.Read(data)
 	for i:=0;i<b.N;i++ {
-		_, err := ht.Add(data)
-		if err != nil {
-			b.Log(err)
-		}
+		ht.Add(data)
 	}
 }
