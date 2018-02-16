@@ -26,29 +26,35 @@ var Zero = []byte{0x0}
 var One = []byte{0x1}
 
 // A History tree is a tree structure with a version metadata.
-// For example, a tree with 5 leaf hashes a0, a1, a2, a3, a4
-//	version 7
+// For example, a tree with 5 leaf hashes x0, x1, x2, x3, x4
+//	version 4
 //
-//	layer 3        __ hash__
-//	              |         |
-//	index         6         7
-//	              |         |
-//	layer 2   __ h20__     a4
-//	          |        |
-//	index     2        5
-//	          |        |
-//	layer 1   h10     h11
-//	         |   |   |   |
-//	index    0   1   3   4
-//	         |   |   |   |
-//	layer 0  a0 a1   a2 a3
+//	layer 3        			____________ h(0,3)____________
+//	              			|         				  	  |
+//	layer 2   	________ h(0,2)______				  __h(4,2)__
+//	          	|        			|				  |		   |
+//	layer 1  __ h(0,1)_   		_ h(2,1)_			_h(4,1)_   ▢
+//	         |   	  |   		|   	|			|	   |
+//	layer 0  x0(0,0) x1(1,0)   x2(2,0) x3(3,0)	x4(4,0)    ▢
 //
 //
-// The size of the tree is the index number and starts at 1.
+// Each a is a pair of index and layer (a position). The index starts in 0.
+// The size of the tree is the last index number plus 1.
 // The next element of the tree can be calculated with the
 // following formula:
 //
-//	next_node = current_node_index + 2^(current_node_layer-1)
+// How to calculate the commitment:
+//	C_n = A_n(0,d) where n is the version of the tree (the last index) and
+//				   d is the depth of the tree
+//  For example, using the previous tree the commitment to calculate will be
+//
+//	C_4 = h(0,3) = A_4(0,3)
+//
+//	Where A_v(i,r) is calculated as follows:
+//  A_v(i,0) = H(0||X_i)   if v >= i
+//	A_v(i,r) = H(1||A_v(i,r-1)||▢)                      if v < i + pow(2,r-1)
+//	           H(1||A_v(i,r-1)||A_v(i+pow(2,r-1),r-1))  if v >= i + pow(2,r-1)
+//	A_v(i,r) = FH(i,r)  whenever v >= i + pow(2,r) - 1
 //
 // The depth of the tree is the maxium layer level, and can be calculated
 // with the following formula:
@@ -133,7 +139,7 @@ func (ht *HistoryTree) getNode(pos *tree.Position, version uint64) (*tree.Node, 
 		// else, the version is lower than the index of the next element,
 		// so there is only one child
 	} else {
-		fmt.Println("DEBUG: get node in: ",pos.SetLayer(pos.Layer-1))
+		fmt.Println("DEBUG: get node in: ", pos.SetLayer(pos.Layer-1))
 		a, err := ht.getNode(pos.SetLayer(pos.Layer-1), version)
 		if err != nil {
 			return nil, err
@@ -175,7 +181,7 @@ func (ht *HistoryTree) Add(data []byte) (*tree.Node, error) {
 	ht.size += 1
 
 	// calculate commitment
-	root, err := ht.getNode(node.Pos, ht.size-1)
+	root, err := ht.getNode(node.Pos.SetIndex(0), ht.size-1)
 	if err != nil {
 		// TODO: rollback inclusion in storage if we cannot calculate a commitment
 		return nil, err
