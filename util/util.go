@@ -16,11 +16,18 @@ import (
 type Digest []byte
 
 // Returns a Digest of the []byte passed as a parameter
-func Hash(buff []byte) Digest {
-	d := sha256.Sum256(buff)
-	return Digest(d[:])
+func Hash(data ...[]byte) Digest {
+	hasher := sha256.New()
+
+	for i := 0; i < len(data); i++ {
+		hasher.Write(data[i])
+	}
+
+	return hasher.Sum(nil)[:]
 }
 
 func Pow(x, y uint64) uint64 {
 	return uint64(math.Pow(float64(x), float64(y)))
 }
+
+
