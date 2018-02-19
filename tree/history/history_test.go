@@ -28,7 +28,7 @@ func TestAdd(t *testing.T) {
 
 	frozen := memory.NewMemoryStore()
 	events := memory.NewMemoryStore()
-	ht := NewHistoryTree(frozen, events)
+	ht := NewTree(frozen, events)
 
 	for _, e := range testCases {
 		t.Log("Testing event: ", e.event)
@@ -51,7 +51,7 @@ func TestAdd(t *testing.T) {
 func BenchmarkAdd(b *testing.B) {
 	frozen := memory.NewMemoryStore()
 	events := memory.NewMemoryStore()
-	ht := NewHistoryTree(frozen, events)
+	ht := NewTree(frozen, events)
 	data := make([]byte, 64)
 	rand.Read(data)
 	for i:=0;i<b.N;i++ {

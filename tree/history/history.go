@@ -64,21 +64,21 @@ var One = []byte{0x1}
 //	layer = ceil(log(index))
 //
 //
-type HistoryTree struct {
+type Tree struct {
 	frozen store.Store // already computed nodes, that will not change
 	events store.Store // layer 0 storage
 	size   uint64
 }
 
 // Returns a new history tree
-func NewHistoryTree(frozen, events store.Store) *HistoryTree {
-	return &HistoryTree{
+func NewTree(frozen, events store.Store) *Tree {
+	return &Tree{
 		frozen, events, 0,
 	}
 }
 
 // Returns the current layer or depth of the tree
-func (ht *HistoryTree) getDepth(index uint64) uint64 {
+func (ht *Tree) getDepth(index uint64) uint64 {
 	if index == 0 {
 		return 0
 	}
@@ -87,7 +87,7 @@ func (ht *HistoryTree) getDepth(index uint64) uint64 {
 
 // Recursively traverses the tree computing the root node
 // using the algorithm documented above.
-func (ht *HistoryTree) getNode(i, r, v uint64) (*tree.Node, error) {
+func (ht *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 	var node *tree.Node
 	pos := newpos(i, r)
 	// try to unfroze first
@@ -145,7 +145,7 @@ func (ht *HistoryTree) getNode(i, r, v uint64) (*tree.Node, error) {
 // Given an event the system appends it to the history tree as
 // the i:th entry and then outputs a commitment
 // https://eprint.iacr.org/2015/007.pdf
-func (ht *HistoryTree) Add(data []byte) (*tree.Node, error) {
+func (ht *Tree) Add(data []byte) (*tree.Node, error) {
 
 	node := &tree.Node{
 		&tree.Position{ht.size, 0},
