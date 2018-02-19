@@ -26,8 +26,8 @@ func TestAdd(t *testing.T) {
 		{0, "377f2fb38a02913effc8ec6de5bf51bfe1ebe2e473ea4fb5060f94b7c11b676e", "Hello World5"},
 	}
 
-	frozen := memory.NewMemoryStore()
-	events := memory.NewMemoryStore()
+	frozen := memory.NewStore()
+	events := memory.NewStore()
 	ht := NewTree(frozen, events)
 
 	for _, e := range testCases {
@@ -49,8 +49,8 @@ func TestAdd(t *testing.T) {
 
 // BenchmarkAdd-4   	  200000	      8166 ns/op
 func BenchmarkAdd(b *testing.B) {
-	frozen := memory.NewMemoryStore()
-	events := memory.NewMemoryStore()
+	frozen := memory.NewStore()
+	events := memory.NewStore()
 	ht := NewTree(frozen, events)
 	data := make([]byte, 64)
 	rand.Read(data)

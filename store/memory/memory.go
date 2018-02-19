@@ -16,12 +16,12 @@ import (
 
 
 // Contains unexported fields
-type MemoryStore struct {
+type Store struct {
 	store *sync.Map
 }
 
 // Implements Add store interface to add tree.Node to the store
-func (m *MemoryStore) Add(n *tree.Node) error {
+func (m *Store) Add(n *tree.Node) error {
 	_, loaded := m.store.LoadOrStore(*n.Pos,*n)
 	if loaded {
 		return fmt.Errorf("Node already in pos: %v",n.Pos)
@@ -31,7 +31,7 @@ func (m *MemoryStore) Add(n *tree.Node) error {
 
 // Implements Get store interface to get tree.Node from the store
 // given a tree.Position
-func (m *MemoryStore) Get(p *tree.Position) (*tree.Node, error) {
+func (m *Store) Get(p *tree.Position) (*tree.Node, error) {
 	v, ok := m.store.Load(*p)
 	if ! ok {
 		return nil, fmt.Errorf("Node with pos %v not found in storage", p)
@@ -44,9 +44,9 @@ func (m *MemoryStore) Get(p *tree.Position) (*tree.Node, error) {
 }
 
 
-// Returns a new instance of a MemoryStore
-func NewMemoryStore() store.Store {
-	return &MemoryStore{
+// Returns a new instance of a Store
+func NewStore() store.Store {
+	return &Store{
 		new(sync.Map),
 	}
 }
