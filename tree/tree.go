@@ -32,22 +32,6 @@ func (p *Position) String() string {
 	return fmt.Sprintf("(i %d, l %d)",p.Index, p.Layer)
 }
 
-// Returns a copy of position with l as Layer
-func (p *Position) SetLayer(l uint64) *Position {
-	return &Position{
-		p.Index,
-		l,
-	}
-}
-
-// Returns a copy of position with i as Index
-func (p *Position) SetIndex(i uint64) *Position {
-	return &Position{
-		i,
-		p.Layer,
-	}
-}
-
 // A node holds its digest and its position
 type Node struct {
 	Pos    *Position
