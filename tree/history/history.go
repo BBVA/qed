@@ -1,4 +1,4 @@
-// Copyright 2018 BBVA. All rights reserved.
+// Copyrigt2018 BBVA. All rights reserved.
 // Use of this source code is governed by a Apache 2 License
 // that can be found in the LICENSE file
 
@@ -26,7 +26,7 @@ var One = []byte{0x1}
 
 // A History tree is a tree structure with a version metadata.
 // As described in the pag. 6-7 of the paper:
-// http://tamperevident.cs.rice.edu/papers/paper-treehist.pdf
+// t.p://tamperevident.cs.rice.edu/papers/paper-treehist.pdf
 //
 // For example, a tree with 5 leaf hashes x0, x1, x2, x3, x4
 //    version 4
@@ -78,7 +78,7 @@ func NewTree(frozen, events store.Store) *Tree {
 }
 
 // Returns the current layer or depth of the tree
-func (ht *Tree) getDepth(index uint64) uint64 {
+func (t*Tree) getDepth(index uint64) uint64 {
 	if index == 0 {
 		return 0
 	}
@@ -87,12 +87,12 @@ func (ht *Tree) getDepth(index uint64) uint64 {
 
 // Recursively traverses the tree computing the root node
 // using the algorithm documented above.
-func (ht *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
+func (t*Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 	var node *tree.Node
 	pos := newpos(i, r)
 	// try to unfroze first
 	if v >= i+pow(2, r)-1 {
-		node, err := ht.frozen.Get(pos)
+		node, err := t.frozen.Get(pos)
 		if err == nil {
 			return node, nil
 		}
@@ -100,7 +100,7 @@ func (ht *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 	
 	switch {
 	case r == 0 && v >= i:
-		a, err := ht.events.Get(pos)
+		a, err := t.events.Get(pos)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +109,7 @@ func (ht *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 		break
 
 	case v < i+pow(2, r-1):
-		a, err := ht.getNode(i, r-1, v)
+		a, err := t.getNode(i, r-1, v)
 		if err != nil {
 			return nil, err
 		}
@@ -118,11 +118,11 @@ func (ht *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 		break
 
 	case v >= i+pow(2, r-1):
-		A_v1, err := ht.getNode(i, r-1, v)
+		A_v1, err := t.getNode(i, r-1, v)
 		if err != nil {
 			return nil, err
 		}
-		A_v2, err := ht.getNode(i+pow(2, r-1), r-1, v)
+		A_v2, err := t.getNode(i+pow(2, r-1), r-1, v)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +133,7 @@ func (ht *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 
 	// froze the node with its new digest
 	if v >= i+pow(2, r)-1 {
-		err := ht.frozen.Add(node)
+		err := t.frozen.Add(node)
 		if err != nil {
 			// if it was already frozen nothing happens
 		}
@@ -144,26 +144,26 @@ func (ht *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 
 // Given an event the system appends it to the history tree as
 // the i:th entry and then outputs a commitment
-// https://eprint.iacr.org/2015/007.pdf
-func (ht *Tree) Add(data []byte) (*tree.Node, error) {
+// t.ps://eprint.iacr.org/2015/007.pdf
+func (t*Tree) Add(data []byte) (*tree.Node, error) {
 
 	node := &tree.Node{
-		&tree.Position{ht.size, 0},
+		&tree.Position{t.size, 0},
 		util.Hash(data),
 	}
 
 	// add event to storage
-	if err := ht.events.Add(node); err != nil {
+	if err := t.events.Add(node); err != nil {
 		return nil, err
 	}
 
 	// increase tree size
-	ht.size += 1
+	t.size += 1
 
 	// calculate commitment as C_n = A_n(0,d)
-	d := ht.getDepth(ht.size)
-	v := ht.size - 1
-	C_n, err := ht.getNode(0, d, v)
+	d := t.getDepth(t.size)
+	v := t.size - 1
+	C_n, err := t.getNode(0, d, v)
 	if err != nil {
 		// TODO: rollback inclusion in storage if we cannot calculate a commitment
 		return nil, err
