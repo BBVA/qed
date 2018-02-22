@@ -64,6 +64,10 @@ type InsertRequest struct {
 	ResponseChannel chan *InsertResponse
 }
 
+type EventInsertHandler struct {
+	InsertRequestQueue chan *InsertRequest
+}
+
 // This handler posts an event into the system:
 // The http post url is:
 //  POST /events
@@ -75,7 +79,7 @@ type InsertRequest struct {
 //	"commitment": "6A19F0FB4BE54511524BCD5B0C98B38DA1EE049A39735C39311E10336024436F",
 //	"index": 1
 //	}
-func EventInsertHandler(w http.ResponseWriter, r *http.Request) {
+func (handler *EventInsertHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure we can only be called with an HTTP POST request.
 	if r.Method != "POST" {

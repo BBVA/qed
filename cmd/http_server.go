@@ -13,7 +13,7 @@ import (
 func main() {
 
 	http.HandleFunc("/health-check", api.HealthCheckHandler)
-	http.HandleFunc("/events", api.EventInsertHandler)
+	http.Handle("/events", &api.EventInsertHandler{InsertRequestQueue: make(chan *api.InsertRequest)})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
