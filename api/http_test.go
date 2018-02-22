@@ -5,6 +5,7 @@
 package api
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -33,9 +34,33 @@ func TestHealthCheckHandler(t *testing.T) {
 	}
 
 	// Check the response body is what we expect.
-	expected := `{"version": "0", "status":"ok"}`
+	expected := `{"version":0,"status":"ok"}`
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
+	}
+}
+
+func TestEventInsertHandler(t *testing.T) {
+	// Create a request to pass to our handler. We pass a message as a data.
+	// If it's nil it will fail.
+	data := []byte(`{"message": "this is a sample event"}`)
+
+	req, err := http.NewRequest("POST", "/events", bytes.NewBuffer(data))
+	if len(data) == 0 {
+		t.Fatal(err)
+	}
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(EventInsertHandler)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusCreated)
 	}
 }

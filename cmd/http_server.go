@@ -13,6 +13,7 @@ import (
 func main() {
 
 	http.HandleFunc("/health-check", api.HealthCheckHandler)
+	http.HandleFunc("/events", api.EventInsertHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
