@@ -101,22 +101,18 @@ func (handler *EventInsertHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	}
 
 	responseChannel := make(chan *InsertResponse)
+	defer close(responseChannel)
 	eventRequest := &InsertRequest{
 		InsertData:      event,
 		ResponseChannel: responseChannel,
 	}
 
 	log.Print(eventRequest)
+	handler.InsertRequestQueue <- eventRequest
 
-	// Wait for the response
-	response := InsertResponse{
-		Hash:       "B8E1F80BD70AE0784C7855A451731B745FDDB67749D23F637BE9082B75E9575B",
-		Commitment: "6A19F0FB4BE54511524BCD5B0C98B38DA1EE049A39735C39311E10336024436F",
-		Index:      1,
-	}
-
-	// Close shannel afte response (MOVE after response code!!!)
-	close(responseChannel)
+	// wait for the response
+	response := <-responseChannel
+	log.Print(response)
 
 	out, err := json.Marshal(response)
 	if err != nil {

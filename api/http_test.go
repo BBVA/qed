@@ -50,9 +50,23 @@ func TestEventInsertHandler(t *testing.T) {
 	if len(data) == 0 {
 		t.Fatal(err)
 	}
+
+	fakeRequestQueue := make(chan *InsertRequest)
+	go func() {
+		select {
+		case request := <-fakeRequestQueue:
+			response := InsertResponse{
+				Hash:       "B8E1F80BD70AE0784C7855A451731B745FDDB67749D23F637BE9082B75E9575B",
+				Commitment: "6A19F0FB4BE54511524BCD5B0C98B38DA1EE049A39735C39311E10336024436F",
+				Index:      1,
+			}
+			request.ResponseChannel <- &response
+		}
+	}()
+
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := EventInsertHandler{InsertRequestQueue: make(chan *InsertRequest)}
+	handler := EventInsertHandler{InsertRequestQueue: fakeRequestQueue}
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
