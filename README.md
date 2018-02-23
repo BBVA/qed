@@ -53,5 +53,6 @@ amounts of data for:
      go test verifiabledata/tree
      go test verifiabledata/tree/history
      go test verifiabledata/store/memory
+     go test verifiabledata/sequencer
  
      go test -bench="." verifiabledata/tree/history
