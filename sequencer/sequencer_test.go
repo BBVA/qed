@@ -2,6 +2,7 @@ package sequencer
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"verifiabledata/api"
 	"verifiabledata/util"
@@ -10,7 +11,7 @@ import (
 func TestSingleInsertionSequencing(t *testing.T) {
 
 	data := api.InsertData{Message: "Event 1"}
-	request := api.InsertRequest{
+	request := &api.InsertRequest{
 		InsertData:      data,
 		ResponseChannel: make(chan *api.InsertResponse),
 	}
@@ -18,7 +19,7 @@ func TestSingleInsertionSequencing(t *testing.T) {
 	sequencer := NewSequencer(10)
 	sequencer.Start()
 
-	sequencer.InsertRequestQueue <- &request
+	sequencer.Enqueue(request)
 
 	response := <-request.ResponseChannel
 	fmt.Println(response)
@@ -35,6 +36,39 @@ func TestSingleInsertionSequencing(t *testing.T) {
 		t.Errorf("The commitment doesn't matches the hash of the original message")
 	}
 
+	sequencer.Stop()
+
+}
+
+func TestMultipleInsertionSequencing(t *testing.T) {
+
+	sequencer := NewSequencer(10)
+	sequencer.Start()
+
+	var wg sync.WaitGroup
+	wg.Add(10)
+
+	requests := make([]*api.InsertRequest, 10)
+	for i := 0; i < 10; i++ {
+		data := api.InsertData{Message: fmt.Sprintf("Event %d", i)}
+		requests[i] = &api.InsertRequest{
+			InsertData:      data,
+			ResponseChannel: make(chan *api.InsertResponse),
+		}
+	}
+
+	for i, req := range requests {
+		go func(index int, request *api.InsertRequest) {
+			response := <-request.ResponseChannel
+			if response.Index != uint64(index) {
+				t.Errorf("The assigned index doesn't obey the insertion order")
+			}
+			wg.Done()
+		}(i, req)
+		sequencer.Enqueue(req)
+	}
+
+	wg.Wait()
 	sequencer.Stop()
 
 }
