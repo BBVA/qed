@@ -46,7 +46,7 @@ amounts of data for:
  
  ## Guide
  
-     $ godoc -http=:6060
+     $ godoc -http=:6060 # http://localhost:6060/pkg/verifiabledata/
      
      go test verifiabledata/util
      go test verifiabledata/store
