@@ -56,7 +56,7 @@ type InsertData struct {
 type InsertResponse struct {
 	Hash       string `json:"hash"`
 	Commitment string `json:"commitment"`
-	Index      int64  `json:"index"`
+	Index      uint64 `json:"index"`
 }
 
 type InsertRequest struct {
