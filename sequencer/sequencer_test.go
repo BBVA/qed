@@ -72,3 +72,22 @@ func TestMultipleInsertionSequencing(t *testing.T) {
 	sequencer.Stop()
 
 }
+
+func BenchmarkSingleInsertion(b *testing.B) {
+
+	data := api.InsertData{Message: "Event 1"}
+	request := &api.InsertRequest{
+		InsertData:      data,
+		ResponseChannel: make(chan *api.InsertResponse),
+	}
+
+	sequencer := NewSequencer(10)
+	sequencer.Start()
+
+	for i := 0; i < b.N; i++ {
+		sequencer.Enqueue(request)
+		<-request.ResponseChannel
+	}
+
+	sequencer.Stop()
+}
