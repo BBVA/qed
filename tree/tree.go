@@ -29,7 +29,7 @@ type Position struct {
 }
 
 func (p *Position) String() string {
-	return fmt.Sprintf("(i %d, l %d)",p.Index, p.Layer)
+	return fmt.Sprintf("(i %d, l %d)", p.Index, p.Layer)
 }
 
 // A node holds its digest and its position

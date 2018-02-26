@@ -11,8 +11,6 @@ import (
 	"verifiabledata/store/memory"
 )
 
-
-
 func TestAdd(t *testing.T) {
 	var testCases = []struct {
 		index      uint64
@@ -54,7 +52,7 @@ func BenchmarkAdd(b *testing.B) {
 	ht := NewTree(frozen, events)
 	data := make([]byte, 64)
 	rand.Read(data)
-	for i:=0;i<b.N;i++ {
+	for i := 0; i < b.N; i++ {
 		ht.Add(data)
 	}
 }

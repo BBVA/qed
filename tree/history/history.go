@@ -78,7 +78,7 @@ func NewTree(frozen, events store.Store) *Tree {
 }
 
 // Returns the current layer or depth of the tree
-func (t*Tree) getDepth(index uint64) uint64 {
+func (t *Tree) getDepth(index uint64) uint64 {
 	if index == 0 {
 		return 0
 	}
@@ -87,7 +87,7 @@ func (t*Tree) getDepth(index uint64) uint64 {
 
 // Recursively traverses the tree computing the root node
 // using the algorithm documented above.
-func (t*Tree) getNode(i, r, v uint64) (*tree.Node, error) {
+func (t *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 	var node *tree.Node
 	pos := newpos(i, r)
 	// try to unfroze first
@@ -97,7 +97,7 @@ func (t*Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 			return node, nil
 		}
 	}
-	
+
 	switch {
 	case r == 0 && v >= i:
 		a, err := t.events.Get(pos)
@@ -145,7 +145,7 @@ func (t*Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 // Given an event the system appends it to the history tree as
 // the i:th entry and then outputs a commitment
 // t.ps://eprint.iacr.org/2015/007.pdf
-func (t*Tree) Add(data []byte) (*tree.Node, error) {
+func (t *Tree) Add(data []byte) (*tree.Node, error) {
 
 	node := &tree.Node{
 		&tree.Position{t.size, 0},
