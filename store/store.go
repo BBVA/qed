@@ -3,7 +3,7 @@
 // that can be found in the LICENSE file
 
 /*
-	Package store implements a common API to access to multiple storage engines 
+	Package store implements a common API to access to multiple storage engines
 */
 package store
 
