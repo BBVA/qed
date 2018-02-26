@@ -7,7 +7,7 @@ package main
 import (
 	"log"
 	"net/http"
-	"verifiabledata/api"
+	api "verifiabledata/api/http"
 )
 
 func main() {
