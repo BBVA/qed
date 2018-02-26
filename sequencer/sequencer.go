@@ -3,7 +3,7 @@ package sequencer
 import (
 	"encoding/hex"
 	"log"
-	"verifiabledata/api"
+	api "verifiabledata/api/http"
 	"verifiabledata/util"
 )
 

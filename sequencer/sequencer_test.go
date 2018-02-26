@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"verifiabledata/api"
+	api "verifiabledata/api/http"
 	"verifiabledata/util"
 )
 
