@@ -29,5 +29,3 @@ func Hash(data ...[]byte) Digest {
 func Pow(x, y uint64) uint64 {
 	return uint64(math.Pow(float64(x), float64(y)))
 }
-
-
