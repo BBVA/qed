@@ -13,6 +13,6 @@ import (
 
 // Define the methods a storage engine must support in order to be used by the system
 type Store interface {
-	Add(*tree.Node) error
-	Get(*tree.Position) (*tree.Node, error)
+	Add(*tree.Node) (*tree.Node, error)
+	Get(*tree.Node) (*tree.Node, error)
 }
