@@ -21,7 +21,7 @@ import (
 var Zero = []byte{0x0}
 
 // Constant One is the 0x1 byte, and it is used as a prefix to know
-// if a node has a non-zero digestg.
+// if a node has a non-zero digest.
 var One = []byte{0x1}
 
 // A History tree is a tree structure with a version metadata.
