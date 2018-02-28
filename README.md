@@ -32,6 +32,8 @@ amounts of data for:
  * Enumerate all entries
  * Prove correct operation
  * Enable detection of split-view
+
+ A glossary of terms can be found [here](docs/glossary.md).
  
  ## Environment
  
