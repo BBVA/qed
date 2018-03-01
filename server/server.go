@@ -22,7 +22,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	s.HTTPServer = startHttpServer(s.HTTPEndpoint)
 
-	go util.AwaitTermSignal(s.Stop)
+	util.AwaitTermSignal(s.Stop)
 
 	glog.Infof("Stopping server, about to exit...")
 
