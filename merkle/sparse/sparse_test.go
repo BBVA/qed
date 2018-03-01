@@ -2,18 +2,18 @@
 // Use of this source code is governed by a Apache 2 License
 // that can be found in the LICENSE file
 
-package history
+package sparse
 
 import (
-	"crypto/rand"
 	"fmt"
 	"testing"
 	"verifiabledata/store/memory"
+	"verifiabledata/tree"
 )
 
 func TestAdd(t *testing.T) {
 	var testCases = []struct {
-		index      uint64
+		index      tree.Index
 		commitment string
 		event      string
 	}{
@@ -42,17 +42,5 @@ func TestAdd(t *testing.T) {
 		if e.commitment != commitment {
 			t.Fatal("Incorrect commitment: ", e.commitment, " != ", commitment)
 		}
-	}
-}
-
-// BenchmarkAdd-4   	  200000	      8166 ns/op
-func BenchmarkAdd(b *testing.B) {
-	frozen := memory.NewStore()
-	events := memory.NewStore()
-	ht := NewTree(frozen, events)
-	data := make([]byte, 64)
-	rand.Read(data)
-	for i := 0; i < b.N; i++ {
-		ht.Add(data)
 	}
 }

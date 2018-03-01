@@ -10,9 +10,8 @@
 package history
 
 import (
+	"fmt"
 	"math"
-	"verifiabledata/store"
-	"verifiabledata/tree"
 	"verifiabledata/util"
 )
 
@@ -23,6 +22,33 @@ var Zero = []byte{0x0}
 // Constant One is the 0x1 byte, and it is used as a prefix to know
 // if a node has a non-zero digest.
 var One = []byte{0x1}
+
+// Commitment holds the Digest as proof of the event insertion, and the verstion of
+// the tree after the insertion, which is equivalent to the Position.Index
+type Commitment struct {
+	Version uint64
+	Digest  util.Digest
+}
+
+// Position holds the index and the layer of a node in a tree
+type Position struct {
+	Index uint64
+	Layer uint64
+}
+
+func (p *Position) String() string {
+	return fmt.Sprintf("(i %d, l %d)", p.Index, p.Layer)
+}
+
+// A node holds its digest and its position
+type Node struct {
+	Pos    *Position
+	Digest util.Digest
+}
+
+func (n *Node) String() string {
+	return fmt.Sprintf("(P %s,  D %x)", n.Pos, n.Digest)
+}
 
 // A History tree is a tree structure with a version metadata.
 // As described in the pag. 6-7 of the paper:
@@ -65,13 +91,13 @@ var One = []byte{0x1}
 //
 //
 type Tree struct {
-	frozen store.Store // already computed nodes, that will not change
-	events store.Store // layer 0 storage
+	frozen Store // already computed nodes, that will not change
+	events Store // layer 0 storage
 	size   uint64
 }
 
 // Returns a new history tree
-func NewTree(frozen, events store.Store) *Tree {
+func NewTree(frozen, events Store) *Tree {
 	return &Tree{
 		frozen, events, 0,
 	}
@@ -87,8 +113,8 @@ func (t *Tree) getDepth(index uint64) uint64 {
 
 // Recursively traverses the tree computing the root node
 // using the algorithm documented above.
-func (t *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
-	var node *tree.Node
+func (t *Tree) getNode(i, r, v uint64) (*Node, error) {
+	var node *Node
 	pos := newpos(i, r)
 	// try to unfroze first
 	if v >= i+pow(2, r)-1 {
@@ -105,7 +131,7 @@ func (t *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 			return nil, err
 		}
 		digest := util.Hash(Zero, a.Digest)
-		node = &tree.Node{pos, digest}
+		node = &Node{pos, digest}
 		break
 
 	case v < i+pow(2, r-1):
@@ -114,7 +140,7 @@ func (t *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 			return nil, err
 		}
 		digest := util.Hash(One, a.Digest, Zero)
-		node = &tree.Node{pos, digest}
+		node = &Node{pos, digest}
 		break
 
 	case v >= i+pow(2, r-1):
@@ -127,7 +153,7 @@ func (t *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 			return nil, err
 		}
 		digest := util.Hash(One, A_v1.Digest, A_v2.Digest)
-		node = &tree.Node{pos, digest}
+		node = &Node{pos, digest}
 		break
 	}
 
@@ -145,10 +171,10 @@ func (t *Tree) getNode(i, r, v uint64) (*tree.Node, error) {
 // Given an event the system appends it to the history tree as
 // the i:th entry and then outputs a commitment
 // t.ps://eprint.iacr.org/2015/007.pdf
-func (t *Tree) Add(data []byte) (*tree.Node, error) {
+func (t *Tree) Add(data []byte) (*Commitment, error) {
 
-	node := &tree.Node{
-		&tree.Position{t.size, 0},
+	node := &Node{
+		&Position{t.size, 0},
 		util.Hash(data),
 	}
 
@@ -163,12 +189,15 @@ func (t *Tree) Add(data []byte) (*tree.Node, error) {
 	// calculate commitment as C_n = A_n(0,d)
 	d := t.getDepth(t.size)
 	v := t.size - 1
-	C_n, err := t.getNode(0, d, v)
+	rootNode, err := t.getNode(0, d, v)
 	if err != nil {
 		// TODO: rollback inclusion in storage if we cannot calculate a commitment
 		return nil, err
 	}
-
+	C_n := &Commitment{
+		Version: v,
+		Digest:  rootNode.Digest,
+	}
 	return C_n, nil
 
 }
@@ -178,7 +207,7 @@ func pow(x, y uint64) uint64 {
 	return uint64(math.Pow(float64(x), float64(y)))
 }
 
-// Utility to allocate a new tree.Position
-func newpos(i, l uint64) *tree.Position {
-	return &tree.Position{i, l}
+// Utility to allocate a new Position
+func newpos(i, l uint64) *Position {
+	return &Position{i, l}
 }
