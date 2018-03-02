@@ -78,3 +78,35 @@ func TestEventInsertHandler(t *testing.T) {
 			status, http.StatusCreated)
 	}
 }
+func TestAuthHandler(t *testing.T){
+
+	req, err := http.NewRequest("GET", "/auth", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Set Api-Key header
+	req.Header.Set("Api-Key", "this-is-my-api-key")
+
+	// Test our handler wrapper
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// if status := rr.Code; status != http.StatusOK {
+		// 	t.Errorf("handler returned wrong status code: got %v want %v",
+		// 		status, http.StatusOK)
+		// }
+	})
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder() 
+	handler := AuthHandler(testHandler) 
+	
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+}
