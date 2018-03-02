@@ -27,7 +27,7 @@ var One = []byte{0x1}
 // the tree after the insertion, which is equivalent to the Position.Index
 type Commitment struct {
 	Version uint64
-	Digest  util.Digest
+	Digest  []byte
 }
 
 // Position holds the index and the layer of a node in a tree
@@ -43,7 +43,7 @@ func (p *Position) String() string {
 // A node holds its digest and its position
 type Node struct {
 	Pos    *Position
-	Digest util.Digest
+	Digest []byte
 }
 
 func (n *Node) String() string {

@@ -12,11 +12,8 @@ import (
 	"math"
 )
 
-// The return type of the hash function, in our case a [32]byte
-type Digest []byte
-
 // Returns a Digest of the []byte passed as a parameter
-func Hash(data ...[]byte) Digest {
+func Hash(data ...[]byte) []byte {
 	hasher := sha256.New()
 
 	for i := 0; i < len(data); i++ {
