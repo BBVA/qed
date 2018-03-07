@@ -94,12 +94,13 @@ type Tree struct {
 	frozen Store // already computed nodes, that will not change
 	events Store // layer 0 storage
 	size   uint64
+	hash	util.HashFunc
 }
 
 // Returns a new history tree
-func NewTree(frozen, events Store) *Tree {
+func NewTree(frozen, events Store, hash util.HashFunc) *Tree {
 	return &Tree{
-		frozen, events, 0,
+		frozen, events, 0, hash,
 	}
 }
 
@@ -130,7 +131,7 @@ func (t *Tree) getNode(i, r, v uint64) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		digest := util.Hash(Zero, a.Digest)
+		digest := t.hash(Zero, a.Digest)
 		node = &Node{pos, digest}
 		break
 
@@ -139,7 +140,7 @@ func (t *Tree) getNode(i, r, v uint64) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		digest := util.Hash(One, a.Digest, Zero)
+		digest := t.hash(One, a.Digest, Zero)
 		node = &Node{pos, digest}
 		break
 
@@ -152,7 +153,7 @@ func (t *Tree) getNode(i, r, v uint64) (*Node, error) {
 		if err != nil {
 			return nil, err
 		}
-		digest := util.Hash(One, A_v1.Digest, A_v2.Digest)
+		digest := t.hash(One, A_v1.Digest, A_v2.Digest)
 		node = &Node{pos, digest}
 		break
 	}
@@ -175,7 +176,7 @@ func (t *Tree) Add(data []byte) (*Commitment, error) {
 
 	node := &Node{
 		&Position{t.size, 0},
-		util.Hash(data),
+		t.hash(data),
 	}
 
 	// add event to storage

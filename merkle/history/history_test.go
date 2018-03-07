@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"testing"
+	"verifiabledata/util"
 )
 
 func TestAdd(t *testing.T) {
@@ -25,7 +26,7 @@ func TestAdd(t *testing.T) {
 
 	frozen := NewInmemoryStore()
 	events := NewInmemoryStore()
-	ht := NewTree(frozen, events)
+	ht := NewTree(frozen, events, util.Hash256())
 
 	for _, e := range testCases {
 		t.Log("Testing event: ", e.event)
@@ -47,7 +48,7 @@ func TestAdd(t *testing.T) {
 func BenchmarkAdd(b *testing.B) {
 	frozen := NewInmemoryStore()
 	events := NewInmemoryStore()
-	ht := NewTree(frozen, events)
+	ht := NewTree(frozen, events, util.Hash256())
 	data := make([]byte, 64)
 	rand.Read(data)
 	for i := 0; i < b.N; i++ {
