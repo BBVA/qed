@@ -10,17 +10,34 @@ package util
 import (
 	"crypto/sha256"
 	"math"
+	"math/big"
 )
 
-// Returns a Digest of the []byte passed as a parameter
-func Hash(data ...[]byte) []byte {
-	hasher := sha256.New()
+// Returns the hash of daa as an []byte, where data can
+// be one or multiple []byte elements
+type HashFunc func(data ...[]byte) []byte
 
-	for i := 0; i < len(data); i++ {
-		hasher.Write(data[i])
+// returns the hash results in big number format
+func (h HashFunc) BigInt(data ...[]byte) *big.Int {
+	return big.NewInt(0).SetBytes(h(data...))
+}
+
+// Return the size in bits of the hash function
+func (h HashFunc) Size() uint64 {
+	return uint64(len(h([]byte("size"))) * 8)
+}
+
+// Returns a SHA256 HashFunc 
+func Hash256() HashFunc {
+	return func(data ...[]byte) []byte {
+		hasher := sha256.New()
+
+		for i := 0; i < len(data); i++ {
+			hasher.Write(data[i])
+		}
+
+		return hasher.Sum(nil)[:]
 	}
-
-	return hasher.Sum(nil)[:]
 }
 
 func Pow(x, y uint64) uint64 {
