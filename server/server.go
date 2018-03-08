@@ -34,12 +34,12 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func startHttpServer(endpoint string) *http.Server {
-
+	
 	glog.Infof("HTTP server starting on %v", endpoint)
-
+	
 	srv := &http.Server{Addr: endpoint}
-	http.HandleFunc("/health-check", apihttp.HealthCheckHandler)
-	http.Handle("/events", &apihttp.EventInsertHandler{InsertRequestQueue: make(chan *apihttp.InsertRequest)})
+	http.Handle("/health-check", apihttp.AuthHandler(http.HandlerFunc(apihttp.HealthCheckHandler)))
+	http.Handle("/events", apihttp.AuthHandler(&apihttp.EventInsertHandler{InsertRequestQueue: make(chan *apihttp.InsertRequest)}))
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {

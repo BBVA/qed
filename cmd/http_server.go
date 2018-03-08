@@ -8,7 +8,6 @@ import (
 	"context"
 	"flag"
 	"verifiabledata/server"
-
 	"github.com/golang/glog"
 )
 
@@ -22,7 +21,6 @@ func main() {
 	flag.Parse()
 
 	// TODO merge config file flags
-
 	ctx := context.Background()
 
 	srv := server.Server{

@@ -31,7 +31,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 		Status:  "ok",
 	}
 
-	resultJson, err := json.Marshal(result)
+    resultJson, err := json.Marshal(result)
 	if err != nil {
 		panic(err)
 	}
@@ -124,3 +124,17 @@ func (handler *EventInsertHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	w.Write(out)
 	return
 }
+
+// AuthHandler function is an HTTP handler wrapper that validates our requests
+func AuthHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		
+	// Check if Api-Key header is empty
+	if r.Header.Get("Api-Key") == "" {
+		http.Error(w, "Missing Api-Key header", http.StatusUnauthorized)
+		return
+	}
+
+	handler.ServeHTTP(w, r)
+	})
+} 
