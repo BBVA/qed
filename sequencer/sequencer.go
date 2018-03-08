@@ -30,7 +30,7 @@ func (sequencer *Sequencer) Start() {
 				//if sequencer.Counter%1000 == 0 {
 				log.Printf("Handling event: %s", request.InsertData.Message)
 				//}
-				commitment := util.Hash([]byte(request.InsertData.Message)) // TODO USE BYTE ARRAYS OR STRINGS
+				commitment := util.Hash256()([]byte(request.InsertData.Message)) // TODO USE BYTE ARRAYS OR STRINGS
 				response := api.InsertResponse{
 					Hash:       string(commitment),
 					Commitment: string(commitment),
