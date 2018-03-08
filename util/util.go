@@ -23,8 +23,9 @@ func (h HashFunc) BigInt(data ...[]byte) *big.Int {
 }
 
 // Return the size in bits of the hash function
-func (h HashFunc) Size() uint64 {
-	return uint64(len(h([]byte("size"))) * 8)
+// TODO Dangerous: this cannot be call often!!
+func (h HashFunc) Size() int {
+	return len(h([]byte("size"))) * 8
 }
 
 // Returns a SHA256 HashFunc 
