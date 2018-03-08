@@ -13,24 +13,17 @@ import (
 	"math/big"
 )
 
-// Returns the hash of daa as an []byte, where data can
-// be one or multiple []byte elements
-type HashFunc func(data ...[]byte) []byte
-
-// returns the hash results in big number format
-func (h HashFunc) BigInt(data ...[]byte) *big.Int {
-	return big.NewInt(0).SetBytes(h(data...))
+// Hahser expose the function hash and its properties
+type Hasher struct {
+	Do     func(...[]byte) []byte
+	Size   int
+	Maxval *big.Int
 }
 
-// Return the size in bits of the hash function
-// TODO Dangerous: this cannot be call often!!
-func (h HashFunc) Size() int {
-	return len(h([]byte("size"))) * 8
-}
-
-// Returns a SHA256 HashFunc 
-func Hash256() HashFunc {
-	return func(data ...[]byte) []byte {
+// Returns a SHA256 HashFunc
+func Hash256() *Hasher {
+	var h Hasher
+	h.Do = func(data ...[]byte) []byte {
 		hasher := sha256.New()
 
 		for i := 0; i < len(data); i++ {
@@ -39,6 +32,14 @@ func Hash256() HashFunc {
 
 		return hasher.Sum(nil)[:]
 	}
+	h.Size = 256
+	h.Maxval = big.NewInt(0).SetBytes([]byte{
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
+
+	return  &h
 }
 
 func Pow(x, y uint64) uint64 {
