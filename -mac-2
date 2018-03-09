@@ -1,0 +1,78 @@
+bash-3.2$ cd
+bash-3.2$ cd go
+bash-3.2$ cd src
+bash-3.2$ ls
+bitbucket.org		golang.org		rsc.io
+eosps			gonum.org		sourcegraph.com
+fnmod			google.golang.org	upspin.io
+github.com		mktlog			verifiabledata
+bash-3.2$ cd verifiabledata/
+bash-3.2$ lc
+Mono License Compiler
+Copyright (c) 2009 by RemObjects Software
+No target/complist passed
+bash-3.2$ ls
+LICENSE		api		docs		sequencer	util
+README.md	cmd		merkle		server
+bash-3.2$ cd merkle
+bash-3.2$ cd sparse
+bash-3.2$ B ../../README.md
+bash-3.2$ pwd
+/Users/gdiazlo/go/src/verifiabledata/merkle/sparse
+bash-3.2$ ls
+inmemory_store.go	sparse_test.go
+sparse.go		store.go
+bash-3.2$ B *
+bash-3.2$ pwd
+/Users/gdiazlo/go/src/verifiabledata/merkle/sparse
+bash-3.2$ B ../../util/*
+bash-3.2$ cd ..
+bash-3.2$ cd ..
+bash-3.2$ B util/*
+bash-3.2$ git status
+On branch master
+Your branch is up to date with 'origin/master'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+	modified:   README.md
+	modified:   merkle/sparse/inmemory_store.go
+	modified:   merkle/sparse/sparse.go
+	modified:   util/util.go
+
+no changes added to commit (use "git add" and/or "git commit -a")
+bash-3.2$ git add util/*
+bash-3.2$ git commit -m "change hash size to int"
+[master baf9748] change hash size to int
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+bash-3.2$ git push
+Counting objects: 4, done.
+Delta compression using up to 8 threads.
+Compressing objects:  25% (1/4)   
+Compressing objects: 100% (4/4), done.
+Writing objects:  25% (1/4)   Compressing objects: 100% (4/4)   Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 485 bytes | 485.00 KiB/s, done.
+Total 4 (delta 2), reused 0 (delta 0)
+To ssh://globaldevtools.bbva.com:7999/bglh/verifiabledata.git
+   bb844bc..baf9748  master -> master
+bash-3.2$ B merkle/sparse/*
+bash-3.2$ bc
+bc 1.06
+Copyright 1991-1994, 1997, 1998, 2000 Free Software Foundation, Inc.
+This is free software with ABSOLUTELY NO WARRANTY.
+For details type `warranty'. 
+2^32
+4294967296
+2^
+(standard_in) 3: parse error
+2^8
+256
+
+(interrupt) use quit to exit.
+
+(interrupt) use quit to exit.
+exit
+0
+^Dbash-3.2$ exit

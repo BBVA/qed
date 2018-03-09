@@ -22,12 +22,10 @@ func TestAdd(t *testing.T) {
 		{4, "377f2fb38a02913effc8ec6de5bf51bfe1ebe2e473ea4fb5060f94b7c11b676e", "Hello World5"},
 	}
 
-	d := NewInmemoryStore()
-	delta := NewInmemoryStore()
-	xi := NewInmemoryStore()
-	n := uint64(256)
+	leaves := NewInmemoryStore()
+	cache := new(CacheBranch)
 
-	st := NewTree(d, xi, delta, n)
+	st := NewTree("test tree", leaves, cache, util.Hash256())
 
 	for _, e := range testCases {
 		t.Log("Testing event: ", e.event)

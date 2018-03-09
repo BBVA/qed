@@ -52,9 +52,9 @@ amounts of data for:
      
      go test verifiabledata/util
      go test verifiabledata/store
-     go test verifiabledata/tree
-     go test verifiabledata/tree/history
-     go test verifiabledata/store/memory
+     go test verifiabledata/merkle
+     go test verifiabledata/merkle/history
+     go test verifiabledata/merkle/sparse
      go test verifiabledata/sequencer
  
      go test -bench="." verifiabledata/tree/history

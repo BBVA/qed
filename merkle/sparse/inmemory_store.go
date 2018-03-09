@@ -14,20 +14,20 @@ type InmemoryStore struct {
 }
 
 type pos struct {
-	k []byte
+	k string
 	d uint64
 }
 
-func newpos(n *Node) pos {
+func newpos(k []byte, d uint64) pos {
 	return pos{
-		n.k,
-		n.d,
+		fmt.Sprintf("%x",k),
+		d,
 	}
 }
 
 // Implements Add store interface to add Node to the store
 func (m *InmemoryStore) Add(n *Node) error {
-	_, loaded := m.store.LoadOrStore(newpos(n), *n)
+	_, loaded := m.store.LoadOrStore(newpos(n.k, n.v), *n)
 	if loaded {
 		return fmt.Errorf("Node already in pos: %v", n)
 	}
@@ -37,7 +37,7 @@ func (m *InmemoryStore) Add(n *Node) error {
 // Implements Get store interface to get Node from the store
 // given a Position
 func (m *InmemoryStore) Get(b []byte, d uint64) (*Node, error) {
-	v, ok := m.store.Load(pos{b, d})
+	v, ok := m.store.Load(newpos(b, d))
 	if !ok {
 		return nil, fmt.Errorf("Node with pos %v not found in storage", b)
 	}

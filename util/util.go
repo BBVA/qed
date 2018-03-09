@@ -10,14 +10,13 @@ package util
 import (
 	"crypto/sha256"
 	"math"
-	"math/big"
 )
 
 // Hahser expose the function hash and its properties
 type Hasher struct {
-	Do     func(...[]byte) []byte
-	Size   int
-	Maxval *big.Int
+	Do     func(...[]byte) []byte	// computes the hash function
+	Size   int	// the size in bits of the hash function
+	Maxval []byte // the maximum value the has function can return
 }
 
 // Returns a SHA256 HashFunc
@@ -33,11 +32,11 @@ func Hash256() *Hasher {
 		return hasher.Sum(nil)[:]
 	}
 	h.Size = 256
-	h.Maxval = big.NewInt(0).SetBytes([]byte{
+	h.Maxval = []byte{
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
 	return  &h
 }
