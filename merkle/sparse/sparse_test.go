@@ -7,6 +7,7 @@ package sparse
 import (
 	"fmt"
 	"testing"
+	"verifiabledata/util"
 )
 
 func TestAdd(t *testing.T) {
