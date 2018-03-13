@@ -41,7 +41,7 @@ func TestHealthCheckHandler(t *testing.T) {
 	}
 }
 
-func TestEventInsertHandler(t *testing.T) {
+func TestQueueHandlerConstructor(t *testing.T) {
 	// Create a request to pass to our handler. We pass a message as a data.
 	// If it's nil it will fail.
 	data := []byte(`{"message": "this is a sample event"}`)
@@ -52,6 +52,7 @@ func TestEventInsertHandler(t *testing.T) {
 	}
 
 	fakeRequestQueue := make(chan *InsertRequest)
+
 	go func() {
 		select {
 		case request := <-fakeRequestQueue:
@@ -66,9 +67,9 @@ func TestEventInsertHandler(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := EventInsertHandler{InsertRequestQueue: fakeRequestQueue}
+	handler := QueueHandlerConstructor(fakeRequestQueue)
 
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method 
 	// directly and pass in our Request and ResponseRecorder.
 	handler.ServeHTTP(rr, req)
 
@@ -78,9 +79,9 @@ func TestEventInsertHandler(t *testing.T) {
 			status, http.StatusCreated)
 	}
 }
-func TestAuthHandler(t *testing.T){
+func TestAuthHandlerMiddleware(t *testing.T) {
 
-	req, err := http.NewRequest("GET", "/auth", nil)
+	req, err := http.NewRequest("GET", "/health-check", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,18 +89,10 @@ func TestAuthHandler(t *testing.T){
 	// Set Api-Key header
 	req.Header.Set("Api-Key", "this-is-my-api-key")
 
-	// Test our handler wrapper
-	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// if status := rr.Code; status != http.StatusOK {
-		// 	t.Errorf("handler returned wrong status code: got %v want %v",
-		// 		status, http.StatusOK)
-		// }
-	})
-
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder() 
-	handler := AuthHandler(testHandler) 
-	
+	rr := httptest.NewRecorder()
+	handler := AuthHandlerMiddleware(HealthCheckHandler)
+
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
 	handler.ServeHTTP(rr, req)

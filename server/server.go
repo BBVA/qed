@@ -6,7 +6,6 @@ import (
 	"time"
 	apihttp "verifiabledata/api/http"
 	"verifiabledata/util"
-
 	"github.com/golang/glog"
 )
 
@@ -38,9 +37,10 @@ func startHttpServer(endpoint string) *http.Server {
 	glog.Infof("HTTP server starting on %v", endpoint)
 	
 	srv := &http.Server{Addr: endpoint}
-	http.Handle("/health-check", apihttp.AuthHandler(http.HandlerFunc(apihttp.HealthCheckHandler)))
-	http.Handle("/events", apihttp.AuthHandler(&apihttp.EventInsertHandler{InsertRequestQueue: make(chan *apihttp.InsertRequest)}))
+	http.Handle("/health-check", apihttp.AuthHandlerMiddleware(apihttp.HealthCheckHandler))
+	http.Handle("/events", apihttp.AuthHandlerMiddleware(apihttp.QueueHandlerConstructor(make(chan *apihttp.InsertRequest))))
 
+ 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
 			glog.Fatalf("HTTPserver: ListenAndServe() error: %s", err)

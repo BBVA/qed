@@ -64,10 +64,6 @@ type InsertRequest struct {
 	ResponseChannel chan *InsertResponse
 }
 
-type EventInsertHandler struct {
-	InsertRequestQueue chan *InsertRequest
-}
-
 // This handler posts an event into the system:
 // The http post url is:
 //  POST /events
@@ -79,54 +75,57 @@ type EventInsertHandler struct {
 //	"commitment": "6A19F0FB4BE54511524BCD5B0C98B38DA1EE049A39735C39311E10336024436F",
 //	"index": 1
 //	}
-func (handler *EventInsertHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func QueueHandlerConstructor(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
 
-	// Make sure we can only be called with an HTTP POST request.
-	if r.Method != "POST" {
-		w.Header().Set("Allow", "POST")
-		w.WriteHeader(http.StatusMethodNotAllowed)
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Make sure we can only be called with an HTTP POST request.
+		if r.Method != "POST" {
+			w.Header().Set("Allow", "POST")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		if r.Body == nil {
+			http.Error(w, "Please send a request body", http.StatusBadRequest)
+			return
+		}
+
+		var event InsertData
+		err := json.NewDecoder(r.Body).Decode(&event)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+
+		responseChannel := make(chan *InsertResponse)
+		defer close(responseChannel)
+		eventRequest := &InsertRequest{
+			InsertData:      event,
+			ResponseChannel: responseChannel,
+		}
+
+		log.Print(eventRequest)
+		insertRequestQueue <- eventRequest
+
+		// wait for the response
+		response := <-responseChannel
+		log.Print(response)
+
+		out, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		w.Write(out)
 		return
 	}
-
-	if r.Body == nil {
-		http.Error(w, "Please send a request body", http.StatusBadRequest)
-		return
-	}
-
-	var event InsertData
-	err := json.NewDecoder(r.Body).Decode(&event)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	responseChannel := make(chan *InsertResponse)
-	defer close(responseChannel)
-	eventRequest := &InsertRequest{
-		InsertData:      event,
-		ResponseChannel: responseChannel,
-	}
-
-	log.Print(eventRequest)
-	handler.InsertRequestQueue <- eventRequest
-
-	// wait for the response
-	response := <-responseChannel
-	log.Print(response)
-
-	out, err := json.Marshal(response)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
-	w.Write(out)
-	return
 }
-
-// AuthHandler function is an HTTP handler wrapper that validates our requests
-func AuthHandler(handler http.Handler) http.Handler {
+// AuthHandlerMiddleware function is an HTTP handler wrapper that validates our requests
+func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		
 	// Check if Api-Key header is empty
