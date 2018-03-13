@@ -103,3 +103,52 @@ func TestAuthHandlerMiddleware(t *testing.T) {
 			status, http.StatusOK)
 	}
 }
+
+func BenchmarkNoAuth(b *testing.B) {
+
+	req, err := http.NewRequest("GET", "/health-check", nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HealthCheckHandler)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Define our http client
+	client := &http.Client{}
+
+	for i := 0; i < b.N; i++ {
+		client.Do(req)
+	}
+}
+
+func BenchmarkAuth(b *testing.B) {
+
+	req, err := http.NewRequest("GET", "/health-check", nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	// Set Api-Key header
+	req.Header.Set("Api-Key", "this-is-my-api-key")
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := AuthHandlerMiddleware(HealthCheckHandler)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Define our http client
+	client := &http.Client{}
+
+	for i := 0; i < b.N; i++ {
+		client.Do(req)
+	}
+}
