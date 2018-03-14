@@ -10,6 +10,7 @@ import (
 
 func TestSingleInsertionSequencing(t *testing.T) {
 
+	hasher := util.Hash256()
 	data := api.InsertData{Message: "Event 1"}
 	request := &api.InsertRequest{
 		InsertData:      data,
@@ -28,14 +29,13 @@ func TestSingleInsertionSequencing(t *testing.T) {
 		t.Errorf("The index should be 0")
 	}
 
-	if response.Hash != string(util.Hash256()([]byte(data.Message))) {
+	if response.Hash != string(hasher.Do([]byte(data.Message))) {
 		t.Errorf("The hash of the original message doesn't match the returned hash")
 	}
 
-	if response.Commitment != string(util.Hash256()([]byte(data.Message))) { // TODO CHANGE THIS!!
+	if response.Commitment != string(hasher.Do([]byte(data.Message))) { // TODO CHANGE THIS!!
 		t.Errorf("The commitment doesn't matches the hash of the original message")
 	}
-
 	sequencer.Stop()
 
 }

@@ -24,13 +24,14 @@ func NewSequencer(bufferSize uint) Sequencer {
 
 func (sequencer *Sequencer) Start() {
 	go func() {
+		hasher := util.Hash256()
 		for {
 			select {
 			case request := <-sequencer.InsertRequestQueue:
 				//if sequencer.Counter%1000 == 0 {
 				log.Printf("Handling event: %s", request.InsertData.Message)
 				//}
-				commitment := util.Hash256()([]byte(request.InsertData.Message)) // TODO USE BYTE ARRAYS OR STRINGS
+				commitment := hasher.Do([]byte(request.InsertData.Message)) // TODO USE BYTE ARRAYS OR STRINGS
 				response := api.InsertResponse{
 					Hash:       string(commitment),
 					Commitment: string(commitment),
