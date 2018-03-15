@@ -98,9 +98,11 @@ func QueueHandlerConstructor(insertRequestQueue chan *InsertRequest) http.Handle
 			return
 		}
 
-
-		responseChannel := make(chan *InsertResponse)
+		responseChannel := make(
+			chan *InsertResponse,
+		)
 		defer close(responseChannel)
+		
 		eventRequest := &InsertRequest{
 			InsertData:      event,
 			ResponseChannel: responseChannel,
@@ -109,7 +111,7 @@ func QueueHandlerConstructor(insertRequestQueue chan *InsertRequest) http.Handle
 		log.Print(eventRequest)
 		insertRequestQueue <- eventRequest
 
-		// wait for the response
+		// Wait for the response
 		response := <-responseChannel
 		log.Print(response)
 
@@ -124,6 +126,72 @@ func QueueHandlerConstructor(insertRequestQueue chan *InsertRequest) http.Handle
 		return
 	}
 }
+
+type FetchData struct {
+	Message string `json: "message"`
+}
+
+type FetchResponse struct {
+	Index      uint64 `json:"index"`
+}
+
+type FetchRequest struct {
+	FetchData	FetchData
+	ResponseChannel chan *FetchResponse
+}
+
+func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Make our endpoint cand only be called with HTTP GET method
+		if r.Method != "GET" {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		
+		// Check if the request body is empty
+		if r.Body == nil {
+			http.Error(w, "Please send a request body", http.StatusBadRequest)	
+		}
+
+		var fetch FetchData
+		err := json.NewDecoder(r.Body).Decode(&fetch)
+		if err != nil { 
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		
+		responseChannel := make(
+			chan *FetchResponse,
+		)
+		defer close(responseChannel)
+
+		eventRequest := &FetchRequest{
+			FetchData:	fetch,
+			ResponseChannel: responseChannel,
+		}
+
+		eventIndex <- eventRequest
+		log.Print("Index:", eventIndex)
+
+		
+		// Wait for the response
+		response := <-responseChannel
+		log.Print(response)
+
+		out, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(out)
+		return
+	}
+}
+
 // AuthHandlerMiddleware function is an HTTP handler wrapper that validates our requests
 func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
