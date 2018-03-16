@@ -55,6 +55,8 @@ amounts of data for:
      go test verifiabledata/merkle
      go test verifiabledata/merkle/history
      go test verifiabledata/merkle/sparse
+     go test -v verifiabledata/merkle/hyper
      go test verifiabledata/sequencer
  
      go test -bench="." verifiabledata/tree/history
+     go test -bench="." verifiabledata/merkle/hyper
