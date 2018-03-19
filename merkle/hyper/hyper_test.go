@@ -2,10 +2,11 @@ package hyper
 
 import (
 	"crypto/rand"
-	"fmt"
+// 	"fmt"
 	"testing"
 )
 
+/* 
 func TestUpdate(t *testing.T) {
 
 	values := []value{
@@ -23,6 +24,19 @@ func TestUpdate(t *testing.T) {
 	}
 
 }
+*/
+
+
+func TestD(t *testing.T) {
+	var d D
+	d.Insert(&value{empty,empty})
+	d.Insert(&value{empty,empty})
+	d.Insert(&value{empty,empty})
+	t.Log(d.Len())
+
+}
+
+
 
 func randomBytes(n int) []byte {
 	bytes := make([]byte, n)
@@ -36,10 +50,9 @@ func randomBytes(n int) []byte {
 
 func BenchmarkAdd(b *testing.B) {
 	ht := newtree("my bench tree")
-	p := rootpos(ht.hasher.Size)
-	b.N = 1000000
+	b.N = 1
 	for i := 0; i < b.N; i++ {
-		ht.toCache(&value{randomBytes(64), randomBytes(1)}, p)
+		ht.Add(randomBytes(64), randomBytes(1))
 	}
-	b.Log("cache hits ", ht.cache.hits, " cache miss ", ht.cache.miss, " default hash ", ht.cache.dh, " cache depth ", ht.cache.depth, " cache max depth ", ht.cache.maxDepth, " cache size ", len(ht.cache.node))
+	b.Logf("stats = %+v len = %d min heigth = %d\n", ht.stats, len(ht.cache.node), ht.cache.minHeight)
 }

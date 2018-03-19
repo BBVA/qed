@@ -2,7 +2,8 @@ package hyper
 
 import (
 	"bytes"
-	"strconv"
+	"encoding/binary"
+	"fmt"
 	"verifiabledata/util"
 )
 
@@ -21,31 +22,31 @@ func newvalue(k, v []byte) *value {
 	return &value{k, v}
 }
 
-// A position identifies a unique node in the tree by its base, split and depth
+// A position identifies a unique node in the tree by its base, split and height
 type position struct {
-	base  []byte // the left-most leaf in this node subtree
-	split []byte // the left-most leaf in the right branch of this node subtree
-	depth int    // depth in the tree of this node
-	n     int    // number of bits in the hash key
+	base   []byte // the left-most leaf in this node subtree
+	split  []byte // the left-most leaf in the right branch of this node subtree
+	height int    // height in the tree of this node
+	n      int    // number of bits in the hash key
 }
 
 // returns a string representation of the position
 func (p position) String() string {
-	return string(p.base[:32]) + strconv.Itoa(p.depth)
-	// fmt.Sprintf("%x-%d", p.base, p.depth)
+	// return string(p.base[:32]) + strconv.Itoa(p.height)
+	return fmt.Sprintf("%x-%d", p.base, p.height)
 }
 
 // returns a new position pointing to the left child
 func (p position) left() *position {
 	var np position
 	np.base = p.base
-	np.depth = p.depth - 1
+	np.height = p.height - 1
 	np.n = p.n
 
 	np.split = make([]byte, 32)
 	copy(np.split, np.base)
 
-	bitSet(np.split, p.n-p.depth)
+	bitSet(np.split, p.n-p.height)
 
 	return &np
 }
@@ -54,13 +55,13 @@ func (p position) left() *position {
 func (p position) right() *position {
 	var np position
 	np.base = p.split
-	np.depth = p.depth - 1
+	np.height = p.height - 1
 	np.n = p.n
 
 	np.split = make([]byte, 32)
 	copy(np.split, np.base)
 
-	bitSet(np.split, p.n-p.depth)
+	bitSet(np.split, p.n-p.height)
 
 	return &np
 }
@@ -70,7 +71,7 @@ func rootpos(n int) *position {
 	var p position
 	p.base = make([]byte, 32)
 	p.split = make([]byte, 32)
-	p.depth = n
+	p.height = n
 	p.n = n
 
 	bitSet(p.split, 0)
@@ -78,15 +79,21 @@ func rootpos(n int) *position {
 	return &p
 }
 
+type stats struct {
+	hits   uint64
+	disk   uint64
+	dh     uint64
+	update uint64
+	leaf   uint64
+	lh     uint64
+	ih     uint64
+}
+
 // a cache contains the hashes of the pre computed nodes
 type cache struct {
-	n        int               // number of bits in the hash key
-	node     map[string][]byte // node map containing the cached hashes
-	depth    int               // current depth of the cache
-	maxDepth int               // max depth of the cache
-	hits     uint64
-	miss     uint64
-	dh       uint64
+	n         int               // number of bits in the hash key
+	node      map[string][]byte // node map containing the cached hashes
+	minHeight int               // min height of the cache
 }
 
 // creates a new cache structure, already initialized with
@@ -94,26 +101,7 @@ func newcache(n int) *cache {
 	return &cache{
 		n,
 		make(map[string][]byte),
-		n,
-		n - 10,
-		0,
-		0,
-		0,
-	}
-}
-
-// pushes down a node in the cache
-// which is completly wrong as the cached value
-// would not be correct for a node below
-func (c *cache) push(val []byte, p *position) {
-	if p.depth <= c.maxDepth {
-		return
-	}
-	c.node[p.left().String()] = val
-	c.node[p.right().String()] = val
-	n := p.depth - 1
-	if n < c.depth {
-		c.depth = n
+		n-10,
 	}
 }
 
@@ -123,6 +111,8 @@ type tree struct {
 	defhash [][]byte
 	id      []byte
 	hasher  *util.Hasher
+	d       D
+	stats   *stats // cache statistics
 }
 
 // creates a new hyper tree
@@ -133,6 +123,8 @@ func newtree(id string) *tree {
 		make([][]byte, hasher.Size),
 		[]byte(id),
 		hasher,
+		newD(),
+		new(stats),
 	}
 
 	t.defhash[0] = t.hasher.Do(t.id, empty)
@@ -147,33 +139,33 @@ func (t *tree) toCache(v *value, p *position) []byte {
 	var nh []byte
 
 	// if we are a leaf, return our hash
-	if p.depth == 0 {
+	if p.height == 0 {
+		t.stats.leaf += 1
 		return t.leafHash(set, v.key)
 	}
 
-	// out hash is the hash of our childs, in a left traversal
-	// the right branch comes from cache and viceversa
-	dir := bytes.Compare(v.key, p.split)
-	if dir < 0 {
-		nh = t.hasher.Do(t.toCache(v, p.left()), t.fromCache(v, p.right()))
-	} else {
-		nh = t.hasher.Do(t.fromCache(v, p.left()), t.toCache(v, p.right()))
+	// if we are beyond the cache zone
+	// we need to go to database to get
+	// nodes
+	if p.height < t.cache.minHeight {
+		t.stats.disk += 1
+		return t.fromStorage(t.d, v, p)
 	}
 
-	// if we are already in cache, we delete ourselves
-	// because we are in the current path of insertion
-	// if we are not cached, we cache ourselves now
-	// for the future queries when we are not in the update
-	// path
-	_, cached := t.cache.node[p.String()]
+	// if not, out hash is the hash of our left and right child
+	dir := bytes.Compare(v.key, p.split)
 	switch {
-	case cached:
-		delete(t.cache.node, p.String())
-	case !cached && p.depth > t.cache.maxDepth:
+	case dir < 0:
+		nh = t.interiorHash(t.toCache(v, p.left()), t.fromCache(v, p.right()), p)
+	case dir > 0:
+		nh = t.interiorHash(t.fromCache(v, p.left()), t.toCache(v, p.right()), p)
+	}
+
+	// we re-cache all the nodes on each update
+	// if the node is whithin the cache area
+	if p.height >= t.cache.minHeight {
+		t.stats.update += 1
 		t.cache.node[p.String()] = nh
-		if p.depth < t.cache.depth {
-			t.cache.depth = p.depth
-		}
 	}
 
 	return nh
@@ -182,42 +174,42 @@ func (t *tree) toCache(v *value, p *position) []byte {
 func (t *tree) fromCache(v *value, p *position) []byte {
 
 	// get the value from the cache
-	cached_val, cached := t.cache.node[p.String()]
+	cached_hash, cached := t.cache.node[p.String()]
 	if cached {
-		t.cache.hits += 1
-		return cached_val
+		t.stats.hits += 1
+		return cached_hash
 	}
-	
-	// if there is no value in the cache, and the node is
-	// below the current cache depth, return a default hash
-	if p.depth < t.cache.depth {
-		t.cache.dh += 1
-		return t.defhash[p.depth]
-	}
-	
-	// if cache depth is at maxDepth and
-	// we doesn't have a value, we need to go to the 
-	// storage to retrieve the tree node
-	if p.depth <= t.cache.maxDepth {
-		t.cache.miss += 1
-		// go to database and iterate with the results
-		// fmt.Println("Go to database at depth ", p.depth, " because max is ", t.cache.maxDepth)
-		return t.defhash[p.depth]
-	}
-	
-	// if the node is a leaf, return a default hash
-	if p.depth == 0 {
-		t.cache.dh += 1
-		return t.defhash[p.depth]
-	}
-	
-	// the hash if this node is the hash of its childs
-	return t.hasher.Do(t.fromCache(v, p.left()), t.fromCache(v, p.right()))
+
+	// if there is no value in the cache,return a default hash
+	t.stats.dh += 1
+	return t.defhash[p.height]
 
 }
 
-func (t *tree) leafHash(a, b []byte) []byte {
+func (t *tree) fromStorage(d D, v *value, p *position) []byte {
+	var nh []byte
 
+	// if we are a leaf, return our hash
+	if p.height == 0 {
+		t.stats.leaf += 1
+		return t.leafHash(set, v.key)
+	}
+
+	// if there are no more childs,
+	// return a default hash
+	if d.Len() == 0 {
+		t.stats.dh += 1
+		return t.defhash[p.height]
+	}
+
+	left, right := d.Split(p.split)
+	nh = t.interiorHash(t.fromStorage(left, v, p.left()), t.fromStorage(right, v, p.right()), p)
+
+	return nh
+}
+
+func (t *tree) leafHash(a, b []byte) []byte {
+	t.stats.lh += 1
 	if bytes.Equal(a, empty) {
 		return t.hasher.Do(t.id)
 	}
@@ -225,8 +217,26 @@ func (t *tree) leafHash(a, b []byte) []byte {
 	return t.hasher.Do(t.id, b)
 }
 
+func (t *tree) interiorHash(left, right []byte, p *position) []byte {
+	t.stats.ih += 1
+	if bytes.Equal(left, right) {
+		return t.hasher.Do(left, right)
+	}
+
+	height_bytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(height_bytes, uint32(p.height))
+
+	return t.hasher.Do(left, right, p.base, height_bytes)
+}
+
 func bitSet(bits []byte, i int)   { bits[i/8] |= 1 << uint(7-i%8) }
 func bitUnset(bits []byte, i int) { bits[i/8] &= 0 << uint(7-i%8) }
+
+func (t *tree) Add(key []byte, v []byte) []byte {
+	val := &value{key, v}
+	t.d.Insert(val)
+	return t.toCache(val, rootpos(t.hasher.Size))
+}
 
 /*
 	Algorithm
