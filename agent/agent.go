@@ -9,8 +9,10 @@
 package agent
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"time"
 
@@ -38,9 +40,25 @@ func Run(ctx context.Context) (*Agent, error) {
 
 func (a *Agent) Echo(buff *os.File) {
 
-	data, err := ioutil.ReadAll(buff)
+	// data, err := ioutil.ReadAll(buff)
+	// check(err)
+
+	data := []byte(`{"message": "this is a sample event"}`)
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(data))
 	check(err)
 
-	glog.Infof("stdin data: %v\n", string(data))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Api-Key", "this-is-my-api-key")
+
+	resp, err := http.DefaultClient.Do(req)
+	check(err)
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	check(err)
+
+	glog.Infof("stdin data: %v\n", string(body))
 
 }
