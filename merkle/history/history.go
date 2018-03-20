@@ -52,7 +52,7 @@ func (n *Node) String() string {
 
 // A History tree is a tree structure with a version metadata.
 // As described in the pag. 6-7 of the paper:
-// t.p://tamperevident.cs.rice.edu/papers/paper-treehist.pdf
+// http://tamperevident.cs.rice.edu/papers/paper-treehist.pdf
 //
 // For example, a tree with 5 leaf hashes x0, x1, x2, x3, x4
 //    version 4
@@ -94,7 +94,7 @@ type Tree struct {
 	frozen Store // already computed nodes, that will not change
 	events Store // layer 0 storage
 	size   uint64
-	hash	*util.Hasher
+	hash   *util.Hasher
 }
 
 // Returns a new history tree
