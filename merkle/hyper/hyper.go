@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"verifiabledata/util"
+
+	"github.com/cznic/b"
 )
 
 // Constants
@@ -87,6 +89,7 @@ type stats struct {
 	leaf   uint64
 	lh     uint64
 	ih     uint64
+	lend   float64
 }
 
 // a cache contains the hashes of the pre computed nodes
@@ -101,7 +104,7 @@ func newcache(n int) *cache {
 	return &cache{
 		n,
 		make(map[string][]byte),
-		n-10,
+		n - 20,
 	}
 }
 
@@ -111,8 +114,12 @@ type tree struct {
 	defhash [][]byte
 	id      []byte
 	hasher  *util.Hasher
-	d       D
+	store   *b.Tree
 	stats   *stats // cache statistics
+}
+
+func cmp(a, b interface{}) int {
+	return bytes.Compare(a.([]byte), b.([]byte))
 }
 
 // creates a new hyper tree
@@ -123,7 +130,7 @@ func newtree(id string) *tree {
 		make([][]byte, hasher.Size),
 		[]byte(id),
 		hasher,
-		newD(),
+		b.TreeNew(cmp),
 		new(stats),
 	}
 
@@ -135,32 +142,61 @@ func newtree(id string) *tree {
 	return t
 }
 
-func (t *tree) toCache(v *value, p *position) []byte {
-	var nh []byte
+func (t *tree) fromBTree(p *position) *D {
+	var d D
+	var err error
+	var k, v interface{}
 
-	// if we are a leaf, return our hash
-	if p.height == 0 {
-		t.stats.leaf += 1
-		return t.leafHash(set, v.key)
+	t.stats.disk += 1
+
+	d.v = make([]*value, 0)
+
+	iter, _ := t.store.Seek(p.base)
+	defer iter.Close()
+	
+	defer func() {
+		t.stats.lend = ( float64(len(d.v)) + t.stats.lend) / float64(t.stats.disk)
+	}()
+	
+	n := 0
+	for {
+		k, v, err = iter.Next()
+		if err != nil {
+			return &d
+		}
+		if bytes.Compare(k.([]byte), p.split) < 0 {
+			d.v = append(d.v, &value{k.([]byte), v.([]byte)})
+		} else {
+			return &d
+		}
+		n += 1
 	}
+
+	return &d
+}
+
+func (t *tree) toCache(v *value, p *position) []byte {
+	var left, right, nh []byte
 
 	// if we are beyond the cache zone
 	// we need to go to database to get
 	// nodes
 	if p.height < t.cache.minHeight {
-		t.stats.disk += 1
-		return t.fromStorage(t.d, v, p)
+		return  t.fromStorage(t.fromBTree(p), v, p)
 	}
 
 	// if not, out hash is the hash of our left and right child
 	dir := bytes.Compare(v.key, p.split)
 	switch {
 	case dir < 0:
-		nh = t.interiorHash(t.toCache(v, p.left()), t.fromCache(v, p.right()), p)
+		left = t.toCache(v, p.left())
+		right = t.fromCache(v, p.right())
 	case dir > 0:
-		nh = t.interiorHash(t.fromCache(v, p.left()), t.toCache(v, p.right()), p)
+		left = t.fromCache(v, p.left())
+		right = t.toCache(v, p.right())
 	}
-
+	//fmt.Println("toCache: do the interior hash from childs")
+	nh = t.interiorHash(left, right, p)
 	// we re-cache all the nodes on each update
 	// if the node is whithin the cache area
 	if p.height >= t.cache.minHeight {
@@ -186,13 +222,12 @@ func (t *tree) fromCache(v *value, p *position) []byte {
 
 }
 
-func (t *tree) fromStorage(d D, v *value, p *position) []byte {
-	var nh []byte
-
+func (t *tree) fromStorage(d *D, v *value, p *position) []byte {	
 	// if we are a leaf, return our hash
 	if p.height == 0 {
 		t.stats.leaf += 1
 		return t.leafHash(set, v.key)
+
 	}
 
 	// if there are no more childs,
@@ -200,12 +235,11 @@ func (t *tree) fromStorage(d D, v *value, p *position) []byte {
 	if d.Len() == 0 {
 		t.stats.dh += 1
 		return t.defhash[p.height]
+
 	}
 
 	left, right := d.Split(p.split)
-	nh = t.interiorHash(t.fromStorage(left, v, p.left()), t.fromStorage(right, v, p.right()), p)
-
-	return nh
+	return t.interiorHash(t.fromStorage(left, v, p.left()), t.fromStorage(right, v, p.right()), p)
 }
 
 func (t *tree) leafHash(a, b []byte) []byte {
@@ -234,7 +268,8 @@ func bitUnset(bits []byte, i int) { bits[i/8] &= 0 << uint(7-i%8) }
 
 func (t *tree) Add(key []byte, v []byte) []byte {
 	val := &value{key, v}
-	t.d.Insert(val)
+	// p := &position{base: key, height: 0}
+	t.store.Set(key, v)
 	return t.toCache(val, rootpos(t.hasher.Size))
 }
 

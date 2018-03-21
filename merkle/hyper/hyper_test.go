@@ -26,18 +26,6 @@ func TestUpdate(t *testing.T) {
 }
 */
 
-
-func TestD(t *testing.T) {
-	var d D
-	d.Insert(&value{empty,empty})
-	d.Insert(&value{empty,empty})
-	d.Insert(&value{empty,empty})
-	t.Log(d.Len())
-
-}
-
-
-
 func randomBytes(n int) []byte {
 	bytes := make([]byte, n)
 	_, err := rand.Read(bytes)
@@ -50,7 +38,7 @@ func randomBytes(n int) []byte {
 
 func BenchmarkAdd(b *testing.B) {
 	ht := newtree("my bench tree")
-	b.N = 1
+	b.N = 10000000
 	for i := 0; i < b.N; i++ {
 		ht.Add(randomBytes(64), randomBytes(1))
 	}
