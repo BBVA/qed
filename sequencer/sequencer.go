@@ -3,20 +3,24 @@ package sequencer
 import (
 	"encoding/hex"
 	"log"
-	api "verifiabledata/api/http"
+
+	"verifiabledata/api/http"
+	"verifiabledata/merkle/history"
 	"verifiabledata/util"
 )
 
 type Sequencer struct {
+	Tree               *history.Tree
 	Counter            uint64
-	InsertRequestQueue chan *api.InsertRequest
+	InsertRequestQueue chan *http.InsertRequest
 	QuitChan           chan bool
 }
 
-func NewSequencer(bufferSize uint) Sequencer {
+func NewSequencer(bufferSize uint, tree *history.Tree) Sequencer {
 	sequencer := Sequencer{
+		Tree:               tree,
 		Counter:            0,
-		InsertRequestQueue: make(chan *api.InsertRequest, bufferSize),
+		InsertRequestQueue: make(chan *http.InsertRequest, bufferSize),
 		QuitChan:           make(chan bool),
 	}
 	return sequencer
@@ -32,7 +36,7 @@ func (sequencer *Sequencer) Start() {
 				log.Printf("Handling event: %s", request.InsertData.Message)
 				//}
 				commitment := hasher.Do([]byte(request.InsertData.Message)) // TODO USE BYTE ARRAYS OR STRINGS
-				response := api.InsertResponse{
+				response := http.InsertResponse{
 					Hash:       string(commitment),
 					Commitment: string(commitment),
 					Index:      sequencer.Counter,
@@ -43,6 +47,7 @@ func (sequencer *Sequencer) Start() {
 				//}
 				sequencer.Counter++
 				request.ResponseChannel <- &response
+
 			case <-sequencer.QuitChan:
 				return
 			}
@@ -57,7 +62,7 @@ func (sequencer *Sequencer) Stop() {
 	}()
 }
 
-func (sequencer *Sequencer) Enqueue(request *api.InsertRequest) {
+func (sequencer *Sequencer) Enqueue(request *http.InsertRequest) {
 	log.Printf("Enqueuing request: %s", request.InsertData.Message)
 	sequencer.InsertRequestQueue <- request
 }
