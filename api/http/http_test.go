@@ -69,7 +69,7 @@ func TestQueueHandlerConstructor(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler := QueueHandlerConstructor(fakeRequestQueue)
 
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method 
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
 	handler.ServeHTTP(rr, req)
 
@@ -103,7 +103,7 @@ func TestAuthHandlerMiddleware(t *testing.T) {
 			status, http.StatusOK)
 	}
 }
-func TestFetchEvent(t *testing.T){
+func TestFetchEvent(t *testing.T) {
 
 	eventMessage := []byte(`{"message": "looking for this message"}`)
 
@@ -119,7 +119,7 @@ func TestFetchEvent(t *testing.T){
 		select {
 		case request := <-fakeRequestFetch:
 			response := FetchResponse{
-				Index:      1,
+				Index: 1,
 			}
 			request.ResponseChannel <- &response
 		}
@@ -136,8 +136,8 @@ func TestFetchEvent(t *testing.T){
 	// CHenck if the status code is what we expected
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-		status, http.StatusOK)
-	} 
+			status, http.StatusOK)
+	}
 }
 
 func BenchmarkNoAuth(b *testing.B) {
@@ -179,6 +179,44 @@ func BenchmarkAuth(b *testing.B) {
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Define our http client
+	client := &http.Client{}
+
+	for i := 0; i < b.N; i++ {
+		client.Do(req)
+	}
+}
+
+func BenchmarkFetchEvent(b *testing.B) {
+
+	eventMessage := []byte(`{"message": "looking for this message"}`)
+
+	// Create a simple request to out fetch endpoint
+	req, err := http.NewRequest("GET", "/fetch", bytes.NewBuffer(eventMessage))
+	if len(eventMessage) == 0 {
+		b.Fatal(err)
+	}
+
+	fakeRequestFetch := make(chan *FetchRequest)
+
+	go func() {
+		select {
+		case request := <-fakeRequestFetch:
+			response := FetchResponse{
+				Index: 1,
+			}
+			request.ResponseChannel <- &response
+		}
+	}()
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := FetchEvent(fakeRequestFetch)
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder
 	handler.ServeHTTP(rr, req)
 
 	// Define our http client

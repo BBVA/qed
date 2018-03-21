@@ -31,7 +31,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 		Status:  "ok",
 	}
 
-    resultJson, err := json.Marshal(result)
+	resultJson, err := json.Marshal(result)
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +102,7 @@ func QueueHandlerConstructor(insertRequestQueue chan *InsertRequest) http.Handle
 			chan *InsertResponse,
 		)
 		defer close(responseChannel)
-		
+
 		eventRequest := &InsertRequest{
 			InsertData:      event,
 			ResponseChannel: responseChannel,
@@ -132,11 +132,11 @@ type FetchData struct {
 }
 
 type FetchResponse struct {
-	Index      uint64 `json:"index"`
+	Index uint64 `json:"index"`
 }
 
 type FetchRequest struct {
-	FetchData	FetchData
+	FetchData       FetchData
 	ResponseChannel chan *FetchResponse
 }
 
@@ -149,33 +149,31 @@ func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		
+
 		// Check if the request body is empty
 		if r.Body == nil {
-			http.Error(w, "Please send a request body", http.StatusBadRequest)	
+			http.Error(w, "Please send a request body", http.StatusBadRequest)
 		}
 
 		var fetch FetchData
 		err := json.NewDecoder(r.Body).Decode(&fetch)
-		if err != nil { 
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		
+
 		responseChannel := make(
 			chan *FetchResponse,
 		)
 		defer close(responseChannel)
 
 		eventRequest := &FetchRequest{
-			FetchData:	fetch,
+			FetchData:       fetch,
 			ResponseChannel: responseChannel,
 		}
 
 		eventIndex <- eventRequest
-		log.Print("Index:", eventIndex)
 
-		
 		// Wait for the response
 		response := <-responseChannel
 		log.Print(response)
@@ -195,13 +193,13 @@ func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
 // AuthHandlerMiddleware function is an HTTP handler wrapper that validates our requests
 func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		
-	// Check if Api-Key header is empty
-	if r.Header.Get("Api-Key") == "" {
-		http.Error(w, "Missing Api-Key header", http.StatusUnauthorized)
-		return
-	}
 
-	handler.ServeHTTP(w, r)
+		// Check if Api-Key header is empty
+		if r.Header.Get("Api-Key") == "" {
+			http.Error(w, "Missing Api-Key header", http.StatusUnauthorized)
+			return
+		}
+
+		handler.ServeHTTP(w, r)
 	})
-} 
+}
