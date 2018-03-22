@@ -13,13 +13,19 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Agent struct{}
 
 func Run(ctx context.Context) (*Agent, error) {
 	agent := new(Agent)
+
+	// wait some time to load server
+	time.Sleep(time.Second)
+
 	return agent, nil
+
 }
 
 func (a *Agent) Add(message string) {
