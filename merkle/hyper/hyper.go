@@ -3,7 +3,7 @@ package hyper
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
+	"strconv"
 	"verifiabledata/util"
 
 	"github.com/cznic/b"
@@ -34,8 +34,8 @@ type position struct {
 
 // returns a string representation of the position
 func (p position) String() string {
-	// return string(p.base[:32]) + strconv.Itoa(p.height)
-	return fmt.Sprintf("%x-%d", p.base, p.height)
+	return string(p.base[:32]) + strconv.Itoa(p.height)
+	// return fmt.Sprintf("%x-%d", p.base, p.height)
 }
 
 // returns a new position pointing to the left child
@@ -103,8 +103,8 @@ type cache struct {
 func newcache(n int) *cache {
 	return &cache{
 		n,
-		make(map[string][]byte),
-		n - 20,
+		make(map[string][]byte, 2097153), // 2^(layers+1) - 1 nodes in the cache
+		n - 27,
 	}
 }
 
@@ -153,11 +153,13 @@ func (t *tree) fromBTree(p *position) *D {
 
 	iter, _ := t.store.Seek(p.base)
 	defer iter.Close()
-	
+
 	defer func() {
-		t.stats.lend = ( float64(len(d.v)) + t.stats.lend) / float64(t.stats.disk)
+		a := float64(len(d.v))
+		if  a > t.stats.lend { t.stats.lend = a }
+		// t.stats.lend = (float64(len(d.v)) + t.stats.lend) / float64(t.stats.disk)
 	}()
-	
+
 	n := 0
 	for {
 		k, v, err = iter.Next()
@@ -182,7 +184,7 @@ func (t *tree) toCache(v *value, p *position) []byte {
 	// we need to go to database to get
 	// nodes
 	if p.height < t.cache.minHeight {
-		return  t.fromStorage(t.fromBTree(p), v, p)
+		return t.fromStorage(t.fromBTree(p), v, p)
 	}
 
 	// if not, out hash is the hash of our left and right child
@@ -195,7 +197,7 @@ func (t *tree) toCache(v *value, p *position) []byte {
 		left = t.fromCache(v, p.left())
 		right = t.toCache(v, p.right())
 	}
-	//fmt.Println("toCache: do the interior hash from childs")
+
 	nh = t.interiorHash(left, right, p)
 	// we re-cache all the nodes on each update
 	// if the node is whithin the cache area
@@ -222,7 +224,7 @@ func (t *tree) fromCache(v *value, p *position) []byte {
 
 }
 
-func (t *tree) fromStorage(d *D, v *value, p *position) []byte {	
+func (t *tree) fromStorage(d *D, v *value, p *position) []byte {
 	// if we are a leaf, return our hash
 	if p.height == 0 {
 		t.stats.leaf += 1
@@ -268,7 +270,7 @@ func bitUnset(bits []byte, i int) { bits[i/8] &= 0 << uint(7-i%8) }
 
 func (t *tree) Add(key []byte, v []byte) []byte {
 	val := &value{key, v}
-	// p := &position{base: key, height: 0}
+
 	t.store.Set(key, v)
 	return t.toCache(val, rootpos(t.hasher.Size))
 }
