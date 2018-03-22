@@ -2,7 +2,8 @@ package sequencer
 
 import (
 	"encoding/hex"
-	"log"
+
+	"github.com/golang/glog"
 
 	"verifiabledata/api/http"
 	"verifiabledata/merkle/history"
@@ -28,7 +29,7 @@ func (sequencer *Sequencer) Start() {
 		for {
 			select {
 			case request := <-sequencer.InsertRequestQueue:
-				log.Printf("Handling event: %s", request.InsertData.Message)
+				glog.Infof("Handling event: %s", request.InsertData.Message)
 
 				commitment, node, err := sequencer.Tree.Add([]byte(request.InsertData.Message))
 				if err != nil {
@@ -41,7 +42,7 @@ func (sequencer *Sequencer) Start() {
 					Index:      node.Pos.Index,
 				}
 
-				log.Printf("New event inserted with index [%d]: %s", response.Index,
+				glog.Infof("New event inserted with index [%d]: %s", response.Index,
 					hex.EncodeToString([]byte(response.Commitment)))
 
 				request.ResponseChannel <- &response
@@ -54,13 +55,13 @@ func (sequencer *Sequencer) Start() {
 }
 
 func (sequencer *Sequencer) Stop() {
-	log.Printf("Stopping sequencer...")
+	glog.Infof("Stopping sequencer...")
 	go func() {
 		sequencer.QuitChan <- true
 	}()
 }
 
 func (sequencer *Sequencer) Enqueue(request *http.InsertRequest) {
-	log.Printf("Enqueuing request: %s", request.InsertData.Message)
+	glog.Infof("Enqueuing request: %s", request.InsertData.Message)
 	sequencer.InsertRequestQueue <- request
 }

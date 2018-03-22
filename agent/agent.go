@@ -43,6 +43,7 @@ func (a *Agent) Add(message string) {
 	if err != nil {
 		panic(err)
 	}
+
 	defer resp.Body.Close()
 
 }

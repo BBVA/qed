@@ -74,8 +74,9 @@ func (s *Server) Stop() {
 	err := s.HTTPServer.Shutdown(nil)
 	if err != nil {
 		// FIXME: err can be failure/timeout, handle it
-		glog.Exitf("Shutdown return not nil status: %v", err)
+		glog.Info(err)
 	}
 
 	glog.Infof("main: done. Exiting...")
+
 }
