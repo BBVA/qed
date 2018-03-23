@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	api "verifiabledata/api/http"
+
+	"verifiabledata/api/http"
+	"verifiabledata/merkle/history"
 	"verifiabledata/util"
 )
 
 func TestSingleInsertionSequencing(t *testing.T) {
 
 	hasher := util.Hash256()
-	data := api.InsertData{Message: "Event 1"}
-	request := &api.InsertRequest{
+	data := http.InsertData{Message: "Event 1"}
+	request := &http.InsertRequest{
 		InsertData:      data,
-		ResponseChannel: make(chan *api.InsertResponse),
+		ResponseChannel: make(chan *http.InsertResponse),
 	}
 
-	sequencer := NewSequencer(10)
+	sequencer := NewSequencer(10, history.NewInmemoryTree())
 	sequencer.Start()
 
 	sequencer.Enqueue(request)
@@ -33,32 +35,34 @@ func TestSingleInsertionSequencing(t *testing.T) {
 		t.Errorf("The hash of the original message doesn't match the returned hash")
 	}
 
-	if response.Commitment != string(hasher.Do([]byte(data.Message))) { // TODO CHANGE THIS!!
-		t.Errorf("The commitment doesn't matches the hash of the original message")
-	}
+	// FIXME: test the commitment in this level requires a verification process
+	// if response.Commitment != string(`FILL WITH VERIFICATION COMMITMENT`) {
+	// 	t.Errorf("The commitment doesn't matches the hash of the original message")
+	// }
+
 	sequencer.Stop()
 
 }
 
 func TestMultipleInsertionSequencing(t *testing.T) {
 
-	sequencer := NewSequencer(10)
+	sequencer := NewSequencer(10, history.NewInmemoryTree())
 	sequencer.Start()
 
 	var wg sync.WaitGroup
 	wg.Add(10)
 
-	requests := make([]*api.InsertRequest, 10)
+	requests := make([]*http.InsertRequest, 10)
 	for i := 0; i < 10; i++ {
-		data := api.InsertData{Message: fmt.Sprintf("Event %d", i)}
-		requests[i] = &api.InsertRequest{
+		data := http.InsertData{Message: fmt.Sprintf("Event %d", i)}
+		requests[i] = &http.InsertRequest{
 			InsertData:      data,
-			ResponseChannel: make(chan *api.InsertResponse),
+			ResponseChannel: make(chan *http.InsertResponse),
 		}
 	}
 
 	for i, req := range requests {
-		go func(index int, request *api.InsertRequest) {
+		go func(index int, request *http.InsertRequest) {
 			response := <-request.ResponseChannel
 			if response.Index != uint64(index) {
 				t.Errorf("The assigned index doesn't obey the insertion order")
@@ -75,13 +79,13 @@ func TestMultipleInsertionSequencing(t *testing.T) {
 
 func BenchmarkSingleInsertion(b *testing.B) {
 
-	data := api.InsertData{Message: "Event 1"}
-	request := &api.InsertRequest{
+	data := http.InsertData{Message: "Event 1"}
+	request := &http.InsertRequest{
 		InsertData:      data,
-		ResponseChannel: make(chan *api.InsertResponse),
+		ResponseChannel: make(chan *http.InsertResponse),
 	}
 
-	sequencer := NewSequencer(10)
+	sequencer := NewSequencer(10, history.NewInmemoryTree())
 	sequencer.Start()
 
 	for i := 0; i < b.N; i++ {

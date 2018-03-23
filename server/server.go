@@ -5,9 +5,11 @@ package server
 
 import (
 	"context"
-	"github.com/golang/glog"
 	"net/http"
+	"os"
 	"time"
+
+	"github.com/golang/glog"
 
 	apihttp "verifiabledata/api/http"
 	"verifiabledata/merkle/history"
@@ -67,8 +69,14 @@ func startHttpServer(endpoint string) *http.Server {
 
 func (s *Server) Stop() {
 	glog.Infof("main: stopping HTTP server")
-	if err := s.HTTPServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
-		panic(err)
+
+	err := s.HTTPServer.Shutdown(nil)
+	if err != nil {
+		// FIXME: err can be failure/timeout, handle it
+		glog.Errorf("Server shutdown return not nil value %v", err)
 	}
+	defer os.Exit(0)
+
 	glog.Infof("main: done. Exiting...")
+
 }

@@ -11,54 +11,39 @@ package agent
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"net/http"
-	"os"
+	"strings"
 	"time"
-
-	"github.com/golang/glog"
 )
 
-type Agent struct {
-}
-
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
+type Agent struct{}
 
 func Run(ctx context.Context) (*Agent, error) {
 	agent := new(Agent)
-	// mock some time
 
-	time.Sleep(time.Second * 2)
+	// wait some time to load server
+	time.Sleep(time.Second)
 
 	return agent, nil
 
 }
 
-func (a *Agent) Echo(buff *os.File) {
-
-	// data, err := ioutil.ReadAll(buff)
-	// check(err)
-
-	data := []byte(`{"message": "this is a sample event"}`)
+func (a *Agent) Add(message string) {
+	data := []byte(strings.Join([]string{`{"message": "`, message, `"}`}, ""))
 
 	req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(data))
-	check(err)
+	if err != nil {
+		panic(err)
+	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Api-Key", "this-is-my-api-key")
 
 	resp, err := http.DefaultClient.Do(req)
-	check(err)
+	if err != nil {
+		panic(err)
+	}
 
 	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	check(err)
-
-	glog.Infof("stdin data: %v\n", string(body))
 
 }

@@ -27,7 +27,7 @@ func TestAdd(t *testing.T) {
 
 	for _, e := range testCases {
 		t.Log("Testing event: ", e.event)
-		commitment, err := ht.Add([]byte(e.event))
+		commitment, _, err := ht.Add([]byte(e.event))
 		if err != nil {
 			t.Fatal("Error in Add call: ", err)
 		}

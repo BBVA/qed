@@ -108,12 +108,10 @@ func QueueHandlerConstructor(insertRequestQueue chan *InsertRequest) http.Handle
 			ResponseChannel: responseChannel,
 		}
 
-		log.Print(eventRequest)
 		insertRequestQueue <- eventRequest
 
 		// Wait for the response
 		response := <-responseChannel
-		log.Print(response)
 
 		out, err := json.Marshal(response)
 		if err != nil {

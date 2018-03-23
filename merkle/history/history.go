@@ -172,16 +172,16 @@ func (t *Tree) getNode(i, r, v uint64) (*Node, error) {
 // Given an event the system appends it to the history tree as
 // the i:th entry and then outputs a commitment
 // t.ps://eprint.iacr.org/2015/007.pdf
-func (t *Tree) Add(data []byte) (*Commitment, error) {
+func (t *Tree) Add(data []byte) (*Commitment, *Node, error) {
 
 	node := &Node{
-		&Position{t.size, 0},
-		t.hash.Do(data),
+		Pos:    &Position{t.size, 0},
+		Digest: t.hash.Do(data),
 	}
 
 	// add event to storage
 	if err := t.events.Add(node); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// increase tree size
@@ -193,13 +193,13 @@ func (t *Tree) Add(data []byte) (*Commitment, error) {
 	rootNode, err := t.getNode(0, d, v)
 	if err != nil {
 		// TODO: rollback inclusion in storage if we cannot calculate a commitment
-		return nil, err
+		return nil, nil, err
 	}
 	C_n := &Commitment{
 		Version: v,
 		Digest:  rootNode.Digest,
 	}
-	return C_n, nil
+	return C_n, node, nil
 
 }
 
