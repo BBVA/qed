@@ -103,8 +103,8 @@ type cache struct {
 func newcache(n int) *cache {
 	return &cache{
 		n,
-		make(map[string][]byte, 2097153), // 2^(layers+1) - 1 nodes in the cache
-		n - 27,
+		make(map[string][]byte, 50000000), // 2^(layers+1) - 1 nodes in the cache
+		n - 30,
 	}
 }
 
