@@ -59,4 +59,6 @@ amounts of data for:
      go test verifiabledata/sequencer
  
      go test -bench="." verifiabledata/tree/history
-     go test -bench="." verifiabledata/merkle/hyper
+     go test -v -timeout=1h -bench="." -cpuprofile cpu.out -memprofile mem.out verifiabledata/merkle/hyper
+     
+     go tool pprof hyper.test cpu.out mem.out

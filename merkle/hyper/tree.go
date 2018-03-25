@@ -5,8 +5,6 @@ import (
 	"encoding/binary"
 	"strconv"
 	"verifiabledata/util"
-
-	"github.com/cznic/b"
 )
 
 // Constants
@@ -15,26 +13,16 @@ var set = []byte{0x01}
 
 const byteslen = 32
 
-// A value is what we store in a tree's leaf
-type value struct {
-	key   []byte
-	value []byte
-}
 
-// creates a new value
-func newvalue(k, v []byte) *value {
-	return &value{k, v}
-}
 
 // holds a hyper tree
-type tree struct {
+type Tree struct {
 	id      []byte
-	upper_cache   *cache
-	lower_cache *cache
+	upper_cache   Cache
+	lower_cache Cache
 	defhash [][]byte
-	hasher  *util.Hasher
-	store   *b.Tree
-	stats   *stats
+	hasher  util.Hasher
+	store   Storage
 }
 
 func cmp(a, b interface{}) int {
@@ -42,7 +30,7 @@ func cmp(a, b interface{}) int {
 }
 
 // creates a new hyper tree
-func newtree(id string, c *cache, h *hasher) *tree {
+func NewTree(id string, upper, lower Cache, h util.Hasher, s Store) *tree {
 	t := &tree{
 		[]byte(id),
 		c,
@@ -60,7 +48,7 @@ func newtree(id string, c *cache, h *hasher) *tree {
 	return t
 }
 
-func (t *tree) toCache(v *value, p *position) []byte {
+func (t *tree) toCache(v *Value, p *Position) []byte {
 	var left, right, nh []byte
 
 	// if we are beyond the cache zone
@@ -90,7 +78,7 @@ func (t *tree) toCache(v *value, p *position) []byte {
 	return nh
 }
 
-func (t *tree) fromCache(v *value, p *position) []byte {
+func (t *tree) fromCache(v *Value, p *Position) []byte {
 
 	// get the value from the cache
 	cached_hash, cached := t.cache.node[p.String()]
@@ -105,7 +93,7 @@ func (t *tree) fromCache(v *value, p *position) []byte {
 
 }
 
-func (t *tree) fromStorage(d *D, v *value, p *position) []byte {
+func (t *tree) fromStorage(d *D, v *Value, p *Position) []byte {
 	// if we are a leaf, return our hash
 	if p.height == 0 {
 		t.stats.leaf += 1
@@ -134,7 +122,7 @@ func (t *tree) leafHash(a, b []byte) []byte {
 	return t.hasher.Do(t.id, b)
 }
 
-func (t *tree) interiorHash(left, right []byte, p *position) []byte {
+func (t *tree) interiorHash(left, right []byte, p *Position) []byte {
 	t.stats.ih += 1
 	if bytes.Equal(left, right) {
 		return t.hasher.Do(left, right)
@@ -150,7 +138,7 @@ func (t *tree) interiorHash(left, right []byte, p *position) []byte {
 func (t *tree) Add(key []byte, v []byte) []byte {
 	val := &value{key, v}
 
-	t.store.Set(key, v)
+	t.store.Add(val)
 	return t.toCache(val, rootpos(t.hasher.Size))
 }
 

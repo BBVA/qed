@@ -3,9 +3,23 @@ package hyper
 import (
 	"bytes"
 	"sort"
-)
 
-// D is our data structure to authenticate
+)
+// Storage is an interface that defines the operations needed 
+// for a storage engine or database
+type Storage interface {
+	Add(*Value) error
+	Get(*Position) *D
+}
+
+// A value is what we store in the storage
+type Value struct {
+	Key   []byte
+	Value []byte
+}
+
+
+// D intermediate data structure from database to memory
 type D struct {
 	v []*value
 }
