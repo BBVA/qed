@@ -7,8 +7,8 @@ package http
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"net/http"
+	// "github.com/golang/glog"
 )
 
 // Create a JSON struct for our HealthCheck
@@ -140,7 +140,6 @@ type FetchRequest struct {
 
 func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		// Make our endpoint cand only be called with HTTP GET method
 		if r.Method != "GET" {
 			w.Header().Set("Allow", "GET")
@@ -173,7 +172,6 @@ func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
 
 		// Wait for the response
 		response := <-responseChannel
-		log.Print(response)
 
 		out, err := json.Marshal(response)
 		if err != nil {

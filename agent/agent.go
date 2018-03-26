@@ -65,10 +65,30 @@ func (a *Agent) Fetch(message string) *apiHttp.FetchResponse {
 	data := []byte(strings.Join([]string{`{"message": "`, message, `"}`}, ""))
 
 	// Create a simple request to out fetch endpoint
-	_, err := http.NewRequest("GET", "/fetch", bytes.NewBuffer(data))
+	req, err := http.NewRequest("GET", "http://localhost:8080/fetch", bytes.NewBuffer(data))
 	if err != nil {
 		panic(err)
 	}
 
-	return nil
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Api-Key", "this-is-my-api-key")
+
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+
+	fetch := &apiHttp.FetchResponse{}
+
+	json.Unmarshal([]byte(bodyBytes), &fetch)
+
+	return fetch
+}
+
+func (a *Agent) Verify(message string) {
+	return
 }

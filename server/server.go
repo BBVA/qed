@@ -37,14 +37,11 @@ func (s *Server) Run(ctx context.Context) error {
 	time.Sleep(time.Second * 2)
 
 	return nil
-
 }
 
 func startHttpServer(endpoint string) *http.Server {
 
 	glog.Infof("HTTP server starting on %v", endpoint)
-
-	fetchQueue := make(chan *apihttp.FetchRequest)
 
 	// INFO: Creating HistoryTree for now. We will need a process to subscribe
 	// to a external one in the distributed future
@@ -56,7 +53,7 @@ func startHttpServer(endpoint string) *http.Server {
 	srv := &http.Server{Addr: endpoint}
 	http.Handle("/health-check", apihttp.AuthHandlerMiddleware(apihttp.HealthCheckHandler))
 	http.Handle("/events", apihttp.AuthHandlerMiddleware(apihttp.InsertEvent(seq.InsertRequestQueue)))
-	http.Handle("/fetch", apihttp.AuthHandlerMiddleware(apihttp.FetchEvent(fetchQueue)))
+	http.Handle("/fetch", apihttp.AuthHandlerMiddleware(apihttp.FetchEvent(seq.FetchRequestQueue)))
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {

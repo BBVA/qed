@@ -39,12 +39,10 @@ func main() {
 	}
 
 	go func() {
-		glog.Info("init channel")
-
 		for {
 			select {
 			case msg := <-ch:
-				agent.Fetch(msg)
+				glog.Info(agent.Fetch(msg))
 
 			default:
 				close(ch)
