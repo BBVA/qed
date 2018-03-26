@@ -41,7 +41,7 @@ func TestHealthCheckHandler(t *testing.T) {
 	}
 }
 
-func TestQueueHandlerConstructor(t *testing.T) {
+func TestInsertEvent(t *testing.T) {
 	// Create a request to pass to our handler. We pass a message as a data.
 	// If it's nil it will fail.
 	data := []byte(`{"message": "this is a sample event"}`)
@@ -67,7 +67,7 @@ func TestQueueHandlerConstructor(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := QueueHandlerConstructor(fakeRequestQueue)
+	handler := InsertEvent(fakeRequestQueue)
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.

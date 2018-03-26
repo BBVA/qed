@@ -55,7 +55,7 @@ func startHttpServer(endpoint string) *http.Server {
 
 	srv := &http.Server{Addr: endpoint}
 	http.Handle("/health-check", apihttp.AuthHandlerMiddleware(apihttp.HealthCheckHandler))
-	http.Handle("/events", apihttp.AuthHandlerMiddleware(apihttp.QueueHandlerConstructor(seq.InsertRequestQueue)))
+	http.Handle("/events", apihttp.AuthHandlerMiddleware(apihttp.InsertEvent(seq.InsertRequestQueue)))
 	http.Handle("/fetch", apihttp.AuthHandlerMiddleware(apihttp.FetchEvent(fetchQueue)))
 
 	go func() {

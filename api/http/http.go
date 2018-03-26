@@ -75,7 +75,7 @@ type InsertRequest struct {
 //	"commitment": "6A19F0FB4BE54511524BCD5B0C98B38DA1EE049A39735C39311E10336024436F",
 //	"index": 1
 //	}
-func QueueHandlerConstructor(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
+func InsertEvent(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
