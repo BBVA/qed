@@ -158,11 +158,10 @@ func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
+
 		}
 
-		responseChannel := make(
-			chan *FetchResponse,
-		)
+		responseChannel := make(chan *FetchResponse)
 		defer close(responseChannel)
 
 		eventRequest := &FetchRequest{
