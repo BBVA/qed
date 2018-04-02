@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"verifiabledata/api/http"
-	"verifiabledata/merkle/history"
 	"verifiabledata/util"
 )
 
@@ -17,9 +16,10 @@ func TestSingleInsertionSequencing(t *testing.T) {
 	request := &http.InsertRequest{
 		InsertData:      data,
 		ResponseChannel: make(chan *http.InsertResponse),
+		ProcessResponse: http.ProcessInsertResponse,
 	}
 
-	sequencer := NewSequencer(10, history.NewInmemoryTree())
+	sequencer := NewSequencer(10)
 	sequencer.Start()
 
 	sequencer.Enqueue(request)
@@ -46,7 +46,7 @@ func TestSingleInsertionSequencing(t *testing.T) {
 
 func TestMultipleInsertionSequencing(t *testing.T) {
 
-	sequencer := NewSequencer(10, history.NewInmemoryTree())
+	sequencer := NewSequencer(10)
 	sequencer.Start()
 
 	var wg sync.WaitGroup
@@ -58,14 +58,15 @@ func TestMultipleInsertionSequencing(t *testing.T) {
 		requests[i] = &http.InsertRequest{
 			InsertData:      data,
 			ResponseChannel: make(chan *http.InsertResponse),
+			ProcessResponse: http.ProcessInsertResponse,
 		}
 	}
 
 	for i, req := range requests {
 		go func(index int, request *http.InsertRequest) {
 			response := <-request.ResponseChannel
-			if response.Index != uint64(index) {
-				t.Errorf("The assigned index doesn't obey the insertion order")
+			if response.Index != uint64(index)+1 {
+				t.Errorf("The assigned index doesn't obey the insertion order %d, %d", response.Index, index)
 			}
 			wg.Done()
 		}(i, req)
@@ -83,9 +84,10 @@ func BenchmarkSingleInsertion(b *testing.B) {
 	request := &http.InsertRequest{
 		InsertData:      data,
 		ResponseChannel: make(chan *http.InsertResponse),
+		ProcessResponse: http.ProcessInsertResponse,
 	}
 
-	sequencer := NewSequencer(10, history.NewInmemoryTree())
+	sequencer := NewSequencer(10)
 	sequencer.Start()
 
 	for i := 0; i < b.N; i++ {

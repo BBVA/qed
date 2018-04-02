@@ -12,7 +12,7 @@ import (
 	"github.com/golang/glog"
 
 	apihttp "verifiabledata/api/http"
-	"verifiabledata/merkle/history"
+	// "verifiabledata/merkle/history"
 	"verifiabledata/sequencer"
 	"verifiabledata/util"
 )
@@ -45,15 +45,16 @@ func startHttpServer(endpoint string) *http.Server {
 
 	// INFO: Creating HistoryTree for now. We will need a process to subscribe
 	// to a external one in the distributed future
-	tree := history.NewInmemoryTree()
-	seq := sequencer.NewSequencer(1000, tree)
+	seq := sequencer.NewSequencer(1000)
 
 	seq.Start()
 
 	srv := &http.Server{Addr: endpoint}
 	http.Handle("/health-check", apihttp.AuthHandlerMiddleware(apihttp.HealthCheckHandler))
 	http.Handle("/events", apihttp.AuthHandlerMiddleware(apihttp.InsertEvent(seq.InsertRequestQueue)))
-	http.Handle("/fetch", apihttp.AuthHandlerMiddleware(apihttp.FetchEvent(seq.FetchRequestQueue)))
+
+	http.Handle("/fetch", apihttp.AuthHandlerMiddleware(apihttp.GetEvent(seq.FetchRequestQueue, apihttp.ProcessFetchResponse)))
+	http.Handle("/proof/membership", apihttp.AuthHandlerMiddleware(apihttp.GetEvent(seq.FetchRequestQueue, apihttp.ProcessMembershipProof)))
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {

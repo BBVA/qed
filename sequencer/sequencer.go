@@ -1,24 +1,19 @@
 package sequencer
 
 import (
-	"encoding/hex"
-
 	"github.com/golang/glog"
 
 	"verifiabledata/api/http"
-	"verifiabledata/merkle/history"
 )
 
 type Sequencer struct {
-	Tree               *history.Tree
 	InsertRequestQueue chan *http.InsertRequest
 	FetchRequestQueue  chan *http.FetchRequest
 	QuitChan           chan bool
 }
 
-func NewSequencer(bufferSize uint, tree *history.Tree) Sequencer {
+func NewSequencer(bufferSize uint) Sequencer {
 	sequencer := Sequencer{
-		Tree:               tree,
 		InsertRequestQueue: make(chan *http.InsertRequest, bufferSize),
 		FetchRequestQueue:  make(chan *http.FetchRequest, bufferSize),
 		QuitChan:           make(chan bool),
@@ -28,40 +23,16 @@ func NewSequencer(bufferSize uint, tree *history.Tree) Sequencer {
 
 func (sequencer *Sequencer) Start() {
 
-	// FIXME: temporal mock insead of the SMT
-	var smt_mock = make(map[string]*http.InsertResponse)
-
 	go func() {
 		for {
 			select {
 			case request := <-sequencer.InsertRequestQueue:
-				// glog.Infof("Handling event: %s", request.InsertData.Message)
-
-				commitment, node, err := sequencer.Tree.Add([]byte(request.InsertData.Message))
-				if err != nil {
-					panic(err)
-				}
-
-				response := http.InsertResponse{
-					Hash:       string(node.Digest),
-					Commitment: string(commitment.Digest),
-					Index:      node.Pos.Index,
-				}
-
-				// FIXME: temporal mock insead of the SMT
-				smt_mock[request.InsertData.Message] = &response
-
-				glog.Infof("New event inserted with index [%d]: %s", response.Index,
-					hex.EncodeToString([]byte(response.Commitment)))
-
-				request.ResponseChannel <- &response
+				glog.Infof("Handling event: %s", request.InsertData.Message)
+				request.ProcessResponse(request.InsertData, request.ResponseChannel)
 
 			case fetch := <-sequencer.FetchRequestQueue:
 				glog.Infof("Fetching  event: %s", fetch.FetchData.Message)
-				// FIXME: temporal mock insead of the SMT
-				fetch.ResponseChannel <- &http.FetchResponse{
-					Index: smt_mock[fetch.FetchData.Message].Index,
-				}
+				go fetch.ProcessResponse(fetch.FetchData, fetch.ResponseChannel)
 
 			case <-sequencer.QuitChan:
 				return

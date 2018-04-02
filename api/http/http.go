@@ -6,10 +6,18 @@ package http
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
-	// "github.com/golang/glog"
+
+	"github.com/golang/glog"
+
+	"verifiabledata/merkle/history"
 )
+
+// FIXME: temporal mock insead of the SMT
+var smt_mock = make(map[string]*InsertResponse)
+var tree = history.NewInmemoryTree()
 
 // Create a JSON struct for our HealthCheck
 type HealthCheckResponse struct {
@@ -62,6 +70,7 @@ type InsertResponse struct {
 type InsertRequest struct {
 	InsertData      InsertData
 	ResponseChannel chan *InsertResponse
+	ProcessResponse func(data InsertData, responseChannel chan *InsertResponse)
 }
 
 // This handler posts an event into the system:
@@ -75,6 +84,28 @@ type InsertRequest struct {
 //	"commitment": "6A19F0FB4BE54511524BCD5B0C98B38DA1EE049A39735C39311E10336024436F",
 //	"index": 1
 //	}
+
+func ProcessInsertResponse(data InsertData, responseChannel chan *InsertResponse) {
+	commitment, node, err := tree.Add([]byte(data.Message))
+	if err != nil {
+		panic(err)
+	}
+
+	response := InsertResponse{
+		Hash:       string(node.Digest),
+		Commitment: string(commitment.Digest),
+		Index:      node.Pos.Index,
+	}
+
+	// FIXME: temporal mock insead of the SMT
+	smt_mock[data.Message] = &response
+
+	glog.Infof("New event inserted with index [%d]: %s", response.Index,
+		hex.EncodeToString([]byte(response.Commitment)))
+
+	responseChannel <- &response
+}
+
 func InsertEvent(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +137,7 @@ func InsertEvent(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
 		eventRequest := &InsertRequest{
 			InsertData:      event,
 			ResponseChannel: responseChannel,
+			ProcessResponse: ProcessInsertResponse,
 		}
 
 		insertRequestQueue <- eventRequest
@@ -136,9 +168,17 @@ type FetchResponse struct {
 type FetchRequest struct {
 	FetchData       FetchData
 	ResponseChannel chan *FetchResponse
+	ProcessResponse func(data FetchData, responseChannel chan *FetchResponse)
 }
 
-func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
+func ProcessFetchResponse(fetch FetchData, responseChannel chan *FetchResponse) {
+	// FIXME: temporal mock insead of the SMT
+	responseChannel <- &FetchResponse{
+		Index: smt_mock[fetch.Message].Index,
+	}
+}
+
+func GetEvent(eventIndex chan *FetchRequest, process func(FetchData, chan *FetchResponse)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Make our endpoint cand only be called with HTTP GET method
 		if r.Method != "GET" {
@@ -166,6 +206,7 @@ func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
 		eventRequest := &FetchRequest{
 			FetchData:       fetch,
 			ResponseChannel: responseChannel,
+			ProcessResponse: process,
 		}
 
 		eventIndex <- eventRequest
@@ -183,6 +224,10 @@ func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
 		w.Write(out)
 		return
 	}
+}
+
+func ProcessMembershipProof(fetch FetchData, responseChannel chan *FetchResponse) {
+
 }
 
 // AuthHandlerMiddleware function is an HTTP handler wrapper that validates our requests
