@@ -14,9 +14,9 @@ import (
 
 // Hahser expose the function hash and its properties
 type Hasher struct {
-	Do     func(...[]byte) []byte	// computes the hash function
-	Size   int	// the size in bits of the hash function
-	Maxval []byte // the maximum value the has function can return
+	Do     func(...[]byte) []byte // computes the hash function
+	Size   uint64                 // the size in bits of the hash function
+	Maxval []byte                 // the maximum value the has function can return
 }
 
 // Returns a SHA256 HashFunc
@@ -38,7 +38,7 @@ func Hash256() *Hasher {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 
-	return  &h
+	return &h
 }
 
 func Pow(x, y uint64) uint64 {

@@ -3,148 +3,162 @@ package hyper
 import (
 	"bytes"
 	"encoding/binary"
-	"strconv"
+	"verifiabledata/merkle"
 	"verifiabledata/util"
 )
 
-// Constants
 var empty = []byte{0x00}
 var set = []byte{0x01}
 
-const byteslen = 32
-
-
-
-// holds a hyper tree
+// Tree holds a hyper tree structure
 type Tree struct {
-	id      []byte
-	upper_cache   Cache
-	lower_cache Cache
-	defhash [][]byte
-	hasher  util.Hasher
-	store   Storage
+	id            []byte
+	hasher        *util.Hasher
+	defaultHashes [][]byte
+	cache         merkle.Cache
+	store         Storage
+	stats         *stats
+	cacheArea     *area
 }
 
-func cmp(a, b interface{}) int {
-	return bytes.Compare(a.([]byte), b.([]byte))
-}
-
-// creates a new hyper tree
-func NewTree(id string, upper, lower Cache, h util.Hasher, s Store) *tree {
-	t := &tree{
+func NewTree(id string, hasher *util.Hasher, cacheLevels uint64, cache merkle.Cache, store Storage) *Tree {
+	tree := &Tree{
 		[]byte(id),
-		c,
-		make([][]byte, h.Size),
-		h,
-		b.TreeNew(cmp),
+		hasher,
+		make([][]byte, hasher.Size),
+		cache,
+		store,
 		new(stats),
+		newArea(hasher.Size-cacheLevels, hasher.Size),
 	}
 
-	t.defhash[0] = t.hasher.Do(t.id, empty)
-	for i := 1; i < hasher.Size; i++ {
-		t.defhash[i] = t.hasher.Do(t.defhash[i-1], t.defhash[i-1])
+	// init default hashes cache
+	tree.defaultHashes[0] = tree.hasher.Do(tree.id, empty)
+	for i := 1; i < int(hasher.Size); i++ {
+		tree.defaultHashes[i] = tree.hasher.Do(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
 
-	return t
+	return tree
 }
 
-func (t *tree) toCache(v *Value, p *Position) []byte {
-	var left, right, nh []byte
+// Add inserts a new key-value pair into the tree and returns the
+// root hash as a commitment.
+func (t *Tree) Add(key []byte, value []byte) []byte {
+	t.store.Add(key, value)
+	return t.toCache(key, value, rootpos(t.hasher.Size))
+}
+
+// INTERNALS
+
+// Area is the area of the tree designated by its min height and its max height
+type area struct {
+	minHeigth, maxHeigth uint64
+}
+
+// check if a position is whithing the caching area
+func (a area) has(p *Position) bool {
+	if p.height > a.minHeigth && p.height <= a.maxHeigth {
+		return true
+	}
+	return false
+}
+
+// posssible overflow
+func (a area) size() uint64 {
+	return 2 ^ (a.maxHeigth + 1) - 1 - 2 ^ (a.minHeigth + 1) - 1
+}
+
+// creates a new area structure, initialized with max and min boundaries
+func newArea(min, max uint64) *area {
+	return &area{
+		min,
+		max,
+	}
+}
+
+func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
+	var left, right []byte
 
 	// if we are beyond the cache zone
 	// we need to go to database to get
 	// nodes
-	if !t.cache.has(p) {
-		return t.fromStorage(fromBTree(t, p), v, p)
+	if !t.cacheArea.has(pos) {
+		t.stats.disk += 1
+		return t.fromStorage(t.store.Get(pos), pos)
 	}
 
 	// if not, out hash is the hash of our left and right child
-	dir := bytes.Compare(v.key, p.split)
+	dir := bytes.Compare(key, pos.split)
 	switch {
 	case dir < 0:
-		left = t.toCache(a, v, p.left())
-		right = t.fromCache(v, p.right())
+		left = t.toCache(key, value, pos.left())
+		right = t.fromCache(pos.right())
 	case dir > 0:
-		left = t.fromCache(v, p.left())
-		right = t.toCache(a, v, p.right())
+		left = t.fromCache(pos.left())
+		right = t.toCache(key, value, pos.right())
 	}
 
-	nh = t.interiorHash(left, right, p)
-	
+	nodeHash := t.interiorHash(left, right, pos)
+
 	// we re-cache all the nodes on each update
 	// if the node is whithin the cache area
-	t.cache.insert(p, nh)
+	t.cache.Put(pos.base, nodeHash)
 
-	return nh
+	return nodeHash
 }
 
-func (t *tree) fromCache(v *Value, p *Position) []byte {
+func (t *Tree) fromCache(pos *Position) []byte {
 
 	// get the value from the cache
-	cached_hash, cached := t.cache.node[p.String()]
+	cachedHash, cached := t.cache.Get(pos.base)
 	if cached {
 		t.stats.hits += 1
-		return cached_hash
+		return cachedHash
 	}
 
 	// if there is no value in the cache,return a default hash
 	t.stats.dh += 1
-	return t.defhash[p.height]
+	return t.defaultHashes[pos.height]
 
 }
 
-func (t *tree) fromStorage(d *D, v *Value, p *Position) []byte {
+func (t *Tree) fromStorage(d D, pos *Position) []byte {
 	// if we are a leaf, return our hash
-	if p.height == 0 {
+	if pos.height == 0 {
 		t.stats.leaf += 1
-		return t.leafHash(set, v.key)
+		return t.leafHash(set, pos.base)
 
 	}
 
 	// if there are no more childs,
 	// return a default hash
-	if d.Len() == 0 {
+	if len(d) == 0 {
 		t.stats.dh += 1
-		return t.defhash[p.height]
-
+		return t.defaultHashes[pos.height]
 	}
 
-	left, right := d.Split(p.split)
-	return t.interiorHash(t.fromStorage(left, v, p.left()), t.fromStorage(right, v, p.right()), p)
+	left, right := d.Split(pos.split)
+
+	return t.interiorHash(t.fromStorage(left, pos.left()), t.fromStorage(right, pos.right()), pos)
 }
 
-func (t *tree) leafHash(a, b []byte) []byte {
+func (t *Tree) leafHash(a, base []byte) []byte {
 	t.stats.lh += 1
 	if bytes.Equal(a, empty) {
 		return t.hasher.Do(t.id)
 	}
 
-	return t.hasher.Do(t.id, b)
+	return t.hasher.Do(t.id, base)
 }
 
-func (t *tree) interiorHash(left, right []byte, p *Position) []byte {
+func (t *Tree) interiorHash(left, right []byte, pos *Position) []byte {
 	t.stats.ih += 1
 	if bytes.Equal(left, right) {
 		return t.hasher.Do(left, right)
 	}
 
-	height_bytes := make([]byte, 4)
-	binary.LittleEndian.PutUintbyteslen(height_bytes, uintbyteslen(p.height))
+	heightBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(heightBytes, uint32(pos.height))
 
-	return t.hasher.Do(left, right, p.base, height_bytes)
+	return t.hasher.Do(left, right, pos.base, heightBytes)
 }
-
-
-func (t *tree) Add(key []byte, v []byte) []byte {
-	val := &value{key, v}
-
-	t.store.Add(val)
-	return t.toCache(val, rootpos(t.hasher.Size))
-}
-
-/*
-	Algorithm
-
-
-
-*/

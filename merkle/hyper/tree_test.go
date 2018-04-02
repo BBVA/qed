@@ -2,11 +2,12 @@ package hyper
 
 import (
 	"crypto/rand"
-// 	"fmt"
+	"verifiabledata/util"
+	// 	"fmt"
 	"testing"
 )
 
-/* 
+/*
 func TestUpdate(t *testing.T) {
 
 	values := []value{
@@ -37,10 +38,10 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	ht := newtree("my bench tree")
+	ht := NewTree("my bench tree", util.Hash256(), 30, NewSimpleCache(50000000), NewBPlusTreeStorage())
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
 		ht.Add(randomBytes(64), randomBytes(1))
 	}
-	b.Logf("stats = %+v len = %d min heigth = %d\n", ht.stats, len(ht.cache.node), ht.cache.minHeight)
+	b.Logf("stats = %+v\n", ht.stats)
 }

@@ -1,17 +1,20 @@
 package hyper
 
+import "strconv"
+
+const byteslen = 32
 
 // A position identifies a unique node in the tree by its base, split and height
 type Position struct {
 	base   []byte // the left-most leaf in this node subtree
 	split  []byte // the left-most leaf in the right branch of this node subtree
-	height int    // height in the tree of this node
-	n      int    // number of bits in the hash key
+	height uint64 // height in the tree of this node
+	n      uint64 // number of bits in the hash key
 }
 
 // returns a string representation of the position
 func (p Position) String() string {
-	return string(p.base[:byteslen]) + strconv.Itoa(p.height)
+	return string(p.base[:byteslen]) + strconv.Itoa(int(p.height))
 	// return fmt.Sprintf("%x-%d", p.base, p.height)
 }
 
@@ -25,7 +28,7 @@ func (p Position) left() *Position {
 	np.split = make([]byte, byteslen)
 	copy(np.split, np.base)
 
-	bitSet(np.split, p.n-p.height)
+	bitSet(np.split, int(p.n-p.height))
 
 	return &np
 }
@@ -40,14 +43,14 @@ func (p Position) right() *Position {
 	np.split = make([]byte, byteslen)
 	copy(np.split, np.base)
 
-	bitSet(np.split, p.n-p.height)
+	bitSet(np.split, int(p.n-p.height))
 
 	return &np
 }
 
 // creates the tree root position
-func rootpos(n int) *Position {
-	var p position
+func rootpos(n uint64) *Position {
+	var p Position
 	p.base = make([]byte, byteslen)
 	p.split = make([]byte, byteslen)
 	p.height = n
@@ -57,8 +60,6 @@ func rootpos(n int) *Position {
 
 	return &p
 }
-
-
 
 func bitSet(bits []byte, i int)   { bits[i/8] |= 1 << uint(7-i%8) }
 func bitUnset(bits []byte, i int) { bits[i/8] &= 0 << uint(7-i%8) }
