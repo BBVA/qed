@@ -1,13 +1,13 @@
 package hyper
 
 // Cache interface defines the operations a cache mechanism must implement to
-// be usabel within the tree
+// be usable within the tree
 type Cache interface {
-	Insert(*position,[]bte) error
+	Insert(*position, []bte) error
 	Has(*position) bool
 }
 
-// area of the tree designated by its min and max height
+// Area is the area of the tree designated by its min and max height
 type Area struct {
 	minHeigth, maxHeigth int
 }
@@ -33,15 +33,14 @@ func newarea(min, max int) *area {
 	}
 }
 
-// a cache contains the hashes of the pre computed nodes
+// SimpleCache is a cache contains the hashes of the pre computed nodes
 type SimpleCache struct {
 	n    int               // number of bits in the hash key
 	node map[string][]byte // node map containing the cached hashes
 	area *area             // min height of the cache
 }
 
-
-func (c* simplecache) Insert(p *position, h []byte) {
+func (c *simplecache) Insert(p *position, h []byte) {
 	if c.area.has(p) {
 		c.node[p.String()] = nh
 	}
@@ -51,7 +50,7 @@ func (c *simplecache) Has(p *position) bool {
 	return c.area.has(p)
 }
 
-// creates a new cache structure, already initialized with
+// NewSimpleCache creates a new cache structure, already initialized with
 func NewSimpleCache(a *area, n int) *Cache {
 	return &SimpleCache{
 		n,
@@ -59,5 +58,3 @@ func NewSimpleCache(a *area, n int) *Cache {
 		a,
 	}
 }
-
-
