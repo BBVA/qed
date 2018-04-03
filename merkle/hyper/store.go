@@ -9,17 +9,17 @@ import (
 // for a storage engine or database
 type Storage interface {
 	Add(key []byte, value []byte) error
-	Get(*Position) D
+	Get(*Position) LeavesSlice
 }
 
-// D intermediate data structure from database to memory
-type D [][]byte
+// LeavesSlice is intermediate data structure from database to memory
+type LeavesSlice [][]byte
 
-// Split splits d.
-func (d D) Split(s []byte) (left, right D) {
+// Split splits the slice.
+func (ls LeavesSlice) Split(s []byte) (left, right LeavesSlice) {
 	// the smallest index i where d[i] >= s
-	i := sort.Search(len(d), func(i int) bool {
-		return bytes.Compare(d[i], s) >= 0
+	i := sort.Search(len(ls), func(i int) bool {
+		return bytes.Compare(ls[i], s) >= 0
 	})
-	return d[:i], d[i:]
+	return ls[:i], ls[i:]
 }

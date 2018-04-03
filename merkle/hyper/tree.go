@@ -120,7 +120,7 @@ func (t *Tree) fromCache(pos *Position) []byte {
 
 }
 
-func (t *Tree) fromStorage(d D, pos *Position) []byte {
+func (t *Tree) fromStorage(d LeavesSlice, pos *Position) []byte {
 	// if we are a leaf, return our hash
 	if pos.height == 0 {
 		t.stats.leaf += 1
