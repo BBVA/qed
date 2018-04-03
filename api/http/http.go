@@ -17,6 +17,7 @@ import (
 
 // FIXME: temporal mock insead of the SMT
 var smt_mock = make(map[string]*InsertResponse)
+
 var tree = history.NewInmemoryTree()
 
 // Create a JSON struct for our HealthCheck
@@ -85,28 +86,28 @@ type InsertRequest struct {
 //	"index": 1
 //	}
 
-func ProcessInsertResponse(data InsertData, responseChannel chan *InsertResponse) {
-	commitment, node, err := tree.Add([]byte(data.Message))
-	if err != nil {
-		panic(err)
-	}
-
-	response := InsertResponse{
-		Hash:       string(node.Digest),
-		Commitment: string(commitment.Digest),
-		Index:      node.Pos.Index,
-	}
-
-	// FIXME: temporal mock insead of the SMT
-	smt_mock[data.Message] = &response
-
-	glog.Infof("New event inserted with index [%d]: %s", response.Index,
-		hex.EncodeToString([]byte(response.Commitment)))
-
-	responseChannel <- &response
-}
-
 func InsertEvent(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
+
+	ProcessInsertResponse := func(data InsertData, responseChannel chan *InsertResponse) {
+		commitment, node, err := tree.Add([]byte(data.Message))
+		if err != nil {
+			panic(err)
+		}
+
+		response := InsertResponse{
+			Hash:       string(node.Digest),
+			Commitment: string(commitment.Digest),
+			Index:      node.Pos.Index,
+		}
+
+		// FIXME: temporal mock insead of the SMT
+		smt_mock[data.Message] = &response
+
+		glog.Infof("New event inserted with index [%d]: %s", response.Index,
+			hex.EncodeToString([]byte(response.Commitment)))
+
+		responseChannel <- &response
+	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -171,14 +172,7 @@ type FetchRequest struct {
 	ProcessResponse func(data FetchData, responseChannel chan *FetchResponse)
 }
 
-func ProcessFetchResponse(fetch FetchData, responseChannel chan *FetchResponse) {
-	// FIXME: temporal mock insead of the SMT
-	responseChannel <- &FetchResponse{
-		Index: smt_mock[fetch.Message].Index,
-	}
-}
-
-func GetEvent(eventIndex chan *FetchRequest, process func(FetchData, chan *FetchResponse)) http.HandlerFunc {
+func GetEvent(eventIndex chan *FetchRequest, process func(fetch FetchData, responseChannel chan *FetchResponse)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Make our endpoint cand only be called with HTTP GET method
 		if r.Method != "GET" {
@@ -226,8 +220,23 @@ func GetEvent(eventIndex chan *FetchRequest, process func(FetchData, chan *Fetch
 	}
 }
 
-func ProcessMembershipProof(fetch FetchData, responseChannel chan *FetchResponse) {
+func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
+	process := func(fetch FetchData, responseChannel chan *FetchResponse) {
+		// FIXME: temporal mock insead of the SMT
+		responseChannel <- &FetchResponse{
+			Index: smt_mock[fetch.Message].Index,
+		}
+	}
 
+	return GetEvent(eventIndex, process)
+}
+
+func GetMembershipProof(eventIndex chan *FetchRequest) http.HandlerFunc {
+	process := func(fetch FetchData, responseChannel chan *FetchResponse) {
+
+	}
+
+	return GetEvent(eventIndex, process)
 }
 
 // AuthHandlerMiddleware function is an HTTP handler wrapper that validates our requests
