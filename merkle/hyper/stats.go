@@ -3,13 +3,13 @@ package hyper
 // stats to measure the performance of the tree and
 // the associated caches and strategies
 type stats struct {
-	hits   uint64
-	disk   uint64
-	dh     uint64
-	update uint64
-	leaf   uint64
-	lh     uint64
-	ih     uint64
+	hits   int
+	disk   int
+	dh     int
+	update int
+	leaf   int
+	lh     int
+	ih     int
 	lend   float64
 }
 

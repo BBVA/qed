@@ -21,7 +21,7 @@ type Tree struct {
 	cacheArea     *area
 }
 
-func NewTree(id string, hasher *util.Hasher, cacheLevels uint64, cache merkle.Cache, store Storage) *Tree {
+func NewTree(id string, hasher *util.Hasher, cacheLevels int, cache merkle.Cache, store Storage) *Tree {
 	tree := &Tree{
 		[]byte(id),
 		hasher,
@@ -52,7 +52,7 @@ func (t *Tree) Add(key []byte, value []byte) []byte {
 
 // Area is the area of the tree designated by its min height and its max height
 type area struct {
-	minHeigth, maxHeigth uint64
+	minHeigth, maxHeigth int
 }
 
 // check if a position is whithing the caching area
@@ -64,7 +64,7 @@ func (a area) has(p *Position) bool {
 }
 
 // creates a new area structure, initialized with max and min boundaries
-func newArea(min, max uint64) *area {
+func newArea(min, max int) *area {
 	return &area{
 		min,
 		max,

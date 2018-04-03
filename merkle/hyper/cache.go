@@ -28,6 +28,6 @@ func (c *SimpleCache) Exists(key []byte) bool {
 
 // NewSimpleCache creates a new cache structure, already initialized
 // with a specified size
-func NewSimpleCache(size uint64) *SimpleCache {
+func NewSimpleCache(size int) *SimpleCache {
 	return &SimpleCache{make(map[[32]byte][]byte, size)}
 }
