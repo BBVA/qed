@@ -45,6 +45,4 @@ func (s *BPlusTreeStorage) Get(p *Position) D {
 		n++
 	}
 
-	return d
-
 }

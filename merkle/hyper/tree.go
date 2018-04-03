@@ -63,11 +63,6 @@ func (a area) has(p *Position) bool {
 	return false
 }
 
-// posssible overflow
-func (a area) size() uint64 {
-	return 2 ^ (a.maxHeigth + 1) - 1 - 2 ^ (a.minHeigth + 1) - 1
-}
-
 // creates a new area structure, initialized with max and min boundaries
 func newArea(min, max uint64) *area {
 	return &area{
@@ -77,7 +72,7 @@ func newArea(min, max uint64) *area {
 }
 
 func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
-	var left, right []byte
+	var left, right, nodeHash []byte
 
 	// if we are beyond the cache zone
 	// we need to go to database to get
@@ -87,7 +82,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 		return t.fromStorage(t.store.Get(pos), pos)
 	}
 
-	// if not, out hash is the hash of our left and right child
+	// if not, the node hash is the hash of our left and right child
 	dir := bytes.Compare(key, pos.split)
 	switch {
 	case dir < 0:
@@ -98,11 +93,14 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 		right = t.toCache(key, value, pos.right())
 	}
 
-	nodeHash := t.interiorHash(left, right, pos)
+	nodeHash = t.interiorHash(left, right, pos)
 
 	// we re-cache all the nodes on each update
 	// if the node is whithin the cache area
-	t.cache.Put(pos.base, nodeHash)
+	if t.cacheArea.has(pos) {
+		t.stats.update += 1
+		t.cache.Put(pos.base, nodeHash)
+	}
 
 	return nodeHash
 }
@@ -127,7 +125,6 @@ func (t *Tree) fromStorage(d D, pos *Position) []byte {
 	if pos.height == 0 {
 		t.stats.leaf += 1
 		return t.leafHash(set, pos.base)
-
 	}
 
 	// if there are no more childs,
