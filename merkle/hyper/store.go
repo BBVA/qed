@@ -9,7 +9,7 @@ import (
 // for a storage engine or database
 type Storage interface {
 	Add(key []byte, value []byte) error
-	Get(*Position) LeavesSlice
+	GetRange(start, end []byte) LeavesSlice
 }
 
 // LeavesSlice is intermediate data structure from database to memory

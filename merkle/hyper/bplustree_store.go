@@ -23,12 +23,12 @@ func (s *BPlusTreeStorage) Add(key []byte, value []byte) error {
 	return nil
 }
 
-func (s *BPlusTreeStorage) Get(p *Position) LeavesSlice {
+func (s *BPlusTreeStorage) GetRange(start, end []byte) LeavesSlice {
 	var leaves LeavesSlice
 	var err error
 	var k interface{}
 
-	iter, _ := s.store.Seek(p.base)
+	iter, _ := s.store.Seek(start)
 	defer iter.Close()
 
 	n := 0
@@ -37,7 +37,7 @@ func (s *BPlusTreeStorage) Get(p *Position) LeavesSlice {
 		if err != nil {
 			return leaves
 		}
-		if bytes.Compare(k.([]byte), p.split) < 0 {
+		if bytes.Compare(k.([]byte), end) < 0 {
 			leaves = append(leaves, k.([]byte))
 		} else {
 			return leaves

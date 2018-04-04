@@ -79,7 +79,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	// nodes
 	if !t.cacheArea.has(pos) {
 		t.stats.disk += 1
-		return t.fromStorage(t.store.Get(pos), pos)
+		return t.fromStorage(t.store.GetRange(pos.base, pos.split), pos)
 	}
 
 	// if not, the node hash is the hash of our left and right child
