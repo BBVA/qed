@@ -7,8 +7,8 @@ import (
 	"verifiabledata/util"
 )
 
-var empty = []byte{0x00}
-var set = []byte{0x01}
+var Empty = []byte{0x00}
+var Set = []byte{0x01}
 
 // Tree holds a hyper tree structure
 type Tree struct {
@@ -33,7 +33,7 @@ func NewTree(id string, hasher *util.Hasher, cacheLevels int, cache merkle.Cache
 	}
 
 	// init default hashes cache
-	tree.defaultHashes[0] = tree.hasher.Do(tree.id, empty)
+	tree.defaultHashes[0] = tree.hasher.Do(tree.id, Empty)
 	for i := 1; i < int(hasher.Size); i++ {
 		tree.defaultHashes[i] = tree.hasher.Do(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
@@ -43,9 +43,9 @@ func NewTree(id string, hasher *util.Hasher, cacheLevels int, cache merkle.Cache
 
 // Add inserts a new key-value pair into the tree and returns the
 // root hash as a commitment.
-func (t *Tree) Add(key []byte, value []byte) []byte {
+func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
 	t.store.Add(key, value)
-	return t.toCache(key, value, rootpos(t.hasher.Size))
+	return t.toCache(key, value, rootpos(t.hasher.Size)), nil
 }
 
 // INTERNALS
@@ -79,7 +79,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	// nodes
 	if !t.cacheArea.has(pos) {
 		t.stats.disk += 1
-		return t.fromStorage(t.store.GetRange(pos.base, pos.split), pos)
+		return t.fromStorage(t.store.GetRange(pos.base, pos.split), value, pos)
 	}
 
 	// if not, the node hash is the hash of our left and right child
@@ -120,11 +120,11 @@ func (t *Tree) fromCache(pos *Position) []byte {
 
 }
 
-func (t *Tree) fromStorage(d LeavesSlice, pos *Position) []byte {
+func (t *Tree) fromStorage(d LeavesSlice, value []byte, pos *Position) []byte {
 	// if we are a leaf, return our hash
 	if pos.height == 0 {
 		t.stats.leaf += 1
-		return t.leafHash(set, pos.base)
+		return t.leafHash(value, pos.base)
 	}
 
 	// if there are no more childs,
@@ -134,14 +134,16 @@ func (t *Tree) fromStorage(d LeavesSlice, pos *Position) []byte {
 		return t.defaultHashes[pos.height]
 	}
 
-	left, right := d.Split(pos.split)
+	leftSlice, rightSlice := d.Split(pos.split)
 
-	return t.interiorHash(t.fromStorage(left, pos.left()), t.fromStorage(right, pos.right()), pos)
+	left := t.fromStorage(leftSlice, value, pos.left())
+	right := t.fromStorage(rightSlice, value, pos.right())
+	return t.interiorHash(left, right, pos)
 }
 
 func (t *Tree) leafHash(a, base []byte) []byte {
 	t.stats.lh += 1
-	if bytes.Equal(a, empty) {
+	if bytes.Equal(a, Empty) {
 		return t.hasher.Do(t.id)
 	}
 
