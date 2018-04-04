@@ -38,8 +38,8 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	ht := NewTree("my bench tree", util.Hash256(), 30, NewSimpleCache(50000000), NewBPlusTreeStorage())
-	b.N = 10000
+	ht := NewTree("my bench tree", util.Hash256(), 30, NewSimpleCache(50000000), NewBadgerStorage("/tmp/badger_test")) //NewBoltStorage("/tmp/bolt_test.db", "test"))
+	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		ht.Add(randomBytes(64), randomBytes(1))
 	}
