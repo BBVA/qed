@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/merkle"
 	"verifiabledata/balloon/storage"
 )
 
@@ -61,12 +60,12 @@ func (t *Tree) Run(operations chan interface{}) {
 			case op := <-operations:
 				switch msg := op.(type) {
 				case *Stop:
-					if msg {
+					if msg.stop {
 						msg.result <- true
 						return
 					}
 				case *Add:
-					digest, _ := t.Add(msg.Digest, msg.Index)
+					digest, _ := t.Add(msg.digest, msg.index)
 					msg.result <- digest
 				default:
 					panic("Hyper tree Run() message not implemented!!")
@@ -86,7 +85,7 @@ type Add struct {
 	result chan []byte
 }
 
-func NewAdd(digest, index []byte) *Add, chan []byte {
+func NewAdd(digest, index []byte) (*Add, chan []byte) {
 	result := make(chan []byte)
 	return &Add{
 		digest,
@@ -100,9 +99,9 @@ type Stop struct {
 	result chan bool
 }
 
-func NewStop() *Stop {
+func NewStop() (*Stop, chan bool) {
 	result := make(chan bool)
-	return &Stop{true, result}
+	return &Stop{true, result}, result
 }
 
 // INTERNALS
