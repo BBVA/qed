@@ -18,6 +18,26 @@ func (s *BadgerStorage) Add(key []byte, value []byte) error {
 	})
 }
 
+func (s *BadgerStorage) Get(key []byte) ([]byte, error) {
+	var value []byte
+	err := s.db.View(func(txn *badger.Txn) error {
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		val, err := item.Value()
+		if err != nil {
+			return err
+		}
+		value = val
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
 func (s *BadgerStorage) GetRange(start, end []byte) LeavesSlice {
 	var leaves LeavesSlice
 

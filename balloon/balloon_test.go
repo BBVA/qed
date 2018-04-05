@@ -9,7 +9,7 @@ import (
 
 func TestAdd(t *testing.T) {
 	hasher, n := hashing.Sha256Hasher()
-	store := storage.NewBadgerStorage("testadd.db")
+	store := storage.NewBadgerStorage("/tmp/testadd.db")
 	balloon := NewBalloon(store, hasher)
 
 	var testCases = []struct {

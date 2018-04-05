@@ -15,7 +15,6 @@ type Position struct {
 // returns a string representation of the position
 func (p Position) String() string {
 	return string(p.base[:byteslen]) + strconv.Itoa(int(p.height))
-	// return fmt.Sprintf("%x-%d", p.base, p.height)
 }
 
 // returns a new position pointing to the left child
