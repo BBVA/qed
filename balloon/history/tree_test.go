@@ -21,10 +21,10 @@ func TestAdd(t *testing.T) {
 		event      string
 	}{
 		{0, "b4aa0a376986b4ab072ed536d41a4df65de5d46da15ff8756bc7657da01d2f52", "Hello World1"},
-		{1, "81d3aa6da152370015e028ef97e9d303ffbf7ae121e362059e66bd217d5e09ce", "Hello World2"},
-		{2, "0871c0d34eb2311a101cf1de957d15103c014885b1c306354766fbca2bc3d10e", "Hello World3"},
-		{3, "8e4d915dcdbe9fd485336ecb7fa6780fc901179c6c5ded78781661120f3e3365", "Hello World4"},
-		{4, "377f2fb38a02913effc8ec6de5bf51bfe1ebe2e473ea4fb5060f94b7c11b676e", "Hello World5"},
+		{1, "8c93bb614746a51c1200f01a0ba5217686bf576b8bb0b095523ea38c740c567e", "Hello World2"},
+		{2, "1306d590e35d965aa42ca6e3b05b67cd009d7b9021f777c480e55eb626072dc4", "Hello World3"},
+		{3, "d3e8bc7215dda0d39689a4bfc16974dd63e5420b35abb4860073dbbcb7e197ae", "Hello World4"},
+		{4, "8b8e3177b98d00f6a9e6d621ac660331318524f5a0cee2a62472e8e8bf682fd8", "Hello World5"},
 	}
 
 	hasher, _ := hashing.Sha256Hasher()
