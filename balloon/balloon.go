@@ -10,8 +10,8 @@ import (
 )
 
 type Balloon struct {
-	history *merkle.TreeChannel
-	hyper   *merkle.TreeChannel
+	history chan interface{}
+	hyper   chan interface{}
 	store   storage.Store
 	hasher  hashing.Hasher
 	version uint
@@ -20,13 +20,13 @@ type Balloon struct {
 type Commitment struct {
 	HistoryDigest []byte
 	IndexDigest   []byte
-	version       uint
+	Version       uint
 }
 
 func NewBalloon(store storage.Store, hasher hashing.Hasher) *Balloon {
 
-	htChannel := merkle.NewTreeChannel()
-	hyperChannel := merkle.NewTreeChannel()
+	htChannel := make(chan interface{})
+	hyperChannel := make(chan interface{})
 
 	history := history.NewTree()
 	hyper := hyper.NewTree()
@@ -41,9 +41,10 @@ func NewBalloon(store storage.Store, hasher hashing.Hasher) *Balloon {
 }
 
 func (b *Balloon) Start() error {
-	go b.history.Run(b.history)
-	go b.hyper.Run(b.hyper)
+	b.history.Run(b.history)
+	b.hyper.Run(b.hyper)
 }
+
 
 func (b *Balloon) Add(event []byte) (*Commitment, error) {
 	digest := b.hasher(event)
@@ -52,13 +53,15 @@ func (b *Balloon) Add(event []byte) (*Commitment, error) {
 
 	b.store.Add(digest, index)
 
-	kvPair := &KVPair{digest, index}
+	historyAddOp, historyAddResult  := history.NewAdd(digest, index)
+	hyperAddOp, hyperAddResult := hyper.NewAdd(digest, index)
+	
+	b.history <- historyAddOp
+	b.hyper <- hyperAddOp
 
-	b.history.send <- kvPair
-	b.hyper.send <- kvPair
 
-	historyDigest := <-b.history.receive
-	hyperDigest := <-b.hyper.receive
+	historyDigest := <-historyAddResult
+	hyperDigest := <- hyperAddResult
 
 	return &Commitment{historyDigest, hyperDigest, b.version}, nil
 }

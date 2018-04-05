@@ -26,6 +26,12 @@ type Tree struct {
 	digestLength  int
 }
 
+// Add inserts a new key-value pair into the tree and returns the
+// root hash as a commitment.
+func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
+	return t.toCache(key, value, rootPosition(t.digestLength)), nil
+}
+
 func NewTree(id string, hasher hashing.Hasher, digestLength int, cacheLevels int, cache storage.Cache, store storage.Store) *Tree {
 	tree := &Tree{
 		[]byte(id),
@@ -47,24 +53,56 @@ func NewTree(id string, hasher hashing.Hasher, digestLength int, cacheLevels int
 	return tree
 }
 
-func (t *Tree) Run(channels *merkle.TreeChannel) {
+// Run listens in channel operations to execute in the tree
+func (t *Tree) Run(operations chan interface{}) {
 	go func() {
 		for {
 			select {
-			case kvPair := <-channels.Send:
-				digest, _ := t.Add(kvPair.Digest, kvPair.Index)
-				channels.Receive <- digest
-			case <-channels.Signal: // TODO => QUIT
-				return
+			case op := <-operations:
+				switch msg := op.(type) {
+				case *Stop:
+					if msg {
+						msg.result <- true
+						return
+					}
+				case *Add:
+					digest, _ := t.Add(msg.Digest, msg.Index)
+					msg.result <- digest
+				default:
+					panic("Hyper tree Run() message not implemented!!")
+				}
+
 			}
 		}
 	}()
 }
 
-// Add inserts a new key-value pair into the tree and returns the
-// root hash as a commitment.
-func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
-	return t.toCache(key, value, rootPosition(t.digestLength)), nil
+// These are the operations the tree supports and
+// together form the channel based API
+
+type Add struct {
+	digest []byte
+	index  []byte
+	result chan []byte
+}
+
+func NewAdd(digest, index []byte) *Add, chan []byte {
+	result := make(chan []byte)
+	return &Add{
+		digest,
+		index,
+		result,
+	}, result
+}
+
+type Stop struct {
+	stop bool
+	result chan bool
+}
+
+func NewStop() *Stop {
+	result := make(chan bool)
+	return &Stop{true, result}
 }
 
 // INTERNALS
