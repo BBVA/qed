@@ -51,13 +51,19 @@ amounts of data for:
      $ godoc -http=:6060 # http://localhost:6060/pkg/verifiabledata/
      
      go test verifiabledata/store
-     go test verifiabledata/balloon
-     go test verifiabledata/balloon/history
-     go test verifiabledata/balloon/hyper
+     
+     go test -v verifiabledata/balloon/history
      go test -v verifiabledata/balloon/hyper
+     
+     go test -v verifiabledata/balloon
+     
      go test verifiabledata/sequencer
  
      go test -bench="." verifiabledata/balloon/hyper
+     go test -bench="." verifiabledata/balloon/history
+     
+     go test -bench="." -v verifiabledata/balloon
+     
      go test -v -timeout=1h -bench="." -cpuprofile cpu.out -memprofile mem.out verifiabledata/merkle/hyper
      
      go tool pprof hyper.test cpu.out mem.out

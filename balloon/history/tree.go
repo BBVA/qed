@@ -150,6 +150,58 @@ func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64
 	return digest, nil
 }
 
+
+// Run listens in channel operations to execute in the tree
+func (t *Tree) Run(operations chan interface{}) {
+	go func() {
+		for {
+			select {
+			case op := <-operations:
+				switch msg := op.(type) {
+				case *Stop:
+					if msg.stop {
+						msg.result <- true
+						return
+					}
+				case *Add:
+					digest, _ := t.Add(msg.digest, msg.index)
+					msg.result <- digest
+				default:
+					panic("Hyper tree Run() message not implemented!!")
+				}
+
+			}
+		}
+	}()
+}
+
+// These are the operations the tree supports and
+// together form the channel based API
+
+type Add struct {
+	digest []byte
+	index  []byte
+	result chan []byte
+}
+
+func NewAdd(digest, index []byte) (*Add, chan []byte) {
+	result := make(chan []byte)
+	return &Add{
+		digest,
+		index,
+		result,
+	}, result
+}
+
+type Stop struct {
+	stop bool
+	result chan bool
+}
+
+func NewStop() (*Stop, chan bool) {
+	result := make(chan bool)
+	return &Stop{true, result}, result
+}
 // Utility to calculate arbitraty pow and return an int64
 func pow(x, y uint64) uint64 {
 	return uint64(math.Pow(float64(x), float64(y)))
