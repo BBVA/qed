@@ -71,7 +71,27 @@ type InsertResponse struct {
 type InsertRequest struct {
 	InsertData      InsertData
 	ResponseChannel chan *InsertResponse
-	ProcessResponse func(data InsertData, responseChannel chan *InsertResponse)
+}
+
+func (i *InsertRequest) Process() {
+	commitment, node, err := tree.Add([]byte(i.InsertData.Message))
+	if err != nil {
+		panic(err)
+	}
+
+	response := InsertResponse{
+		Hash:       string(node.Digest),
+		Commitment: string(commitment.Digest),
+		Index:      node.Pos.Index,
+	}
+
+	// FIXME: temporal mock insead of the SMT
+	smt_mock[i.InsertData.Message] = &response
+
+	glog.Infof("New event inserted with index [%d]: %s", response.Index,
+		hex.EncodeToString([]byte(response.Commitment)))
+
+	i.ResponseChannel <- &response
 }
 
 // This handler posts an event into the system:
@@ -87,27 +107,6 @@ type InsertRequest struct {
 //	}
 
 func InsertEvent(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
-
-	ProcessInsertResponse := func(data InsertData, responseChannel chan *InsertResponse) {
-		commitment, node, err := tree.Add([]byte(data.Message))
-		if err != nil {
-			panic(err)
-		}
-
-		response := InsertResponse{
-			Hash:       string(node.Digest),
-			Commitment: string(commitment.Digest),
-			Index:      node.Pos.Index,
-		}
-
-		// FIXME: temporal mock insead of the SMT
-		smt_mock[data.Message] = &response
-
-		glog.Infof("New event inserted with index [%d]: %s", response.Index,
-			hex.EncodeToString([]byte(response.Commitment)))
-
-		responseChannel <- &response
-	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -138,7 +137,6 @@ func InsertEvent(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
 		eventRequest := &InsertRequest{
 			InsertData:      event,
 			ResponseChannel: responseChannel,
-			ProcessResponse: ProcessInsertResponse,
 		}
 
 		insertRequestQueue <- eventRequest
@@ -172,7 +170,14 @@ type FetchRequest struct {
 	ProcessResponse func(data FetchData, responseChannel chan *FetchResponse)
 }
 
-func GetEvent(eventIndex chan *FetchRequest, process func(fetch FetchData, responseChannel chan *FetchResponse)) http.HandlerFunc {
+func (f *FetchRequest) Process() {
+	f.ResponseChannel <- &FetchResponse{
+		// FIXME: temporal mock insead of the SMT
+		Index: smt_mock[f.FetchData.Message].Index,
+	}
+}
+
+func GetEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Make our endpoint cand only be called with HTTP GET method
 		if r.Method != "GET" {
@@ -200,7 +205,6 @@ func GetEvent(eventIndex chan *FetchRequest, process func(fetch FetchData, respo
 		eventRequest := &FetchRequest{
 			FetchData:       fetch,
 			ResponseChannel: responseChannel,
-			ProcessResponse: process,
 		}
 
 		eventIndex <- eventRequest
@@ -220,23 +224,24 @@ func GetEvent(eventIndex chan *FetchRequest, process func(fetch FetchData, respo
 	}
 }
 
-func FetchEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
-	process := func(fetch FetchData, responseChannel chan *FetchResponse) {
-		// FIXME: temporal mock insead of the SMT
-		responseChannel <- &FetchResponse{
-			Index: smt_mock[fetch.Message].Index,
-		}
-	}
-
-	return GetEvent(eventIndex, process)
+type MembershipData struct {
+	Message string `json: "message"`
 }
 
-func GetMembershipProof(eventIndex chan *FetchRequest) http.HandlerFunc {
-	process := func(fetch FetchData, responseChannel chan *FetchResponse) {
+type MembershipResponse struct {
+	Index uint64 `json:"index"`
+}
 
+type MembershipRequest struct {
+	MembershipData  MembershipData
+	ResponseChannel chan *MembershipResponse
+}
+
+func (m *MembershipRequest) Process() {
+	m.ResponseChannel <- &MembershipResponse{
+		// FIXME: temporal mock insead of the SMT
+		Index: smt_mock[m.MembershipData.Message].Index,
 	}
-
-	return GetEvent(eventIndex, process)
 }
 
 // AuthHandlerMiddleware function is an HTTP handler wrapper that validates our requests

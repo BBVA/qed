@@ -16,7 +16,6 @@ func TestSingleInsertionSequencing(t *testing.T) {
 	request := &http.InsertRequest{
 		InsertData:      data,
 		ResponseChannel: make(chan *http.InsertResponse),
-		ProcessResponse: http.ProcessInsertResponse,
 	}
 
 	sequencer := NewSequencer(10)
@@ -58,13 +57,13 @@ func TestMultipleInsertionSequencing(t *testing.T) {
 		requests[i] = &http.InsertRequest{
 			InsertData:      data,
 			ResponseChannel: make(chan *http.InsertResponse),
-			ProcessResponse: http.ProcessInsertResponse,
 		}
 	}
 
 	for i, req := range requests {
 		go func(index int, request *http.InsertRequest) {
 			response := <-request.ResponseChannel
+			// FIXME:+1 is due that the three is a singleton and must be encapsulated
 			if response.Index != uint64(index)+1 {
 				t.Errorf("The assigned index doesn't obey the insertion order %d, %d", response.Index, index)
 			}
@@ -84,7 +83,6 @@ func BenchmarkSingleInsertion(b *testing.B) {
 	request := &http.InsertRequest{
 		InsertData:      data,
 		ResponseChannel: make(chan *http.InsertResponse),
-		ProcessResponse: http.ProcessInsertResponse,
 	}
 
 	sequencer := NewSequencer(10)

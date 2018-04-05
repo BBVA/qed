@@ -51,10 +51,10 @@ func startHttpServer(endpoint string) *http.Server {
 
 	srv := &http.Server{Addr: endpoint}
 	http.Handle("/health-check", apihttp.AuthHandlerMiddleware(apihttp.HealthCheckHandler))
-	http.Handle("/events", apihttp.AuthHandlerMiddleware(apihttp.InsertEvent(seq.InsertRequestQueue)))
+	http.Handle("/events", apihttp.AuthHandlerMiddleware(apihttp.InsertEvent(seq.SyncRequest)))
 
-	http.Handle("/fetch", apihttp.AuthHandlerMiddleware(apihttp.GetEvent(seq.FetchRequestQueue, apihttp.ProcessFetchResponse)))
-	http.Handle("/proof/membership", apihttp.AuthHandlerMiddleware(apihttp.GetEvent(seq.FetchRequestQueue, apihttp.ProcessMembershipProof)))
+	http.Handle("/fetch", apihttp.AuthHandlerMiddleware(apihttp.GetEvent(seq.AsyncRequest)))
+	http.Handle("/proof/membership", apihttp.AuthHandlerMiddleware(apihttp.GetEvent(seq.AsyncRequest)))
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
