@@ -1,4 +1,4 @@
-package hyper
+package storage
 
 import (
 	"bytes"

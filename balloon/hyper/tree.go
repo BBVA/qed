@@ -3,49 +3,68 @@ package hyper
 import (
 	"bytes"
 	"encoding/binary"
-	"verifiabledata/merkle"
-	"verifiabledata/util"
+	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/merkle"
+	"verifiabledata/balloon/storage"
 )
 
+// Constant Empty is a constant for empty leaves
 var Empty = []byte{0x00}
+
+// Constant Set is a constant for non-empty leaves
 var Set = []byte{0x01}
 
 // Tree holds a hyper tree structure
 type Tree struct {
-	id            []byte
-	hasher        *util.Hasher
+	id            []byte // tree-wide constant
+	hasher        hashing.Hasher
 	defaultHashes [][]byte
-	cache         merkle.Cache
-	store         Storage
+	cache         storage.Cache
+	store         storage.Store
 	stats         *stats
 	cacheArea     *area
+	digestLength  int
 }
 
-func NewTree(id string, hasher *util.Hasher, cacheLevels int, cache merkle.Cache, store Storage) *Tree {
+func NewTree(id string, hasher hashing.Hasher, digestLength int, cacheLevels int, cache storage.Cache, store storage.Store) *Tree {
 	tree := &Tree{
 		[]byte(id),
 		hasher,
-		make([][]byte, hasher.Size),
+		make([][]byte, digestLength),
 		cache,
 		store,
 		new(stats),
-		newArea(hasher.Size-cacheLevels, hasher.Size),
+		newArea(digestLength-cacheLevels, digestLength),
+		digestLength,
 	}
 
 	// init default hashes cache
-	tree.defaultHashes[0] = tree.hasher.Do(tree.id, Empty)
-	for i := 1; i < int(hasher.Size); i++ {
-		tree.defaultHashes[i] = tree.hasher.Do(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
+	tree.defaultHashes[0] = tree.hasher(tree.id, Empty)
+	for i := 1; i < int(digestLength); i++ {
+		tree.defaultHashes[i] = tree.hasher(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
 
 	return tree
 }
 
+func (t *Tree) Run(channels *merkle.TreeChannel) {
+	go func() {
+		for {
+			select {
+			case kvPair := <-channels.Send:
+				digest, _ := t.Add(kvPair.Digest, kvPair.Index)
+				channels.Receive <- digest
+			case <-channels.Signal: // TODO => QUIT
+				return
+			}
+		}
+	}()
+}
+
 // Add inserts a new key-value pair into the tree and returns the
 // root hash as a commitment.
 func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
-	t.store.Add(key, value)
-	return t.toCache(key, value, rootpos(t.hasher.Size)), nil
+	return t.toCache(key, value, rootPosition(t.digestLength)), nil
 }
 
 // INTERNALS
@@ -120,7 +139,7 @@ func (t *Tree) fromCache(pos *Position) []byte {
 
 }
 
-func (t *Tree) fromStorage(d LeavesSlice, value []byte, pos *Position) []byte {
+func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) []byte {
 	// if we are a leaf, return our hash
 	if pos.height == 0 {
 		t.stats.leaf += 1
@@ -144,20 +163,20 @@ func (t *Tree) fromStorage(d LeavesSlice, value []byte, pos *Position) []byte {
 func (t *Tree) leafHash(a, base []byte) []byte {
 	t.stats.lh += 1
 	if bytes.Equal(a, Empty) {
-		return t.hasher.Do(t.id)
+		return t.hasher(t.id)
 	}
 
-	return t.hasher.Do(t.id, base)
+	return t.hasher(t.id, base)
 }
 
 func (t *Tree) interiorHash(left, right []byte, pos *Position) []byte {
 	t.stats.ih += 1
 	if bytes.Equal(left, right) {
-		return t.hasher.Do(left, right)
+		return t.hasher(left, right)
 	}
 
 	heightBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(heightBytes, uint32(pos.height))
 
-	return t.hasher.Do(left, right, pos.base, heightBytes)
+	return t.hasher(left, right, pos.base, heightBytes)
 }

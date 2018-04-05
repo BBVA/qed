@@ -1,4 +1,4 @@
-package merkle
+package storage
 
 // Cache interface defines the operations a cache mechanism must implement to
 // be usable within the tree

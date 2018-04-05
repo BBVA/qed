@@ -8,8 +8,8 @@ const byteslen = 32
 type Position struct {
 	base   []byte // the left-most leaf in this node subtree
 	split  []byte // the left-most leaf in the right branch of this node subtree
-	height int // height in the tree of this node
-	n      int // number of bits in the hash key
+	height int    // height in the tree of this node
+	n      int    // number of bits in the hash key
 }
 
 // returns a string representation of the position
@@ -49,7 +49,7 @@ func (p Position) right() *Position {
 }
 
 // creates the tree root position
-func rootpos(n int) *Position {
+func rootPosition(n int) *Position {
 	var p Position
 	p.base = make([]byte, byteslen)
 	p.split = make([]byte, byteslen)

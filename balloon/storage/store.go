@@ -1,13 +1,11 @@
-package hyper
+package storage
 
 import (
 	"bytes"
 	"sort"
 )
 
-// Storage is an interface that defines the operations needed
-// for a storage engine or database
-type Storage interface {
+type Store interface {
 	Add(key []byte, value []byte) error
 	GetRange(start, end []byte) LeavesSlice
 }

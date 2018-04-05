@@ -2,7 +2,8 @@ package hyper
 
 import (
 	"crypto/rand"
-	"verifiabledata/util"
+	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/storage"
 	// 	"fmt"
 	"testing"
 )
@@ -38,10 +39,15 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	ht := NewTree("my bench tree", util.Hash256(), 30, NewSimpleCache(50000000), NewBadgerStorage("/tmp/badger_test")) //NewBoltStorage("/tmp/bolt_test.db", "test"))
+	hasher, digestLength := hashing.Sha256Hasher()
+	store := storage.NewBadgerStorage("/tmp/badger_test")
+	ht := NewTree("my bench tree", hasher, digestLength, 30, storage.NewSimpleCache(50000000), store) //NewBoltStorage("/tmp/bolt_test.db", "test"))
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
-		ht.Add(randomBytes(64), randomBytes(1))
+		key := randomBytes(64)
+		value := randomBytes(1)
+		store.Add(key, value)
+		ht.Add(key, value)
 	}
 	b.Logf("stats = %+v\n", ht.stats)
 }

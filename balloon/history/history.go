@@ -172,6 +172,10 @@ func (t *Tree) getNode(i, r, v uint64) (*Node, error) {
 // Given an event the system appends it to the history tree as
 // the i:th entry and then outputs a commitment
 // t.ps://eprint.iacr.org/2015/007.pdf
+func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
+
+}
+
 func (t *Tree) Add(data []byte) (*Commitment, *Node, error) {
 
 	node := &Node{
