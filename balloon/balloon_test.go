@@ -60,7 +60,7 @@ func randomBytes(n int) []byte {
 func BenchmarkAdd(b *testing.B) {
 
 	balloon := NewBalloon("/tmp/benchAdd", 5000000, hashing.Sha256Hasher)
-
+	b.N = 10000
 	for i := 0; i < b.N; i++ {
 		event := randomBytes(128)
 		balloon.Add(event)
