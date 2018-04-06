@@ -64,4 +64,5 @@ func BenchmarkAdd(b *testing.B) {
 		key := randomBytes(64)
 		ht.Add(key, util.UInt64AsBytes(uint64(i)))
 	}
+	b.Logf("stats = %+v\n", ht.stats)
 }

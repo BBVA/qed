@@ -67,6 +67,7 @@ var One = []byte{0x1}
 type Tree struct {
 	frozen storage.Store // already computed nodes, that will not change
 	hasher hashing.Hasher
+	stats  *stats
 }
 
 // NewTree returns a new history tree
@@ -74,12 +75,8 @@ func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 	return &Tree{
 		frozen,
 		hasher,
+		new(stats),
 	}
-}
-
-// Returns the current layer or depth of the tree
-func (t *Tree) getDepth(index uint64) uint64 {
-	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
 
 // Given an event the system appends it to the history tree as
@@ -97,14 +94,21 @@ func (t *Tree) Add(eventDigest []byte, index []byte) ([]byte, error) {
 	return rootDigest, nil
 }
 
+// Returns the current layer or depth of the tree
+func (t *Tree) getDepth(index uint64) uint64 {
+	return uint64(math.Ceil(math.Log2(float64(index + 1))))
+}
+
 func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64) ([]byte, error) {
 
 	var digest []byte
 
 	// try to unfroze first
 	if version >= pos.Index+pow(2, pos.Layer)-1 {
+		t.stats.unfreezing++
 		digest, err := t.frozen.Get(pos.GetBytes())
 		if err == nil {
+			t.stats.unfreezingHits++
 			return digest, nil
 		}
 	}
@@ -113,6 +117,7 @@ func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64
 	// we are at a leaf: A_v(i,0)
 	case pos.Layer == 0 && version >= pos.Index:
 		digest = t.hasher(Zero, eventDigest)
+		t.stats.leafHashes++
 		break
 	// A_v(i,r)
 	case version < pos.Index+pow(2, pos.Layer-1):
@@ -122,6 +127,7 @@ func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64
 			return nil, err
 		}
 		digest = t.hasher(One, hash)
+		t.stats.internalHashes++
 		break
 	// A_v(i,r)
 	case version >= pos.Index+pow(2, pos.Layer-1):
@@ -136,11 +142,13 @@ func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64
 			return nil, err
 		}
 		digest = t.hasher(One, hash1, hash2)
+		t.stats.internalHashes++
 		break
 	}
 
 	// froze the node with its new digest
 	if version >= pos.Index+pow(2, pos.Layer)-1 {
+		t.stats.freezing++
 		err := t.frozen.Add(pos.GetBytes(), digest)
 		if err != nil {
 			// if it was already frozen nothing happens
@@ -149,7 +157,6 @@ func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64
 
 	return digest, nil
 }
-
 
 // Run listens in channel operations to execute in the tree
 func (t *Tree) Run(operations chan interface{}) {
@@ -194,7 +201,7 @@ func NewAdd(digest, index []byte) (*Add, chan []byte) {
 }
 
 type Stop struct {
-	stop bool
+	stop   bool
 	result chan bool
 }
 
@@ -202,6 +209,7 @@ func NewStop() (*Stop, chan bool) {
 	result := make(chan bool)
 	return &Stop{true, result}, result
 }
+
 // Utility to calculate arbitraty pow and return an int64
 func pow(x, y uint64) uint64 {
 	return uint64(math.Pow(float64(x), float64(y)))
