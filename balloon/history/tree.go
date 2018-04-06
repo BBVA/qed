@@ -99,7 +99,7 @@ func (t *Tree) getDepth(index uint64) uint64 {
 	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
 
-func asBytes(index, layer uint64) []byte {
+func frozenKey(index, layer uint64) []byte {
 	return append(util.UInt64AsBytes(index), util.UInt64AsBytes(layer)...)
 }
 
@@ -110,7 +110,7 @@ func (t *Tree) computeNodeHash(eventDigest []byte, index, layer uint64, version 
 	// try to unfroze first
 	if version >= index+pow(2, layer)-1 {
 		t.stats.unfreezing++
-		digest, err := t.frozen.Get(asBytes(index, layer))
+		digest, err := t.frozen.Get(frozenKey(index, layer))
 		if err == nil {
 			t.stats.unfreezingHits++
 			return digest, nil
@@ -150,7 +150,7 @@ func (t *Tree) computeNodeHash(eventDigest []byte, index, layer uint64, version 
 	// froze the node with its new digest
 	if version >= index+pow(2, layer)-1 {
 		t.stats.freezing++
-		err := t.frozen.Add(asBytes(index, layer), digest)
+		err := t.frozen.Add(frozenKey(index, layer), digest)
 		if err != nil {
 			// if it was already frozen nothing happens
 		}
