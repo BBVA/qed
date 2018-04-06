@@ -83,7 +83,7 @@ func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 // Given an event the system appends it to the history tree as
 // the i:th entry and then outputs a root hash as a commitment
 // t.ps://eprint.iacr.org/2015/007.pdf
-func (t *Tree) Add(eventDigest []byte, index []byte) ([]byte, error) {
+func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	version := binary.LittleEndian.Uint64(index)
 	// calculate commitment as C_n = A_n(0,d)
 	depth := t.getDepth(version)
@@ -172,7 +172,7 @@ func (t *Tree) Run(operations chan interface{}) {
 						return
 					}
 				case *Add:
-					digest, _ := t.Add(msg.digest, msg.index)
+					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
 				default:
 					panic("Hyper tree Run() message not implemented!!")
@@ -192,13 +192,12 @@ type Add struct {
 	result chan []byte
 }
 
-func NewAdd(digest, index []byte) (*Add, chan []byte) {
-	result := make(chan []byte)
+func NewAdd(digest, index []byte, result chan []byte) *Add {
 	return &Add{
 		digest,
 		index,
 		result,
-	}, result
+	}
 }
 
 type Stop struct {
@@ -206,9 +205,8 @@ type Stop struct {
 	result chan bool
 }
 
-func NewStop() (*Stop, chan bool) {
-	result := make(chan bool)
-	return &Stop{true, result}, result
+func NewStop(result chan bool) *Stop {
+	return &Stop{true, result}
 }
 
 // Utility to calculate arbitraty pow and return an int64

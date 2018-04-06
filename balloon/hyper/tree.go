@@ -19,7 +19,7 @@ type Tree struct {
 	hasher        hashing.Hasher
 	defaultHashes [][]byte
 	cache         storage.Cache
-	store         storage.Store
+	leaves         storage.Store
 	stats         *stats
 	cacheArea     *area
 	digestLength  int
@@ -27,17 +27,21 @@ type Tree struct {
 
 // Add inserts a new key-value pair into the tree and returns the
 // root hash as a commitment.
-func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
+func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
 	return t.toCache(key, value, rootPosition(t.digestLength)), nil
 }
 
-func NewTree(id string, hasher hashing.Hasher, digestLength int, cacheLevels int, cache storage.Cache, store storage.Store) *Tree {
+func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
+
+	digestLength := len(hasher([]byte("una cosa mala")))*8
+	cacheLevels := 30
+
 	tree := &Tree{
 		[]byte(id),
 		hasher,
 		make([][]byte, digestLength),
 		cache,
-		store,
+		leaves,
 		new(stats),
 		newArea(digestLength-cacheLevels, digestLength),
 		digestLength,
@@ -65,7 +69,7 @@ func (t *Tree) Run(operations chan interface{}) {
 						return
 					}
 				case *Add:
-					digest, _ := t.Add(msg.digest, msg.index)
+					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
 				default:
 					panic("Hyper tree Run() message not implemented!!")
@@ -85,13 +89,12 @@ type Add struct {
 	result chan []byte
 }
 
-func NewAdd(digest, index []byte) (*Add, chan []byte) {
-	result := make(chan []byte)
+func NewAdd(digest, index []byte, result chan []byte) *Add {
 	return &Add{
 		digest,
 		index,
 		result,
-	}, result
+	}
 }
 
 type Stop struct {
@@ -99,9 +102,8 @@ type Stop struct {
 	result chan bool
 }
 
-func NewStop() (*Stop, chan bool) {
-	result := make(chan bool)
-	return &Stop{true, result}, result
+func NewStop(result chan bool) *Stop {
+	return &Stop{true, result}
 }
 
 // INTERNALS
@@ -135,7 +137,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	// nodes
 	if !t.cacheArea.has(pos) {
 		t.stats.disk += 1
-		return t.fromStorage(t.store.GetRange(pos.base, pos.split), value, pos)
+		return t.fromStorage(t.leaves.GetRange(pos.base, pos.split), value, pos)
 	}
 
 	// if not, the node hash is the hash of our left and right child

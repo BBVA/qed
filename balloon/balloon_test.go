@@ -2,16 +2,15 @@ package balloon
 
 import (
 	"crypto/rand"
-//	"fmt"
+	//	"fmt"
 	"testing"
 	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/storage"
 )
+
 /*
 func TestAdd(t *testing.T) {
-	hasher, _ := hashing.Sha256Hasher()
-	store := storage.NewBadgerStorage("/tmp/testadd.db")
-	balloon := NewBalloon(store, hasher)
+
+	balloon := NewBalloon("/tmp/testAdd", hashing.Sha256Hasher)
 
 	var testCases = []struct {
 		index         uint
@@ -59,11 +58,8 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	hasher, _ := hashing.Sha256Hasher()
-	bs := storage.NewBadgerStorage("/tmp/bench_ball.db")
-	hs := storage.NewBadgerStorage("/tmp/bench_frozen.db")
-	hys:= storage.NewBadgerStorage("/tmp/bench_hyper.db")
-	balloon := NewBalloon(bs, hs, hys, hasher)
+
+	balloon := NewBalloon("/tmp/benchAdd", 5000000, hashing.Sha256Hasher)
 
 	for i := 0; i < b.N; i++ {
 		event := randomBytes(128)

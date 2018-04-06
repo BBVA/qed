@@ -2,6 +2,7 @@ package balloon
 
 import (
 	"encoding/binary"
+	"fmt"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
@@ -11,7 +12,6 @@ import (
 type Balloon struct {
 	history chan interface{}
 	hyper   chan interface{}
-	store   storage.Store
 	hasher  hashing.Hasher
 	version uint
 }
@@ -22,23 +22,27 @@ type Commitment struct {
 	Version       uint
 }
 
-func NewBalloon(bs, hs, hys storage.Store, hasher hashing.Hasher) *Balloon {
+func NewBalloon(path string, cacheSize int, hasher hashing.Hasher) *Balloon {
 
-	hc := make(chan interface{})
-	hyc := make(chan interface{})
-	history := history.NewTree(hs, hasher)
-	hyper := hyper.NewTree("id", hasher, 256, 30, storage.NewSimpleCache(50000000), hys)
+	frozen := storage.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
+	leaves := storage.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
+	cache := storage.NewSimpleCache(cacheSize)
 
-	history.Run(hc)
-	hyper.Run(hyc)
+	history := history.NewTree(frozen, hasher)
+	hyper := hyper.NewTree(path, cache, leaves, hasher)
 
-	return &Balloon{
-		hc,
-		hyc,
-		bs,
+	b := Balloon{
+		make(chan interface{}),
+		make(chan interface{}),
 		hasher,
 		0,
 	}
+
+	history.Run(b.history)
+	hyper.Run(b.hyper)
+
+	return &b
+
 }
 
 func (b *Balloon) Add(event []byte) (*Commitment, error) {
@@ -47,16 +51,22 @@ func (b *Balloon) Add(event []byte) (*Commitment, error) {
 	index := make([]byte, 8)
 	binary.LittleEndian.PutUint64(index, uint64(b.version))
 
-	b.store.Add(digest, index)
+	historyAddResult:= make(chan []byte)
+	hyperAddResult := make(chan []byte)
 
-	historyAddOp, historyAddResult := history.NewAdd(digest, index)
-	hyperAddOp, hyperAddResult := hyper.NewAdd(digest, index)
-
-	b.history <- historyAddOp
-	b.hyper <- hyperAddOp
+	b.history <- history.NewAdd(digest, index, historyAddResult)
+	b.hyper <-hyper.NewAdd(digest, index, hyperAddResult)
 
 	historyDigest := <-historyAddResult
 	hyperDigest := <-hyperAddResult
 
 	return &Commitment{historyDigest, hyperDigest, b.version}, nil
+}
+
+func (b *Balloon) Close() error {
+	var result chan bool
+	b.history <- history.NewStop(result)
+	b.hyper <- hyper.NewStop(result)
+
+	return nil
 }
