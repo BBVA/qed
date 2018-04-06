@@ -14,6 +14,7 @@ import (
 	"math"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
+	"verifiabledata/util"
 )
 
 // Constant Zero is the 0x0 byte, and it is used as a prefix to know
@@ -86,8 +87,7 @@ func (t *Tree) Add(eventDigest []byte, index []byte) ([]byte, error) {
 	version := binary.LittleEndian.Uint64(index)
 	// calculate commitment as C_n = A_n(0,d)
 	depth := t.getDepth(version)
-	rootPos := newPosition(0, depth)
-	rootDigest, err := t.computeNodeHash(eventDigest, rootPos, version)
+	rootDigest, err := t.computeNodeHash(eventDigest, 0, depth, version)
 	if err != nil {
 		return nil, err
 	}
@@ -99,14 +99,18 @@ func (t *Tree) getDepth(index uint64) uint64 {
 	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
 
-func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64) ([]byte, error) {
+func asBytes(index, layer uint64) []byte {
+	return append(util.UInt64AsBytes(index), util.UInt64AsBytes(layer)...)
+}
+
+func (t *Tree) computeNodeHash(eventDigest []byte, index, layer uint64, version uint64) ([]byte, error) {
 
 	var digest []byte
 
 	// try to unfroze first
-	if version >= pos.Index+pow(2, pos.Layer)-1 {
+	if version >= index+pow(2, layer)-1 {
 		t.stats.unfreezing++
-		digest, err := t.frozen.Get(pos.GetBytes())
+		digest, err := t.frozen.Get(asBytes(index, layer))
 		if err == nil {
 			t.stats.unfreezingHits++
 			return digest, nil
@@ -115,14 +119,13 @@ func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64
 
 	switch {
 	// we are at a leaf: A_v(i,0)
-	case pos.Layer == 0 && version >= pos.Index:
+	case layer == 0 && version >= index:
 		digest = t.hasher(Zero, eventDigest)
 		t.stats.leafHashes++
 		break
 	// A_v(i,r)
-	case version < pos.Index+pow(2, pos.Layer-1):
-		newPos := newPosition(pos.Index, pos.Layer-1)
-		hash, err := t.computeNodeHash(eventDigest, newPos, version)
+	case version < index+pow(2, layer-1):
+		hash, err := t.computeNodeHash(eventDigest, index, layer-1, version)
 		if err != nil {
 			return nil, err
 		}
@@ -130,14 +133,12 @@ func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64
 		t.stats.internalHashes++
 		break
 	// A_v(i,r)
-	case version >= pos.Index+pow(2, pos.Layer-1):
-		newPos1 := newPosition(pos.Index, pos.Layer-1)
-		hash1, err := t.computeNodeHash(eventDigest, newPos1, version)
+	case version >= index+pow(2, layer-1):
+		hash1, err := t.computeNodeHash(eventDigest, index, layer-1, version)
 		if err != nil {
 			return nil, err
 		}
-		newPos2 := newPosition(pos.Index+pow(2, pos.Layer-1), pos.Layer-1)
-		hash2, err := t.computeNodeHash(eventDigest, newPos2, version)
+		hash2, err := t.computeNodeHash(eventDigest, index+pow(2, layer-1), layer-1, version)
 		if err != nil {
 			return nil, err
 		}
@@ -147,9 +148,9 @@ func (t *Tree) computeNodeHash(eventDigest []byte, pos *Position, version uint64
 	}
 
 	// froze the node with its new digest
-	if version >= pos.Index+pow(2, pos.Layer)-1 {
+	if version >= index+pow(2, layer)-1 {
 		t.stats.freezing++
-		err := t.frozen.Add(pos.GetBytes(), digest)
+		err := t.frozen.Add(asBytes(index, layer), digest)
 		if err != nil {
 			// if it was already frozen nothing happens
 		}

@@ -59,8 +59,8 @@ func randomBytes(n int) []byte {
 func BenchmarkAdd(b *testing.B) {
 	hasher, _ := hashing.Sha256Hasher()
 	ht := NewTree(storage.NewBadgerStorage("/tmp/htbenchmark.db"), hasher)
-	N := 100000
-	for i := 0; i < N; i++ {
+	b.N = 100000
+	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
 		ht.Add(key, util.UInt64AsBytes(uint64(i)))
 	}
