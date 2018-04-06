@@ -24,6 +24,23 @@ func (s *BoltStorage) Add(key []byte, value []byte) error {
 	})
 }
 
+func (s *BoltStorage) Get(key []byte) ([]byte, error) {
+	var value []byte
+	err := s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(s.bucket)
+		v := b.Get(key)
+		if v == nil {
+			return fmt.Errorf("Unknown key %d", key)
+		}
+		value = v
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
+}
+
 func (s *BoltStorage) GetRange(start, end []byte) LeavesSlice {
 	var leaves LeavesSlice
 
