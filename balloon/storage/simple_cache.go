@@ -7,21 +7,21 @@ type SimpleCache struct {
 
 func (c *SimpleCache) Put(key []byte, value []byte) error {
 	var aux [32]byte
-	copy(aux[:], key[:32])
+	copy(aux[:], key)
 	c.nodes[aux] = value
 	return nil
 }
 
 func (c *SimpleCache) Get(key []byte) ([]byte, bool) {
 	var aux [32]byte
-	copy(aux[:], key[:32])
+	copy(aux[:], key)
 	result, ok := c.nodes[aux]
 	return result, ok
 }
 
 func (c *SimpleCache) Exists(key []byte) bool {
 	var aux [32]byte
-	copy(aux[:], key[:32])
+	copy(aux[:], key)
 	_, ok := c.nodes[aux]
 	return ok
 }
