@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"testing"
-	"verifiabledata/util"
 )
 
 func TestSplit(t *testing.T) {
@@ -22,6 +21,7 @@ func TestSplit(t *testing.T) {
 
 	for _, test := range tests {
 		leaves := buildLeavesSlice(test.numElems)
+		fmt.Println(leaves)
 		left, right := leaves.Split(asBytes(test.searchElem))
 		if len(left) != test.leftSize {
 			t.Fatalf("Error splitting: left slice should have size %d but has %d", test.leftSize, len(left))
@@ -33,31 +33,28 @@ func TestSplit(t *testing.T) {
 }
 
 func BenchmarkSplitAtTheEnd(b *testing.B) {
-	N := 1000
-	leaves := buildLeavesSlice(N)
-	fmt.Println(len(leaves))
-	end := asBytes(N - 1)
-	fmt.Println(end)
+	b.N = 10000
+	leaves := buildLeavesSlice(b.N)
+	end := asBytes(b.N)
 	left, _ := leaves.Split(end)
-	if len(left) < N {
-		b.Fatalf("Error splitting: left slice should have size %d but has %d", N, len(left))
+	if len(left) < b.N {
+		b.Fatalf("Error splitting: left slice should have size %d but has %d", b.N, len(left))
 	}
 }
 
 func asBytes(elem int) []byte {
 	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, uint32(elem))
+	binary.BigEndian.PutUint32(bytes, uint32(elem))
 	return bytes
 }
 
 func buildLeavesSlice(numElems int) LeavesSlice {
 	var leaves LeavesSlice
-	hasher := util.Hash256()
 	// Initialize
 	for i := 0; i < numElems; i++ {
 		intBytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(intBytes, uint32(i))
-		leaves = append(leaves, hasher.Do(intBytes))
+		binary.BigEndian.PutUint32(intBytes, uint32(i))
+		leaves = append(leaves, intBytes)
 	}
 	return leaves
 }
