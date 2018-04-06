@@ -13,6 +13,7 @@ import (
 	"github.com/golang/glog"
 
 	"verifiabledata/merkle/history"
+	"verifiabledata/sequencer"
 )
 
 // FIXME: temporal mock insead of the SMT
@@ -106,7 +107,7 @@ func (i *InsertRequest) Process() {
 //	"index": 1
 //	}
 
-func InsertEvent(insertRequestQueue chan *InsertRequest) http.HandlerFunc {
+func InsertEvent(insertRequestQueue chan sequencer.Processer) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -177,7 +178,7 @@ func (f *FetchRequest) Process() {
 	}
 }
 
-func GetEvent(eventIndex chan *FetchRequest) http.HandlerFunc {
+func GetEvent(eventIndex chan sequencer.Processer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Make our endpoint cand only be called with HTTP GET method
 		if r.Method != "GET" {
