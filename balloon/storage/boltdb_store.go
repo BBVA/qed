@@ -2,11 +2,8 @@ package storage
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"time"
 
 	bolt "github.com/coreos/bbolt"
 )
@@ -32,7 +29,8 @@ func (s *BoltStorage) Get(key []byte) ([]byte, error) {
 		if v == nil {
 			return fmt.Errorf("Unknown key %d", key)
 		}
-		value = v
+		value = make([]byte, len(v))
+		copy(value, v)
 		return nil
 	})
 	if err != nil {
@@ -73,25 +71,25 @@ func NewBoltStorage(path, bucketName string) *BoltStorage {
 	})
 
 	// start stats collection
-	go func() {
-		// Grab the initial stats.
-		prev := db.Stats()
+	// go func() {
+	// 	// Grab the initial stats.
+	// 	prev := db.Stats()
 
-		for {
-			// Wait for 10s.
-			time.Sleep(10 * time.Second)
+	// 	for {
+	// 		// Wait for 10s.
+	// 		time.Sleep(10 * time.Second)
 
-			// Grab the current stats and diff them.
-			stats := db.Stats()
-			diff := stats.Sub(&prev)
+	// 		// Grab the current stats and diff them.
+	// 		stats := db.Stats()
+	// 		diff := stats.Sub(&prev)
 
-			// Encode stats to JSON and print to STDOUT.
-			json.NewEncoder(os.Stdout).Encode(diff)
+	// 		// Encode stats to JSON and print to STDOUT.
+	// 		json.NewEncoder(os.Stdout).Encode(diff)
 
-			// Save stats for the next loop.
-			prev = stats
-		}
-	}()
+	// 		// Save stats for the next loop.
+	// 		prev = stats
+	// 	}
+	// }()
 
 	return &BoltStorage{
 		db,
