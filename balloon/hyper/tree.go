@@ -28,6 +28,10 @@ type Tree struct {
 // Add inserts a new key-value pair into the tree and returns the
 // root hash as a commitment.
 func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
+	err := t.leaves.Add(key, value)
+	if err != nil {
+		return nil, err
+	}
 	return t.toCache(key, value, rootPosition(t.digestLength)), nil
 }
 
