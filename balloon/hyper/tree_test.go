@@ -11,21 +11,17 @@ import (
 
 func TestAdd(t *testing.T) {
 
-	hasher, n := hashing.Sha256Hasher()
 	cache := storage.NewSimpleCache(5000)
 	store := storage.NewBadgerStorage("/tmp/badger_test")
-	ht := NewTree("my test tree", hasher, n, 30, cache, store)
+	ht := NewTree("my test tree", cache, store,hashing.Sha256Hasher)
 
 	for i := 0; i < 5; i++ {
 
 		event := fmt.Sprintf("Hello World%d", i)
-		key := hasher([]byte(event))
+		key := hashing.Sha256Hasher([]byte(event))
 		value := make([]byte, 8)
 		binary.LittleEndian.PutUint64(value, uint64(i))
-		commitment, err := ht.Add(key, value)
-		if err != nil {
-			t.Log(err)
-		}
+		commitment := <- ht.Add(key, value)
 		fmt.Printf("%x\n", commitment)
 	}
 
@@ -42,10 +38,9 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	hasher, digestLength := hashing.Sha256Hasher()
-	store := storage.NewBadgerStorage("/tmp/badger_bench") // NewBoltStorage("/tmp/bolt_test.db"
+	store := storage.NewBadgerStorage("/tmp/badger_bench")
 	cache := storage.NewSimpleCache(50000000)
-	ht := NewTree("my bench tree", hasher, digestLength, 30, cache, store) 
+	ht := NewTree("my test tree", cache, store,hashing.Sha256Hasher)
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
