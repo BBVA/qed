@@ -92,6 +92,7 @@ func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage()
 	defer closeF()
 	b.N = 10000
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		store.Add(randomBytes(128), []byte("Value"))
 	}
@@ -113,6 +114,8 @@ func BenchmarkGet(b *testing.B) {
 			store.Add(randomBytes(128), []byte("Value"))
 		}
 	}
+
+	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
 		_, err := store.Get(key)
