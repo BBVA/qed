@@ -55,6 +55,10 @@ func (s *BoltStorage) GetRange(start, end []byte) LeavesSlice {
 	return leaves
 }
 
+func (s *BoltStorage) Close() error {
+	return s.db.Close()
+}
+
 func NewBoltStorage(path, bucketName string) *BoltStorage {
 	db, err := bolt.Open(path, 0600, nil)
 	if err != nil {

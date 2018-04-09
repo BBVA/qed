@@ -55,3 +55,8 @@ func (s *BPlusTreeStorage) GetRange(start, end []byte) LeavesSlice {
 	}
 
 }
+
+func (s *BPlusTreeStorage) Close() error {
+	s.store.Close()
+	return nil
+}
