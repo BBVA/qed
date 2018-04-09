@@ -2,12 +2,10 @@ package balloon
 
 import (
 	"encoding/binary"
-	"fmt"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
-	"verifiabledata/balloon/storage/badger"
-	"verifiabledata/balloon/storage/cache"
+	"verifiabledata/balloon/storage"
 )
 
 type Balloon struct {
@@ -23,11 +21,7 @@ type Commitment struct {
 	Version       uint
 }
 
-func NewBalloon(path string, cacheSize int, hasher hashing.Hasher) *Balloon {
-
-	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
-	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
-	cache := cache.NewSimpleCache(cacheSize)
+func NewBalloon(path string, cacheSize int, hasher hashing.Hasher, frozen, leaves storage.Store, cache storage.Cache) *Balloon {
 
 	history := history.NewTree(frozen, hasher)
 	hyper := hyper.NewTree(path, cache, leaves, hasher)
