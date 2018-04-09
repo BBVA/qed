@@ -61,6 +61,10 @@ func (s *BadgerStorage) GetRange(start, end []byte) LeavesSlice {
 	return leaves
 }
 
+func (s *BadgerStorage) Close() error {
+	return s.db.Close()
+}
+
 func NewBadgerStorage(path string) *BadgerStorage {
 	opts := badger.DefaultOptions
 	opts.Dir = path
