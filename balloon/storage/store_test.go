@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/binary"
-	"fmt"
 	"testing"
 )
 
@@ -21,7 +20,6 @@ func TestSplit(t *testing.T) {
 
 	for _, test := range tests {
 		leaves := buildLeavesSlice(test.numElems)
-		fmt.Println(leaves)
 		left, right := leaves.Split(asBytes(test.searchElem))
 		if len(left) != test.leftSize {
 			t.Fatalf("Error splitting: left slice should have size %d but has %d", test.leftSize, len(left))
