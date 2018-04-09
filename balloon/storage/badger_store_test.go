@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
 	"os"
 	"testing"
@@ -71,6 +72,7 @@ func TestGetRange(t *testing.T) {
 		{11, 1, 20},
 		{10, 40, 60},
 		{0, 60, 100},
+		{0, 20, 10},
 	}
 
 	for i := 10; i < 50; i++ {
@@ -86,10 +88,78 @@ func TestGetRange(t *testing.T) {
 
 }
 
+func BenchmarkAdd(b *testing.B) {
+	store, closeF := openStorage()
+	defer closeF()
+	b.N = 10000
+	for i := 0; i < b.N; i++ {
+		store.Add(randomBytes(128), []byte("Value"))
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	store, closeF := openStorage()
+	defer closeF()
+	N := 10000
+	b.N = N
+	var key []byte
+
+	// populate storage
+	for i := 0; i < N; i++ {
+		if i == 10 {
+			key = randomBytes(128)
+			store.Add(key, []byte("Value"))
+		} else {
+			store.Add(randomBytes(128), []byte("Value"))
+		}
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := store.Get(key)
+		if err != nil {
+			b.Fatalf("Unexpected error: %s", err)
+		}
+	}
+
+}
+
+func BenchmarkGetRangeInLargeTree(b *testing.B) {
+	store, closeF := openStorage()
+	defer closeF()
+	N := 1000000
+
+	// populate storage
+	for i := 0; i < N; i++ {
+		store.Add([]byte{byte(i)}, []byte("Value"))
+	}
+
+	b.ResetTimer()
+
+	b.Run("Small range", func(b *testing.B) {
+		b.N = 10000
+		for i := 0; i < b.N; i++ {
+			slice := store.GetRange([]byte{10}, []byte{10})
+			if len(slice) != 1 {
+				b.Fatalf("Unexpected leaves slice size: %d", len(slice))
+			}
+		}
+	})
+
+	b.Run("Large range", func(b *testing.B) {
+		b.N = 10000
+		for i := 0; i < b.N; i++ {
+			slice := store.GetRange([]byte{10}, []byte{35})
+			if len(slice) != 26 {
+				b.Fatalf("Unexpected leaves slice size: %d", len(slice))
+			}
+		}
+	})
+
+}
+
 func openStorage() (*BadgerStorage, func()) {
 	store := NewBadgerStorage("/tmp/badger_store_test.db")
 	return store, func() {
-		fmt.Println("Cleaning...")
 		store.Close()
 		deleteFile("/tmp/badger_store_test.db")
 	}
@@ -100,4 +170,13 @@ func deleteFile(path string) {
 	if err != nil {
 		fmt.Printf("Unable to remove db file %s", err)
 	}
+}
+
+func randomBytes(n int) []byte {
+	bytes := make([]byte, n)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		panic(err)
+	}
+	return bytes
 }
