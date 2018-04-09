@@ -47,7 +47,7 @@ func (s *BPlusTreeStorage) GetRange(start, end []byte) storage.LeavesSlice {
 		if err != nil {
 			return leaves
 		}
-		if bytes.Compare(k.([]byte), end) < 0 {
+		if bytes.Compare(k.([]byte), end) <= 0 {
 			leaves = append(leaves, k.([]byte))
 		} else {
 			return leaves
