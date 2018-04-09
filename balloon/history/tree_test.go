@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"testing"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
@@ -22,23 +23,22 @@ func TestAdd(t *testing.T) {
 	}{
 		{0, "b4aa0a376986b4ab072ed536d41a4df65de5d46da15ff8756bc7657da01d2f52", "Hello World1"},
 		{1, "8c93bb614746a51c1200f01a0ba5217686bf576b8bb0b095523ea38c740c567e", "Hello World2"},
-		{2, "1306d590e35d965aa42ca6e3b05b67cd009d7b9021f777c480e55eb626072dc4", "Hello World3"},
-		{3, "d3e8bc7215dda0d39689a4bfc16974dd63e5420b35abb4860073dbbcb7e197ae", "Hello World4"},
-		{4, "8b8e3177b98d00f6a9e6d621ac660331318524f5a0cee2a62472e8e8bf682fd8", "Hello World5"},
+		{2, "ef88d8ccbf2d620e83066e16be4e2f31db0a10713d5970da2a15dc57b64d760a", "Hello World3"},
+		{3, "4cc083de4b21da14ca6d216293037b23c363580592b35eea724d5426b1dbd0ee", "Hello World4"},
+		{4, "52b0222c6c43792823cfe719548a6f1b6ff01a5b2c8c08b3d9480d7b76a96d0f", "Hello World5"},
 	}
 
-	ht := NewTree(storage.NewBadgerStorage("/tmp/httest.db"), hashing.Sha256Hasher)
+	store, closeF := openStorage()
+	defer closeF()
+
+	ht := NewTree(store, hashing.Sha256Hasher)
 
 	for _, e := range testCases {
 		t.Log("Testing event: ", e.event)
-		commitment, err := ht.add([]byte(e.event), util.UInt64AsBytes(e.index))
-		if err != nil {
-			t.Fatal("Error in Add call: ", err)
-		}
+		commitment := <- ht.Add([]byte(e.event), util.UInt64AsBytes(e.index))
 
 		c := hex.EncodeToString(commitment)
-		fmt.Println(c)
-		fmt.Println(hex.EncodeToString(hashing.Sha256Hasher([]byte{0x0}, []byte(e.event))))
+
 		if e.commitment != c {
 			t.Fatal("Incorrect commitment: ", e.commitment, " != ", c)
 		}
@@ -56,11 +56,29 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	ht := NewTree(storage.NewBadgerStorage("/tmp/htbenchmark.db"), hashing.Sha256Hasher)
+	store, closeF := openStorage()
+	defer closeF()
+	ht := NewTree(store, hashing.Sha256Hasher)
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
-		ht.add(key, util.UInt64AsBytes(uint64(i)))
+		<- ht.Add(key, util.UInt64AsBytes(uint64(i)))
 	}
 	b.Logf("stats = %+v\n", ht.stats)
+}
+
+func openStorage() (*storage.BadgerStorage, func()) {
+	store := storage.NewBadgerStorage("/tmp/badger_store_test.db")
+	return store, func() {
+		fmt.Println("Cleaning...")
+		store.Close()
+		deleteFile("/tmp/badger_store_test.db")
+	}
+}
+
+func deleteFile(path string) {
+	err := os.RemoveAll(path)
+	if err != nil {
+		fmt.Printf("Unable to remove db file %s", err)
+	}
 }

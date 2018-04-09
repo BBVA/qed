@@ -4,25 +4,26 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"os"
 	"testing"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 )
 
 func TestAdd(t *testing.T) {
+	store, closeF := openStorage()
+	defer closeF()
 
 	cache := storage.NewSimpleCache(5000)
-	store := storage.NewBadgerStorage("/tmp/badger_test")
-	ht := NewTree("my test tree", cache, store,hashing.Sha256Hasher)
+
+	ht := NewTree("my test tree", cache, store, hashing.Sha256Hasher)
 
 	for i := 0; i < 5; i++ {
-
 		event := fmt.Sprintf("Hello World%d", i)
 		key := hashing.Sha256Hasher([]byte(event))
 		value := make([]byte, 8)
 		binary.LittleEndian.PutUint64(value, uint64(i))
-		commitment := <- ht.Add(key, value)
-		fmt.Printf("%x\n", commitment)
+		<- ht.Add(key, value)
 	}
 
 }
@@ -38,15 +39,32 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	store := storage.NewBadgerStorage("/tmp/badger_bench")
-	cache := storage.NewSimpleCache(50000000)
-	ht := NewTree("my test tree", cache, store,hashing.Sha256Hasher)
+	store, closeF := openStorage()
+	defer closeF()
+	cache := storage.NewSimpleCache(5000000)
+	ht := NewTree("my test tree", cache, store, hashing.Sha256Hasher)
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
 		value := randomBytes(1)
 		store.Add(key, value)
-		ht.Add(key, value)
+		<- ht.Add(key, value)
 	}
 	b.Logf("stats = %+v\n", ht.stats)
+}
+
+func openStorage() (*storage.BadgerStorage, func()) {
+	store := storage.NewBadgerStorage("/tmp/badger_store_test.db")
+	return store, func() {
+		fmt.Println("Cleaning...")
+		store.Close()
+		deleteFile("/tmp/badger_store_test.db")
+	}
+}
+
+func deleteFile(path string) {
+	err := os.RemoveAll(path)
+	if err != nil {
+		fmt.Printf("Unable to remove db file %s", err)
+	}
 }

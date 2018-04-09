@@ -59,8 +59,8 @@ amounts of data for:
      
      go test verifiabledata/sequencer
  
-     go test -bench="." verifiabledata/balloon/hyper
-     go test -bench="." verifiabledata/balloon/history
+     go test -bench="BenchmarkAdd" verifiabledata/balloon/hyper
+     go test -bench="BenchmarkAdd" verifiabledata/balloon/history
      
      go test -bench="." -v verifiabledata/balloon
      
