@@ -10,8 +10,8 @@ import (
 )
 
 type Balloon struct {
-	history chan interface{}
-	hyper   chan interface{}
+	history *history.Tree
+	hyper   *hyper.Tree
 	hasher  hashing.Hasher
 	version uint
 }
@@ -32,14 +32,11 @@ func NewBalloon(path string, cacheSize int, hasher hashing.Hasher) *Balloon {
 	hyper := hyper.NewTree(path, cache, leaves, hasher)
 
 	b := Balloon{
-		make(chan interface{}),
-		make(chan interface{}),
+		history,
+		hyper,
 		hasher,
 		0,
 	}
-
-	history.Run(b.history)
-	hyper.Run(b.hyper)
 
 	return &b
 
@@ -51,22 +48,16 @@ func (b *Balloon) Add(event []byte) (*Commitment, error) {
 	index := make([]byte, 8)
 	binary.LittleEndian.PutUint64(index, uint64(b.version))
 
-	historyAddResult:= make(chan []byte)
-	hyperAddResult := make(chan []byte)
-
-	b.history <- history.NewAdd(digest, index, historyAddResult)
-	b.hyper <-hyper.NewAdd(digest, index, hyperAddResult)
-
-	historyDigest := <-historyAddResult
-	hyperDigest := <-hyperAddResult
-
-	return &Commitment{historyDigest, hyperDigest, b.version}, nil
+	return &Commitment{
+		<-b.history.Add(digest, index), 
+		<-b.hyper.Add(index, digest), 
+		b.version,
+	}, nil
 }
 
 func (b *Balloon) Close() error {
-	var result chan bool
-	b.history <- history.NewStop(result)
-	b.hyper <- hyper.NewStop(result)
+	b.history.Close()
+	b.hyper.Close()
 
 	return nil
 }

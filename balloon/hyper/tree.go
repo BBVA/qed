@@ -23,6 +23,7 @@ type Tree struct {
 	stats         *stats
 	cacheArea     *area
 	digestLength  int
+	ops chan interface{} // serialize operations
 }
 
 // Add inserts a new key-value pair into the tree and returns the
@@ -49,6 +50,7 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 		new(stats),
 		newArea(digestLength-cacheLevels, digestLength),
 		digestLength,
+		nil,
 	}
 
 	// init default hashes cache
@@ -56,23 +58,24 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 	for i := 1; i < int(digestLength); i++ {
 		tree.defaultHashes[i] = tree.hasher(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
-
+	tree.ops = tree.operations()
 	return tree
 }
 
 // Run listens in channel operations to execute in the tree
-func (t *Tree) Run(operations chan interface{}) {
+func (t *Tree) operations() chan interface{} {
+	operations := make(chan interface{},0)
 	go func() {
 		for {
 			select {
 			case op := <-operations:
 				switch msg := op.(type) {
-				case *Stop:
+				case *close:
 					if msg.stop {
 						msg.result <- true
 						return
 					}
-				case *Add:
+				case *add:
 					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
 				default:
@@ -82,32 +85,43 @@ func (t *Tree) Run(operations chan interface{}) {
 			}
 		}
 	}()
+	return operations
 }
+// Internally we use a channel API to serialize operations
+// but external we use exported methods to be called
+// by others.
+// These methods returns a channel with an appropriate type
+// for each operation to be consumed from when the data arrives.
 
-// These are the operations the tree supports and
-// together form the channel based API
-
-type Add struct {
+type add struct {
 	digest []byte
 	index  []byte
 	result chan []byte
 }
 
-func NewAdd(digest, index []byte, result chan []byte) *Add {
-	return &Add{
+// Queues an Add operation to the tree and returns a channel
+// when the result []byte will be sent when ready
+func (t Tree) Add(digest, index []byte)  chan []byte {
+	result := make(chan []byte, 0)
+	t.ops <- &add{
 		digest,
 		index,
 		result,
 	}
+	return result
 }
 
-type Stop struct {
-	stop bool
+type close struct {
+	stop   bool
 	result chan bool
 }
 
-func NewStop(result chan bool) *Stop {
-	return &Stop{true, result}
+// Queues a close operation to the tree and returns a channel
+// were a true or false will be send when the operation is completed
+func (t Tree) Close() chan bool {
+	result := make(chan bool)
+	t.ops <- &close{true, result,}
+	return result
 }
 
 // INTERNALS
