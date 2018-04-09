@@ -1,4 +1,4 @@
-package storage
+package cache
 
 // SimpleCache is a cache that contains the hashes of the pre-computed nodes
 type SimpleCache struct {

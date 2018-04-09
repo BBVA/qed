@@ -19,11 +19,11 @@ type Tree struct {
 	hasher        hashing.Hasher
 	defaultHashes [][]byte
 	cache         storage.Cache
-	leaves         storage.Store
+	leaves        storage.Store
 	stats         *stats
 	cacheArea     *area
 	digestLength  int
-	ops chan interface{} // serialize operations
+	ops           chan interface{} // serialize operations
 }
 
 // Add inserts a new key-value pair into the tree and returns the
@@ -38,7 +38,7 @@ func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
 
 func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
 
-	digestLength := len(hasher([]byte("una cosa mala")))*8
+	digestLength := len(hasher([]byte("una cosa mala"))) * 8
 	cacheLevels := 30
 
 	tree := &Tree{
@@ -64,17 +64,16 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 
 // Run listens in channel operations to execute in the tree
 func (t *Tree) operations() chan interface{} {
-	operations := make(chan interface{},0)
+	operations := make(chan interface{}, 0)
 	go func() {
 		for {
 			select {
 			case op := <-operations:
 				switch msg := op.(type) {
 				case *close:
-					if msg.stop {
-						msg.result <- true
-						return
-					}
+					t.leaves.Close()
+					msg.result <- true
+					return
 				case *add:
 					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
@@ -87,6 +86,7 @@ func (t *Tree) operations() chan interface{} {
 	}()
 	return operations
 }
+
 // Internally we use a channel API to serialize operations
 // but external we use exported methods to be called
 // by others.
@@ -101,7 +101,7 @@ type add struct {
 
 // Queues an Add operation to the tree and returns a channel
 // when the result []byte will be sent when ready
-func (t Tree) Add(digest, index []byte)  chan []byte {
+func (t Tree) Add(digest, index []byte) chan []byte {
 	result := make(chan []byte, 0)
 	t.ops <- &add{
 		digest,
@@ -120,7 +120,7 @@ type close struct {
 // were a true or false will be send when the operation is completed
 func (t Tree) Close() chan bool {
 	result := make(chan bool)
-	t.ops <- &close{true, result,}
+	t.ops <- &close{true, result}
 	return result
 }
 

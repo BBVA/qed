@@ -1,4 +1,4 @@
-package storage
+package badger
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-	store, closeF := openStorage()
+	store, closeF := openBadgerStorage()
 	defer closeF()
 
 	key := []byte("Key")
@@ -27,7 +27,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestGetExistentKey(t *testing.T) {
-	store, closeF := openStorage()
+	store, closeF := openBadgerStorage()
 	defer closeF()
 
 	key := []byte("Key")
@@ -46,7 +46,7 @@ func TestGetExistentKey(t *testing.T) {
 }
 
 func TestNonExistentKey(t *testing.T) {
-	store, closeF := openStorage()
+	store, closeF := openBadgerStorage()
 	defer closeF()
 
 	key := []byte("Key")
@@ -59,7 +59,7 @@ func TestNonExistentKey(t *testing.T) {
 }
 
 func TestGetRange(t *testing.T) {
-	store, closeF := openStorage()
+	store, closeF := openBadgerStorage()
 	defer closeF()
 
 	var testValues = []struct {
@@ -89,7 +89,7 @@ func TestGetRange(t *testing.T) {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	store, closeF := openStorage()
+	store, closeF := openBadgerStorage()
 	defer closeF()
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
@@ -98,7 +98,7 @@ func BenchmarkAdd(b *testing.B) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	store, closeF := openStorage()
+	store, closeF := openBadgerStorage()
 	defer closeF()
 	N := 10000
 	b.N = N
@@ -124,7 +124,7 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkGetRangeInLargeTree(b *testing.B) {
-	store, closeF := openStorage()
+	store, closeF := openBadgerStorage()
 	defer closeF()
 	N := 1000000
 
@@ -157,7 +157,7 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 
 }
 
-func openStorage() (*BadgerStorage, func()) {
+func openBadgerStorage() (*BadgerStorage, func()) {
 	store := NewBadgerStorage("/tmp/badger_store_test.db")
 	return store, func() {
 		store.Close()

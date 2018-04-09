@@ -3,6 +3,7 @@ package balloon
 import (
 	"crypto/rand"
 	"fmt"
+	"os"
 	"testing"
 	"verifiabledata/balloon/hashing"
 )
@@ -10,6 +11,9 @@ import (
 func TestAdd(t *testing.T) {
 
 	balloon := NewBalloon("/tmp/testAdd", 5000000, hashing.Sha256Hasher)
+	defer balloon.history.Close()
+	defer balloon.hyper.Close()
+	defer deleteFilesInDir("/tmp/testAdd")
 
 	var testCases = []struct {
 		index         uint
@@ -54,6 +58,11 @@ func randomBytes(n int) []byte {
 	}
 
 	return bytes
+}
+
+func deleteFilesInDir(path string) {
+	os.RemoveAll(fmt.Sprintf("%s/leaves.db", path))
+	os.RemoveAll(fmt.Sprintf("%s/frozen.db", path))
 }
 
 func BenchmarkAdd(b *testing.B) {

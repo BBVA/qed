@@ -6,7 +6,8 @@ import (
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
-	"verifiabledata/balloon/storage"
+	"verifiabledata/balloon/storage/badger"
+	"verifiabledata/balloon/storage/cache"
 )
 
 type Balloon struct {
@@ -24,9 +25,9 @@ type Commitment struct {
 
 func NewBalloon(path string, cacheSize int, hasher hashing.Hasher) *Balloon {
 
-	frozen := storage.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
-	leaves := storage.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
-	cache := storage.NewSimpleCache(cacheSize)
+	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
+	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
+	cache := cache.NewSimpleCache(cacheSize)
 
 	history := history.NewTree(frozen, hasher)
 	hyper := hyper.NewTree(path, cache, leaves, hasher)
@@ -49,8 +50,8 @@ func (b *Balloon) Add(event []byte) (*Commitment, error) {
 	binary.LittleEndian.PutUint64(index, uint64(b.version))
 
 	return &Commitment{
-		<-b.history.Add(digest, index), 
-		<-b.hyper.Add(index, digest), 
+		<-b.history.Add(digest, index),
+		<-b.hyper.Add(index, digest),
 		b.version,
 	}, nil
 }

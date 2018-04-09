@@ -1,8 +1,9 @@
-package storage
+package bplus
 
 import (
 	"bytes"
 	"fmt"
+	"verifiabledata/balloon/storage"
 
 	"github.com/cznic/b"
 )
@@ -32,8 +33,8 @@ func (s *BPlusTreeStorage) Get(key []byte) ([]byte, error) {
 	return value.([]byte), nil
 }
 
-func (s *BPlusTreeStorage) GetRange(start, end []byte) LeavesSlice {
-	var leaves LeavesSlice
+func (s *BPlusTreeStorage) GetRange(start, end []byte) storage.LeavesSlice {
+	var leaves storage.LeavesSlice
 	var err error
 	var k interface{}
 

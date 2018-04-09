@@ -1,18 +1,19 @@
-package storage
+package badger
 
 import (
 	"bytes"
 	"log"
+	"verifiabledata/balloon/storage"
 
-	"github.com/dgraph-io/badger"
+	b "github.com/dgraph-io/badger"
 )
 
 type BadgerStorage struct {
-	db *badger.DB
+	db *b.DB
 }
 
 func (s *BadgerStorage) Add(key []byte, value []byte) error {
-	return s.db.Update(func(txn *badger.Txn) error {
+	return s.db.Update(func(txn *b.Txn) error {
 		err := txn.Set(key, value)
 		return err
 	})
@@ -20,7 +21,7 @@ func (s *BadgerStorage) Add(key []byte, value []byte) error {
 
 func (s *BadgerStorage) Get(key []byte) ([]byte, error) {
 	var value []byte
-	err := s.db.View(func(txn *badger.Txn) error {
+	err := s.db.View(func(txn *b.Txn) error {
 		item, err := txn.Get(key)
 		if err != nil {
 			return err
@@ -39,11 +40,11 @@ func (s *BadgerStorage) Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func (s *BadgerStorage) GetRange(start, end []byte) LeavesSlice {
-	var leaves LeavesSlice
+func (s *BadgerStorage) GetRange(start, end []byte) storage.LeavesSlice {
+	var leaves storage.LeavesSlice
 
-	s.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
+	s.db.View(func(txn *b.Txn) error {
+		opts := b.DefaultIteratorOptions
 		opts.PrefetchValues = false
 		it := txn.NewIterator(opts)
 		defer it.Close()
@@ -66,10 +67,10 @@ func (s *BadgerStorage) Close() error {
 }
 
 func NewBadgerStorage(path string) *BadgerStorage {
-	opts := badger.DefaultOptions
+	opts := b.DefaultOptions
 	opts.Dir = path
 	opts.ValueDir = path
-	db, err := badger.Open(opts)
+	db, err := b.Open(opts)
 	if err != nil {
 		log.Fatal(err)
 	}

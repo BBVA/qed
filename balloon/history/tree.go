@@ -69,21 +69,21 @@ type Tree struct {
 	frozen storage.Store // already computed nodes, that will not change
 	hasher hashing.Hasher
 	stats  *stats
-	ops chan interface{} // serialize operations
+	ops    chan interface{} // serialize operations
 }
 
 // NewTree returns a new history tree
 func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
-	t:= &Tree{
+	t := &Tree{
 		frozen,
 		hasher,
 		new(stats),
 		nil,
 	}
-	// start tree goroutine to handle 
+	// start tree goroutine to handle
 	// tree operations
 	t.ops = t.operations()
-	
+
 	return t
 }
 
@@ -175,10 +175,9 @@ func (t *Tree) operations() chan interface{} {
 			case op := <-operations:
 				switch msg := op.(type) {
 				case *close:
-					if msg.stop {
-						msg.result <- true
-						return
-					}
+					t.frozen.Close()
+					msg.result <- true
+					return
 				case *add:
 					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
@@ -206,7 +205,7 @@ type add struct {
 
 // Queues an Add operation to the tree and returns a channel
 // when the result []byte will be sent when ready
-func (t Tree) Add(digest, index []byte)  chan []byte {
+func (t Tree) Add(digest, index []byte) chan []byte {
 	result := make(chan []byte, 0)
 	t.ops <- &add{
 		digest,
@@ -225,7 +224,7 @@ type close struct {
 // were a true or false will be send when the operation is completed
 func (t Tree) Close() chan bool {
 	result := make(chan bool)
-	t.ops <- &close{true, result,}
+	t.ops <- &close{true, result}
 	return result
 }
 

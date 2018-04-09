@@ -1,20 +1,21 @@
-package storage
+package bolt
 
 import (
 	"bytes"
 	"fmt"
 	"log"
+	"verifiabledata/balloon/storage"
 
-	bolt "github.com/coreos/bbolt"
+	b "github.com/coreos/bbolt"
 )
 
 type BoltStorage struct {
-	db     *bolt.DB
+	db     *b.DB
 	bucket []byte
 }
 
 func (s *BoltStorage) Add(key []byte, value []byte) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
+	return s.db.Update(func(tx *b.Tx) error {
 		b := tx.Bucket(s.bucket)
 		err := b.Put(key, value)
 		return err
@@ -23,7 +24,7 @@ func (s *BoltStorage) Add(key []byte, value []byte) error {
 
 func (s *BoltStorage) Get(key []byte) ([]byte, error) {
 	var value []byte
-	err := s.db.View(func(tx *bolt.Tx) error {
+	err := s.db.View(func(tx *b.Tx) error {
 		b := tx.Bucket(s.bucket)
 		v := b.Get(key)
 		if v == nil {
@@ -39,10 +40,10 @@ func (s *BoltStorage) Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func (s *BoltStorage) GetRange(start, end []byte) LeavesSlice {
-	var leaves LeavesSlice
+func (s *BoltStorage) GetRange(start, end []byte) storage.LeavesSlice {
+	var leaves storage.LeavesSlice
 
-	s.db.View(func(tx *bolt.Tx) error {
+	s.db.View(func(tx *b.Tx) error {
 		cursor := tx.Bucket(s.bucket).Cursor()
 
 		for k, _ := cursor.Seek(start); k != nil && bytes.Compare(k, end) <= 0; k, _ = cursor.Next() {
@@ -60,13 +61,13 @@ func (s *BoltStorage) Close() error {
 }
 
 func NewBoltStorage(path, bucketName string) *BoltStorage {
-	db, err := bolt.Open(path, 0600, nil)
+	db, err := b.Open(path, 0600, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// create bucket
-	db.Update(func(tx *bolt.Tx) error {
+	db.Update(func(tx *b.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(bucketName))
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
