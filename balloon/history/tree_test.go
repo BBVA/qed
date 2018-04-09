@@ -27,8 +27,7 @@ func TestAdd(t *testing.T) {
 		{4, "8b8e3177b98d00f6a9e6d621ac660331318524f5a0cee2a62472e8e8bf682fd8", "Hello World5"},
 	}
 
-	hasher, _ := hashing.Sha256Hasher()
-	ht := NewTree(storage.NewBadgerStorage("/tmp/httest.db"), hasher)
+	ht := NewTree(storage.NewBadgerStorage("/tmp/httest.db"), hashing.Sha256Hasher)
 
 	for _, e := range testCases {
 		t.Log("Testing event: ", e.event)
@@ -39,7 +38,7 @@ func TestAdd(t *testing.T) {
 
 		c := hex.EncodeToString(commitment)
 		fmt.Println(c)
-		fmt.Println(hex.EncodeToString(hasher([]byte{0x0}, []byte(e.event))))
+		fmt.Println(hex.EncodeToString(hashing.Sha256Hasher([]byte{0x0}, []byte(e.event))))
 		if e.commitment != c {
 			t.Fatal("Incorrect commitment: ", e.commitment, " != ", c)
 		}
@@ -57,8 +56,7 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	hasher, _ := hashing.Sha256Hasher()
-	ht := NewTree(storage.NewBadgerStorage("/tmp/htbenchmark.db"), hasher)
+	ht := NewTree(storage.NewBadgerStorage("/tmp/htbenchmark.db"), hashing.Sha256Hasher)
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
