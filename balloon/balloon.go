@@ -8,7 +8,12 @@ import (
 	"verifiabledata/balloon/storage"
 )
 
-type Balloon struct {
+type Balloon interface {
+	Add(event []byte) chan *Commitment
+	Close() chan bool
+}
+
+type HyperBalloon struct {
 	history *history.Tree
 	hyper   *hyper.Tree
 	hasher  hashing.Hasher
@@ -22,12 +27,12 @@ type Commitment struct {
 	Version       uint
 }
 
-func NewBalloon(path string, cacheSize int, hasher hashing.Hasher, frozen, leaves storage.Store, cache storage.Cache) *Balloon {
+func NewHyperBalloon(path string, hasher hashing.Hasher, frozen, leaves storage.Store, cache storage.Cache) *HyperBalloon {
 
 	history := history.NewTree(frozen, hasher)
 	hyper := hyper.NewTree(path, cache, leaves, hasher)
 
-	b := Balloon{
+	b := HyperBalloon{
 		history,
 		hyper,
 		hasher,
@@ -39,7 +44,7 @@ func NewBalloon(path string, cacheSize int, hasher hashing.Hasher, frozen, leave
 
 }
 
-func (b *Balloon) add(event []byte) (*Commitment, error) {
+func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
 	digest := b.hasher(event)
 	b.version++
 	index := make([]byte, 8)
@@ -53,7 +58,7 @@ func (b *Balloon) add(event []byte) (*Commitment, error) {
 }
 
 // Run listens in channel operations to execute in the tree
-func (b *Balloon) operations() chan interface{} {
+func (b *HyperBalloon) operations() chan interface{} {
 	operations := make(chan interface{}, 0)
 	go func() {
 		for {
@@ -81,7 +86,7 @@ type add struct {
 	result chan *Commitment
 }
 
-func (b Balloon) Add(event []byte) chan *Commitment {
+func (b HyperBalloon) Add(event []byte) chan *Commitment {
 	result := make(chan *Commitment)
 	b.ops <- &add{
 		event,
@@ -96,7 +101,7 @@ type close struct {
 	result chan bool
 }
 
-func (b *Balloon) Close() chan bool {
+func (b *HyperBalloon) Close() chan bool {
 	result := make(chan bool)
 
 	b.history.Close()

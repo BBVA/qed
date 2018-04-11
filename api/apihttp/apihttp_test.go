@@ -2,15 +2,35 @@
 // Use of this source code is governed by a Apache 2 License
 // that can be found in the LICENSE file
 
-package http
+package apihttp
 
 import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"verifiabledata/balloon"
 )
 
+type fakeBalloon struct {
+	addch  chan *balloon.Commitment
+	stopch chan bool
+}
+
+func (b fakeBalloon) Add(event []byte) chan *balloon.Commitment {
+	return b.addch
+}
+
+func (b fakeBalloon) Close() chan bool {
+	return b.stopch
+}
+
+func newFakeBalloon(addch chan *balloon.Commitment, stopch chan bool) fakeBalloon {
+	return fakeBalloon{
+		addch,
+		stopch,
+	}
+}
 func TestHealthCheckHandler(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
@@ -51,18 +71,15 @@ func TestInsertEvent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fakeRequestQueue := make(chan sequencer.Processer)
-
-	go func() {
-		select {
-		case request := <-fakeRequestQueue:
-			request.Process()
-		}
-	}()
-
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := InsertEvent(fakeRequestQueue)
+	addch := make(chan *balloon.Commitment)
+	closech := make(chan bool)
+	handler := InsertEvent(newFakeBalloon(addch, closech))
+
+	go func() {
+		addch <- &balloon.Commitment{}
+	}()
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -93,39 +110,6 @@ func TestAuthHandlerMiddleware(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-}
-func TestFetchEvent(t *testing.T) {
-
-	eventMessage := []byte(`{"message": "looking for this message"}`)
-
-	// Create a simple request to out fetch endpoint
-	req, err := http.NewRequest("GET", "/fetch", bytes.NewBuffer(eventMessage))
-	if len(eventMessage) == 0 {
-		t.Fatal(err)
-	}
-
-	fakeRequestFetch := make(chan sequencer.Processer)
-
-	go func() {
-		select {
-		case request := <-fakeRequestFetch:
-			request.Process()
-		}
-	}()
-
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	handler := GetEvent(fakeRequestFetch)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder
-	handler.ServeHTTP(rr, req)
-
-	// CHenck if the status code is what we expected
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
@@ -171,41 +155,6 @@ func BenchmarkAuth(b *testing.B) {
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
-
-	// Define our http client
-	client := &http.Client{}
-
-	for i := 0; i < b.N; i++ {
-		client.Do(req)
-	}
-}
-
-func BenchmarkFetchEvent(b *testing.B) {
-
-	eventMessage := []byte(`{"message": "looking for this message"}`)
-
-	// Create a simple request to out fetch endpoint
-	req, err := http.NewRequest("GET", "/fetch", bytes.NewBuffer(eventMessage))
-	if len(eventMessage) == 0 {
-		b.Fatal(err)
-	}
-
-	fakeRequestFetch := make(chan sequencer.Processer)
-
-	go func() {
-		select {
-		case request := <-fakeRequestFetch:
-			request.Process()
-		}
-	}()
-
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	handler := GetEvent(fakeRequestFetch)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder
 	handler.ServeHTTP(rr, req)
 
 	// Define our http client

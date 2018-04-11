@@ -14,7 +14,6 @@ import (
 	"math"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
-	"verifiabledata/util"
 )
 
 // Constant Zero is the 0x0 byte, and it is used as a prefix to know
@@ -106,8 +105,14 @@ func (t *Tree) getDepth(index uint64) uint64 {
 	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
 
+func uInt64AsBytes(i uint64) []byte {
+	valuebytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(valuebytes, i)
+	return valuebytes
+}
+
 func frozenKey(index, layer uint64) []byte {
-	return append(util.UInt64AsBytes(index), util.UInt64AsBytes(layer)...)
+	return append(uInt64AsBytes(index), uInt64AsBytes(layer)...)
 }
 
 func (t *Tree) computeNodeHash(eventDigest []byte, index, layer uint64, version uint64) ([]byte, error) {

@@ -1,0 +1,32 @@
+// Create a JSON struct for our event
+type InsertResponse struct {
+	Hash       string `json:"hash"`
+	Commitment string `json:"commitment"`
+	Index      uint64 `json:"index"`
+}
+
+type InsertRequest struct {
+	InsertData      InsertData
+	ResponseChannel chan *InsertResponse
+}
+
+func (i *InsertRequest) Process() {
+	commitment, node, err := tree.Add([]byte(i.InsertData.Message))
+	if err != nil {
+		panic(err)
+	}
+
+	response := InsertResponse{
+		Hash:       string(node.Digest),
+		Commitment: string(commitment.Digest),
+		Index:      node.Pos.Index,
+	}
+
+	// FIXME: temporal mock insead of the SMT
+	smt_mock[i.InsertData.Message] = &response
+
+	log.Printf("New event inserted with index [%d]: %s", response.Index,
+		hex.EncodeToString([]byte(response.Commitment)))
+
+	i.ResponseChannel <- &response
+}
