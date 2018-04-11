@@ -13,6 +13,7 @@ type Balloon struct {
 	hyper   *hyper.Tree
 	hasher  hashing.Hasher
 	version uint
+	ops     chan interface{} // serialize operations
 }
 
 type Commitment struct {
@@ -31,13 +32,14 @@ func NewBalloon(path string, cacheSize int, hasher hashing.Hasher, frozen, leave
 		hyper,
 		hasher,
 		0,
+		nil,
 	}
-
+	b.ops = b.operations()
 	return &b
 
 }
 
-func (b *Balloon) Add(event []byte) (*Commitment, error) {
+func (b *Balloon) add(event []byte) (*Commitment, error) {
 	digest := b.hasher(event)
 	b.version++
 	index := make([]byte, 8)
@@ -50,9 +52,56 @@ func (b *Balloon) Add(event []byte) (*Commitment, error) {
 	}, nil
 }
 
-func (b *Balloon) Close() error {
+// Run listens in channel operations to execute in the tree
+func (b *Balloon) operations() chan interface{} {
+	operations := make(chan interface{}, 0)
+	go func() {
+		for {
+			select {
+			case op := <-operations:
+				switch msg := op.(type) {
+				case *close:
+					msg.result <- true
+					return
+				case *add:
+					digest, _ := b.add(msg.event)
+					msg.result <- digest
+				default:
+					panic("Hyper tree Run() message not implemented!!")
+				}
+
+			}
+		}
+	}()
+	return operations
+}
+
+type add struct {
+	event  []byte
+	result chan *Commitment
+}
+
+func (b Balloon) Add(event []byte) chan *Commitment {
+	result := make(chan *Commitment)
+	b.ops <- &add{
+		event,
+		result,
+	}
+
+	return result
+}
+
+type close struct {
+	stop   bool
+	result chan bool
+}
+
+func (b *Balloon) Close() chan bool {
+	result := make(chan bool)
+
 	b.history.Close()
 	b.hyper.Close()
 
-	return nil
+	b.ops <- &close{true, result}
+	return result
 }
