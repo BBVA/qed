@@ -51,17 +51,12 @@ func TestInsertEvent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fakeRequestQueue := make(chan *InsertRequest)
+	fakeRequestQueue := make(chan sequencer.Processer)
 
 	go func() {
 		select {
 		case request := <-fakeRequestQueue:
-			response := InsertResponse{
-				Hash:       "B8E1F80BD70AE0784C7855A451731B745FDDB67749D23F637BE9082B75E9575B",
-				Commitment: "6A19F0FB4BE54511524BCD5B0C98B38DA1EE049A39735C39311E10336024436F",
-				Index:      1,
-			}
-			request.ResponseChannel <- &response
+			request.Process()
 		}
 	}()
 
@@ -113,15 +108,12 @@ func TestFetchEvent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fakeRequestFetch := make(chan *FetchRequest)
+	fakeRequestFetch := make(chan sequencer.Processer)
 
 	go func() {
 		select {
 		case request := <-fakeRequestFetch:
-			response := FetchResponse{
-				Index: 1,
-			}
-			request.ResponseChannel <- &response
+			request.Process()
 		}
 	}()
 
@@ -199,15 +191,12 @@ func BenchmarkFetchEvent(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	fakeRequestFetch := make(chan *FetchRequest)
+	fakeRequestFetch := make(chan sequencer.Processer)
 
 	go func() {
 		select {
 		case request := <-fakeRequestFetch:
-			response := FetchResponse{
-				Index: 1,
-			}
-			request.ResponseChannel <- &response
+			request.Process()
 		}
 	}()
 
