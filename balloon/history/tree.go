@@ -93,7 +93,7 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	version := binary.LittleEndian.Uint64(index)
 	// calculate commitment as C_n = A_n(0,d)
 	depth := t.getDepth(version)
-	rootDigest, err := t.computeNodeHash(eventDigest, 0, depth, version)
+	rootDigest, err := t.rootHash(eventDigest, 0, depth, version)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func frozenKey(index, layer uint64) []byte {
 	return append(uInt64AsBytes(index), uInt64AsBytes(layer)...)
 }
 
-func (t *Tree) computeNodeHash(eventDigest []byte, index, layer uint64, version uint64) ([]byte, error) {
+func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64) ([]byte, error) {
 
 	var digest []byte
 
@@ -137,7 +137,7 @@ func (t *Tree) computeNodeHash(eventDigest []byte, index, layer uint64, version 
 		break
 	// A_v(i,r)
 	case version < index+pow(2, layer-1):
-		hash, err := t.computeNodeHash(eventDigest, index, layer-1, version)
+		hash, err := t.rootHash(eventDigest, index, layer-1, version)
 		if err != nil {
 			return nil, err
 		}
@@ -146,11 +146,11 @@ func (t *Tree) computeNodeHash(eventDigest []byte, index, layer uint64, version 
 		break
 	// A_v(i,r)
 	case version >= index+pow(2, layer-1):
-		hash1, err := t.computeNodeHash(eventDigest, index, layer-1, version)
+		hash1, err := t.rootHash(eventDigest, index, layer-1, version)
 		if err != nil {
 			return nil, err
 		}
-		hash2, err := t.computeNodeHash(eventDigest, index+pow(2, layer-1), layer-1, version)
+		hash2, err := t.rootHash(eventDigest, index+pow(2, layer-1), layer-1, version)
 		if err != nil {
 			return nil, err
 		}
