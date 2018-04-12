@@ -21,8 +21,8 @@ import (
 var (
 	httpEndpoint = *flag.String("http_endpoint", ":8080", "Endpoint for REST requests on (host:port)")
 	path         = *flag.String("path", "/tmp/balloon.db", "Set default storage path.")
-	cach         = *flag.Int("cache", 5000000, "Initialize and reserve custom cache size.")
-	stor         = *flag.String("storage", "badger", "Choose between different storage backends. Eg badge|bolt")
+	cacheSize    = *flag.Int("cache", 5000000, "Initialize and reserve custom cache size.")
+	storageName  = *flag.String("storage", "badger", "Choose between different storage backends. Eg badge|bolt")
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 
 	var frozen, leaves storage.Store
 
-	switch stor {
+	switch storageName {
 	case "badger":
 		frozen = badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
 		leaves = badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
@@ -42,7 +42,7 @@ func main() {
 		fmt.Print("Please select a valid storage backend")
 	}
 
-	cache := cache.NewSimpleCache(cach)
+	cache := cache.NewSimpleCache(cacheSize)
 
 	balloon := balloon.NewHyperBalloon(path, hashing.Sha256Hasher, frozen, leaves, cache)
 
