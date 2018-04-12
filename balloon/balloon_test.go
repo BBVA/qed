@@ -16,7 +16,7 @@ func TestAdd(t *testing.T) {
 	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
 	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
 	cache := cache.NewSimpleCache(5000000)
-	balloon := NewBalloon("/tmp/testAdd", 5000000, hashing.Sha256Hasher, frozen, leaves, cache)
+	balloon := NewHyperBalloon("/tmp/testAdd", hashing.Sha256Hasher, frozen, leaves, cache)
 	defer balloon.history.Close()
 	defer balloon.hyper.Close()
 	defer deleteFilesInDir("/tmp/testAdd")
@@ -74,7 +74,7 @@ func BenchmarkAddBolt(b *testing.B) {
 	frozen := bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", path), "frozen")
 	leaves := bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", path), "leaves")
 	cache := cache.NewSimpleCache(5000000)
-	balloon := NewBalloon("/tmp/benchAdd", 5000000, hashing.Sha256Hasher, frozen, leaves, cache)
+	balloon := NewHyperBalloon("/tmp/benchAdd", hashing.Sha256Hasher, frozen, leaves, cache)
 	defer deleteFilesInDir("/tmp/benchAdd")
 	b.ResetTimer()
 	b.N = 10000
@@ -91,7 +91,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
 	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
 	cache := cache.NewSimpleCache(5000000)
-	balloon := NewBalloon("/tmp/benchAdd", 5000000, hashing.Sha256Hasher, frozen, leaves, cache)
+	balloon := NewHyperBalloon("/tmp/benchAdd", hashing.Sha256Hasher, frozen, leaves, cache)
 	defer deleteFilesInDir("/tmp/benchAdd")
 	b.ResetTimer()
 	b.N = 10000
