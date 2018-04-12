@@ -17,9 +17,7 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/golang/glog"
-
-	apiHttp "verifiabledata/api/http"
+	apiHttp "verifiabledata/api/apihttp"
 )
 
 type Agent struct{}
