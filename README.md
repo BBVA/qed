@@ -56,8 +56,6 @@ amounts of data for:
      go test -v verifiabledata/balloon/hyper
      
      go test -v verifiabledata/balloon
-     
-     go test verifiabledata/sequencer
  
      go test -bench="BenchmarkAdd" verifiabledata/balloon/hyper
      go test -bench="BenchmarkAdd" verifiabledata/balloon/history
@@ -67,3 +65,4 @@ amounts of data for:
      go test -v -timeout=1h -bench="." -cpuprofile cpu.out -memprofile mem.out verifiabledata/merkle/hyper
      
      go tool pprof hyper.test cpu.out mem.out
+     
