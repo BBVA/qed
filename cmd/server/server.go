@@ -19,32 +19,34 @@ import (
 )
 
 var (
-	httpEndpoint = *flag.String("http_endpoint", ":8080", "Endpoint for REST requests on (host:port)")
-	path         = *flag.String("path", "/tmp/balloon.db", "Set default storage path.")
-	cacheSize    = *flag.Int("cache", 5000000, "Initialize and reserve custom cache size.")
-	storageName  = *flag.String("storage", "badger", "Choose between different storage backends. Eg badge|bolt")
+	httpEndpoint, dbPath, storageName string
+	cacheSize                         int
 )
 
 func main() {
-
+	// We use the TypeVar flag syntax becouse balloon requires parameters as *type
+	flag.StringVar(&httpEndpoint, "http_endpoint", ":8080", "Endpoint for REST requests on (host:port)")
+	flag.StringVar(&dbPath, "path", "/tmp/balloon.db", "Set default storage path.")
+	flag.IntVar(&cacheSize, "cache", 5000000, "Initialize and reserve custom cache size.")
+	flag.StringVar(&storageName, "storage", "badger", "Choose between different storage backends. Eg badge|bolt")
 	flag.Parse()
 
 	var frozen, leaves storage.Store
 
 	switch storageName {
 	case "badger":
-		frozen = badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
-		leaves = badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
+		frozen = badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
+		leaves = badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", dbPath))
 	case "bolt":
-		frozen = bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", path), "forzen")
-		leaves = bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", path), "leaves")
+		frozen = bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", dbPath), "forzen")
+		leaves = bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", dbPath), "leaves")
 	default:
 		fmt.Print("Please select a valid storage backend")
 	}
 
 	cache := cache.NewSimpleCache(cacheSize)
 
-	balloon := balloon.NewHyperBalloon(path, hashing.Sha256Hasher, frozen, leaves, cache)
+	balloon := balloon.NewHyperBalloon(dbPath, hashing.Sha256Hasher, frozen, leaves, cache)
 
 	err := http.ListenAndServe(httpEndpoint, apihttp.New(balloon))
 	if err != nil {
