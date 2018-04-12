@@ -41,7 +41,7 @@ func TestAdd(t *testing.T) {
 	for _, e := range testCases {
 		t.Log("Testing event: ", e.event)
 		comm := balloon.Add([]byte(e.event))
-		commitment := <- comm
+		commitment := <-comm
 
 		if e.index != commitment.Version {
 			t.Fatal("Incorrect index: ", e.index, " != ", commitment.Version)
@@ -84,8 +84,8 @@ func BenchmarkAddBolt(b *testing.B) {
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
 		event := randomBytes(128)
-		 r := balloon.Add(event)
-		 <- r
+		r := balloon.Add(event)
+		<-r
 	}
 
 }
@@ -102,7 +102,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		event := randomBytes(128)
 		r := balloon.Add(event)
-		<- r
+		<-r
 	}
 
 }
