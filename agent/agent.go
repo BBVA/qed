@@ -16,9 +16,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	apiHttp "verifiabledata/api/apihttp"
 )
+
+type response map[string]interface{}
 
 type Agent struct{}
 
@@ -32,7 +32,7 @@ func Run(ctx context.Context) (*Agent, error) {
 
 }
 
-func (a *Agent) Add(message string) *apiHttp.InsertResponse {
+func (a *Agent) Add(message string) response {
 	data := []byte(strings.Join([]string{`{"message": "`, message, `"}`}, ""))
 
 	req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(data))
@@ -50,41 +50,13 @@ func (a *Agent) Add(message string) *apiHttp.InsertResponse {
 
 	defer resp.Body.Close()
 
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 
-	insert := &apiHttp.InsertResponse{}
+	insert := make(response)
 
 	json.Unmarshal([]byte(bodyBytes), &insert)
 
 	return insert
-}
-
-func (a *Agent) Fetch(message string) *apiHttp.FetchResponse {
-	data := []byte(strings.Join([]string{`{"message": "`, message, `"}`}, ""))
-
-	// Create a simple request to out fetch endpoint
-	req, err := http.NewRequest("GET", "http://localhost:8080/fetch", bytes.NewBuffer(data))
-	if err != nil {
-		panic(err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Api-Key", "this-is-my-api-key")
-
-	resp, err := http.DefaultClient.Do(req)
-
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-
-	fetch := &apiHttp.FetchResponse{}
-
-	json.Unmarshal([]byte(bodyBytes), &fetch)
-
-	return fetch
 }
 
 func (a *Agent) Verify(message string) {
