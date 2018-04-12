@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"verifiabledata/agent"
@@ -12,12 +13,11 @@ import (
 func main() {
 	ctx := context.Background()
 
-	fmt.Println("Starting agent")
+	log.Println("Starting agent")
 
 	agent, err := agent.Run(ctx)
 	if err != nil {
-		fmt.Println("Error: ", err)
-		panic("Agent exited")
+		log.Panicln("Agent exited with error:", err)
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
