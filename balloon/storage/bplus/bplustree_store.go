@@ -6,7 +6,6 @@ package bplus
 
 import (
 	"bytes"
-	"fmt"
 	"verifiabledata/balloon/storage"
 
 	"github.com/cznic/b"
@@ -32,7 +31,7 @@ func (s *BPlusTreeStorage) Add(key []byte, value []byte) error {
 func (s *BPlusTreeStorage) Get(key []byte) ([]byte, error) {
 	value, ok := s.store.Get(key)
 	if ok == false {
-		return nil, fmt.Errorf("Unknown key %d", key)
+		return make([]byte, 0), nil
 	}
 	return value.([]byte), nil
 }

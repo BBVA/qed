@@ -32,10 +32,11 @@ func (s *BoltStorage) Get(key []byte) ([]byte, error) {
 		b := tx.Bucket(s.bucket)
 		v := b.Get(key)
 		if v == nil {
-			return fmt.Errorf("Unknown key %d", key)
+			value = make([]byte, 0)
+		} else {
+			value = make([]byte, len(v))
+			copy(value, v)
 		}
-		value = make([]byte, len(v))
-		copy(value, v)
 		return nil
 	})
 	if err != nil {

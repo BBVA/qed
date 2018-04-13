@@ -53,9 +53,9 @@ func TestNonExistentKey(t *testing.T) {
 
 	key := []byte("Key")
 
-	_, err := store.Get(key)
-	if err == nil {
-		t.Fatalf("Expected exception when trying to return a non-existent key")
+	value, _ := store.Get(key)
+	if len(value) > 0 {
+		t.Fatalf("Expected empty value")
 	}
 
 }

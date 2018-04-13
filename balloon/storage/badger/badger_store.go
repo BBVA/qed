@@ -38,10 +38,14 @@ func (s *BadgerStorage) Get(key []byte) ([]byte, error) {
 		copy(value, v)
 		return nil
 	})
-	if err != nil {
+	switch err {
+	case nil:
+		return value, nil
+	case b.ErrEmptyKey:
+		return make([]byte, 0), nil
+	default:
 		return nil, err
 	}
-	return value, nil
 }
 
 func (s *BadgerStorage) GetRange(start, end []byte) storage.LeavesSlice {
