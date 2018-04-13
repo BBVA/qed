@@ -38,7 +38,7 @@ func main() {
 		frozen = badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
 		leaves = badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", dbPath))
 	case "bolt":
-		frozen = bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", dbPath), "forzen")
+		frozen = bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", dbPath), "frozen")
 		leaves = bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", dbPath), "leaves")
 	default:
 		fmt.Print("Please select a valid storage backend")
