@@ -118,7 +118,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 
 // NewServer returns a new *http.ServeMux containing all the API handlers
 // already configured
-func New(balloon balloon.Balloon) *http.ServeMux {
+func NewApiHttp(balloon balloon.Balloon) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))

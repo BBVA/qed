@@ -48,7 +48,7 @@ func main() {
 
 	balloon := balloon.NewHyperBalloon(dbPath, hashing.Sha256Hasher, frozen, leaves, cache)
 
-	err := http.ListenAndServe(httpEndpoint, apihttp.New(balloon))
+	err := http.ListenAndServe(httpEndpoint, apihttp.NewApiHttp(balloon))
 	if err != nil {
 		log.Fatalln("Can't start HTTP Server: ", err)
 	}
