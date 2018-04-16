@@ -10,7 +10,6 @@ package agent
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -20,10 +19,14 @@ import (
 
 type response map[string]interface{}
 
-type Agent struct{}
+type Agent struct {
+	httpEndpoint string
+}
 
-func Run(ctx context.Context) (*Agent, error) {
-	agent := new(Agent)
+func Run(httpEndpoint string) (*Agent, error) {
+	agent := &Agent{
+		httpEndpoint,
+	}
 
 	// wait some time to load server
 	time.Sleep(time.Second)
@@ -35,7 +38,7 @@ func Run(ctx context.Context) (*Agent, error) {
 func (a *Agent) Add(message string) response {
 	data := []byte(strings.Join([]string{`{"message": "`, message, `"}`}, ""))
 
-	req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", a.httpEndpoint+"/events", bytes.NewBuffer(data))
 	if err != nil {
 		panic(err)
 	}
