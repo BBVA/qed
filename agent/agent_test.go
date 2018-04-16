@@ -3,3 +3,24 @@
 // that can be found in the LICENSE file
 
 package agent
+
+import (
+	"testing"
+)
+
+func TestAdd(t *testing.T) {
+
+	testAgent, _ := NewAgent("http://localhost:8080")
+	testAgent.Add("Hola mundo!")
+
+}
+
+func BenchmarkAdd(b *testing.B) {
+
+	testAgent, _ := NewAgent("http://localhost:8080")
+
+	for n := 0; n < b.N; n++ {
+		testAgent.Add(string(n))
+	}
+
+}
