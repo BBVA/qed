@@ -17,40 +17,30 @@ import (
 	"verifiabledata/balloon/storage/cache"
 )
 
-func dummyServer() {
+func init() {
+	// Instantiate a server with defaults.
+	// DISCUSS: it's filosophically required?
+	go (func() {
+		dbPath := "/tmp/testAdd"
+		frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
+		leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", dbPath))
+		cache := cache.NewSimpleCache(5000000)
+		balloon := balloon.NewHyperBalloon(dbPath, hashing.Sha256Hasher, frozen, leaves, cache)
 
-	dbPath := "/tmp/testAdd"
-	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
-	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", dbPath))
-	cache := cache.NewSimpleCache(5000000)
-	balloon := balloon.NewHyperBalloon(dbPath, hashing.Sha256Hasher, frozen, leaves, cache)
-
-	err := http.ListenAndServe(":8080", apihttp.New(balloon))
-	if err != nil {
-		log.Fatalln("Can't start HTTP Server: ", err)
-	}
+		err := http.ListenAndServe(":8080", apihttp.New(balloon))
+		if err != nil {
+			log.Fatalln("Can't start HTTP Server: ", err)
+		}
+	})()
 }
 
-var flag bool
-
 func TestAdd(t *testing.T) {
-	if !flag {
-		go dummyServer()
-		flag = true
-	}
-
 	testAgent, _ := NewAgent("http://localhost:8080")
 	testAgent.Add("Hola mundo!")
 
 }
 
 func BenchmarkAdd(b *testing.B) {
-
-	if !flag {
-		go dummyServer()
-		flag = true
-	}
-
 	testAgent, _ := NewAgent("http://localhost:8080")
 
 	for n := 0; n < b.N; n++ {
