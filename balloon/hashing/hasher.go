@@ -17,3 +17,15 @@ var Sha256Hasher Hasher = func(data ...[]byte) []byte {
 
 	return hasher.Sum(nil)[:]
 }
+
+var XorHasher Hasher = func(data ...[]byte) []byte {
+	var result byte
+	for _, elem := range data {
+		var sum byte
+		for _, b := range elem {
+			sum = sum ^ b
+		}
+		result = result ^ sum
+	}
+	return []byte{result}
+}

@@ -123,7 +123,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64)
 	if version >= index+pow(2, layer)-1 {
 		t.stats.unfreezing++
 		digest, err := t.frozen.Get(frozenKey(index, layer))
-		if err == nil {
+		if err == nil || len(digest) == 0 {
 			t.stats.unfreezingHits++
 			return digest, nil
 		}

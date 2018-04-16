@@ -6,21 +6,16 @@ package hyper
 
 import (
 	"bytes"
-	"encoding/binary"
+	"fmt"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 )
 
-// Constant Empty is a constant for empty leaves
-var Empty = []byte{0x00}
-
-// Constant Set is a constant for non-empty leaves
-var Set = []byte{0x01}
-
 // Tree holds a hyper tree structure
 type Tree struct {
 	id            []byte // tree-wide constant
-	hasher        hashing.Hasher
+	leafHash      LeafHasher
+	interiorHash  InteriorHasher
 	defaultHashes [][]byte
 	cache         storage.Cache
 	leaves        storage.Store
@@ -30,24 +25,22 @@ type Tree struct {
 	ops           chan interface{} // serialize operations
 }
 
-// Add inserts a new key-value pair into the tree and returns the
-// root hash as a commitment.
-func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
-	err := t.leaves.Add(key, value)
-	if err != nil {
-		return nil, err
-	}
-	return t.toCache(key, value, rootPosition(t.digestLength)), nil
+// MembershipProof holds the audit information needed the verify
+// membership
+
+type MembershipProof struct {
+	AuditPath   [][]byte
+	ActualValue []byte
 }
 
-func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
+func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher, lh LeafHasher, ih InteriorHasher) *Tree {
 
-	digestLength := len(hasher([]byte("una cosa mala"))) * 8
-	cacheLevels := 30
+	digestLength := len(hasher([]byte("x"))) * 8
 
 	tree := &Tree{
 		[]byte(id),
-		hasher,
+		lh,
+		ih,
 		make([][]byte, digestLength),
 		cache,
 		leaves,
@@ -58,12 +51,63 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 	}
 
 	// init default hashes cache
-	tree.defaultHashes[0] = tree.hasher(tree.id, Empty)
+	tree.defaultHashes[0] = hasher(tree.id, Empty)
 	for i := 1; i < int(digestLength); i++ {
-		tree.defaultHashes[i] = tree.hasher(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
+		tree.defaultHashes[i] = hasher(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
 	tree.ops = tree.operations()
 	return tree
+}
+
+// Internally we use a channel API to serialize operations
+// but external we use exported methods to be called
+// by others.
+// These methods returns a channel with an appropriate type
+// for each operation to be consumed from when the data arrives.
+
+// Queues an Add operation to the tree and returns a channel
+// when the result []byte will be sent when ready
+func (t Tree) Add(digest, index []byte) chan []byte {
+	result := make(chan []byte, 0)
+	t.ops <- &add{
+		digest,
+		index,
+		result,
+	}
+	return result
+}
+
+// Returns the Merkle audit path for a given key and returns a channel
+func (t Tree) AuditPath(key []byte) chan *MembershipProof {
+	result := make(chan *MembershipProof, 0)
+	t.ops <- &audit{key, result}
+	return result
+}
+
+// Queues a close operation to the tree and returns a channel
+// were a true or false will be send when the operation is completed
+func (t Tree) Close() chan bool {
+	result := make(chan bool)
+	t.ops <- &close{true, result}
+	return result
+}
+
+// INTERNALS
+
+type add struct {
+	digest []byte
+	index  []byte
+	result chan []byte
+}
+
+type audit struct {
+	key    []byte
+	result chan *MembershipProof
+}
+
+type close struct {
+	stop   bool
+	result chan bool
 }
 
 // Run listens in channel operations to execute in the tree
@@ -81,6 +125,9 @@ func (t *Tree) operations() chan interface{} {
 				case *add:
 					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
+				case *audit:
+					proof, _ := t.auditPath(msg.key)
+					msg.result <- proof
 				default:
 					panic("Hyper tree Run() message not implemented!!")
 				}
@@ -91,44 +138,27 @@ func (t *Tree) operations() chan interface{} {
 	return operations
 }
 
-// Internally we use a channel API to serialize operations
-// but external we use exported methods to be called
-// by others.
-// These methods returns a channel with an appropriate type
-// for each operation to be consumed from when the data arrives.
-
-type add struct {
-	digest []byte
-	index  []byte
-	result chan []byte
-}
-
-// Queues an Add operation to the tree and returns a channel
-// when the result []byte will be sent when ready
-func (t Tree) Add(digest, index []byte) chan []byte {
-	result := make(chan []byte, 0)
-	t.ops <- &add{
-		digest,
-		index,
-		result,
+// Add inserts a new key-value pair into the tree and returns the
+// root hash as a commitment.
+func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
+	err := t.leaves.Add(key, value)
+	if err != nil {
+		return nil, err
 	}
-	return result
+	return t.toCache(key, value, rootPosition(t.digestLength)), nil
 }
 
-type close struct {
-	stop   bool
-	result chan bool
+func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
+	value, err := t.leaves.Get(key) // TODO check existance
+	if err != nil {
+		return nil, err
+	}
+	path := t.calcAuditPathFromCache(key, rootPosition(t.digestLength))
+	return &MembershipProof{
+		path,
+		value,
+	}, nil
 }
-
-// Queues a close operation to the tree and returns a channel
-// were a true or false will be send when the operation is completed
-func (t Tree) Close() chan bool {
-	result := make(chan bool)
-	t.ops <- &close{true, result}
-	return result
-}
-
-// INTERNALS
 
 // Area is the area of the tree designated by its min height and its max height
 type area struct {
@@ -152,6 +182,7 @@ func newArea(min, max int) *area {
 }
 
 func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
+	fmt.Println(pos)
 	var left, right, nodeHash []byte
 
 	// if we are beyond the cache zone
@@ -173,7 +204,8 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 		right = t.toCache(key, value, pos.right())
 	}
 
-	nodeHash = t.interiorHash(left, right, pos)
+	t.stats.ih += 1
+	nodeHash = t.interiorHash(left, right, pos.base, pos.heightBytes())
 
 	// we re-cache all the nodes on each update
 	// if the node is whithin the cache area
@@ -186,6 +218,8 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 }
 
 func (t *Tree) fromCache(pos *Position) []byte {
+
+	fmt.Println(pos)
 
 	// get the value from the cache
 	cachedHash, cached := t.cache.Get(pos.base)
@@ -201,12 +235,7 @@ func (t *Tree) fromCache(pos *Position) []byte {
 }
 
 func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) []byte {
-	// if we are a leaf, return our hash
-	if pos.height == 0 {
-		t.stats.leaf += 1
-		return t.leafHash(value, pos.base)
-	}
-
+	fmt.Println(pos)
 	// if there are no more childs,
 	// return a default hash
 	if len(d) == 0 {
@@ -214,30 +243,55 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 		return t.defaultHashes[pos.height]
 	}
 
+	// if we are a leaf, return our hash
+	if pos.height == 0 && len(d) == 1 {
+		t.stats.leaf += 1
+		t.stats.lh += 1
+		return t.leafHash(t.id, value, pos.base)
+	}
+
 	leftSlice, rightSlice := d.Split(pos.split)
 
 	left := t.fromStorage(leftSlice, value, pos.left())
 	right := t.fromStorage(rightSlice, value, pos.right())
-	return t.interiorHash(left, right, pos)
-}
-
-func (t *Tree) leafHash(a, base []byte) []byte {
-	t.stats.lh += 1
-	if bytes.Equal(a, Empty) {
-		return t.hasher(t.id)
-	}
-
-	return t.hasher(t.id, base)
-}
-
-func (t *Tree) interiorHash(left, right []byte, pos *Position) []byte {
 	t.stats.ih += 1
-	if bytes.Equal(left, right) {
-		return t.hasher(left, right)
+	return t.interiorHash(left, right, pos.base, pos.heightBytes())
+}
+
+func (t *Tree) calcAuditPathFromCache(key []byte, pos *Position) [][]byte {
+
+	// if we are beyond the cache zone
+	// we need to go to database to get
+	// nodes
+	if !t.cacheArea.has(pos) {
+		leaves := t.leaves.GetRange(pos.base, pos.split)
+		if bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
+			return append(t.calcAuditPath(leaves, key, pos.left()),
+				t.fromCache(pos.right()))
+		}
+		return append(t.calcAuditPath(leaves, key, pos.right()),
+			t.fromCache(pos.left()))
 	}
 
-	heightBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(heightBytes, uint32(pos.height))
+	if bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
+		return append(t.calcAuditPathFromCache(key, pos.left()),
+			t.fromCache(pos.right()))
+	}
+	return append(t.calcAuditPathFromCache(key, pos.right()),
+		t.fromCache(pos.left()))
 
-	return t.hasher(left, right, pos.base, heightBytes)
+}
+
+func (t *Tree) calcAuditPath(d storage.LeavesSlice, key []byte, pos *Position) [][]byte {
+	if pos.height == 0 {
+		return nil
+	}
+	left, right := d.Split(pos.split)
+
+	if bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
+		return append(t.calcAuditPath(left, key, pos.left()),
+			t.fromStorage(right, key, pos.right()))
+	}
+	return append(t.calcAuditPath(right, key, pos.right()),
+		t.fromStorage(left, key, pos.left()))
 }
