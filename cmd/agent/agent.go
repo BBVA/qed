@@ -24,13 +24,13 @@ func main() {
 
 	log.Println("Starting agent")
 
-	agent, err := agent.Run(httpEndpoint)
+	auditor, err := agent.NewAgent(httpEndpoint)
 	if err != nil {
 		log.Panicln("Agent exited with error:", err)
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		fmt.Println(agent.Add(scanner.Text()))
+		fmt.Println(auditor.Add(scanner.Text()))
 	}
 }

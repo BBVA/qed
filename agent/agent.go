@@ -23,7 +23,7 @@ type Agent struct {
 	httpEndpoint string
 }
 
-func Run(httpEndpoint string) (*Agent, error) {
+func NewAgent(httpEndpoint string) (*Agent, error) {
 	agent := &Agent{
 		httpEndpoint,
 	}
