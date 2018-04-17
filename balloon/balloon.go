@@ -43,7 +43,7 @@ type MembershipProof struct {
 
 func NewHyperBalloon(path string, hasher hashing.Hasher, frozen, leaves storage.Store, cache storage.Cache) *HyperBalloon {
 
-	history := history.NewTree(frozen, hasher)
+	history := history.NewTree(frozen, history.LeafHasherF(hasher), history.InteriorHasherF(hasher))
 	hyper := hyper.NewTree(path, 30, cache, leaves, hasher, hyper.LeafHasherF(hasher), hyper.InteriorHasherF(hasher))
 
 	b := HyperBalloon{
@@ -149,7 +149,7 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 	digest := b.hasher(event)
 
 	var hyperProof *hyper.MembershipProof
-	var historyProof *[][]byte
+	var historyProof *history.MembershipProof
 
 	hyperProof = <-b.hyper.Prove(digest)
 
@@ -161,7 +161,7 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 	actualVersion := uint(binary.LittleEndian.Uint64(hyperProof.ActualValue))
 
 	if exists && actualVersion <= version {
-		historyProof = <-b.history.Prove(hyperProof.ActualVersion)
+		historyProof = <-b.history.Prove(hyperProof.ActualValue)
 	}
 
 	return &MembershipProof{

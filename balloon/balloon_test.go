@@ -69,11 +69,10 @@ func TestProof(t *testing.T) {
 	defer deleteFilesInDir(path)
 	event := []byte("Hello World1")
 	comm := balloon.Add(event)
-	fmt.Printf("%v ", <- comm)
-	proof := balloon.Prove(event)
-	fmt.Printf("%v\n", <- proof)
+	fmt.Printf("%v ", <-comm)
+	//proof := balloon.Prove(event)
+	//fmt.Printf("%v\n", <-proof)
 }
-
 
 func randomBytes(n int) []byte {
 	bytes := make([]byte, n)

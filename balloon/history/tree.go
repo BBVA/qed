@@ -71,6 +71,13 @@ type Tree struct {
 	ops            chan interface{} // serialize operations
 }
 
+// MembershipProof holds the audit information needed the verify
+// membership
+
+type MembershipProof struct {
+	AuditPath [][]byte
+}
+
 // NewTree returns a new history tree
 func NewTree(frozen storage.Store, lh LeafHasher, ih InteriorHasher) *Tree {
 	t := &Tree{
@@ -87,6 +94,84 @@ func NewTree(frozen storage.Store, lh LeafHasher, ih InteriorHasher) *Tree {
 	return t
 }
 
+// Queues an Add operation to the tree and returns a channel
+// when the result []byte will be sent when ready
+func (t Tree) Add(digest, index []byte) chan []byte {
+	result := make(chan []byte, 0)
+	t.ops <- &add{
+		digest,
+		index,
+		result,
+	}
+	return result
+}
+
+func (t Tree) Prove(key []byte) chan *MembershipProof {
+	result := make(chan *MembershipProof, 0)
+	t.ops <- &proof{key, result}
+	return result
+}
+
+// Queues a Stop operation to the tree and returns a channel
+// were a true or false will be send when the operation is completed
+func (t Tree) Close() chan bool {
+	result := make(chan bool)
+	t.ops <- &close{true, result}
+	return result
+}
+
+// INTERNALS
+
+// Internally we use a channel API to serialize operations
+// but external we use exported methods to be called
+// by others.
+// These methods returns a channel with an appropriate type
+// for each operation to be consumed from when the data arrives.
+
+type add struct {
+	digest []byte
+	index  []byte
+	result chan []byte
+}
+
+type proof struct {
+	key    []byte
+	result chan *MembershipProof
+}
+
+type close struct {
+	stop   bool
+	result chan bool
+}
+
+// Run listens in channel operations to execute in the tree
+func (t *Tree) operations() chan interface{} {
+	operations := make(chan interface{}, 0)
+	go func() {
+		for {
+			select {
+			case op := <-operations:
+				switch msg := op.(type) {
+				case *add:
+					digest, _ := t.add(msg.digest, msg.index)
+					msg.result <- digest
+				case *proof:
+					proof, _ := t.auditPath(msg.key)
+					msg.result <- proof
+				case *close:
+					t.frozen.Close()
+					msg.result <- true
+					return
+				default:
+					panic("Hyper tree Run() message not implemented!!")
+				}
+
+			}
+		}
+	}()
+	return operations
+}
+
 // Given an event the system appends it to the history tree as
 // the i:th entry and then outputs a root hash as a commitment
 // t.ps://eprint.iacr.org/2015/007.pdf
@@ -99,6 +184,10 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 		return nil, err
 	}
 	return rootDigest, nil
+}
+
+func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
+	return &MembershipProof{}, nil
 }
 
 // Returns the current layer or depth of the tree
@@ -170,68 +259,6 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64)
 	}
 
 	return digest, nil
-}
-
-// Run listens in channel operations to execute in the tree
-func (t *Tree) operations() chan interface{} {
-	operations := make(chan interface{}, 0)
-	go func() {
-		for {
-			select {
-			case op := <-operations:
-				switch msg := op.(type) {
-				case *close:
-					t.frozen.Close()
-					msg.result <- true
-					return
-				case *add:
-					digest, _ := t.add(msg.digest, msg.index)
-					msg.result <- digest
-				default:
-					panic("Hyper tree Run() message not implemented!!")
-				}
-
-			}
-		}
-	}()
-	return operations
-}
-
-// Internally we use a channel API to serialize operations
-// but external we use exported methods to be called
-// by others.
-// These methods returns a channel with an appropriate type
-// for each operation to be consumed from when the data arrives.
-
-type add struct {
-	digest []byte
-	index  []byte
-	result chan []byte
-}
-
-// Queues an Add operation to the tree and returns a channel
-// when the result []byte will be sent when ready
-func (t Tree) Add(digest, index []byte) chan []byte {
-	result := make(chan []byte, 0)
-	t.ops <- &add{
-		digest,
-		index,
-		result,
-	}
-	return result
-}
-
-type close struct {
-	stop   bool
-	result chan bool
-}
-
-// Queues a Stop operation to the tree and returns a channel
-// were a true or false will be send when the operation is completed
-func (t Tree) Close() chan bool {
-	result := make(chan bool)
-	t.ops <- &close{true, result}
-	return result
 }
 
 // Utility to calculate arbitraty pow and return an int64
