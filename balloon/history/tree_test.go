@@ -12,6 +12,7 @@ import (
 	"testing"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage/badger"
+	"verifiabledata/balloon/storage/bplus"
 )
 
 func TestAdd(t *testing.T) {
@@ -20,20 +21,23 @@ func TestAdd(t *testing.T) {
 		commitment []byte
 		event      []byte
 	}{
-		{0, []byte{0x5a}, []byte("test event")},
+		{0, []byte{0x4a}, []byte{0x4a}},
+		{1, []byte{0x00}, []byte{0x4b}},
+		{2, []byte{0x48}, []byte{0x48}},
+		{3, []byte{0x01}, []byte{0x49}},
 	}
 
-	store, closeF := openStorage()
+	store, closeF := openBPlusStorage()
 	defer closeF()
 
 	ht := NewTree(store, fakeLeafHasherF(hashing.XorHasher), fakeInteriorHasherF(hashing.XorHasher))
 
 	for _, e := range testCases {
-		t.Log("Testing event: ", e.event)
-		commitment := <-ht.Add([]byte(e.event), uInt64AsBytes(e.index))
+		t.Logf("Testing event: %b", e.event)
+		commitment := <-ht.Add(e.event, uInt64AsBytes(e.index))
 
-		if bytes.Equal(e.commitment, commitment) {
-			t.Fatal("Incorrect commitment: ", e.commitment, " != ", commitment)
+		if !bytes.Equal(e.commitment, commitment) {
+			t.Fatalf("Incorrect commitment: expected %b, actual %b", e.commitment, commitment)
 		}
 	}
 }
@@ -49,7 +53,7 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	store, closeF := openStorage()
+	store, closeF := openBadgerStorage()
 	defer closeF()
 	ht := NewTree(store, LeafHasherF(hashing.Sha256Hasher), InteriorHasherF(hashing.Sha256Hasher))
 	b.N = 100000
@@ -60,7 +64,14 @@ func BenchmarkAdd(b *testing.B) {
 	b.Logf("stats = %+v\n", ht.stats)
 }
 
-func openStorage() (*badger.BadgerStorage, func()) {
+func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
+	store := bplus.NewBPlusTreeStorage()
+	return store, func() {
+		store.Close()
+	}
+}
+
+func openBadgerStorage() (*badger.BadgerStorage, func()) {
 	store := badger.NewBadgerStorage("/tmp/history_store_test.db")
 	return store, func() {
 		fmt.Println("Cleaning...")

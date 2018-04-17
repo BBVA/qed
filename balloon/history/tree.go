@@ -177,6 +177,7 @@ func (t *Tree) operations() chan interface{} {
 // t.ps://eprint.iacr.org/2015/007.pdf
 func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	version := binary.LittleEndian.Uint64(index)
+
 	// calculate commitment as C_n = A_n(0,d)
 	depth := t.getDepth(version)
 	rootDigest, err := t.rootHash(eventDigest, 0, depth, version)
@@ -213,7 +214,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64)
 	if version >= index+pow(2, layer)-1 {
 		t.stats.unfreezing++
 		digest, err := t.frozen.Get(frozenKey(index, layer))
-		if err == nil || len(digest) == 0 {
+		if err == nil && len(digest) != 0 {
 			t.stats.unfreezingHits++
 			return digest, nil
 		}
