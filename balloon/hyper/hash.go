@@ -14,7 +14,7 @@ var Set = []byte{0x01}
 type LeafHasher func([]byte, []byte, []byte) []byte
 type InteriorHasher func([]byte, []byte, []byte, []byte) []byte
 
-func leafHashF(hasher hashing.Hasher) LeafHasher {
+func leafHasherF(hasher hashing.Hasher) LeafHasher {
 	return func(id, a, base []byte) []byte {
 		if bytes.Equal(a, Empty) {
 			return hasher(id)
@@ -23,7 +23,7 @@ func leafHashF(hasher hashing.Hasher) LeafHasher {
 	}
 }
 
-func interiorHashF(hasher hashing.Hasher) InteriorHasher {
+func interiorHasherF(hasher hashing.Hasher) InteriorHasher {
 	return func(left, right, base, height []byte) []byte {
 		if bytes.Equal(left, right) {
 			return hasher(left, right)

@@ -91,7 +91,7 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 	cache := cache.NewSimpleCache(5000000)
 	hasher := hashing.Sha256Hasher
-	ht := NewTree("my test tree", 30, cache, store, hasher, leafHashF(hasher), interiorHashF(hasher))
+	ht := NewTree("my test tree", 30, cache, store, hasher, leafHasherF(hasher), interiorHasherF(hasher))
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)

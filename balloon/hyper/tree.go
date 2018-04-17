@@ -13,16 +13,16 @@ import (
 
 // Tree holds a hyper tree structure
 type Tree struct {
-	id            []byte // tree-wide constant
-	leafHash      LeafHasher
-	interiorHash  InteriorHasher
-	defaultHashes [][]byte
-	cache         storage.Cache
-	leaves        storage.Store
-	stats         *stats
-	cacheArea     *area
-	digestLength  int
-	ops           chan interface{} // serialize operations
+	id             []byte // tree-wide constant
+	leafHasher     LeafHasher
+	interiorHasher InteriorHasher
+	defaultHashes  [][]byte
+	cache          storage.Cache
+	leaves         storage.Store
+	stats          *stats
+	cacheArea      *area
+	digestLength   int
+	ops            chan interface{} // serialize operations
 }
 
 // MembershipProof holds the audit information needed the verify
@@ -205,7 +205,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	}
 
 	t.stats.ih += 1
-	nodeHash = t.interiorHash(left, right, pos.base, pos.heightBytes())
+	nodeHash = t.interiorHasher(left, right, pos.base, pos.heightBytes())
 
 	// we re-cache all the nodes on each update
 	// if the node is whithin the cache area
@@ -247,7 +247,7 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 	if pos.height == 0 && len(d) == 1 {
 		t.stats.leaf += 1
 		t.stats.lh += 1
-		return t.leafHash(t.id, value, pos.base)
+		return t.leafHasher(t.id, value, pos.base)
 	}
 
 	leftSlice, rightSlice := d.Split(pos.split)
@@ -255,7 +255,7 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 	left := t.fromStorage(leftSlice, value, pos.left())
 	right := t.fromStorage(rightSlice, value, pos.right())
 	t.stats.ih += 1
-	return t.interiorHash(left, right, pos.base, pos.heightBytes())
+	return t.interiorHasher(left, right, pos.base, pos.heightBytes())
 }
 
 func (t *Tree) calcAuditPathFromCache(key []byte, pos *Position) [][]byte {
