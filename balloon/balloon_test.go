@@ -20,10 +20,10 @@ func TestAdd(t *testing.T) {
 	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
 	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
 	cache := cache.NewSimpleCache(5000000)
-	balloon := NewHyperBalloon("/tmp/testAdd", hashing.Sha256Hasher, frozen, leaves, cache)
+	balloon := NewHyperBalloon(path, hashing.Sha256Hasher, frozen, leaves, cache)
 	defer balloon.history.Close()
 	defer balloon.hyper.Close()
-	defer deleteFilesInDir("/tmp/testAdd")
+	defer deleteFilesInDir(path)
 
 	var testCases = []struct {
 		index         uint
@@ -57,6 +57,23 @@ func TestAdd(t *testing.T) {
 		}
 	}
 }
+
+func TestProof(t *testing.T) {
+	path := "/tmp/testProof"
+	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
+	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
+	cache := cache.NewSimpleCache(5000000)
+	balloon := NewHyperBalloon(path, hashing.Sha256Hasher, frozen, leaves, cache)
+	defer balloon.history.Close()
+	defer balloon.hyper.Close()
+	defer deleteFilesInDir(path)
+	event := []byte("Hello World1")
+	comm := balloon.Add(event)
+	fmt.Printf("%v ", <- comm)
+	proof := balloon.Prove(event)
+	fmt.Printf("%v\n", <- proof)
+}
+
 
 func randomBytes(n int) []byte {
 	bytes := make([]byte, n)

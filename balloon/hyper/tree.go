@@ -77,9 +77,9 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 }
 
 // Returns the Merkle audit path for a given key and returns a channel
-func (t Tree) AuditPath(key []byte) chan *MembershipProof {
+func (t Tree) Prove(key []byte) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
-	t.ops <- &audit{key, result}
+	t.ops <- &proof{key, result}
 	return result
 }
 
@@ -99,7 +99,7 @@ type add struct {
 	result chan []byte
 }
 
-type audit struct {
+type proof struct {
 	key    []byte
 	result chan *MembershipProof
 }
@@ -124,7 +124,7 @@ func (t *Tree) operations() chan interface{} {
 				case *add:
 					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
-				case *audit:
+				case *proof:
 					proof, _ := t.auditPath(msg.key)
 					msg.result <- proof
 				default:
@@ -181,7 +181,6 @@ func newArea(min, max int) *area {
 }
 
 func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
-	fmt.Println(pos)
 	var left, right, nodeHash []byte
 
 	// if we are beyond the cache zone
@@ -216,8 +215,6 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 }
 
 func (t *Tree) fromCache(pos *Position) []byte {
-
-	fmt.Println(pos)
 
 	// get the value from the cache
 	cachedHash, cached := t.cache.Get(pos.base)
