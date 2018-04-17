@@ -5,7 +5,6 @@
 package hyper
 
 import (
-	"bytes"
 	"fmt"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
@@ -194,12 +193,11 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	}
 
 	// if not, the node hash is the hash of our left and right child
-	dir := bytes.Compare(key, pos.split)
-	switch {
-	case dir < 0:
+	isleft := !bitIsSet(key, t.digestLength-pos.height)
+	if isleft {
 		left = t.toCache(key, value, pos.left())
 		right = t.fromCache(pos.right())
-	case dir > 0:
+	} else {
 		left = t.fromCache(pos.left())
 		right = t.toCache(key, value, pos.right())
 	}
@@ -224,6 +222,7 @@ func (t *Tree) fromCache(pos *Position) []byte {
 	// get the value from the cache
 	cachedHash, cached := t.cache.Get(pos.base)
 	if cached {
+		fmt.Println(cachedHash)
 		t.stats.hits += 1
 		return cachedHash
 	}
@@ -260,38 +259,52 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 
 func (t *Tree) calcAuditPathFromCache(key []byte, pos *Position) [][]byte {
 
+	fmt.Println("apfc ", pos)
+
 	// if we are beyond the cache zone
 	// we need to go to database to get
 	// nodes
 	if !t.cacheArea.has(pos) {
 		leaves := t.leaves.GetRange(pos.base, pos.split)
-		if bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
-			return append(t.calcAuditPath(leaves, key, pos.left()),
+		if !bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
+			return myappend("no-cache apfc left",
+				t.calcAuditPath(leaves, key, pos.left()),
 				t.fromCache(pos.right()))
 		}
-		return append(t.calcAuditPath(leaves, key, pos.right()),
+		return myappend("no-cache apfc right",
+			t.calcAuditPath(leaves, key, pos.right()),
 			t.fromCache(pos.left()))
 	}
 
-	if bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
-		return append(t.calcAuditPathFromCache(key, pos.left()),
+	if !bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
+		return myappend("cache apfc left",
+			t.calcAuditPathFromCache(key, pos.left()),
 			t.fromCache(pos.right()))
 	}
-	return append(t.calcAuditPathFromCache(key, pos.right()),
+	return myappend("cache apfc right",
+		t.calcAuditPathFromCache(key, pos.right()),
 		t.fromCache(pos.left()))
 
 }
 
+func myappend(src string, a [][]byte, b []byte) [][]byte {
+	fmt.Printf("%s add %v to %v\n", src, b, a)
+	return append(a, b)
+}
+
 func (t *Tree) calcAuditPath(d storage.LeavesSlice, key []byte, pos *Position) [][]byte {
+	fmt.Println("ca ", pos)
 	if pos.height == 0 {
 		return nil
 	}
 	left, right := d.Split(pos.split)
 
-	if bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
-		return append(t.calcAuditPath(left, key, pos.left()),
+	if !bitIsSet(key, t.digestLength-pos.height) { // if k_j ==
+		return myappend("ca left",
+			t.calcAuditPath(left, key, pos.left()),
 			t.fromStorage(right, key, pos.right()))
 	}
-	return append(t.calcAuditPath(right, key, pos.right()),
+	return myappend("ca right",
+		t.calcAuditPath(right, key, pos.right()),
 		t.fromStorage(left, key, pos.left()))
 }

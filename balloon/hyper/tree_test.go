@@ -37,44 +37,47 @@ func TestAdd(t *testing.T) {
 
 }
 
-// func TestExistentAuditPath(t *testing.T) {
-//	store, closeF := openBPlusStorage()
-//	defer closeF()
+func TestAuditPath(t *testing.T) {
 
-//	cache := cache.NewSimpleCache(5000)
+	store, closeF := openBPlusStorage()
+	defer closeF()
 
-//	id := "my test tree"
-//	ht := NewTree(id, cache, store, hashing.Sha256Hasher)
+	cache := cache.NewSimpleCache(5000)
+	hasher := hashing.XorHasher
 
-//	//var commitment []byte
-//	// Add some elements in the tree
-//	for i := 0; i < 5; i++ {
-//		event := fmt.Sprintf("Hello World%d", i)
-//		key := hashing.Sha256Hasher([]byte(event))
-//		value := make([]byte, 8)
-//		binary.BigEndian.PutUint64(value, uint64(i))
-//		if i == 3 {
-//			//commitment = <-ht.Add(key, value)
-//		}
-//	}
+	ht := NewTree(string(0x0), 2, cache, store, hasher, fakeLeafHasherF(hasher), fakeInteriorHasherF(hasher))
 
-//	val := hashing.Sha256Hasher([]byte("Hello World3"))
-//	version := make([]byte, 8)
-//	binary.BigEndian.PutUint64(version, uint64(3))
-//	proof := <-ht.AuditPath(val)
-//	fmt.Printf("Path length: %v, actual value: %x\n", len(proof.AuditPath), proof.ActualValue)
-//	for i := 0; i < len(proof.AuditPath); i++ {
-//		fmt.Printf("Index %v - %x\n", i, proof.AuditPath[i])
-//	}
+	key := []byte{0x5a}
+	value := []byte{0x01}
 
-//	// verifier := NewVerifier(id, hashing.Sha256Hasher)
-//	// correct, recomputed := verifier.Verify(commitment, proof.AuditPath, val, version)
+	<-ht.Add(key, value)
 
-//	// if !correct {
-//	//	t.Fatalf("Verify error: expected %x, actual %x", commitment, recomputed)
-//	// }
+	expectedPath := [][]byte{
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+	}
+	proof := <-ht.AuditPath(key)
 
-// }
+	if !comparePaths(expectedPath, proof.AuditPath) {
+		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.AuditPath)
+	}
+
+}
+
+func comparePaths(expected, actual [][]byte) bool {
+	for i, e := range expected {
+		if !bytes.Equal(e, actual[i]) {
+			return false
+		}
+	}
+	return true
+}
 
 func randomBytes(n int) []byte {
 	bytes := make([]byte, n)
