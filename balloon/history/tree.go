@@ -12,7 +12,6 @@ package history
 import (
 	"encoding/binary"
 	"math"
-	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 )
 
@@ -65,17 +64,19 @@ var One = []byte{0x1}
 //
 //
 type Tree struct {
-	frozen storage.Store // already computed nodes, that will not change
-	hasher hashing.Hasher
-	stats  *stats
-	ops    chan interface{} // serialize operations
+	frozen         storage.Store // already computed nodes, that will not change
+	leafHasher     LeafHasher
+	interiorHasher InteriorHasher
+	stats          *stats
+	ops            chan interface{} // serialize operations
 }
 
 // NewTree returns a new history tree
-func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+func NewTree(frozen storage.Store, lh LeafHasher, ih InteriorHasher) *Tree {
 	t := &Tree{
 		frozen,
-		hasher,
+		lh,
+		ih,
 		new(stats),
 		nil,
 	}
@@ -132,7 +133,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64)
 	switch {
 	// we are at a leaf: A_v(i,0)
 	case layer == 0 && version >= index:
-		digest = t.hasher(Zero, eventDigest)
+		digest = t.leafHasher(Zero, eventDigest)
 		t.stats.leafHashes++
 		break
 	// A_v(i,r)
@@ -141,7 +142,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64)
 		if err != nil {
 			return nil, err
 		}
-		digest = t.hasher(One, hash)
+		digest = t.leafHasher(One, hash)
 		t.stats.internalHashes++
 		break
 	// A_v(i,r)
@@ -154,7 +155,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64)
 		if err != nil {
 			return nil, err
 		}
-		digest = t.hasher(One, hash1, hash2)
+		digest = t.interiorHasher(One, hash1, hash2)
 		t.stats.internalHashes++
 		break
 	}

@@ -5,8 +5,8 @@
 package history
 
 import (
+	"bytes"
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"os"
 	"testing"
@@ -17,29 +17,23 @@ import (
 func TestAdd(t *testing.T) {
 	var testCases = []struct {
 		index      uint64
-		commitment string
-		event      string
+		commitment []byte
+		event      []byte
 	}{
-		{0, "b4aa0a376986b4ab072ed536d41a4df65de5d46da15ff8756bc7657da01d2f52", "Hello World1"},
-		{1, "8c93bb614746a51c1200f01a0ba5217686bf576b8bb0b095523ea38c740c567e", "Hello World2"},
-		{2, "1306d590e35d965aa42ca6e3b05b67cd009d7b9021f777c480e55eb626072dc4", "Hello World3"},
-		{3, "d3e8bc7215dda0d39689a4bfc16974dd63e5420b35abb4860073dbbcb7e197ae", "Hello World4"},
-		{4, "8b8e3177b98d00f6a9e6d621ac660331318524f5a0cee2a62472e8e8bf682fd8", "Hello World5"},
+		{0, []byte{0x5a}, []byte("test event")},
 	}
 
 	store, closeF := openStorage()
 	defer closeF()
 
-	ht := NewTree(store, hashing.Sha256Hasher)
+	ht := NewTree(store, fakeLeafHasherF(hashing.XorHasher), fakeInteriorHasherF(hashing.XorHasher))
 
 	for _, e := range testCases {
 		t.Log("Testing event: ", e.event)
 		commitment := <-ht.Add([]byte(e.event), uInt64AsBytes(e.index))
 
-		c := hex.EncodeToString(commitment)
-
-		if e.commitment != c {
-			t.Fatal("Incorrect commitment: ", e.commitment, " != ", c)
+		if bytes.Equal(e.commitment, commitment) {
+			t.Fatal("Incorrect commitment: ", e.commitment, " != ", commitment)
 		}
 	}
 }
@@ -57,7 +51,7 @@ func randomBytes(n int) []byte {
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openStorage()
 	defer closeF()
-	ht := NewTree(store, hashing.Sha256Hasher)
+	ht := NewTree(store, LeafHasherF(hashing.Sha256Hasher), InteriorHasherF(hashing.Sha256Hasher))
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
