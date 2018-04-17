@@ -38,41 +38,41 @@ func TestAdd(t *testing.T) {
 }
 
 // func TestExistentAuditPath(t *testing.T) {
-// 	store, closeF := openBPlusStorage()
-// 	defer closeF()
+//	store, closeF := openBPlusStorage()
+//	defer closeF()
 
-// 	cache := cache.NewSimpleCache(5000)
+//	cache := cache.NewSimpleCache(5000)
 
-// 	id := "my test tree"
-// 	ht := NewTree(id, cache, store, hashing.Sha256Hasher)
+//	id := "my test tree"
+//	ht := NewTree(id, cache, store, hashing.Sha256Hasher)
 
-// 	//var commitment []byte
-// 	// Add some elements in the tree
-// 	for i := 0; i < 5; i++ {
-// 		event := fmt.Sprintf("Hello World%d", i)
-// 		key := hashing.Sha256Hasher([]byte(event))
-// 		value := make([]byte, 8)
-// 		binary.BigEndian.PutUint64(value, uint64(i))
-// 		if i == 3 {
-// 			//commitment = <-ht.Add(key, value)
-// 		}
-// 	}
+//	//var commitment []byte
+//	// Add some elements in the tree
+//	for i := 0; i < 5; i++ {
+//		event := fmt.Sprintf("Hello World%d", i)
+//		key := hashing.Sha256Hasher([]byte(event))
+//		value := make([]byte, 8)
+//		binary.BigEndian.PutUint64(value, uint64(i))
+//		if i == 3 {
+//			//commitment = <-ht.Add(key, value)
+//		}
+//	}
 
-// 	val := hashing.Sha256Hasher([]byte("Hello World3"))
-// 	version := make([]byte, 8)
-// 	binary.BigEndian.PutUint64(version, uint64(3))
-// 	proof := <-ht.AuditPath(val)
-// 	fmt.Printf("Path length: %v, actual value: %x\n", len(proof.AuditPath), proof.ActualValue)
-// 	for i := 0; i < len(proof.AuditPath); i++ {
-// 		fmt.Printf("Index %v - %x\n", i, proof.AuditPath[i])
-// 	}
+//	val := hashing.Sha256Hasher([]byte("Hello World3"))
+//	version := make([]byte, 8)
+//	binary.BigEndian.PutUint64(version, uint64(3))
+//	proof := <-ht.AuditPath(val)
+//	fmt.Printf("Path length: %v, actual value: %x\n", len(proof.AuditPath), proof.ActualValue)
+//	for i := 0; i < len(proof.AuditPath); i++ {
+//		fmt.Printf("Index %v - %x\n", i, proof.AuditPath[i])
+//	}
 
-// 	// verifier := NewVerifier(id, hashing.Sha256Hasher)
-// 	// correct, recomputed := verifier.Verify(commitment, proof.AuditPath, val, version)
+//	// verifier := NewVerifier(id, hashing.Sha256Hasher)
+//	// correct, recomputed := verifier.Verify(commitment, proof.AuditPath, val, version)
 
-// 	// if !correct {
-// 	// 	t.Fatalf("Verify error: expected %x, actual %x", commitment, recomputed)
-// 	// }
+//	// if !correct {
+//	//	t.Fatalf("Verify error: expected %x, actual %x", commitment, recomputed)
+//	// }
 
 // }
 
