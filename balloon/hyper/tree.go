@@ -209,7 +209,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	// if the node is whithin the cache area
 	if t.cacheArea.has(pos) {
 		t.stats.update += 1
-		t.cache.Put(pos.base, nodeHash)
+		t.cache.Put(pos.Key(), nodeHash)
 	}
 
 	return nodeHash
@@ -288,7 +288,7 @@ func (t *Tree) calcAuditPathFromCache(key []byte, pos *Position) [][]byte {
 }
 
 func myappend(src string, a [][]byte, b []byte) [][]byte {
-	fmt.Printf("%s add %v to %v\n", src, b, a)
+	fmt.Printf("%s add %v to %x\n", src, b, a)
 	return append(a, b)
 }
 

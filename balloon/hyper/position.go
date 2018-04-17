@@ -22,6 +22,15 @@ func (p Position) String() string {
 	return fmt.Sprintf("base: %b , split: %b , height: %d , n: %d", p.base, p.split, p.height, uint(p.n))
 }
 
+func (p Position) Key() []byte {
+	// size of base in bytes + size of height in bytes is 36
+	// so we reserve that amount first
+	key := make([]byte, 36)
+	copy(key, p.base)
+	copy(key[len(p.base):], p.heightBytes())
+	return key
+}
+
 func (p Position) len() int {
 	return p.n / 8
 }
@@ -84,3 +93,4 @@ func rootPosition(n int) *Position {
 func bitIsSet(bits []byte, i int) bool { return bits[i/8]&(1<<uint(7-i%8)) != 0 }
 func bitSet(bits []byte, i int)        { bits[i/8] |= 1 << uint(7-i%8) }
 func bitUnset(bits []byte, i int)      { bits[i/8] &= 0 << uint(7-i%8) }
+
