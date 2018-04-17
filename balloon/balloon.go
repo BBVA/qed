@@ -34,7 +34,7 @@ type Commitment struct {
 func NewHyperBalloon(path string, hasher hashing.Hasher, frozen, leaves storage.Store, cache storage.Cache) *HyperBalloon {
 
 	history := history.NewTree(frozen, hasher)
-	hyper := hyper.NewTree(path, cache, leaves, hasher)
+	hyper := hyper.NewTree(path, 30, cache, leaves, hasher, hyper.LeafHasherF(hasher), hyper.InteriorHasherF(hasher))
 
 	b := HyperBalloon{
 		history,
