@@ -66,3 +66,7 @@ amounts of data for:
      
      go tool pprof hyper.test cpu.out mem.out
      
+## Acme section
+
+uncomment Edit .s/^(	| *)\/\//\1/g
+comment Edit .s/^(	| *)/\1\/\//g
