@@ -31,9 +31,14 @@ type Commitment struct {
 	Version       uint
 }
 
-type Membership struct {
-	AuditPath [][]byte
-	ActualValue	[]byte
+type AuditPath [][]byte
+
+type MembershipProof struct {
+	Exists        bool
+	HyperProof    AuditPath
+	HistoryProof  AuditPath
+	QueryVersion  uint
+	ActualVersion uint
 }
 
 func NewHyperBalloon(path string, hasher hashing.Hasher, frozen, leaves storage.Store, cache storage.Cache) *HyperBalloon {
@@ -53,6 +58,53 @@ func NewHyperBalloon(path string, hasher hashing.Hasher, frozen, leaves storage.
 
 }
 
+func (b HyperBalloon) Add(event []byte) chan *Commitment {
+	result := make(chan *Commitment)
+	b.ops <- &add{
+		event,
+		result,
+	}
+	return result
+}
+
+func (b HyperBalloon) GenMembershipProof(event []byte, version uint) chan *MembershipProof {
+	result := make(chan *MembershipProof)
+	b.ops <- &membership{
+		event,
+		version,
+		result,
+	}
+	return result
+}
+
+func (b HyperBalloon) Close() chan bool {
+	result := make(chan bool)
+
+	b.history.Close()
+	b.hyper.Close()
+
+	b.ops <- &close{true, result}
+	return result
+}
+
+// INTERNALS
+
+type add struct {
+	event  []byte
+	result chan *Commitment
+}
+
+type membership struct {
+	event   []byte
+	version uint
+	result  chan *MembershipProof
+}
+
+type close struct {
+	stop   bool
+	result chan bool
+}
+
 // Run listens in channel operations to execute in the tree
 func (b *HyperBalloon) operations() chan interface{} {
 	operations := make(chan interface{}, 0)
@@ -67,12 +119,9 @@ func (b *HyperBalloon) operations() chan interface{} {
 				case *add:
 					digest, _ := b.add(msg.event)
 					msg.result <- digest
-				case *proof:
-					proof, _ := b.prove(msg.event)
-					msg.result <- &Membership{
-						proof.AuditPath,
-						proof.ActualValue,
-					}
+				case *membership:
+					proof, _ := b.genMembershipProof(msg.event, msg.version)
+					msg.result <- proof
 				default:
 					panic("Hyper tree Run() message not implemented!!")
 				}
@@ -81,11 +130,6 @@ func (b *HyperBalloon) operations() chan interface{} {
 		}
 	}()
 	return operations
-}
-
-type add struct {
-	event  []byte
-	result chan *Commitment
 }
 
 func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
@@ -101,51 +145,31 @@ func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
 	}, nil
 }
 
-func (b HyperBalloon) Add(event []byte) chan *Commitment {
-	result := make(chan *Commitment)
-	b.ops <- &add{
-		event,
-		result,
-	}
-
-	return result
-}
-
-type proof struct {
-	event  []byte
-	result chan *Membership
-}
-
-
-func (b HyperBalloon) prove(event []byte) (*Membership, error) {
+func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*MembershipProof, error) {
 	digest := b.hasher(event)
-	proof := <- b.hyper.Prove(digest)
-	return &Membership{
-		proof.AuditPath,
-		proof.ActualValue,
-	}, nil
-}
 
-func (b HyperBalloon) Prove(event []byte) chan *Membership {
-	result := make(chan *Membership)
-	b.ops <- &proof{
-		event,
-		result,
+	var hyperProof *hyper.MembershipProof
+	var historyProof *[][]byte
+
+	hyperProof = <-b.hyper.Prove(digest)
+
+	var exists bool
+	if len(hyperProof.ActualValue) > 0 {
+		exists = true
 	}
-	return result
-}
 
-type close struct {
-	stop   bool
-	result chan bool
-}
+	actualVersion := uint(binary.LittleEndian.Uint64(hyperProof.ActualValue))
 
-func (b *HyperBalloon) Close() chan bool {
-	result := make(chan bool)
+	if exists && actualVersion <= version {
+		historyProof = <-b.history.Prove(hyperProof.ActualVersion)
+	}
 
-	b.history.Close()
-	b.hyper.Close()
+	return &MembershipProof{
+		exists,
+		hyperProof.AuditPath,
+		historyProof.AuditPath,
+		version,
+		actualVersion,
+	}, nil
 
-	b.ops <- &close{true, result}
-	return result
 }
