@@ -42,6 +42,36 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestProve(t *testing.T) {
+	store, closeF := openBPlusStorage()
+	defer closeF()
+
+	ht := NewTree(store, fakeLeafHasherF(hashing.XorHasher), fakeInteriorHasherF(hashing.XorHasher))
+
+	key := []byte{0x4a}
+	value := uInt64AsBytes(1)
+
+	<-ht.Add(key, value)
+
+	expectedPath := [][]byte{
+		[]byte{0x4a},
+	}
+	proof := <-ht.Prove(key)
+
+	if !comparePaths(expectedPath, proof.AuditPath) {
+		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.AuditPath)
+	}
+}
+
+func comparePaths(expected, actual [][]byte) bool {
+	for i, e := range expected {
+		if !bytes.Equal(e, actual[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 func randomBytes(n int) []byte {
 	bytes := make([]byte, n)
 	_, err := rand.Read(bytes)

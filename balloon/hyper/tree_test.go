@@ -37,7 +37,7 @@ func TestAdd(t *testing.T) {
 
 }
 
-func TestAuditPath(t *testing.T) {
+func TestProve(t *testing.T) {
 
 	store, closeF := openBPlusStorage()
 	defer closeF()
@@ -62,7 +62,7 @@ func TestAuditPath(t *testing.T) {
 		[]byte{0x00},
 		[]byte{0x00},
 	}
-	proof := <-ht.AuditPath(key)
+	proof := <-ht.Prove(key)
 
 	if !comparePaths(expectedPath, proof.AuditPath) {
 		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.AuditPath)

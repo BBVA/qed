@@ -156,7 +156,7 @@ func (t *Tree) operations() chan interface{} {
 					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
 				case *proof:
-					proof, _ := t.auditPath(msg.key)
+					proof, _ := t.prove(msg.key)
 					msg.result <- proof
 				case *close:
 					t.frozen.Close()
@@ -187,7 +187,7 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	return rootDigest, nil
 }
 
-func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
+func (t *Tree) prove(key []byte) (*MembershipProof, error) {
 	return &MembershipProof{}, nil
 }
 
