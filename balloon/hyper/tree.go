@@ -40,7 +40,7 @@ func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Sto
 		[]byte(id),
 		lh,
 		ih,
-		make([][]byte, digestLength),
+		make([][]byte, digestLength+1),
 		cache,
 		leaves,
 		new(stats),
@@ -51,7 +51,7 @@ func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Sto
 
 	// init default hashes cache
 	tree.defaultHashes[0] = hasher(tree.id, Empty)
-	for i := 1; i < int(digestLength); i++ {
+	for i := 1; i <= int(digestLength); i++ {
 		tree.defaultHashes[i] = hasher(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
 	tree.ops = tree.operations()
