@@ -5,7 +5,6 @@
 package hyper
 
 import (
-	"fmt"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 )
@@ -219,7 +218,6 @@ func (t *Tree) fromCache(pos *Position) []byte {
 	// get the value from the cache
 	cachedHash, cached := t.cache.Get(pos.Key())
 	if cached {
-		fmt.Println(cachedHash)
 		t.stats.hits += 1
 		return cachedHash
 	}
