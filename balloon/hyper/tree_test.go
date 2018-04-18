@@ -97,7 +97,7 @@ func BenchmarkAdd(b *testing.B) {
 	ht := NewTree("my test tree", 30, cache, store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
-		key := randomBytes(64)
+		key := randomBytes(32)
 		value := randomBytes(1)
 		store.Add(key, value)
 		<-ht.Add(key, value)
