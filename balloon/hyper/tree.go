@@ -217,7 +217,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 func (t *Tree) fromCache(pos *Position) []byte {
 
 	// get the value from the cache
-	cachedHash, cached := t.cache.Get(pos.base)
+	cachedHash, cached := t.cache.Get(pos.Key())
 	if cached {
 		fmt.Println(cachedHash)
 		t.stats.hits += 1
