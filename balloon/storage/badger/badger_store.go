@@ -30,12 +30,10 @@ func (s *BadgerStorage) Get(key []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		v, err := item.Value()
+		value, err = item.ValueCopy(value)
 		if err != nil {
 			return err
 		}
-		value = make([]byte, len(v))
-		copy(value, v)
 		return nil
 	})
 	switch err {
