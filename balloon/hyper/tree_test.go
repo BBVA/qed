@@ -12,6 +12,7 @@ import (
 	"testing"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage/badger"
+	"verifiabledata/balloon/storage/bolt"
 	"verifiabledata/balloon/storage/bplus"
 	"verifiabledata/balloon/storage/cache"
 )
@@ -90,14 +91,14 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	store, closeF := openBadgerStorage()
+	store, closeF := openBadgerStorage() //openBoltStorage()
 	defer closeF()
 	cache := cache.NewSimpleCache(5000000)
 	hasher := hashing.Sha256Hasher
 	ht := NewTree("my test tree", 30, cache, store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
-		key := randomBytes(32)
+		key := hashing.Sha256Hasher(randomBytes(32))
 		value := randomBytes(1)
 		store.Add(key, value)
 		<-ht.Add(key, value)
@@ -114,6 +115,14 @@ func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
 
 func openBadgerStorage() (*badger.BadgerStorage, func()) {
 	store := badger.NewBadgerStorage("/tmp/hyper_tree_test.db")
+	return store, func() {
+		store.Close()
+		deleteFile("/tmp/hyper_tree_test.db")
+	}
+}
+
+func openBoltStorage() (*bolt.BoltStorage, func()) {
+	store := bolt.NewBoltStorage("/tmp/hyper_tree_test.db", "test")
 	return store, func() {
 		store.Close()
 		deleteFile("/tmp/hyper_tree_test.db")
