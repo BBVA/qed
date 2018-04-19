@@ -11,6 +11,7 @@ package history
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"verifiabledata/balloon/storage"
 )
@@ -35,7 +36,7 @@ var One = []byte{0x1}
 //    layer 2       _______h(0,2)_______                 __h(4,2)__
 //                  |                  |                 |        |
 //    layer 1   __h(0,1)__         __h(2,1)__         __h(4,1)__  ▢
-//              |        |         |        |         |        |
+//              |        |         |      º  |         |        |
 //    layer 0  x0(0,0) x1(1,0) x2(2,0)   x3(3,0)    x4(4,0)    ▢
 //
 //
@@ -106,9 +107,13 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 	return result
 }
 
-func (t Tree) Prove(key []byte) chan *MembershipProof {
+func (t Tree) Prove(key []byte, version uint) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
-	t.ops <- &proof{key, result}
+	t.ops <- &proof{
+		key,
+		version,
+		result,
+	}
 	return result
 }
 
@@ -135,8 +140,9 @@ type add struct {
 }
 
 type proof struct {
-	key    []byte
-	result chan *MembershipProof
+	key     []byte
+	version uint
+	result  chan *MembershipProof
 }
 
 type close struct {
@@ -156,7 +162,7 @@ func (t *Tree) operations() chan interface{} {
 					digest, _ := t.add(msg.digest, msg.index)
 					msg.result <- digest
 				case *proof:
-					proof, _ := t.prove(msg.key)
+					proof, _ := t.prove(msg.key, msg.version)
 					msg.result <- proof
 				case *close:
 					t.frozen.Close()
@@ -187,7 +193,15 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	return rootDigest, nil
 }
 
-func (t *Tree) prove(key []byte) (*MembershipProof, error) {
+func (t *Tree) prove(key []byte, version uint) (*MembershipProof, error) {
+	// Chech if the index exists
+	digest, err := t.frozen.Get(key)
+
+	if err != nil {
+		return nil, err
+	}
+	// TO-DO
+	fmt.Println(digest)
 	return &MembershipProof{}, nil
 }
 

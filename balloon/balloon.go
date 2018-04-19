@@ -161,7 +161,7 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 	actualVersion := uint(binary.LittleEndian.Uint64(hyperProof.ActualValue))
 
 	if exists && actualVersion <= version {
-		historyProof = <-b.history.Prove(hyperProof.ActualValue)
+		historyProof = <-b.history.Prove(hyperProof.ActualValue, version)
 	}
 
 	return &MembershipProof{
