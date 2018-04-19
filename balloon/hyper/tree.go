@@ -2,6 +2,13 @@
 // Use of this source code is governed by an Apache 2 License
 // that can be found in the LICENSE file
 
+/*
+	Package hyper implements an hyper tree (HT), which is an sparse merkle tree (SMT) with
+	optimizations for horizontal scalability.
+	The work here is based in the paper
+	    Efficient Sparse Merkle Trees: Caching Strategies and Secure (Non-)Membership Proofs
+	    https://eprint.iacr.org/2016/683
+*/
 package hyper
 
 import (
@@ -9,7 +16,25 @@ import (
 	"verifiabledata/balloon/storage"
 )
 
-// Tree holds a hyper tree structure
+// An Hyper Tree is an optimized Sparse Merkle Tree with
+// aggresive caching and optimized storage.
+//
+// It builds the caching and storage strategy with the assumption
+// that the hash function used to compute the key of the values
+// begin inserted satisfy the sparse condition stated in the paper.
+//
+// This makes possible to relay on an external database as the promise
+// is that it will be very unlikely that a query to the database returns more
+// than two elements. This approach minimizes the queries made to the database:
+// one insert and one search per element being inserted, and one search per element
+// being proved.
+//
+// The database used can be either a B+Tree based one for quick queries and ok
+// insertion rate, or LSM with fast insterion and a key index to quickly scan keys.
+//
+// The API exported by the tree does not contain vissible state, just the operations
+// that can be made to the tree, ensuring its integrity, and the strcutres returned by
+// those public methods.
 type Tree struct {
 	id             []byte // tree-wide constant
 	leafHasher     LeafHasher
@@ -25,12 +50,12 @@ type Tree struct {
 
 // MembershipProof holds the audit information needed the verify
 // membership
-
 type MembershipProof struct {
 	AuditPath   [][]byte
 	ActualValue []byte
 }
 
+// NewTree returns  a new Hyper Tree given all its dependencies
 func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher, lh LeafHasher, ih InteriorHasher) *Tree {
 
 	digestLength := len(hasher([]byte("x"))) * 8
@@ -65,6 +90,16 @@ func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Sto
 
 // Queues an Add operation to the tree and returns a channel
 // when the result []byte will be sent when ready
+//
+// The resulting []byte correspond to the hash of the root element
+// of the tree.
+//
+// The algorithm will first store the key-value in the provided leaves store
+// and then will proceed to compute the root hash.
+//
+// The algorithm need to compute at least a n+1 hashes per each inserted elements,
+// when n is the size in bits of the key, but on average this number will
+// be higher [....]
 func (t Tree) Add(digest, index []byte) chan []byte {
 	result := make(chan []byte, 0)
 	t.ops <- &add{
@@ -75,7 +110,8 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 	return result
 }
 
-// Returns the Merkle audit path for a given key and returns a channel
+// Queues a Prove operation to the tree and returns a channel
+// when the result *MembershipProof will be sent when ready
 func (t Tree) Prove(key []byte) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
 	t.ops <- &proof{key, result}
