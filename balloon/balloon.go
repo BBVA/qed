@@ -14,6 +14,7 @@ import (
 
 type Balloon interface {
 	Add(event []byte) chan *Commitment
+	GenMembershipProof(event []byte, version uint) chan *MembershipProof
 	Close() chan bool
 }
 

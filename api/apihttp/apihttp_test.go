@@ -91,6 +91,26 @@ func TestInsertEvent(t *testing.T) {
 			status, http.StatusCreated)
 	}
 }
+
+func TestMembership(t *testing.T) {
+	// Create a request to pass to our handler. We pass a parameters as query params.
+	// If it's nil it will fail.
+
+	req, err := http.NewRequest("GET", "/proof/membership", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	q := req.URL.Query()
+	q.Add("key", "this is a sample event")
+	q.Add("version", "1")
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := Membership()
+
+}
+
 func TestAuthHandlerMiddleware(t *testing.T) {
 
 	req, err := http.NewRequest("GET", "/health-check", nil)

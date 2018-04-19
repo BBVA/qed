@@ -7,6 +7,7 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
 	"verifiabledata/balloon"
 )
@@ -50,6 +51,11 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 type event struct {
 	Message string `json:"message"`
+}
+
+type query struct {
+	key     []byte
+	version uint
 }
 
 // This handler posts an event into the system:
@@ -102,6 +108,32 @@ func InsertEvent(balloon balloon.Balloon) http.HandlerFunc {
 	}
 }
 
+func Membership(balloon balloon.Balloon) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		keys, ok := r.URL.Query()["key"]
+		if !ok || len(keys) < 1 {
+			log.Println("Url Param 'key' is missing")
+			return
+		}
+
+		var query query
+		// Wait for the response
+		response := <-balloon.GenMembershipProof(query.key, query.version)
+
+		out, err := json.Marshal(response)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		w.Write(out)
+		return
+
+	}
+}
+
 // AuthHandlerMiddleware function is an HTTP handler wrapper that validates our requests
 func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -123,6 +155,7 @@ func NewApiHttp(balloon balloon.Balloon) *http.ServeMux {
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
 	api.HandleFunc("/events", AuthHandlerMiddleware(InsertEvent(balloon)))
+	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 
 	return api
 }
