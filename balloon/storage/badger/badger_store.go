@@ -58,7 +58,8 @@ func (s *BadgerStorage) GetRange(start, end []byte) storage.LeavesSlice {
 		defer it.Close()
 		for it.Seek(start); it.Valid(); it.Next() {
 			item := it.Item()
-			k := item.Key()
+			var k []byte
+			k = item.KeyCopy(k)
 			if bytes.Compare(k, end) > 0 {
 				break
 			}
