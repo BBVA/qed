@@ -229,6 +229,14 @@ func (t *Tree) fromCache(pos *Position) []byte {
 }
 
 func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) []byte {
+
+	// if we are a leaf, return our hash
+	if len(d) == 1 && pos.height == 0 {
+		t.stats.leaf += 1
+		t.stats.lh += 1
+		return t.leafHasher(t.id, value, pos.base)
+	}
+
 	// if there are no more childs,
 	// return a default hash
 	if len(d) == 0 {
@@ -236,11 +244,8 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 		return t.defaultHashes[pos.height]
 	}
 
-	// if we are a leaf, return our hash
-	if pos.height == 0 && len(d) == 1 {
-		t.stats.leaf += 1
-		t.stats.lh += 1
-		return t.leafHasher(t.id, value, pos.base)
+	if len(d) > 0 && pos.height == 0 {
+		panic("this should never happen (unsorted LeavesSlice or broken split?)")
 	}
 
 	leftSlice, rightSlice := d.Split(pos.split)
