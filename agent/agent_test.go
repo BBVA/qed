@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"testing"
 
 	"verifiabledata/api/apihttp"
@@ -22,6 +23,7 @@ func init() {
 	// DISCUSS: it's filosophically required?
 	go (func() {
 		dbPath := "/tmp/testAdd"
+		os.MkdirAll(dbPath, os.FileMode(0755))
 		frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
 		leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", dbPath))
 		cache := cache.NewSimpleCache(5000000)

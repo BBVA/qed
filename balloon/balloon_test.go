@@ -17,6 +17,7 @@ import (
 
 func TestAdd(t *testing.T) {
 	path := "/tmp/testAdd"
+	os.MkdirAll(path, os.FileMode(0755))
 	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
 	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
 	cache := cache.NewSimpleCache(5000000)
@@ -60,6 +61,7 @@ func TestAdd(t *testing.T) {
 
 func TestProof(t *testing.T) {
 	path := "/tmp/testProof"
+	os.MkdirAll(path, os.FileMode(0755))
 	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
 	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
 	cache := cache.NewSimpleCache(5000000)
@@ -91,6 +93,7 @@ func deleteFilesInDir(path string) {
 
 func BenchmarkAddBolt(b *testing.B) {
 	path := "/tmp/benchAdd"
+	os.MkdirAll(path, os.FileMode(0755))
 	frozen := bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", path), "frozen")
 	leaves := bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", path), "leaves")
 	cache := cache.NewSimpleCache(5000000)
