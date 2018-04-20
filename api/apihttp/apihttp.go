@@ -7,7 +7,6 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"net/http"
 	"verifiabledata/balloon"
 )
@@ -111,13 +110,22 @@ func InsertEvent(balloon balloon.Balloon) http.HandlerFunc {
 func Membership(balloon balloon.Balloon) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		keys, ok := r.URL.Query()["key"]
-		if !ok || len(keys) < 1 {
-			log.Println("Url Param 'key' is missing")
+		// Make sure we can only be called with an HTTP POST request.
+		if r.Method != "GET" {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 
 		var query query
+		key, ok := r.URL.Query()["key"]
+		version, ok := r.URL.Query()["version"]
+
+		if !ok || len(key) < 1 || len(version) < 1 {
+			http.Error(w, "\nUrl Param Key or Version is missing", http.StatusBadRequest)
+			return
+		}
+
 		// Wait for the response
 		response := <-balloon.GenMembershipProof(query.key, query.version)
 
@@ -127,7 +135,7 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 			return
 		}
 
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusOK)
 		w.Write(out)
 		return
 

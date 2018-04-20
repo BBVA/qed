@@ -15,6 +15,11 @@ import (
 type fakeBalloon struct {
 	addch  chan *balloon.Commitment
 	stopch chan bool
+	proof  chan *balloon.MembershipProof
+}
+
+type fakeProof struct {
+	proof chan *balloon.MembershipProof
 }
 
 func (b fakeBalloon) Add(event []byte) chan *balloon.Commitment {
@@ -25,12 +30,18 @@ func (b fakeBalloon) Close() chan bool {
 	return b.stopch
 }
 
-func newFakeBalloon(addch chan *balloon.Commitment, stopch chan bool) fakeBalloon {
+func (b fakeBalloon) GenMembershipProof(event []byte, version uint) chan *balloon.MembershipProof {
+	return b.proof
+}
+
+func newFakeBalloon(addch chan *balloon.Commitment, stopch chan bool, proof chan *balloon.MembershipProof) fakeBalloon {
 	return fakeBalloon{
 		addch,
 		stopch,
+		proof,
 	}
 }
+
 func TestHealthCheckHandler(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
@@ -75,7 +86,8 @@ func TestInsertEvent(t *testing.T) {
 	rr := httptest.NewRecorder()
 	addch := make(chan *balloon.Commitment)
 	closech := make(chan bool)
-	handler := InsertEvent(newFakeBalloon(addch, closech))
+	proof := make(chan *balloon.MembershipProof)
+	handler := InsertEvent(newFakeBalloon(addch, closech, proof))
 
 	go func() {
 		addch <- &balloon.Commitment{}
@@ -95,19 +107,36 @@ func TestInsertEvent(t *testing.T) {
 func TestMembership(t *testing.T) {
 	// Create a request to pass to our handler. We pass a parameters as query params.
 	// If it's nil it will fail.
-
 	req, err := http.NewRequest("GET", "/proof/membership", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	q := req.URL.Query()
-	q.Add("key", "this is a sample event")
-	q.Add("version", "1")
+	q.Set("key", "this is a sample event")
+	q.Set("version", "1")
+	req.URL.RawQuery = q.Encode()
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := Membership()
+	addch := make(chan *balloon.Commitment)
+	closech := make(chan bool)
+	proof := make(chan *balloon.MembershipProof)
+	handler := Membership(newFakeBalloon(addch, closech, proof))
+
+	go func() {
+		proof <- &balloon.MembershipProof{}
+	}()
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
 
 }
 
