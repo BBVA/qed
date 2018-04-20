@@ -7,13 +7,8 @@ package hyper
 import (
 	"bytes"
 	"crypto/rand"
-	"fmt"
-	"os"
 	"testing"
 	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/storage/badger"
-	"verifiabledata/balloon/storage/bolt"
-	"verifiabledata/balloon/storage/bplus"
 	"verifiabledata/balloon/storage/cache"
 )
 
@@ -91,7 +86,7 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	store, closeF := openBadgerStorage() //openBoltStorage()
+	store, closeF := openBadgerStorage("/tmp/hyper_tree_test.db") //openBoltStorage()
 	defer closeF()
 	cache := cache.NewSimpleCache(5000000)
 	hasher := hashing.Sha256Hasher
@@ -104,34 +99,4 @@ func BenchmarkAdd(b *testing.B) {
 		<-ht.Add(key, value)
 	}
 	b.Logf("stats = %+v\n", ht.stats)
-}
-
-func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
-	store := bplus.NewBPlusTreeStorage()
-	return store, func() {
-		store.Close()
-	}
-}
-
-func openBadgerStorage() (*badger.BadgerStorage, func()) {
-	store := badger.NewBadgerStorage("/tmp/hyper_tree_test.db")
-	return store, func() {
-		store.Close()
-		deleteFile("/tmp/hyper_tree_test.db")
-	}
-}
-
-func openBoltStorage() (*bolt.BoltStorage, func()) {
-	store := bolt.NewBoltStorage("/tmp/hyper_tree_test.db", "test")
-	return store, func() {
-		store.Close()
-		deleteFile("/tmp/hyper_tree_test.db")
-	}
-}
-
-func deleteFile(path string) {
-	err := os.RemoveAll(path)
-	if err != nil {
-		fmt.Printf("Unable to remove db file %s", err)
-	}
 }
