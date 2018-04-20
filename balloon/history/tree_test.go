@@ -34,7 +34,7 @@ func TestAdd(t *testing.T) {
 
 	for _, e := range testCases {
 		t.Logf("Testing event: %b", e.event)
-		commitment := <-ht.Add(e.event, uInt64AsBytes(e.index))
+		commitment := <-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
 
 		if !bytes.Equal(e.commitment, commitment) {
 			t.Fatalf("Incorrect commitment: expected %b, actual %b", e.commitment, commitment)
@@ -46,26 +46,46 @@ func TestProve(t *testing.T) {
 	store, closeF := openBPlusStorage()
 	defer closeF()
 
-	ht := NewTree(store, fakeLeafHasherF(hashing.XorHasher), fakeInteriorHasherF(hashing.XorHasher))
+	var testCases = []struct {
+		index      uint64
+		commitment []byte
+		event      []byte
+	}{
+		{0, []byte{0x4a}, []byte{0x4a}}, // 74
+		{1, []byte{0x00}, []byte{0x4b}}, // 75
+		{2, []byte{0x48}, []byte{0x48}}, // 72
+		{3, []byte{0x01}, []byte{0x49}}, // 73
+		{4, []byte{0x01}, []byte{0x50}}, // 80
+		{5, []byte{0x01}, []byte{0x51}}, // 81
+		{6, []byte{0x01}, []byte{0x52}}, // 82
+	}
 
-	key := []byte{0x4a}
-	value := uInt64AsBytes(1)
+	ht := NewTree(store, fakeLeafHasherCleanF(hashing.XorHasher), fakeInteriorHasherCleanF(hashing.XorHasher))
 
-	<-ht.Add(key, value)
+	for _, e := range testCases {
+		<-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
+	}
 
 	expectedPath := [][]byte{
-		[]byte{0x4a},
+		[]byte{0x00},
+		[]byte{0x52},
+		[]byte{0x50},
 	}
-	proof := <-ht.Prove(key)
+	proof := <-ht.Prove([]byte{0x5}, 6)
 
-	if !comparePaths(expectedPath, proof.AuditPath) {
-		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.AuditPath)
+	fmt.Println(proof)
+	if !comparePaths(expectedPath, proof.Nodes) {
+		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.Nodes)
 	}
 }
 
-func comparePaths(expected, actual [][]byte) bool {
+func comparePaths(expected [][]byte, actual []Node) bool {
+	if len(expected) != len(actual) {
+		return false
+	}
+
 	for i, e := range expected {
-		if !bytes.Equal(e, actual[i]) {
+		if !bytes.Equal(e, actual[i].Digest) {
 			return false
 		}
 	}
@@ -89,7 +109,7 @@ func BenchmarkAdd(b *testing.B) {
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
-		<-ht.Add(key, uInt64AsBytes(uint64(i)))
+		<-ht.Add(key, uInt64AsBytes(uint(i)))
 	}
 	b.Logf("stats = %+v\n", ht.stats)
 }

@@ -11,7 +11,6 @@ package history
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math"
 	"verifiabledata/balloon/storage"
 )
@@ -70,13 +69,6 @@ type Tree struct {
 	interiorHasher InteriorHasher
 	stats          *stats
 	ops            chan interface{} // serialize operations
-}
-
-// MembershipProof holds the audit information needed the verify
-// membership
-
-type MembershipProof struct {
-	AuditPath [][]byte
 }
 
 // NewTree returns a new history tree
@@ -182,7 +174,7 @@ func (t *Tree) operations() chan interface{} {
 // the i:th entry and then outputs a root hash as a commitment
 // t.ps://eprint.iacr.org/2015/007.pdf
 func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
-	version := binary.LittleEndian.Uint64(index)
+	version := uint(binary.LittleEndian.Uint64(index))
 
 	// calculate commitment as C_n = A_n(0,d)
 	depth := t.getDepth(version)
@@ -193,34 +185,77 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	return rootDigest, nil
 }
 
-func (t *Tree) prove(key []byte, version uint) (*MembershipProof, error) {
-	// Chech if the index exists
-	digest, err := t.frozen.Get(key)
-
+func (t Tree) prove(key []byte, version uint) (*MembershipProof, error) {
+	var proof MembershipProof
+	index, _ := binary.Uvarint(key)
+	err := t.auditPath(key, uint(index), 0, t.getDepth(version), version, &proof)
 	if err != nil {
 		return nil, err
 	}
-	// TO-DO
-	fmt.Println(digest)
-	return &MembershipProof{}, nil
+	return &proof, nil
+}
+
+type Node struct {
+	Digest       []byte
+	Index, Layer uint
+}
+
+// MembershipProof is a proof of membership of an event.
+type MembershipProof struct {
+	Nodes []Node
+}
+
+func (t Tree) auditPath(key []byte, target, index, layer, version uint, proof *MembershipProof) (err error) {
+	if layer == 0 {
+		return
+	}
+	// the number of events to the left of the node
+	n := index + pow(2, layer-1)
+	if target < n {
+		// go left, but should we save right first? We need to save right if there are any leaf nodes
+		// fixed by the right node (otherwise we know it's hash is nil), dictated by the version of the
+		// tree we are generating
+		if version >= n {
+			node := new(Node)
+			node.Index = n
+			node.Layer = layer - 1
+			node.Digest, err = t.rootHash(key, node.Index, node.Layer, version)
+			if err != nil {
+				return
+			}
+			proof.Nodes = append(proof.Nodes, *node)
+		}
+		return t.auditPath(key, target, index, layer-1, version, proof)
+	}
+	// go right, once we have saved the left node
+	node := new(Node)
+	node.Index = index
+	node.Layer = layer - 1
+	node.Digest, err = t.rootHash(key, node.Index, node.Layer, version)
+	if err != nil {
+		return
+	}
+	proof.Nodes = append(proof.Nodes, *node)
+
+	return t.auditPath(key, target, n, layer-1, version, proof)
 }
 
 // Returns the current layer or depth of the tree
-func (t *Tree) getDepth(index uint64) uint64 {
-	return uint64(math.Ceil(math.Log2(float64(index + 1))))
+func (t Tree) getDepth(index uint) uint {
+	return uint(math.Ceil(math.Log2(float64(index + 1))))
 }
 
-func uInt64AsBytes(i uint64) []byte {
+func uInt64AsBytes(i uint) []byte {
 	valuebytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valuebytes, i)
+	binary.LittleEndian.PutUint64(valuebytes, uint64(i))
 	return valuebytes
 }
 
-func frozenKey(index, layer uint64) []byte {
+func frozenKey(index, layer uint) []byte {
 	return append(uInt64AsBytes(index), uInt64AsBytes(layer)...)
 }
 
-func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64) ([]byte, error) {
+func (t *Tree) rootHash(eventDigest []byte, index, layer uint, version uint) ([]byte, error) {
 
 	var digest []byte
 
@@ -277,6 +312,6 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint64, version uint64)
 }
 
 // Utility to calculate arbitraty pow and return an int64
-func pow(x, y uint64) uint64 {
-	return uint64(math.Pow(float64(x), float64(y)))
+func pow(x, y uint) uint {
+	return uint(math.Pow(float64(x), float64(y)))
 }
