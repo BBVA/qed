@@ -136,3 +136,92 @@ func deleteFile(path string) {
 		fmt.Printf("Unable to remove db file %s", err)
 	}
 }
+
+// Utility to generate graphviz code to visualize
+// a tree
+func graphTree(t *Tree, key []byte, version uint) {
+	fmt.Println("digraph BST {")
+	fmt.Println("	node [style=filled];")
+
+	// start at root, and traverse the tree
+	// using the frozen leaves
+	// tree := new(repr)
+	graphBody(t, version)
+	//	fmt.Println(tree)
+
+	fmt.Println("}")
+
+}
+
+func atob(a, b *node, color string) {
+	fmt.Printf("	\"%s\" -> \"%s\" [%s];\n", a, b, color)
+}
+
+func strnode(digest []byte, index, layer uint) string {
+	return fmt.Sprintf("[%x] (%d,%d)", digest, index, layer)
+}
+
+func strfroz(index, layer uint) string {
+	return fmt.Sprintf("[??] (%d,%d)", index, layer)
+}
+
+type node struct {
+	index, layer uint
+	digest       string
+}
+
+func (n node) String() string {
+	return fmt.Sprintf("[%s] (%d,%d)", n.digest, n.layer, n.index)
+}
+
+type stack []*node
+
+func (s *stack) push(n *node) {
+	*s = append(*s, n)
+}
+func (s *stack) pop() *node {
+	first, rest := (*s)[0], (*s)[1:]
+	*s = rest
+	return first
+}
+
+func graphBody(t *Tree, version uint) error {
+	var current *node
+	var s *stack
+
+	index := uint(0)
+	layer := t.getDepth(version)
+	digest, _ := t.frozen.Get(frozenKey(uint(index), uint(layer)))
+	current = &node{index, layer, fmt.Sprintf("0x%x", digest)}
+	s = &stack{}
+
+	for {
+		if current != nil {
+			s.push(current)
+			digest, _ = t.frozen.Get(frozenKey(index, layer-1))
+			left := &node{current.index, current.layer - 1, fmt.Sprintf("0x%x", digest)}
+			atob(current, left, "color=blue")
+			if current.layer-1 == 0 {
+				current = nil
+			} else {
+				current = left
+			}
+		} else {
+			if len(*s) > 0 {
+				current = s.pop()
+				right := &node{current.index + pow(2, current.layer-1), current.layer - 1, "??"}
+				atob(current, right, "color=green")
+				if current.layer-1 == 0 {
+					current = nil
+				} else {
+					current = right
+				}
+			} else {
+				break
+			}
+
+		}
+
+	}
+	return nil
+}

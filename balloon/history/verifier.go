@@ -34,7 +34,7 @@ func (v *Verifier) getDepth(index uint) uint {
 }
 
 func pathKey(index, layer uint) string {
-	return fmt.Sprintf("%s|%s", index, layer)
+	return fmt.Sprintf("%d|%d", index, layer)
 }
 
 func (v *Verifier) rootHash(auditPath map[string][]byte, key []byte, index, layer, version uint) []byte {
