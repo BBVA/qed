@@ -4,11 +4,13 @@ import (
 	"verifiabledata/balloon/hashing"
 )
 
-// Constant Empty is a constant for empty leaves
-var Empty = []byte{0x00}
+// Constant Zero is the 0x0 byte, and it is used as a prefix to know
+// if a node has a zero digest.
+var Zero = []byte{0x0}
 
-// Constant Set is a constant for non-empty leaves
-var Set = []byte{0x01}
+// Constant One is the 0x1 byte, and it is used as a prefix to know
+// if a node has a non-zero digest.
+var One = []byte{0x1}
 
 type LeafHasher func([]byte, []byte) []byte
 type InteriorHasher func([]byte, []byte, []byte) []byte

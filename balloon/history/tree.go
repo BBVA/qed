@@ -15,14 +15,6 @@ import (
 	"verifiabledata/balloon/storage"
 )
 
-// Constant Zero is the 0x0 byte, and it is used as a prefix to know
-// if a node has a zero digest.
-var Zero = []byte{0x0}
-
-// Constant One is the 0x1 byte, and it is used as a prefix to know
-// if a node has a non-zero digest.
-var One = []byte{0x1}
-
 // A History tree is a tree structure with a version metadata.
 // As described in the pag. 6-7 of the paper:
 // http://tamperevident.cs.rice.edu/papers/paper-treehist.pdf
