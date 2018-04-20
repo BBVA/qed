@@ -72,7 +72,7 @@ func TestProve(t *testing.T) {
 		[]byte{0x50},
 	}
 	proof := <-ht.Prove([]byte{0x5}, 6)
-
+	graphTree(ht, []byte{0x5}, 6)
 	fmt.Println(proof)
 	if !comparePaths(expectedPath, proof.Nodes) {
 		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.Nodes)
@@ -138,15 +138,16 @@ func deleteFile(path string) {
 }
 
 // Utility to generate graphviz code to visualize
-// a tree
+// the frozen tree
 func graphTree(t *Tree, key []byte, version uint) {
 	fmt.Println("digraph BST {")
 	fmt.Println("	node [style=filled];")
 
 	// start at root, and traverse the tree
 	// using the frozen leaves
-	// tree := new(repr)
-	graphBody(t, version)
+	//graphBody(t, version)
+	graphTreePreoder(t, rootnode(t, version))
+
 	//	fmt.Println(tree)
 
 	fmt.Println("}")
@@ -155,14 +156,6 @@ func graphTree(t *Tree, key []byte, version uint) {
 
 func atob(a, b *node, color string) {
 	fmt.Printf("	\"%s\" -> \"%s\" [%s];\n", a, b, color)
-}
-
-func strnode(digest []byte, index, layer uint) string {
-	return fmt.Sprintf("[%x] (%d,%d)", digest, index, layer)
-}
-
-func strfroz(index, layer uint) string {
-	return fmt.Sprintf("[??] (%d,%d)", index, layer)
 }
 
 type node struct {
@@ -174,54 +167,24 @@ func (n node) String() string {
 	return fmt.Sprintf("[%s] (%d,%d)", n.digest, n.layer, n.index)
 }
 
-type stack []*node
-
-func (s *stack) push(n *node) {
-	*s = append(*s, n)
-}
-func (s *stack) pop() *node {
-	first, rest := (*s)[0], (*s)[1:]
-	*s = rest
-	return first
-}
-
-func graphBody(t *Tree, version uint) error {
-	var current *node
-	var s *stack
-
+func rootnode(t *Tree, version uint) *node {
 	index := uint(0)
 	layer := t.getDepth(version)
 	digest, _ := t.frozen.Get(frozenKey(uint(index), uint(layer)))
-	current = &node{index, layer, fmt.Sprintf("0x%x", digest)}
-	s = &stack{}
+	return &node{index, layer, fmt.Sprintf("0x%x", digest)}
+}
 
-	for {
-		if current != nil {
-			s.push(current)
-			digest, _ = t.frozen.Get(frozenKey(index, layer-1))
-			left := &node{current.index, current.layer - 1, fmt.Sprintf("0x%x", digest)}
-			atob(current, left, "color=blue")
-			if current.layer-1 == 0 {
-				current = nil
-			} else {
-				current = left
-			}
-		} else {
-			if len(*s) > 0 {
-				current = s.pop()
-				right := &node{current.index + pow(2, current.layer-1), current.layer - 1, "??"}
-				atob(current, right, "color=green")
-				if current.layer-1 == 0 {
-					current = nil
-				} else {
-					current = right
-				}
-			} else {
-				break
-			}
-
-		}
-
+func graphTreePreoder(t *Tree, parent *node) {
+	if parent.layer == 0 {
+		return
 	}
-	return nil
+
+	digest, _ := t.frozen.Get(frozenKey(parent.index, parent.layer-1))
+	left := &node{parent.index, parent.layer - 1, fmt.Sprintf("0x%x", digest)}
+	atob(parent, left, "color=blue")
+	graphTreePreoder(t, left)
+
+	right := &node{parent.index + pow(2, parent.layer-1), parent.layer - 1, "??"}
+	atob(parent, right, "color=green")
+	graphTreePreoder(t, right)
 }
