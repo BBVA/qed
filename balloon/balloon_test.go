@@ -71,6 +71,82 @@ func TestAdd(t *testing.T) {
 
 }
 
+func TestGenMembershipProof(t *testing.T) {
+
+	frozen, frozenCloseF := openBPlusStorage()
+	leaves, leavesCloseF := openBPlusStorage()
+	defer frozenCloseF()
+	defer leavesCloseF()
+
+	cache := cache.NewSimpleCache(5000)
+	hasher := hashing.XorHasher
+
+	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
+	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+
+	key := []byte{0x5a}
+	var version uint = 0
+	expectedHyperProof := [][]byte{
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+		[]byte{0x00},
+	}
+	expectedHistoryProof := [][]byte{}
+
+	<-balloon.Add(key)
+
+	proof := <-balloon.GenMembershipProof(key, version)
+
+	if !proof.Exists {
+		t.Fatalf("Wrong proof: the event should exist")
+	}
+
+	if proof.QueryVersion != version {
+		t.Fatalf("The query version does not match: expected %d, actual %d", version, proof.QueryVersion)
+	}
+
+	if proof.ActualVersion != version {
+		t.Fatalf("The actual version does not match: expected %d, actual %d", version, proof.ActualVersion)
+	}
+
+	if !compareHyperProofs(expectedHyperProof, proof.HyperProof) {
+		t.Fatalf("Wrong hyper proof: expected %v, actual %v", expectedHyperProof, proof.HyperProof)
+	}
+
+	if !compareHistoryProofs(expectedHistoryProof, proof.HistoryProof) {
+		t.Fatalf("Wrong history proof: expected %v, actual %v", expectedHistoryProof, proof.HistoryProof)
+	}
+
+}
+
+func compareHyperProofs(expected, actual AuditPath) bool {
+	for i, e := range expected {
+		if !bytes.Equal(e, actual[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func compareHistoryProofs(expected [][]byte, actual []history.Node) bool {
+	if len(expected) != len(actual) {
+		return false
+	}
+
+	for i, e := range expected {
+		if !bytes.Equal(e, actual[i].Digest) {
+			return false
+		}
+	}
+	return true
+}
+
 //https://play.golang.org/p/nP241T7HXBj
 // test event 0 : 4a [1001010] - 00 [0]
 // test event 1 : 4b [1001011] - 01 [1]
