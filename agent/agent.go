@@ -15,6 +15,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"verifiabledata/balloon"
 )
 
 type response map[string]interface{}
@@ -35,7 +37,7 @@ func NewAgent(httpEndpoint string) (*Agent, error) {
 
 }
 
-func (a *Agent) Add(message string) response {
+func (a *Agent) Add(message string) *balloon.Commitment {
 	data := []byte(strings.Join([]string{`{"message": "`, message, `"}`}, ""))
 
 	req, err := http.NewRequest("POST", a.httpEndpoint+"/events", bytes.NewBuffer(data))
@@ -55,13 +57,43 @@ func (a *Agent) Add(message string) response {
 
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 
-	insert := make(response)
+	commitment := &balloon.Commitment{}
 
-	json.Unmarshal([]byte(bodyBytes), &insert)
+	json.Unmarshal([]byte(bodyBytes), commitment)
 
-	return insert
+	return commitment
+
 }
 
-func (a *Agent) Verify(message string) {
+func (a *Agent) MembershipProof(commitment *balloon.Commitment) *balloon.MembershipProof {
+
+	data := json.Marshall(commitment)
+
+	req, err := http.NewRequest("POST", a.httpEndpoint+"/proofs/membership", bytes.NewBuffer(data))
+	if err != nil {
+		panic(err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Api-Key", "this-is-my-api-key")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+
+	defer resp.Body.Close()
+
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	proof := &balloon.MembershipProof{}
+
+	json.Unmarshal([]byte(bodyBytes), proof)
+
+	return proof
+}
+
+func (a *Agent) Verify(proof *balloon.MembershipProof) {
+
 	return
 }

@@ -18,9 +18,10 @@ import (
 	"verifiabledata/balloon/storage/cache"
 )
 
+var testAgent *Agent
+
 func init() {
 	// Instantiate a server with defaults.
-	// DISCUSS: it's filosophically required?
 	go (func() {
 		dbPath := "/tmp/testAdd"
 		os.MkdirAll(dbPath, os.FileMode(0755))
@@ -29,24 +30,29 @@ func init() {
 		cache := cache.NewSimpleCache(5000000)
 		balloon := balloon.NewHyperBalloon(dbPath, hashing.Sha256Hasher, frozen, leaves, cache)
 
-		err := http.ListenAndServe(":8080", apihttp.NewApiHttp(balloon))
+		err := http.ListenAndServe(":8079", apihttp.NewApiHttp(balloon))
 		if err != nil {
 			log.Fatalln("Can't start HTTP Server: ", err)
 		}
 	})()
+
+	testAgent, _ = NewAgent("http://localhost:8079")
 }
 
 func TestAdd(t *testing.T) {
-	testAgent, _ := NewAgent("http://localhost:8080")
 	testAgent.Add("Hola mundo!")
+}
 
+func TestMembership(t *testing.T) {
+	testAgent.MembershipProof(testAgent.Add("Ping pong"))
+}
+
+func TestVerify(t *testing.T) {
+	testAgent.Verify(testAgent.MembershipProof(testAgent.Add("is this real life?")))
 }
 
 func BenchmarkAdd(b *testing.B) {
-	testAgent, _ := NewAgent("http://localhost:8080")
-
 	for n := 0; n < b.N; n++ {
 		testAgent.Add(string(n))
 	}
-
 }
