@@ -14,6 +14,7 @@ import (
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
 	"verifiabledata/balloon/storage/badger"
+	"verifiabledata/balloon/storage/bolt"
 	"verifiabledata/balloon/storage/bplus"
 	"verifiabledata/balloon/storage/cache"
 )
@@ -101,8 +102,8 @@ func BenchmarkAddBolt(b *testing.B) {
 	path := "/tmp/benchAdd"
 	os.MkdirAll(path, os.FileMode(0755))
 
-	frozen, frozenCloseF := openBadgerStorage(path)
-	leaves, leavesCloseF := openBadgerStorage(path)
+	frozen, frozenCloseF := openBoltStorage(path)
+	leaves, leavesCloseF := openBoltStorage(path)
 	defer frozenCloseF()
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
@@ -155,6 +156,14 @@ func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
 	store := bplus.NewBPlusTreeStorage()
 	return store, func() {
 		store.Close()
+	}
+}
+
+func openBoltStorage(path string) (*bolt.BoltStorage, func()) {
+	store := bolt.NewBoltStorage(path, "test")
+	return store, func() {
+		store.Close()
+		deleteFile(path)
 	}
 }
 
