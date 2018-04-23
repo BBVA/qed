@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"verifiabledata/balloon"
+	"verifiabledata/balloon/hashing"
 )
 
 type response map[string]interface{}
@@ -24,12 +25,24 @@ type response map[string]interface{}
 type Agent struct {
 	httpEndpoint string
 	verifier     *balloon.Verifier
+
+	hasher  hashing.Hasher
+	storage map[string]*Log
+}
+
+type Log struct {
+	plain      string
+	event      []byte
+	commitment *balloon.Commitment
+	proof      *balloon.MembershipProof
 }
 
 func NewAgent(httpEndpoint string) (*Agent, error) {
 	agent := &Agent{
 		httpEndpoint,
-		balloon.NewVerifier(),
+		balloon.NewDefaultVerifier(),
+		hashing.Sha256Hasher,
+		make(map[string]*Log),
 	}
 
 	// wait some time to load server
@@ -39,8 +52,9 @@ func NewAgent(httpEndpoint string) (*Agent, error) {
 
 }
 
-func (a *Agent) Add(message string) *balloon.Commitment {
-	data := []byte(strings.Join([]string{`{"message": "`, message, `"}`}, ""))
+func (a *Agent) Add(event string) *balloon.Commitment {
+	// TODO: rename message to event also in apiHttp
+	data := []byte(strings.Join([]string{`{"message": "`, event, `"}`}, ""))
 
 	req, err := http.NewRequest("POST", a.httpEndpoint+"/events", bytes.NewBuffer(data))
 	if err != nil {
@@ -63,20 +77,26 @@ func (a *Agent) Add(message string) *balloon.Commitment {
 
 	json.Unmarshal([]byte(bodyBytes), commitment)
 
+	a.storage[string(a.hasher([]byte(event)))] = &Log{
+		plain:      event,
+		event:      []byte(event),
+		commitment: commitment,
+	}
+
 	return commitment
 
 }
 
-func (a *Agent) MembershipProof(commitment *balloon.Commitment) *balloon.MembershipProof {
-	data, err := json.Marshal(commitment)
+func (a *Agent) MembershipProof(event []byte, version uint) *balloon.MembershipProof {
+	req, err := http.NewRequest("GET", a.httpEndpoint+"/proofs/membership", nil)
 	if err != nil {
 		panic(err)
 	}
 
-	req, err := http.NewRequest("POST", a.httpEndpoint+"/proofs/membership", bytes.NewBuffer(data))
-	if err != nil {
-		panic(err)
-	}
+	q := req.URL.Query()
+	q.Set("event", string(event))
+	q.Set("version", string(version))
+	req.URL.RawQuery = q.Encode()
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Api-Key", "this-is-my-api-key")
@@ -94,11 +114,13 @@ func (a *Agent) MembershipProof(commitment *balloon.Commitment) *balloon.Members
 
 	json.Unmarshal([]byte(bodyBytes), proof)
 
+	a.storage[string(a.hasher(event))].proof = proof
+
 	return proof
 }
 
-func (a *Agent) Verify(proof *balloon.MembershipProof) bool {
-	result, err := a.verifier.Verify(proof)
+func (a *Agent) Verify(proof *balloon.MembershipProof, commitment *balloon.Commitment, event []byte) bool {
+	result, err := a.verifier.Verify(proof, commitment, event)
 	if err != nil {
 		// TODO: log error internally
 		return false

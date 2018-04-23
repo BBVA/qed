@@ -16,25 +16,27 @@ type Verifier struct {
 }
 
 func NewDefaultVerifier() *Verifier {
+	hasher := hashing.Sha256Hasher
+
 	return NewVerifier(
-		history.LeafHasherF,
-		history.InteriorHasherF,
+		history.LeafHasherF(hasher),
+		history.InteriorHasherF(hasher),
 
 		"auditor",
-		hashing.Sha256Hasher,
-		hyper.LeafHasherF,
-		hyper.InteriorHasherF,
+		hasher,
+		hyper.LeafHasherF(hasher),
+		hyper.InteriorHasherF(hasher),
 	)
 }
 
 func NewVerifier(
-	historyLeafHasher history.LeafHaser,
-	historyInteriorHasher history.InteriorHaser,
+	historyLeafHasher history.LeafHasher,
+	historyInteriorHasher history.InteriorHasher,
 
 	hyperId string,
-	hyperhasher hashing.Hasher,
-	hyperLeafHasher hyper.LeafHaser,
-	hyperInteriorHasher hyper.InteriorHaser,
+	hyperHasher hashing.Hasher,
+	hyperLeafHasher hyper.LeafHasher,
+	hyperInteriorHasher hyper.InteriorHasher,
 
 ) *Verifier {
 
@@ -44,25 +46,26 @@ func NewVerifier(
 	}
 }
 
-func (v *Verifier) Verify(proof *MembershipProof, key []byte, version uint, value []byte) (bool, error) {
+func (v *Verifier) Verify(proof *MembershipProof, commitment *Commitment, event []byte) (bool, error) {
 
-	correct, recomputed := historyVerifier.Verify(
-		// expectedDigest []byte,
-		proof.HistoryProof, // auditPath []Node,
-		// key []byte,
-		proof.ActualVersion, // version uint
+	historyCorrect, _ := v.historyVerifier.Verify(
+		commitment.HistoryDigest, // expectedDigest []byte,
+		proof.HistoryProof,       // auditPath []Node,
+		event,                    // key []byte,
+		proof.ActualVersion,      // version uint
 	)
-	if !correct {
+	if !historyCorrect {
 		return false, nil
 	}
 
-	correct, recomputed := hyperVerifier.Verify(
-		// expectedCommitment []byte,
-		proof.HyperProof, // auditPath [][]byte,
-		// key,
-		proof.QueryVersion, // value []byte
+	hyperCorrect, _ := v.hyperVerifier.Verify(
+		commitment.IndexDigest, // expectedCommitment []byte,
+		proof.HyperProof,       // auditPath [][]byte,
+		event,                  // key,
+		event,                  // value []byte
 	)
-	if !correct {
+
+	if !hyperCorrect {
 		return false, nil
 	}
 

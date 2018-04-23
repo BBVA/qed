@@ -113,7 +113,7 @@ func TestMembership(t *testing.T) {
 	}
 
 	q := req.URL.Query()
-	q.Set("key", "this is a sample event")
+	q.Set("event", "this is a sample event")
 	q.Set("version", "1")
 	req.URL.RawQuery = q.Encode()
 

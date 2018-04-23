@@ -27,6 +27,7 @@ func init() {
 	go (func() {
 		dbPath := "/tmp/testAdd"
 		os.MkdirAll(dbPath, os.FileMode(0755))
+
 		frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
 		leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", dbPath))
 		cache := cache.NewSimpleCache(5000000)
@@ -45,17 +46,32 @@ func init() {
 }
 
 func TestAdd(t *testing.T) {
-	testAgent.Add("Hola mundo!")
+	testAgent.Add("Ping Pong")
 }
 
 func TestMembership(t *testing.T) {
-	testAgent.MembershipProof(testAgent.Add("Ping pong"))
+	event := "King Pong"
+	testAgent.Add(event)
+
+	record := testAgent.storage[string(testAgent.hasher([]byte(event)))]
+
+	fmt.Println("****************")
+	testAgent.MembershipProof(record.event, record.commitment.Version)
+
 }
 
 func TestVerify(t *testing.T) {
-	if testAgent.Verify(testAgent.MembershipProof(testAgent.Add("is this real life?"))) != true {
-		t.Error("Can't verify the Membership Proof")
-	}
+	event := "Donkey Pong"
+	testAgent.Add(event)
+
+	// record := testAgent.storage[string(testAgent.hasher([]byte(event)))]
+	//
+	// testAgent.MembershipProof(record.event, record.commitment.Version)
+	//
+	// if !testAgent.Verify(record.proof, record.commitment, record.event) {
+	// 	t.Error("Can't verify the Membership Proof")
+	// }
+
 }
 
 func BenchmarkAdd(b *testing.B) {
