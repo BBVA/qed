@@ -158,10 +158,17 @@ func (t *Tree) operations() chan interface{} {
 					msg.result <- true
 					return
 				case *add:
-					digest, _ := t.add(msg.digest, msg.index)
+					digest, err := t.add(msg.digest, msg.index)
+					if err != nil {
+						fmt.Println("Operations error: ", err)
+
+					}
 					msg.result <- digest
 				case *proof:
-					proof, _ := t.auditPath(msg.key)
+					proof, err := t.auditPath(msg.key)
+					if err != nil {
+						fmt.Println("Operations error: ", err)
+					}
 					msg.result <- proof
 				default:
 					panic("Hyper tree Run() message not implemented!!")
