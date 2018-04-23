@@ -141,7 +141,7 @@ func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
 
 	return &Commitment{
 		<-b.history.Add(digest, index),
-		<-b.hyper.Add(index, digest),
+		<-b.hyper.Add(b.hasher(index), digest),
 		b.version,
 	}, nil
 }
