@@ -39,15 +39,15 @@ func TestAdd(t *testing.T) {
 		historyDigest []byte
 		version       uint
 	}{
-		{"test event 0", []byte{0x0}, []byte{0x4a}, 0},
+		{"test event 0", []byte{0x4a}, []byte{0x4a}, 0},
 		{"test event 1", []byte{0x1}, []byte{0x00}, 1},
-		{"test event 2", []byte{0x3}, []byte{0x48}, 2},
+		{"test event 2", []byte{0x49}, []byte{0x48}, 2},
 		{"test event 3", []byte{0x0}, []byte{0x01}, 3},
-		{"test event 4", []byte{0x4}, []byte{0x4e}, 4},
+		{"test event 4", []byte{0x4e}, []byte{0x4e}, 4},
 		{"test event 5", []byte{0x1}, []byte{0x01}, 5},
-		{"test event 6", []byte{0x7}, []byte{0x4c}, 6},
+		{"test event 6", []byte{0x4d}, []byte{0x4c}, 6},
 		{"test event 7", []byte{0x0}, []byte{0x01}, 7},
-		{"test event 8", []byte{0x8}, []byte{0x43}, 8},
+		{"test event 8", []byte{0x42}, []byte{0x43}, 8},
 		{"test event 9", []byte{0x1}, []byte{0x00}, 9},
 	}
 
