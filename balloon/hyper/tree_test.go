@@ -19,16 +19,31 @@ func TestAdd(t *testing.T) {
 	cache := cache.NewSimpleCache(5000)
 	hasher := hashing.XorHasher
 
-	ht := NewTree(string(0x0), 2, cache, store, hasher, fakeLeafHasherF(hasher), fakeInteriorHasherF(hasher))
+	ht := NewTree(string(0x0), 2, cache, store, hasher, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
 
-	key := []byte{0x5a}
+	var testCases = []struct {
+		key        []byte
+		commitment []byte
+	}{
+		{[]byte{0x00}, []byte{0x0}},
+		{[]byte{0x1}, []byte{0x1}},
+		{[]byte{0x2}, []byte{0x3}},
+		{[]byte{0x3}, []byte{0x0}},
+		{[]byte{0x4}, []byte{0x4}},
+		{[]byte{0x5}, []byte{0x1}},
+		{[]byte{0x6}, []byte{0x7}},
+		{[]byte{0x7}, []byte{0x0}},
+		{[]byte{0x8}, []byte{0x8}},
+		{[]byte{0x9}, []byte{0x1}},
+	}
 	value := []byte{0x01}
 
-	expectedCommitment := []byte{0x5a}
-	commitment := <-ht.Add(key, value)
+	for i, e := range testCases {
+		commitment := <-ht.Add(e.key, value)
 
-	if bytes.Compare(commitment, expectedCommitment) != 0 {
-		t.Fatalf("Expected: %x, Actual: %x", expectedCommitment, commitment)
+		if bytes.Compare(commitment, e.commitment) != 0 {
+			t.Fatalf("Expected commitment for test %d: %x, Actual: %x", i, e.commitment, commitment)
+		}
 	}
 
 }
@@ -41,7 +56,7 @@ func TestProve(t *testing.T) {
 	cache := cache.NewSimpleCache(5000)
 	hasher := hashing.XorHasher
 
-	ht := NewTree(string(0x0), 2, cache, store, hasher, fakeLeafHasherF(hasher), fakeInteriorHasherF(hasher))
+	ht := NewTree(string(0x0), 2, cache, store, hasher, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
 
 	key := []byte{0x5a}
 	value := []byte{0x01}

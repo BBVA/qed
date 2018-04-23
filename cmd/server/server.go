@@ -12,6 +12,8 @@ import (
 	"verifiabledata/api/apihttp"
 	"verifiabledata/balloon"
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/history"
+	"verifiabledata/balloon/hyper"
 	"verifiabledata/balloon/storage"
 	"verifiabledata/balloon/storage/badger"
 	"verifiabledata/balloon/storage/bolt"
@@ -45,8 +47,10 @@ func main() {
 	}
 
 	cache := cache.NewSimpleCache(cacheSize)
-
-	balloon := balloon.NewHyperBalloon(dbPath, hashing.Sha256Hasher, frozen, leaves, cache)
+	hasher := hashing.Sha256Hasher
+	history := history.NewTree(frozen, history.LeafHasherF(hasher), history.InteriorHasherF(hasher))
+	hyper := hyper.NewTree(dbPath, 30, cache, leaves, hasher, hyper.LeafHasherF(hasher), hyper.InteriorHasherF(hasher))
+	balloon := balloon.NewHyperBalloon(hasher, history, hyper)
 
 	err := http.ListenAndServe(httpEndpoint, apihttp.NewApiHttp(balloon))
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 	"verifiabledata/balloon/storage/bplus"
 )
 
-func fakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
+func FakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
 	return func(id, value, base []byte) []byte {
 		if bytes.Equal(value, Empty) {
 			return hasher(Empty)
@@ -19,7 +19,7 @@ func fakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
 	}
 }
 
-func fakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
+func FakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
 	return func(left, right, base, height []byte) []byte {
 		return hasher(left, right)
 	}

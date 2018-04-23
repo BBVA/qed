@@ -79,7 +79,7 @@ func TestVerify(t *testing.T) {
 	}
 
 	hasher := hashing.XorHasher
-	verifier := NewVerifier(fakeLeafHasherF(hasher), fakeInteriorHasherF(hasher))
+	verifier := NewVerifier(FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
 
 	for _, c := range testCases {
 		correct, recomputed := verifier.Verify(c.expectedCommitment, c.auditPath, c.key, c.version)

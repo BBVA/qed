@@ -9,7 +9,6 @@ import (
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
-	"verifiabledata/balloon/storage"
 )
 
 type Balloon interface {
@@ -37,15 +36,12 @@ type AuditPath [][]byte
 type MembershipProof struct {
 	Exists        bool
 	HyperProof    AuditPath
-	HistoryProof  AuditPath
+	HistoryProof  []history.Node
 	QueryVersion  uint
 	ActualVersion uint
 }
 
-func NewHyperBalloon(path string, hasher hashing.Hasher, frozen, leaves storage.Store, cache storage.Cache) *HyperBalloon {
-
-	history := history.NewTree(frozen, history.LeafHasherF(hasher), history.InteriorHasherF(hasher))
-	hyper := hyper.NewTree(path, 30, cache, leaves, hasher, hyper.LeafHasherF(hasher), hyper.InteriorHasherF(hasher))
+func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree) *HyperBalloon {
 
 	b := HyperBalloon{
 		history,
@@ -135,14 +131,14 @@ func (b *HyperBalloon) operations() chan interface{} {
 
 func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
 	digest := b.hasher(event)
-	b.version++
+	version := b.version
 	index := make([]byte, 8)
-	binary.LittleEndian.PutUint64(index, uint64(b.version))
-
+	binary.LittleEndian.PutUint64(index, uint64(version))
+	b.version++
 	return &Commitment{
 		<-b.history.Add(digest, index),
 		<-b.hyper.Add(b.hasher(index), digest),
-		b.version,
+		version,
 	}, nil
 }
 
@@ -168,7 +164,7 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 	return &MembershipProof{
 		exists,
 		hyperProof.AuditPath,
-		nil, //historyProof.AuditPath,
+		historyProof.Nodes,
 		version,
 		actualVersion,
 	}, nil

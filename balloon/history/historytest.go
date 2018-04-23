@@ -8,7 +8,7 @@ import (
 	"verifiabledata/balloon/hashing"
 )
 
-func fakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
+func FakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
 	return func(a, key []byte) []byte {
 		digest := hasher(a, key)
 		fmt.Printf("Hashing leaf: a-> %b key-> %b :=> %b\n", a, key, digest)
@@ -16,7 +16,7 @@ func fakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
 	}
 }
 
-func fakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
+func FakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
 	return func(a, left, right []byte) []byte {
 		digest := hasher(a, left, right)
 		fmt.Printf("Hashing interior: a-> %b left-> %b right-> %b :=> %b\n", a, left, right, digest)
@@ -24,13 +24,13 @@ func fakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
 	}
 }
 
-func fakeLeafHasherCleanF(hasher hashing.Hasher) LeafHasher {
+func FakeLeafHasherCleanF(hasher hashing.Hasher) LeafHasher {
 	return func(a, key []byte) []byte {
 		return hasher(key)
 	}
 }
 
-func fakeInteriorHasherCleanF(hasher hashing.Hasher) InteriorHasher {
+func FakeInteriorHasherCleanF(hasher hashing.Hasher) InteriorHasher {
 	return func(a, left, right []byte) []byte {
 		return hasher(left, right)
 	}
