@@ -1,0 +1,4 @@
+POST http://localhost:8080/events
+Content-Type: application/json
+Api-key: this-is-my-dummy-key
+@stress/event.json
