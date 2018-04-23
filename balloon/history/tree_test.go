@@ -25,19 +25,24 @@ func TestAdd(t *testing.T) {
 		{1, []byte{0x00}, []byte{0x4b}},
 		{2, []byte{0x48}, []byte{0x48}},
 		{3, []byte{0x01}, []byte{0x49}},
+		{4, []byte{0x4e}, []byte{0x4e}},
+		{5, []byte{0x01}, []byte{0x4f}},
+		{6, []byte{0x4c}, []byte{0x4c}},
+		{7, []byte{0x01}, []byte{0x4d}},
+		{8, []byte{0x43}, []byte{0x42}},
+		{9, []byte{0x00}, []byte{0x43}},
 	}
 
 	store, closeF := openBPlusStorage()
 	defer closeF()
 
-	ht := NewTree(store, fakeLeafHasherF(hashing.XorHasher), fakeInteriorHasherF(hashing.XorHasher))
+	ht := NewTree(store, FakeLeafHasherF(hashing.XorHasher), FakeInteriorHasherF(hashing.XorHasher))
 
-	for _, e := range testCases {
-		t.Logf("Testing event: %b", e.event)
+	for i, e := range testCases {
 		commitment := <-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
 
 		if !bytes.Equal(e.commitment, commitment) {
-			t.Fatalf("Incorrect commitment: expected %b, actual %b", e.commitment, commitment)
+			t.Fatalf("Incorrect commitment for test %d: expected %x, actual %x", i, e.commitment, commitment)
 		}
 	}
 }
@@ -60,7 +65,7 @@ func TestProve(t *testing.T) {
 		{6, []byte{0x01}, []byte{0x52}}, // 82
 	}
 
-	ht := NewTree(store, fakeLeafHasherCleanF(hashing.XorHasher), fakeInteriorHasherCleanF(hashing.XorHasher))
+	ht := NewTree(store, FakeLeafHasherCleanF(hashing.XorHasher), FakeInteriorHasherCleanF(hashing.XorHasher))
 
 	for _, e := range testCases {
 		<-ht.Add(e.event, uInt64AsBytes(uint(e.index)))

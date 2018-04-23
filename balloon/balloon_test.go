@@ -5,101 +5,82 @@
 package balloon
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"os"
 	"testing"
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/history"
+	"verifiabledata/balloon/hyper"
 	"verifiabledata/balloon/storage/badger"
-	"verifiabledata/balloon/storage/bolt"
+	"verifiabledata/balloon/storage/bplus"
 	"verifiabledata/balloon/storage/cache"
 )
 
 func TestAdd(t *testing.T) {
-	path := "/tmp/testAdd"
-	os.MkdirAll(path, os.FileMode(0755))
-	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
-	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
-	cache := cache.NewSimpleCache(5000000)
-	balloon := NewHyperBalloon(path, hashing.Sha256Hasher, frozen, leaves, cache)
-	defer balloon.history.Close()
-	defer balloon.hyper.Close()
-	defer deleteFilesInDir(path)
+
+	frozen, frozenCloseF := openBPlusStorage()
+	leaves, leavesCloseF := openBPlusStorage()
+	defer frozenCloseF()
+	defer leavesCloseF()
+
+	cache := cache.NewSimpleCache(5000)
+	hasher := hashing.XorHasher
+
+	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
+	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	var testCases = []struct {
-		index         uint
-		historyDigest string
-		indexDigest   string
 		event         string
+		indexDigest   []byte
+		historyDigest []byte
+		version       uint
 	}{
-		{
-			1,
-			"fa712069a4f6ece78619c7ab233b42b94e40a7bab384311ee1e16b101a8478ec",
-			"ff6ea7855c5d2dde67d7cdf10d18d116457b9e9454e0f595de7611d69b9d301c",
-			"Hello World1",
-		},
-		{
-			2,
-			"db1d613425a77f0f129c55af46407f74a804ac1fb9ea6b27694dbc3628bc299b",
-			"173a3265185c0f6de406165a3505f09f271b6d15658b57b591f4df88d35605a7",
-			"Hello World2",
-		},
-		{
-			3,
-			"952f3d4d5a242c29192b132a9f10d0dcbd20fb7b8a8b0a92cc5e777c5eee889f",
-			"4d2111d387095e4f7e35b10bdcec87cf8184161f6a7b67672d0d797b50af1447",
-			"Hello World3",
-		},
-		{
-			4,
-			"2ed6c9bf02b523a9d9e29dbd4ad52242f31b1666503d44e33f3723c20db7bc9b",
-			"84955497b5b43129b8570ccbb0cbf3240746cca8ee40b00c061315ab4c0a809c",
-			"Hello World4",
-		},
-		{
-			5,
-			"887c24c88a1f9cfb006a7ee23d891b3bbaed6842026dfe00df647b8db3e18f7b",
-			"1c65d8ac3e65db7520fee5a81b11de675ef5b94a7f8ce8d8ca534733750e1156",
-			"Hello World5",
-		},
+		{"test event 0", []byte{0x0}, []byte{0x4a}, 0},
+		{"test event 1", []byte{0x1}, []byte{0x00}, 1},
+		{"test event 2", []byte{0x3}, []byte{0x48}, 2},
+		{"test event 3", []byte{0x0}, []byte{0x01}, 3},
+		{"test event 4", []byte{0x4}, []byte{0x4e}, 4},
+		{"test event 5", []byte{0x1}, []byte{0x01}, 5},
+		{"test event 6", []byte{0x7}, []byte{0x4c}, 6},
+		{"test event 7", []byte{0x0}, []byte{0x01}, 7},
+		{"test event 8", []byte{0x8}, []byte{0x43}, 8},
+		{"test event 9", []byte{0x1}, []byte{0x00}, 9},
 	}
 
-	for _, e := range testCases {
-		t.Logf("Testing event: '%v'", e.event)
-		comm := balloon.Add([]byte(e.event))
-		commitment := <-comm
+	for i, e := range testCases {
 
-		if e.index != commitment.Version {
-			t.Fatalf("Incorrect index: '%v' != '%v'", e.index, commitment.Version)
-		}
-		hd := fmt.Sprintf("%x", commitment.HistoryDigest)
-		hyd := fmt.Sprintf("%x", commitment.IndexDigest)
-		if e.historyDigest != hd {
-			t.Fatalf("Incorrect history commitment: '%v' != '%v'", e.historyDigest, hd)
+		commitment := <-balloon.Add([]byte(e.event))
+		fmt.Println(commitment)
+
+		if commitment.Version != e.version {
+			t.Fatalf("Wrong version for test %d: expected %d, actual %d", i, e.version, commitment.Version)
 		}
 
-		if e.indexDigest != hyd {
-			t.Fatalf("Incorrect hyper commitment: '%v' != '%v'", e.indexDigest, hyd)
+		if bytes.Compare(commitment.IndexDigest, e.indexDigest) != 0 {
+			t.Fatalf("Wrong index digest for test %d: expected: %x, Actual: %x", i, e.indexDigest, commitment.IndexDigest)
+		}
+
+		if bytes.Compare(commitment.HistoryDigest, e.historyDigest) != 0 {
+			t.Fatalf("Wrong history digest for test %d: expected: %x, Actual: %x", i, e.historyDigest, commitment.HistoryDigest)
 		}
 	}
+
 }
 
-func TestProof(t *testing.T) {
-	path := "/tmp/testProof"
-	os.MkdirAll(path, os.FileMode(0755))
-	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
-	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
-	cache := cache.NewSimpleCache(5000000)
-	balloon := NewHyperBalloon(path, hashing.Sha256Hasher, frozen, leaves, cache)
-	defer balloon.history.Close()
-	defer balloon.hyper.Close()
-	defer deleteFilesInDir(path)
-	event := []byte("Hello World1")
-	comm := balloon.Add(event)
-	fmt.Printf("%v ", <-comm)
-	//proof := balloon.Prove(event)
-	//fmt.Printf("%v\n", <-proof)
-}
+//https://play.golang.org/p/nP241T7HXBj
+// test event 0 : 4a [1001010] - 00 [0]
+// test event 1 : 4b [1001011] - 01 [1]
+// test event 2 : 48 [1001000] - 02 [10]
+// test event 3 : 49 [1001001] - 03 [11]
+// test event 4 : 4e [1001110] - 04 [100]
+// test event 5 : 4f [1001111] - 05 [101]
+// test event 6 : 4c [1001100] - 06 [110]
+// test event 7 : 4d [1001101] - 07 [111]
+// test event 8 : 42 [1000010] - 08 [1000]
+// test event 9 : 43 [1000011] - 09 [1001]
 
 func randomBytes(n int) []byte {
 	bytes := make([]byte, n)
@@ -119,11 +100,20 @@ func deleteFilesInDir(path string) {
 func BenchmarkAddBolt(b *testing.B) {
 	path := "/tmp/benchAdd"
 	os.MkdirAll(path, os.FileMode(0755))
-	frozen := bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", path), "frozen")
-	leaves := bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", path), "leaves")
-	cache := cache.NewSimpleCache(5000000)
-	balloon := NewHyperBalloon("/tmp/benchAdd", hashing.Sha256Hasher, frozen, leaves, cache)
-	defer deleteFilesInDir("/tmp/benchAdd")
+
+	frozen, frozenCloseF := openBadgerStorage(path)
+	leaves, leavesCloseF := openBadgerStorage(path)
+	defer frozenCloseF()
+	defer leavesCloseF()
+	defer deleteFilesInDir(path)
+
+	cache := cache.NewSimpleCache(5000)
+	hasher := hashing.XorHasher
+
+	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
+	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+
 	b.ResetTimer()
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
@@ -136,11 +126,21 @@ func BenchmarkAddBolt(b *testing.B) {
 
 func BenchmarkAddBadger(b *testing.B) {
 	path := "/tmp/benchAdd"
-	frozen := badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", path))
-	leaves := badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", path))
-	cache := cache.NewSimpleCache(5000000)
-	balloon := NewHyperBalloon("/tmp/benchAdd", hashing.Sha256Hasher, frozen, leaves, cache)
-	defer deleteFilesInDir("/tmp/benchAdd")
+	os.MkdirAll(path, os.FileMode(0755))
+
+	frozen, frozenCloseF := openBadgerStorage(path)
+	leaves, leavesCloseF := openBadgerStorage(path)
+	defer frozenCloseF()
+	defer leavesCloseF()
+	defer deleteFilesInDir(path)
+
+	cache := cache.NewSimpleCache(5000)
+	hasher := hashing.XorHasher
+
+	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
+	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+
 	b.ResetTimer()
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
@@ -149,4 +149,26 @@ func BenchmarkAddBadger(b *testing.B) {
 		<-r
 	}
 
+}
+
+func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
+	store := bplus.NewBPlusTreeStorage()
+	return store, func() {
+		store.Close()
+	}
+}
+
+func openBadgerStorage(path string) (*badger.BadgerStorage, func()) {
+	store := badger.NewBadgerStorage(path)
+	return store, func() {
+		store.Close()
+		deleteFile(path)
+	}
+}
+
+func deleteFile(path string) {
+	err := os.RemoveAll(path)
+	if err != nil {
+		fmt.Printf("Unable to remove db file %s", err)
+	}
 }

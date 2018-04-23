@@ -14,7 +14,7 @@ import (
 
 func TestVerify(t *testing.T) {
 	hasher := hashing.XorHasher
-	verifier := NewVerifier("test", hasher, fakeLeafHasherF(hasher), fakeInteriorHasherF(hasher))
+	verifier := NewVerifier("test", hasher, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
 
 	expectedCommitment := []byte{0x5a}
 	key := []byte{0x5a}
