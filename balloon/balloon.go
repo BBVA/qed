@@ -173,7 +173,3 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 		actualVersion,
 	}, nil
 }
-
-func Verify(proof *MembershipProof) (bool, error) {
-	return false, nil
-}
