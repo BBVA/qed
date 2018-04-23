@@ -11,7 +11,9 @@ package history
 
 import (
 	"encoding/binary"
+	"log"
 	"math"
+	"os"
 	"verifiabledata/balloon/storage"
 )
 
@@ -61,6 +63,7 @@ type Tree struct {
 	interiorHasher InteriorHasher
 	stats          *stats
 	ops            chan interface{} // serialize operations
+	log            *log.Logger
 }
 
 // NewTree returns a new history tree
@@ -71,6 +74,7 @@ func NewTree(frozen storage.Store, lh LeafHasher, ih InteriorHasher) *Tree {
 		ih,
 		new(stats),
 		nil,
+		log.New(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 	// start tree goroutine to handle
 	// tree operations
@@ -143,17 +147,23 @@ func (t *Tree) operations() chan interface{} {
 			case op := <-operations:
 				switch msg := op.(type) {
 				case *add:
-					digest, _ := t.add(msg.digest, msg.index)
+					digest, err := t.add(msg.digest, msg.index)
+					if err != nil {
+						log.Fatalf("Operations error: %v", err)
+					}
 					msg.result <- digest
 				case *proof:
-					proof, _ := t.prove(msg.key, msg.version)
+					proof, err := t.prove(msg.key, msg.version)
+					if err != nil {
+						log.Fatalf("Operations error: %v", err)
+					}
 					msg.result <- proof
 				case *close:
 					t.frozen.Close()
 					msg.result <- true
 					return
 				default:
-					panic("Hyper tree Run() message not implemented!!")
+					log.Panic("Hyper tree Run() message not implemented!!")
 				}
 
 			}

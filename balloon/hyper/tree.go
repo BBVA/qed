@@ -12,7 +12,8 @@
 package hyper
 
 import (
-	"fmt"
+	"log"
+	"os"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 )
@@ -47,6 +48,7 @@ type Tree struct {
 	cacheArea      *area
 	digestLength   int
 	ops            chan interface{} // serialize operations
+	log            *log.Logger
 }
 
 // MembershipProof holds the audit information needed the verify
@@ -72,6 +74,7 @@ func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Sto
 		newArea(digestLength-cacheLevels, digestLength),
 		digestLength,
 		nil,
+		log.New(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 
 	// init default hashes cache
@@ -160,18 +163,17 @@ func (t *Tree) operations() chan interface{} {
 				case *add:
 					digest, err := t.add(msg.digest, msg.index)
 					if err != nil {
-						fmt.Println("Operations error: ", err)
-
+						log.Println("Operations error: ", err)
 					}
 					msg.result <- digest
 				case *proof:
 					proof, err := t.auditPath(msg.key)
 					if err != nil {
-						fmt.Println("Operations error: ", err)
+						log.Println("Operations error: ", err)
 					}
 					msg.result <- proof
 				default:
-					panic("Hyper tree Run() message not implemented!!")
+					log.Panic("Hyper tree Run() message not implemented!!")
 				}
 
 			}
@@ -193,9 +195,7 @@ func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
 func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
 	value, err := t.leaves.Get(key) // TODO check existence
 	if err != nil {
-
-		fmt.Print(t.leaves)
-
+		log.Println(t.leaves)
 		return nil, err
 	}
 	path := t.calcAuditPathFromCache(key, rootPosition(t.digestLength))

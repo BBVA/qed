@@ -184,8 +184,8 @@ func BenchmarkAddBolt(b *testing.B) {
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
 
-	cache := cache.NewSimpleCache(5000)
-	hasher := hashing.XorHasher
+	cache := cache.NewSimpleCache(500000)
+	hasher := hashing.Sha256Hasher
 
 	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
 	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
@@ -205,21 +205,21 @@ func BenchmarkAddBadger(b *testing.B) {
 	path := "/tmp/benchAdd"
 	os.MkdirAll(path, os.FileMode(0755))
 
-	frozen, frozenCloseF := openBadgerStorage(path)
-	leaves, leavesCloseF := openBadgerStorage(path)
+	frozen, frozenCloseF := openBadgerStorage(fmt.Sprintf("%s/frozen", path))
+	leaves, leavesCloseF := openBadgerStorage(fmt.Sprintf("%s/leaves", path))
 	defer frozenCloseF()
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
 
-	cache := cache.NewSimpleCache(5000)
-	hasher := hashing.XorHasher
+	cache := cache.NewSimpleCache(500000)
+	hasher := hashing.Sha256Hasher
 
 	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
 	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	b.ResetTimer()
-	b.N = 10000
+	b.N = 10
 	for i := 0; i < b.N; i++ {
 		event := randomBytes(128)
 		r := balloon.Add(event)

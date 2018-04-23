@@ -3,23 +3,27 @@ package history
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math"
+	"os"
 )
 
 type Verifier struct {
 	leafHasher     LeafHasher
 	interiorHasher InteriorHasher
+	log            *log.Logger
 }
 
 func NewVerifier(leafHasher LeafHasher, interiorHasher InteriorHasher) *Verifier {
 	return &Verifier{
 		leafHasher,
 		interiorHasher,
+		log.New(os.Stdout, "HistoryVerifier", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 
 func (v *Verifier) Verify(expectedDigest []byte, auditPath []Node, key []byte, version uint) (bool, []byte) {
-	fmt.Printf("\nVerifying commitment %v with auditpath %v, key %v and version %v\n", expectedDigest, auditPath, key, version)
+	log.Printf("\nVerifying commitment %v with auditpath %v, key %v and version %v\n", expectedDigest, auditPath, key, version)
 	depth := v.getDepth(version)
 	pathMap := make(map[string][]byte)
 	for _, n := range auditPath {
@@ -39,15 +43,15 @@ func pathKey(index, layer uint) string {
 
 func (v *Verifier) rootHash(auditPath map[string][]byte, key []byte, index, layer, version uint) []byte {
 	var digest []byte
-	fmt.Printf("Calling rootHash with auditpath %v, key %v, index %v, layer %v and version %v\n", auditPath, key, index, layer, version)
+	log.Printf("Calling rootHash with auditpath %v, key %v, index %v, layer %v and version %v\n", auditPath, key, index, layer, version)
 	//if version >= index+pow(2, layer)-1 {
-	fmt.Printf("Extracting hash from audit path at index %v and layer %v :=> ", index, layer)
+	log.Printf("Extracting hash from audit path at index %v and layer %v :=> ", index, layer)
 	digest, ok := auditPath[pathKey(index, layer)]
 	if ok {
-		fmt.Println("found")
+		log.Println("found")
 		return digest
 	}
-	fmt.Println("not found")
+	log.Println("not found")
 	//	}
 
 	switch {
