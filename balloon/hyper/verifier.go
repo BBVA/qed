@@ -6,6 +6,8 @@ package hyper
 
 import (
 	"bytes"
+	"log"
+	"os"
 	"verifiabledata/balloon/hashing"
 )
 
@@ -14,6 +16,7 @@ type Verifier struct {
 	digestLength   int
 	leafHasher     LeafHasher
 	interiorHasher InteriorHasher
+	log            *log.Logger
 }
 
 func NewVerifier(id string, hasher hashing.Hasher, leafHasher LeafHasher, interiorHasher InteriorHasher) *Verifier {
@@ -23,6 +26,7 @@ func NewVerifier(id string, hasher hashing.Hasher, leafHasher LeafHasher, interi
 		digestLength,
 		leafHasher,
 		interiorHasher,
+		log.New(os.Stdout, "HistoryVerifier", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 

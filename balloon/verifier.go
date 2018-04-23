@@ -5,6 +5,8 @@
 package balloon
 
 import (
+	"log"
+	"os"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
@@ -13,6 +15,7 @@ import (
 type Verifier struct {
 	historyVerifier *history.Verifier
 	hyperVerifier   *hyper.Verifier
+	log             *log.Logger
 }
 
 func NewDefaultVerifier() *Verifier {
@@ -43,6 +46,7 @@ func NewVerifier(
 	return &Verifier{
 		history.NewVerifier(historyLeafHasher, historyInteriorHasher),
 		hyper.NewVerifier(hyperId, hyperHasher, hyperLeafHasher, hyperInteriorHasher),
+		log.New(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 
