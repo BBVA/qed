@@ -146,7 +146,7 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 	digest := b.hasher(event)
 
 	var hyperProof *hyper.MembershipProof
-	// var historyProof *history.MembershipProof
+	var historyProof *history.MembershipProof
 
 	<-b.hyper.Prove(digest)
 
