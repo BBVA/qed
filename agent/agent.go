@@ -31,7 +31,6 @@ type Agent struct {
 }
 
 type Log struct {
-	plain      string
 	event      []byte
 	commitment *balloon.Commitment
 	proof      *balloon.MembershipProof
@@ -78,7 +77,6 @@ func (a *Agent) Add(event string) *balloon.Commitment {
 	json.Unmarshal([]byte(bodyBytes), commitment)
 
 	a.storage[string(a.hasher([]byte(event)))] = &Log{
-		plain:      event,
 		event:      []byte(event),
 		commitment: commitment,
 	}
@@ -94,7 +92,7 @@ func (a *Agent) MembershipProof(event []byte, version uint) *balloon.MembershipP
 	}
 
 	q := req.URL.Query()
-	q.Set("event", string(event))
+	q.Set("key", string(version))
 	q.Set("version", string(version))
 	req.URL.RawQuery = q.Encode()
 
