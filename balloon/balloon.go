@@ -175,5 +175,5 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 }
 
 func Verify(proof *MembershipProof) (bool, error) {
-	return true, nil
+	return false, nil
 }

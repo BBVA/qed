@@ -98,5 +98,11 @@ func (a *Agent) MembershipProof(commitment *balloon.Commitment) *balloon.Members
 
 func (a *Agent) Verify(proof *balloon.MembershipProof) bool {
 
-	return false
+	result, err := balloon.Verify(proof)
+	if err != nil {
+		// TODO: log error internally
+		return false
+	}
+
+	return result
 }
