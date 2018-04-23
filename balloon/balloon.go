@@ -6,6 +6,7 @@ package balloon
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
@@ -115,10 +116,16 @@ func (b *HyperBalloon) operations() chan interface{} {
 					msg.result <- true
 					return
 				case *add:
-					digest, _ := b.add(msg.event)
+					digest, err := b.add(msg.event)
+					if err != nil {
+						fmt.Println("Operations error: ", err)
+					}
 					msg.result <- digest
 				case *membership:
-					proof, _ := b.genMembershipProof(msg.event, msg.version)
+					proof, err := b.genMembershipProof(msg.event, msg.version)
+					if err != nil {
+						fmt.Println("Operations error: ", err)
+					}
 					msg.result <- proof
 				default:
 					panic("Hyper tree Run() message not implemented!!")
@@ -161,6 +168,8 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 
 	if exists && actualVersion <= version {
 		historyProof = <-b.history.Prove(hyperProof.ActualValue, version)
+	} else {
+		return &MembershipProof{}, fmt.Errorf("Unable to get proof from history tree")
 	}
 
 	return &MembershipProof{
