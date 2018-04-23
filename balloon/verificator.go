@@ -8,12 +8,12 @@ import (
 // "verifiabledata/balloon/history"
 )
 
-type Verifier struct{}
+type Verificator struct{}
 
-func NewVerifier() *Verifier {
-	return &Verifier{}
+func NewVerificator() *Verificator {
+	return &Verificator{}
 }
 
-func (v *Verifier) Verify(proof *MembershipProof) (bool, error) {
+func (v *Verificator) Verify(proof *MembershipProof) (bool, error) {
 	return false, nil
 }

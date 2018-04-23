@@ -23,13 +23,13 @@ type response map[string]interface{}
 
 type Agent struct {
 	httpEndpoint string
-	verifier     *balloon.Verifier
+	verificator  *balloon.Verificator
 }
 
 func NewAgent(httpEndpoint string) (*Agent, error) {
 	agent := &Agent{
 		httpEndpoint,
-		balloon.NewVerifier(),
+		balloon.NewVerificator(),
 	}
 
 	// wait some time to load server
@@ -98,7 +98,7 @@ func (a *Agent) MembershipProof(commitment *balloon.Commitment) *balloon.Members
 }
 
 func (a *Agent) Verify(proof *balloon.MembershipProof) bool {
-	result, err := a.verifier.Verify(proof)
+	result, err := a.verificator.Verify(proof)
 	if err != nil {
 		// TODO: log error internally
 		return false
