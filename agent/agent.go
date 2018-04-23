@@ -67,7 +67,10 @@ func (a *Agent) Add(message string) *balloon.Commitment {
 
 func (a *Agent) MembershipProof(commitment *balloon.Commitment) *balloon.MembershipProof {
 
-	data := json.Marshall(commitment)
+	data, err := json.Marshal(commitment)
+	if err != nil {
+		panic(err)
+	}
 
 	req, err := http.NewRequest("POST", a.httpEndpoint+"/proofs/membership", bytes.NewBuffer(data))
 	if err != nil {
@@ -93,7 +96,7 @@ func (a *Agent) MembershipProof(commitment *balloon.Commitment) *balloon.Members
 	return proof
 }
 
-func (a *Agent) Verify(proof *balloon.MembershipProof) {
+func (a *Agent) Verify(proof *balloon.MembershipProof) bool {
 
-	return
+	return false
 }
