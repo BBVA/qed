@@ -53,7 +53,7 @@ type event struct {
 }
 
 type query struct {
-	key     []byte
+	event   []byte
 	version uint
 }
 
@@ -118,16 +118,16 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 		}
 
 		var query query
-		key, ok := r.URL.Query()["key"]
+		event, ok := r.URL.Query()["event"]
 		version, ok := r.URL.Query()["version"]
 
-		if !ok || len(key) < 1 || len(version) < 1 {
+		if !ok || len(event) < 1 || len(version) < 1 {
 			http.Error(w, "\nUrl Param Key or Version is missing", http.StatusBadRequest)
 			return
 		}
 
 		// Wait for the response
-		response := <-balloon.GenMembershipProof(query.key, query.version)
+		response := <-balloon.GenMembershipProof(query.event, query.version)
 
 		out, err := json.Marshal(response)
 		if err != nil {

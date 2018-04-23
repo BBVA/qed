@@ -6,6 +6,7 @@ package balloon
 
 import (
 	"encoding/binary"
+
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
@@ -152,6 +153,7 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 
 	var exists bool
 	var actualVersion uint
+
 	if len(hyperProof.ActualValue) > 0 {
 		exists = true
 		actualVersion = uint(binary.LittleEndian.Uint64(hyperProof.ActualValue))
@@ -168,4 +170,5 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 		version,
 		actualVersion,
 	}, nil
+
 }

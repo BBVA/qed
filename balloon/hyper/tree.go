@@ -12,6 +12,7 @@
 package hyper
 
 import (
+	"fmt"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 )
@@ -183,8 +184,11 @@ func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
 }
 
 func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
-	value, err := t.leaves.Get(key) // TODO check existance
+	value, err := t.leaves.Get(key) // TODO check existence
 	if err != nil {
+
+		fmt.Print(t.leaves)
+
 		return nil, err
 	}
 	path := t.calcAuditPathFromCache(key, rootPosition(t.digestLength))
