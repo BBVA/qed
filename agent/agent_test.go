@@ -55,22 +55,22 @@ func TestMembership(t *testing.T) {
 
 	record := testAgent.storage[string(testAgent.hasher([]byte(event)))]
 
-	fmt.Println("****************")
 	testAgent.MembershipProof(record.event, record.commitment.Version)
 
 }
 
 func TestVerify(t *testing.T) {
+
 	event := "Donkey Pong"
 	testAgent.Add(event)
 
-	// record := testAgent.storage[string(testAgent.hasher([]byte(event)))]
-	//
-	// testAgent.MembershipProof(record.event, record.commitment.Version)
-	//
-	// if !testAgent.Verify(record.proof, record.commitment, record.event) {
-	// 	t.Error("Can't verify the Membership Proof")
-	// }
+	record := testAgent.storage[string(testAgent.hasher([]byte(event)))]
+
+	testAgent.MembershipProof(record.event, record.commitment.Version)
+
+	if !testAgent.Verify(record.proof, record.commitment, record.event) {
+		t.Error("Can't verify the Membership Proof")
+	}
 
 }
 
