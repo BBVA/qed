@@ -150,9 +150,9 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 	digest := b.hasher(event)
 
 	var hyperProof *hyper.MembershipProof
-	var historyProof *history.MembershipProof
+	// var historyProof *history.MembershipProof
 
-	hyperProof = <-b.hyper.Prove(digest)
+	<-b.hyper.Prove(digest)
 
 	var exists bool
 	if len(hyperProof.ActualValue) > 0 {
@@ -162,15 +162,18 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 	actualVersion := uint(binary.LittleEndian.Uint64(hyperProof.ActualValue))
 
 	if exists && actualVersion <= version {
-		historyProof = <-b.history.Prove(hyperProof.ActualValue, version)
+		<-b.history.Prove(hyperProof.ActualValue, version)
 	}
 
 	return &MembershipProof{
 		exists,
 		hyperProof.AuditPath,
-		historyProof.AuditPath,
+		nil, //historyProof.AuditPath,
 		version,
 		actualVersion,
 	}, nil
+}
 
+func Verify(proof *MembershipProof) (bool, error) {
+	return true, nil
 }

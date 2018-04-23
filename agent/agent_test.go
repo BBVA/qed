@@ -48,7 +48,9 @@ func TestMembership(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
-	testAgent.Verify(testAgent.MembershipProof(testAgent.Add("is this real life?")))
+	if testAgent.Verify(testAgent.MembershipProof(testAgent.Add("is this real life?"))) != true {
+		t.Error("Can't verify the Membership Proof")
+	}
 }
 
 func BenchmarkAdd(b *testing.B) {
