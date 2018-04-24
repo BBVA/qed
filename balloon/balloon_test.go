@@ -35,7 +35,7 @@ func TestAdd(t *testing.T) {
 
 	var testCases = []struct {
 		event         string
-		indexDigest   []byte
+		hyperDigest   []byte
 		historyDigest []byte
 		version       uint
 	}{
@@ -60,8 +60,8 @@ func TestAdd(t *testing.T) {
 			t.Fatalf("Wrong version for test %d: expected %d, actual %d", i, e.version, commitment.Version)
 		}
 
-		if bytes.Compare(commitment.IndexDigest, e.indexDigest) != 0 {
-			t.Fatalf("Wrong index digest for test %d: expected: %x, Actual: %x", i, e.indexDigest, commitment.IndexDigest)
+		if bytes.Compare(commitment.HyperDigest, e.hyperDigest) != 0 {
+			t.Fatalf("Wrong index digest for test %d: expected: %x, Actual: %x", i, e.hyperDigest, commitment.HyperDigest)
 		}
 
 		if bytes.Compare(commitment.HistoryDigest, e.historyDigest) != 0 {
