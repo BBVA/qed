@@ -7,8 +7,8 @@ package balloon
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"os"
+	"verifiabledata/log"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
@@ -27,7 +27,7 @@ type HyperBalloon struct {
 	hasher  hashing.Hasher
 	version uint
 	ops     chan interface{} // serialize operations
-	log     *log.Logger
+	log     log.Logger
 }
 
 type Commitment struct {
@@ -54,7 +54,7 @@ func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.
 		hasher,
 		0,
 		nil,
-		log.New(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		log.NewError(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 	b.ops = b.operations()
 	return &b
@@ -122,17 +122,17 @@ func (b *HyperBalloon) operations() chan interface{} {
 				case *add:
 					digest, err := b.add(msg.event)
 					if err != nil {
-						log.Fatalf("Operations error: %v", err)
+						b.log.Error("Operations error: %v", err)
 					}
 					msg.result <- digest
 				case *membership:
 					proof, err := b.genMembershipProof(msg.event, msg.version)
 					if err != nil {
-						log.Fatalf("Operations error: %v", err)
+						b.log.Error("Operations error: %v", err)
 					}
 					msg.result <- proof
 				default:
-					log.Panic("Hyper tree Run() message not implemented!!")
+					b.log.Error("Hyper tree Run() message not implemented!!")
 				}
 
 			}

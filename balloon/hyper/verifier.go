@@ -7,9 +7,9 @@ package hyper
 import (
 	"bytes"
 	"encoding/binary"
-	"log"
 	"os"
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/log"
 )
 
 type Proof struct {
@@ -18,7 +18,7 @@ type Proof struct {
 	digestLength   int
 	leafHasher     LeafHasher
 	interiorHasher InteriorHasher
-	log            *log.Logger
+	log            log.Logger
 }
 
 func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher, leafHasher LeafHasher, interiorHasher InteriorHasher) *Proof {
@@ -29,12 +29,12 @@ func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher, leafHasher L
 		digestLength,
 		leafHasher,
 		interiorHasher,
-		log.New(os.Stdout, "HyperProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		log.NewError(os.Stdout, "HyperProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 
 func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint) bool {
-	p.log.Printf("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
+	p.log.Infof("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
 	valueBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
 	recomputed := p.rootHash(p.auditPath, rootPosition(p.digestLength), key, valueBytes)
@@ -42,7 +42,7 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint) bool {
 }
 
 func (p *Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
-	p.log.Printf("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
+	p.log.Infof("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
 	if pos.height == 0 {
 		return p.leafHasher(p.id, value, pos.base)
 	}
