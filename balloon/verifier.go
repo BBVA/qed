@@ -12,7 +12,7 @@ type Verifiable interface {
 	Verify([]byte, []byte, uint) bool
 }
 
-type BalloonProof struct {
+type Proof struct {
 	exists        bool
 	hyperProof    Verifiable
 	historyProof  Verifiable
@@ -21,7 +21,7 @@ type BalloonProof struct {
 	log           *log.Logger
 }
 
-func (p *BalloonProof) Verify(commitment *Commitment, event []byte) bool {
+func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
 	hyperCorrect := p.hyperProof.Verify(
 		commitment.HyperDigest,
 		event,
