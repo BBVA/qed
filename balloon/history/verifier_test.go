@@ -1,7 +1,6 @@
 package history
 
 import (
-	"bytes"
 	"testing"
 	"verifiabledata/balloon/hashing"
 )
@@ -79,17 +78,13 @@ func TestVerify(t *testing.T) {
 	}
 
 	hasher := hashing.XorHasher
-	verifier := NewVerifier(FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
 
-	for _, c := range testCases {
-		correct, recomputed := verifier.Verify(c.expectedCommitment, c.auditPath, c.key, c.version)
+	for i, c := range testCases {
+		proof := NewProof(c.auditPath, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+		correct := proof.Verify(c.expectedCommitment, c.key, c.version)
 
 		if !correct {
-			t.Fatalf("The verification failed")
-		}
-
-		if bytes.Compare(recomputed, c.expectedCommitment) != 0 {
-			t.Fatalf("Expected: %x, Actual: %x", c.expectedCommitment, recomputed)
+			t.Fatalf("The verification of the test case #%d failed", i)
 		}
 	}
 }
