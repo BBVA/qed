@@ -6,6 +6,7 @@ package balloon
 
 import (
 	"log"
+	"os"
 )
 
 type Verifiable interface {
@@ -19,6 +20,23 @@ type Proof struct {
 	queryVersion  uint
 	actualVersion uint
 	log           *log.Logger
+}
+
+func NewProof(
+	exists bool,
+	hyperProof Verifiable,
+	historyProof Verifiable,
+	queryVersion uint,
+	actualVersion uint,
+) *Proof {
+	return &Proof{
+		exists,
+		hyperProof,
+		historyProof,
+		queryVersion,
+		actualVersion,
+		log.New(os.Stdout, "BalloonProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+	}
 }
 
 func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
