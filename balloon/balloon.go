@@ -32,7 +32,7 @@ type HyperBalloon struct {
 
 type Commitment struct {
 	HistoryDigest []byte
-	IndexDigest   []byte
+	HyperDigest   []byte
 	Version       uint
 }
 
