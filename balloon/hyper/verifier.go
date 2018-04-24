@@ -6,47 +6,54 @@ package hyper
 
 import (
 	"bytes"
+	"encoding/binary"
 	"log"
 	"os"
 	"verifiabledata/balloon/hashing"
 )
 
-type Verifier struct {
+type Proof struct {
 	id             []byte
+	auditPath      [][]byte
 	digestLength   int
 	leafHasher     LeafHasher
 	interiorHasher InteriorHasher
 	log            *log.Logger
 }
 
-func NewVerifier(id string, hasher hashing.Hasher, leafHasher LeafHasher, interiorHasher InteriorHasher) *Verifier {
+func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher, leafHasher LeafHasher, interiorHasher InteriorHasher) *Proof {
 	digestLength := len(hasher([]byte("x"))) * 8
-	return &Verifier{
+	return &Proof{
 		[]byte(id),
+		auditPath,
 		digestLength,
 		leafHasher,
 		interiorHasher,
-		log.New(os.Stdout, "HistoryVerifier", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		log.New(os.Stdout, "HyperProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 
-func (v *Verifier) Verify(expectedDigest []byte, auditPath [][]byte, key, value []byte) (bool, []byte) {
-	recomputed := v.rootHash(auditPath, rootPosition(v.digestLength), key, value)
-	return bytes.Equal(expectedDigest, recomputed), recomputed
+func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint) bool {
+	p.log.Printf("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
+	valueBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
+	recomputed := p.rootHash(p.auditPath, rootPosition(p.digestLength), key, valueBytes)
+	return bytes.Equal(expectedDigest, recomputed)
 }
 
-func (v *Verifier) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
+func (p *Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
+	p.log.Printf("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
 	if pos.height == 0 {
-		return v.leafHasher(v.id, value, pos.base)
+		return p.leafHasher(p.id, value, pos.base)
 	}
-	if !bitIsSet(key, v.digestLength-pos.height) { // if k_j == 0
-		left := v.rootHash(auditPath, pos.left(), key, value)
+	if !bitIsSet(key, p.digestLength-pos.height) { // if k_j == 0
+		left := p.rootHash(auditPath, pos.left(), key, value)
 		right := auditPath[pos.height]
 		next := pos.right()
-		return v.interiorHasher(left, right, next.base, next.heightBytes())
+		return p.interiorHasher(left, right, next.base, next.heightBytes())
 	}
 	left := auditPath[pos.height]
-	right := v.rootHash(auditPath, pos.right(), key, value)
+	right := p.rootHash(auditPath, pos.right(), key, value)
 	next := pos.left()
-	return v.interiorHasher(left, right, next.base, next.heightBytes())
+	return p.interiorHasher(left, right, next.base, next.heightBytes())
 }
