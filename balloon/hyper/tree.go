@@ -12,10 +12,10 @@
 package hyper
 
 import (
-	"log"
 	"os"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
+	"verifiabledata/log"
 )
 
 // An Hyper Tree is an optimized Sparse Merkle Tree with
@@ -48,7 +48,7 @@ type Tree struct {
 	cacheArea      *area
 	digestLength   int
 	ops            chan interface{} // serialize operations
-	log            *log.Logger
+	log            log.Logger
 }
 
 // MembershipProof holds the audit information needed the verify
@@ -74,7 +74,7 @@ func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Sto
 		newArea(digestLength-cacheLevels, digestLength),
 		digestLength,
 		nil,
-		log.New(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		log.NewError(os.Stdout, "HyperTree", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 
 	// init default hashes cache
@@ -163,17 +163,17 @@ func (t *Tree) operations() chan interface{} {
 				case *add:
 					digest, err := t.add(msg.digest, msg.index)
 					if err != nil {
-						log.Println("Operations error: ", err)
+						t.log.Error("Operations error: ", err)
 					}
 					msg.result <- digest
 				case *proof:
 					proof, err := t.auditPath(msg.key)
 					if err != nil {
-						log.Println("Operations error: ", err)
+						t.log.Error("Operations error: ", err)
 					}
 					msg.result <- proof
 				default:
-					log.Panic("Hyper tree Run() message not implemented!!")
+					t.log.Error("Hyper tree Run() message not implemented!!")
 				}
 
 			}
@@ -195,7 +195,7 @@ func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
 func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
 	value, err := t.leaves.Get(key) // TODO check existence
 	if err != nil {
-		log.Println(t.leaves)
+		t.log.Debug(t.leaves)
 		return nil, err
 	}
 	path := t.calcAuditPathFromCache(key, rootPosition(t.digestLength))

@@ -11,10 +11,10 @@ package history
 
 import (
 	"encoding/binary"
-	"log"
 	"math"
 	"os"
 	"verifiabledata/balloon/storage"
+	"verifiabledata/log"
 )
 
 // A History tree is a tree structure with a version metadata.
@@ -63,7 +63,7 @@ type Tree struct {
 	interiorHasher InteriorHasher
 	stats          *stats
 	ops            chan interface{} // serialize operations
-	log            *log.Logger
+	log            log.Logger
 }
 
 // NewTree returns a new history tree
@@ -74,7 +74,7 @@ func NewTree(frozen storage.Store, lh LeafHasher, ih InteriorHasher) *Tree {
 		ih,
 		new(stats),
 		nil,
-		log.New(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		log.NewError(os.Stdout, "HistoryTree", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 	// start tree goroutine to handle
 	// tree operations
@@ -149,13 +149,13 @@ func (t *Tree) operations() chan interface{} {
 				case *add:
 					digest, err := t.add(msg.digest, msg.index)
 					if err != nil {
-						log.Fatalf("Operations error: %v", err)
+						t.log.Errorf("Operations error: %v", err)
 					}
 					msg.result <- digest
 				case *proof:
 					proof, err := t.prove(msg.key, msg.version)
 					if err != nil {
-						log.Fatalf("Operations error: %v", err)
+						t.log.Errorf("Operations error: %v", err)
 					}
 					msg.result <- proof
 				case *close:
@@ -163,7 +163,7 @@ func (t *Tree) operations() chan interface{} {
 					msg.result <- true
 					return
 				default:
-					log.Panic("Hyper tree Run() message not implemented!!")
+					t.log.Error("Hyper tree Run() message not implemented!!")
 				}
 
 			}

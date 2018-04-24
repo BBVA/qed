@@ -4,14 +4,14 @@
 package history
 
 import (
-	//	"fmt"
+	// "verifiabledata/log"
 	"verifiabledata/balloon/hashing"
 )
 
 func FakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
 	return func(a, key []byte) []byte {
 		digest := hasher(a, key)
-		//fmt.Printf("Hashing leaf: a-> %b key-> %b :=> %b\n", a, key, digest)
+		//log.Debug("Hashing leaf: a-> %b key-> %b :=> %b\n", a, key, digest)
 		return digest
 	}
 }
@@ -19,7 +19,7 @@ func FakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
 func FakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
 	return func(a, left, right []byte) []byte {
 		digest := hasher(a, left, right)
-		//fmt.Printf("Hashing interior: a-> %b left-> %b right-> %b :=> %b\n", a, left, right, digest)
+		//log.Debug("Hashing interior: a-> %b left-> %b right-> %b :=> %b\n", a, left, right, digest)
 		return digest
 	}
 }
