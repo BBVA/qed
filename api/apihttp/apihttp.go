@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"verifiabledata/balloon"
 )
 
@@ -52,8 +53,8 @@ type event struct {
 	Message string `json:"message"`
 }
 
-type query struct {
-	event   []byte
+type membershipQuery struct {
+	event   string
 	version uint
 }
 
@@ -117,19 +118,22 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 			return
 		}
 
-		var query query
-		event, ok := r.URL.Query()["event"]
-		version, ok := r.URL.Query()["version"]
+		eventParams, ok := r.URL.Query()["event"]
+		versionParams, ok := r.URL.Query()["version"]
 
-		if !ok || len(event) < 1 || len(version) < 1 {
+		if !ok || len(eventParams) < 1 || len(versionParams) < 1 {
 			http.Error(w, "\nUrl Param Key or Version is missing", http.StatusBadRequest)
 			return
 		}
 
-		// Wait for the response
-		response := <-balloon.GenMembershipProof(query.event, query.version)
+		event := eventParams[0]
+		versionUint64, _ := strconv.ParseUint(versionParams[0], 10, 64)
+		version := uint(versionUint64)
 
-		out, err := json.Marshal(response)
+		// Wait for the response
+		response := <-balloon.GenMembershipProof([]byte(event), version)
+
+		out, err := json.Marshal(assemblyMembershipProof(event, response))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
