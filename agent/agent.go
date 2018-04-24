@@ -24,10 +24,8 @@ type response map[string]interface{}
 
 type Agent struct {
 	httpEndpoint string
-	verifier     *balloon.Verifier
-
-	hasher  hashing.Hasher
-	storage map[string]*Log
+	hasher       hashing.Hasher
+	storage      map[string]*Log
 }
 
 type Log struct {
@@ -39,7 +37,6 @@ type Log struct {
 func NewAgent(httpEndpoint string) (*Agent, error) {
 	agent := &Agent{
 		httpEndpoint,
-		balloon.NewDefaultVerifier(),
 		hashing.Sha256Hasher,
 		make(map[string]*Log),
 	}
@@ -118,11 +115,5 @@ func (a *Agent) MembershipProof(event []byte, version uint) *balloon.MembershipP
 }
 
 func (a *Agent) Verify(proof *balloon.MembershipProof, commitment *balloon.Commitment, event []byte) bool {
-	result, err := a.verifier.Verify(proof, commitment, event)
-	if err != nil {
-		// TODO: log error internally
-		return false
-	}
-
-	return result
+	return false
 }
