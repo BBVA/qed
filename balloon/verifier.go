@@ -5,6 +5,7 @@
 package balloon
 
 import (
+	"encoding/binary"
 	"log"
 	"os"
 	"verifiabledata/balloon/hashing"
@@ -18,60 +19,60 @@ type Verifier struct {
 	log             *log.Logger
 }
 
-func NewDefaultVerifier() *Verifier {
+func NewDefaultVerifier(balloonId string) *Verifier {
 	hasher := hashing.Sha256Hasher
 
 	return NewVerifier(
+		balloonId,
+		hasher,
 		history.LeafHasherF(hasher),
 		history.InteriorHasherF(hasher),
-
-		"auditor",
-		hasher,
 		hyper.LeafHasherF(hasher),
 		hyper.InteriorHasherF(hasher),
 	)
 }
 
 func NewVerifier(
-	historyLeafHasher history.LeafHasher,
-	historyInteriorHasher history.InteriorHasher,
-
-	hyperId string,
-	hyperHasher hashing.Hasher,
-	hyperLeafHasher hyper.LeafHasher,
-	hyperInteriorHasher hyper.InteriorHasher,
+	balloonId string,
+	hasher hashing.Hasher,
+	historyLH history.LeafHasher,
+	historyIH history.InteriorHasher,
+	hyperLH hyper.LeafHasher,
+	hyperIH hyper.InteriorHasher,
 
 ) *Verifier {
 
 	return &Verifier{
-		history.NewVerifier(historyLeafHasher, historyInteriorHasher),
-		hyper.NewVerifier(hyperId, hyperHasher, hyperLeafHasher, hyperInteriorHasher),
+		history.NewVerifier(historyLH, historyIH),
+		hyper.NewVerifier(balloonId, hasher, hyperLH, hyperIH),
 		log.New(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 
 func (v *Verifier) Verify(proof *MembershipProof, commitment *Commitment, event []byte) (bool, error) {
 
-	historyCorrect, _ := v.historyVerifier.Verify(
-		commitment.HistoryDigest, // expectedDigest []byte,
-		proof.HistoryProof,       // auditPath []Node,
-		event,                    // key []byte,
-		proof.ActualVersion,      // version uint
-	)
-	if !historyCorrect {
-		return false, nil
-	}
+	queryVersion := make([]byte, 8)
+	binary.LittleEndian.PutUint64(queryVersion, uint64(proof.QueryVersion))
 
 	hyperCorrect, _ := v.hyperVerifier.Verify(
-		commitment.IndexDigest, // expectedCommitment []byte,
+		commitment.HyperDigest, // expectedCommitment []byte,
 		proof.HyperProof,       // auditPath [][]byte,
 		event,                  // key,
-		event,                  // value []byte
+		queryVersion,           // value []byte
 	)
 
-	if !hyperCorrect {
-		return false, nil
+	if proof.Exists {
+		if proof.QueryVersion <= proof.ActualVersion {
+			historyCorrect, _ := v.historyVerifier.Verify(
+				commitment.HistoryDigest, // expectedDigest []byte,
+				proof.HistoryProof,       // auditPath []Node,
+				event,                    // key []byte,
+				proof.QueryVersion,       // version uint
+			)
+			return hyperCorrect && historyCorrect, nil
+		}
 	}
 
-	return true, nil
+	return hyperCorrect, nil
+
 }
