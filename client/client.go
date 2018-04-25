@@ -37,12 +37,12 @@ type HttpClient struct {
 func NewHttpClient(endpoint, apiKey string, c *http.Client) *HttpClient {
 	return &HttpClient{
 		endpoint,
-		key,
+		apiKey,
 		c,
 	}
 }
 
-func (c Client) InsertEvent(event []byte) apihttp.Snapshot {
+func (c HttpClient) InsertEvent(event string) *apihttp.Snapshot {
 
 	// TODO: rename message to event also in apiHttp
 	data := []byte(strings.Join([]string{`{"message": "`, event, `"}`}, ""))
@@ -55,7 +55,7 @@ func (c Client) InsertEvent(event []byte) apihttp.Snapshot {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Api-Key", c.apiKey)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		panic(err)
 	}
@@ -72,7 +72,7 @@ func (c Client) InsertEvent(event []byte) apihttp.Snapshot {
 
 }
 
-func (c Client) Membership(event []byte, version uint64) *apihttp.MembershipProof {
+func (c HttpClient) Membership(event []byte, version uint64) *apihttp.MembershipProof {
 
 	req, err := http.NewRequest("GET", c.httpEndpoint+"/proofs/membership", nil)
 	if err != nil {
@@ -87,7 +87,7 @@ func (c Client) Membership(event []byte, version uint64) *apihttp.MembershipProo
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Api-Key", c.apiKey)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.client.Do(req)
 	if err != nil {
 		panic(err)
 	}
@@ -104,7 +104,7 @@ func (c Client) Membership(event []byte, version uint64) *apihttp.MembershipProo
 
 }
 
-func (c Client) Verify(event []byte, cm *balloon.Commitment, p *apihttp.MembershipProof) bool {
+func (c HttpClient) Verify(event []byte, cm *balloon.Commitment, p *apihttp.MembershipProof) bool {
 	htlh := history.LeafHasherF(hashing.Sha256Hasher)
 	htih := history.InteriorHasherF(hashing.Sha256Hasher)
 
