@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"verifiabledata/agent"
@@ -20,11 +21,12 @@ var (
 
 func main() {
 	flag.StringVar(&httpEndpoint, "http_endpoint", "http://localhost:8080", "Endpoint for send requests on (host:port)")
+	flag.StringVar(&apiKey, "api_key", "this-is-my-api-key", "Api auth key")
 	flag.Parse()
 
 	log.Println("Starting agent")
 
-	auditor, err := agent.NewAgent(httpEndpoint)
+	auditor, err := agent.NewAgent(httpEndpoint, apiKey, &http.DefaultClient)
 	if err != nil {
 		log.Panicln("Agent exited with error:", err)
 	}
