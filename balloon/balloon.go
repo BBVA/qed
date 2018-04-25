@@ -44,6 +44,7 @@ type MembershipProof struct {
 	HistoryProof  []history.Node
 	QueryVersion  uint
 	ActualVersion uint
+	KeyDigest     []byte
 }
 
 func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree) *HyperBalloon {
@@ -182,6 +183,7 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 		historyProof.Nodes,
 		version,
 		actualVersion,
+		digest,
 	}, nil
 
 }

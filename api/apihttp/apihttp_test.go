@@ -168,6 +168,7 @@ func TestMembership(t *testing.T) {
 			[]history.Node{history.Node{[]byte{0x0}, 0, 1}},
 			version,
 			version + 1,
+			[]byte{0x0},
 		}
 	}()
 
@@ -187,6 +188,10 @@ func TestMembership(t *testing.T) {
 
 	if membershipProof.Key != key {
 		t.Errorf("Key is not consistent ")
+	}
+
+	if membershipProof.KeyDigest == "" {
+		t.Errorf("KeyDigest is not consistent ")
 	}
 
 	if membershipProof.IsMember != true {
