@@ -6,20 +6,19 @@ package apihttp
 
 import (
 	"bytes"
+	"encoding/json"
+	// "io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"verifiabledata/balloon"
+	"verifiabledata/balloon/history"
 )
 
 type fakeBalloon struct {
 	addch  chan *balloon.Commitment
 	stopch chan bool
 	proof  chan *balloon.MembershipProof
-}
-
-type fakeProof struct {
-	proof chan *balloon.MembershipProof
 }
 
 func (b fakeBalloon) Add(event []byte) chan *balloon.Commitment {
@@ -34,11 +33,25 @@ func (b fakeBalloon) GenMembershipProof(event []byte, version uint) chan *balloo
 	return b.proof
 }
 
-func newFakeBalloon(addch chan *balloon.Commitment, stopch chan bool, proof chan *balloon.MembershipProof) fakeBalloon {
+func newAddOpFakeBalloon(addch chan *balloon.Commitment) fakeBalloon {
+	closech := make(chan bool)
+	proofch := make(chan *balloon.MembershipProof)
+
 	return fakeBalloon{
 		addch,
-		stopch,
-		proof,
+		closech,
+		proofch,
+	}
+}
+
+func newMembershipOpFakeBalloon(proofch chan *balloon.MembershipProof) fakeBalloon {
+	addch := make(chan *balloon.Commitment)
+	closech := make(chan bool)
+
+	return fakeBalloon{
+		addch,
+		closech,
+		proofch,
 	}
 }
 
@@ -85,12 +98,14 @@ func TestInsertEvent(t *testing.T) {
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	addch := make(chan *balloon.Commitment)
-	closech := make(chan bool)
-	proof := make(chan *balloon.MembershipProof)
-	handler := InsertEvent(newFakeBalloon(addch, closech, proof))
+	handler := InsertEvent(newAddOpFakeBalloon(addch))
 
 	go func() {
-		addch <- &balloon.Commitment{}
+		addch <- &balloon.Commitment{
+			[]byte{0x0},
+			[]byte{0x1},
+			0,
+		}
 	}()
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
@@ -102,6 +117,26 @@ func TestInsertEvent(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusCreated)
 	}
+
+	// Check the body response
+	snapshot := &Snapshot{}
+	json.Unmarshal([]byte(rr.Body.String()), snapshot)
+
+	if snapshot.HyperDigest != "0000000000000000000000000000000000000000000000000000000000000001" {
+		t.Errorf("HyperDigest is not consistent: %s", snapshot.HyperDigest)
+	}
+
+	if snapshot.HistoryDigest != "0000000000000000000000000000000000000000000000000000000000000000" {
+		t.Errorf("HistoryDigest is not consistent %s", snapshot.HistoryDigest)
+	}
+
+	if snapshot.Version != 0 {
+		t.Errorf("Version is not consistent")
+	}
+	if snapshot.Event != "this is a sample event" {
+		t.Errorf("Event is not consistent ")
+	}
+
 }
 
 func TestMembership(t *testing.T) {
@@ -113,19 +148,27 @@ func TestMembership(t *testing.T) {
 	}
 
 	q := req.URL.Query()
-	q.Set("event", "this is a sample event")
+
+	key := "this is a sample event"
+	q.Set("key", key)
+
+	version := uint(1)
 	q.Set("version", "1")
 	req.URL.RawQuery = q.Encode()
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	addch := make(chan *balloon.Commitment)
-	closech := make(chan bool)
 	proof := make(chan *balloon.MembershipProof)
-	handler := Membership(newFakeBalloon(addch, closech, proof))
+	handler := Membership(newMembershipOpFakeBalloon(proof))
 
 	go func() {
-		proof <- &balloon.MembershipProof{}
+		proof <- &balloon.MembershipProof{
+			true,
+			[][]byte{[]byte{0x0}},
+			[]history.Node{history.Node{[]byte{0x0}, 0, 1}},
+			version,
+			version + 1,
+		}
 	}()
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
@@ -136,6 +179,52 @@ func TestMembership(t *testing.T) {
 	if status := rr.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
+	}
+
+	// Check the body response
+	membershipProof := &MembershipProof{}
+	json.Unmarshal([]byte(rr.Body.String()), membershipProof)
+
+	if membershipProof.Key != key {
+		t.Errorf("Key is not consistent ")
+	}
+
+	if membershipProof.IsMember != true {
+		t.Errorf("IsMember is not consistent ")
+	}
+
+	if len(membershipProof.Proofs.HyperAuditPath) != 1 {
+		t.Errorf("Proofs.HyperAuditPath is not consistent ")
+	}
+
+	if membershipProof.Proofs.HyperAuditPath[0] !=
+		"0000000000000000000000000000000000000000000000000000000000000000" {
+		t.Errorf("Proofs.HyperAuditPath is not consistent ")
+	}
+
+	if len(membershipProof.Proofs.HistoryAuditPath) != 1 {
+		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
+	}
+
+	if membershipProof.Proofs.HistoryAuditPath[0].Digest !=
+		"0000000000000000000000000000000000000000000000000000000000000000" {
+		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
+	}
+
+	if membershipProof.Proofs.HistoryAuditPath[0].Index != 0 {
+		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
+	}
+
+	if membershipProof.Proofs.HistoryAuditPath[0].Layer != 1 {
+		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
+	}
+
+	if membershipProof.QueryVersion != version {
+		t.Errorf("QueryVersion is not consistent ")
+	}
+
+	if membershipProof.ActualVersion != version+1 {
+		t.Errorf("ActualVersion is not consistent ")
 	}
 
 }
