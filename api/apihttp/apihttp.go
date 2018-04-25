@@ -96,7 +96,7 @@ func InsertEvent(balloon balloon.Balloon) http.HandlerFunc {
 		// Wait for the response
 		response := <-balloon.Add([]byte(event.Message))
 
-		out, err := json.Marshal(assemblySnapshot(response, event.Message))
+		out, err := json.Marshal(ToSnapshot(response, event.Message))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -133,7 +133,7 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 		// Wait for the response
 		response := <-balloon.GenMembershipProof([]byte(event), version)
 
-		out, err := json.Marshal(assemblyMembershipProof(event, response))
+		out, err := json.Marshal(ToMembershipProof(event, response))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
