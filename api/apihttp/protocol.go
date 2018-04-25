@@ -6,6 +6,24 @@ import (
 	"verifiabledata/balloon/history"
 )
 
+type Snapshot struct {
+	HyperDigest   string
+	HistoryDigest string
+	Version       uint
+	Event         string
+	//TODO: implement this
+	// EventDigest   string
+}
+
+func assemblySnapshot(commitment *balloon.Commitment, event string) *Snapshot {
+	return &Snapshot{
+		fmt.Sprintf("%064x", commitment.HyperDigest),
+		fmt.Sprintf("%064x", commitment.HistoryDigest),
+		commitment.Version,
+		event,
+	}
+}
+
 type HistoryNode struct {
 	Digest       string
 	Index, Layer uint
@@ -26,7 +44,7 @@ type MembershipProof struct {
 func assemblyHyperAuditPath(path [][]byte) []string {
 	result := make([]string, 0)
 	for _, elem := range path {
-		result = append(result, fmt.Sprintf("%x", elem))
+		result = append(result, fmt.Sprintf("%064x", elem))
 	}
 	return result
 }
@@ -41,7 +59,7 @@ func assemblyHistoryAuditPath(path []history.Node) []HistoryNode {
 
 func assemblyHistoryNode(node history.Node) HistoryNode {
 	return HistoryNode{
-		fmt.Sprintf("%x", node.Digest),
+		fmt.Sprintf("%064x", node.Digest),
 		node.Index,
 		node.Layer,
 	}

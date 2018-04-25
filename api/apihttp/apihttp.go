@@ -96,7 +96,7 @@ func InsertEvent(balloon balloon.Balloon) http.HandlerFunc {
 		// Wait for the response
 		response := <-balloon.Add([]byte(event.Message))
 
-		out, err := json.Marshal(response)
+		out, err := json.Marshal(assemblySnapshot(response, event.Message))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -118,7 +118,7 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 			return
 		}
 
-		eventParams, ok := r.URL.Query()["event"]
+		eventParams, ok := r.URL.Query()["key"]
 		versionParams, ok := r.URL.Query()["version"]
 
 		if !ok || len(eventParams) < 1 || len(versionParams) < 1 {
