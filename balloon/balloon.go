@@ -36,11 +36,9 @@ type Commitment struct {
 	Version       uint
 }
 
-type AuditPath [][]byte
-
 type MembershipProof struct {
 	Exists        bool
-	HyperProof    AuditPath
+	HyperProof    [][]byte
 	HistoryProof  []history.Node
 	QueryVersion  uint
 	ActualVersion uint
