@@ -15,15 +15,6 @@ type Snapshot struct {
 	// EventDigest   string
 }
 
-func assemblySnapshot(commitment *balloon.Commitment, event string) *Snapshot {
-	return &Snapshot{
-		fmt.Sprintf("%064x", commitment.HyperDigest),
-		fmt.Sprintf("%064x", commitment.HistoryDigest),
-		commitment.Version,
-		event,
-	}
-}
-
 type HistoryNode struct {
 	Digest       string
 	Index, Layer uint
@@ -36,9 +27,19 @@ type Proofs struct {
 
 type MembershipProof struct {
 	Key                         string
+	KeyDigest                   string
 	IsMember                    bool
 	Proofs                      *Proofs
 	QueryVersion, ActualVersion uint
+}
+
+func assemblySnapshot(commitment *balloon.Commitment, event string) *Snapshot {
+	return &Snapshot{
+		fmt.Sprintf("%064x", commitment.HyperDigest),
+		fmt.Sprintf("%064x", commitment.HistoryDigest),
+		commitment.Version,
+		event,
+	}
 }
 
 func assemblyHyperAuditPath(path [][]byte) []string {
@@ -68,6 +69,7 @@ func assemblyHistoryNode(node history.Node) HistoryNode {
 func assemblyMembershipProof(event string, proof *balloon.MembershipProof) *MembershipProof {
 	return &MembershipProof{
 		event,
+		fmt.Sprintf("%064x", proof.KeyDigest),
 		proof.Exists,
 		&Proofs{
 			assemblyHyperAuditPath(proof.HyperProof),
