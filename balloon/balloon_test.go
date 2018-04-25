@@ -125,7 +125,7 @@ func TestGenMembershipProof(t *testing.T) {
 
 }
 
-func compareHyperProofs(expected, actual AuditPath) bool {
+func compareHyperProofs(expected, actual [][]byte) bool {
 	for i, e := range expected {
 		if !bytes.Equal(e, actual[i]) {
 			return false
