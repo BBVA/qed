@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"verifiabledata/balloon"
 )
 
@@ -50,12 +49,12 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type event struct {
-	Message string `json:"message"`
+	Event []byte
 }
 
 type membershipQuery struct {
-	event   string
-	version uint
+	Key     []byte
+	Version uint
 }
 
 // This handler posts an event into the system:
@@ -94,9 +93,9 @@ func Add(balloon balloon.Balloon) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		response := <-balloon.Add([]byte(event.Message))
+		response := <-balloon.Add(event.Event)
 
-		out, err := json.Marshal(ToSnapshot(response, event.Message))
+		out, err := json.Marshal(ToSnapshot(response, event.Event))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -112,28 +111,23 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
-		if r.Method != "GET" {
-			w.Header().Set("Allow", "GET")
+		if r.Method != "POST" {
+			w.Header().Set("Allow", "POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 
-		eventParams, ok := r.URL.Query()["key"]
-		versionParams, ok := r.URL.Query()["version"]
-
-		if !ok || len(eventParams) < 1 || len(versionParams) < 1 {
-			http.Error(w, "\nUrl Param Key or Version is missing", http.StatusBadRequest)
+		var query membershipQuery
+		err := json.NewDecoder(r.Body).Decode(&query)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		event := eventParams[0]
-		versionUint64, _ := strconv.ParseUint(versionParams[0], 10, 64)
-		version := uint(versionUint64)
-
 		// Wait for the response
-		response := <-balloon.GenMembershipProof([]byte(event), version)
+		proof := <-balloon.GenMembershipProof(query.Key, query.Version)
 
-		out, err := json.Marshal(ToMembershipProof(event, response))
+		out, err := json.Marshal(ToMembershipProof(query.Key, proof))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
