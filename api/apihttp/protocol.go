@@ -32,12 +32,12 @@ type MembershipProof struct {
 	QueryVersion, ActualVersion uint
 }
 
-func ToSnapshot(commitment *balloon.Commitment, event string) *Snapshot {
+func ToSnapshot(commitment *balloon.Commitment, event []byte) *Snapshot {
 	return &Snapshot{
 		commitment.HyperDigest,
 		commitment.HistoryDigest,
 		commitment.Version,
-		[]byte(event),
+		event,
 	}
 }
 
@@ -49,9 +49,9 @@ func ToHistoryAuditPath(path []history.Node) []HistoryNode {
 	return result
 }
 
-func ToMembershipProof(event string, proof *balloon.MembershipProof) *MembershipProof {
+func ToMembershipProof(event []byte, proof *balloon.MembershipProof) *MembershipProof {
 	return &MembershipProof{
-		[]byte(event),
+		event,
 		proof.KeyDigest,
 		proof.Exists,
 		&Proofs{
