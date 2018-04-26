@@ -88,7 +88,7 @@ func TestHealthCheckHandler(t *testing.T) {
 func TestAdd(t *testing.T) {
 	// Create a request to pass to our handler. We pass a message as a data.
 	// If it's nil it will fail.
-	data := []byte(`{"message": "this is a sample event"}`)
+	data, _ := json.Marshal(&Event{[]byte("this is a sample event")})
 
 	req, err := http.NewRequest("POST", "/events", bytes.NewBuffer(data))
 	if len(data) == 0 {

@@ -48,15 +48,6 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(out.Bytes())
 }
 
-type event struct {
-	Event []byte
-}
-
-type membershipQuery struct {
-	Key     []byte
-	Version uint
-}
-
 // This handler posts an event into the system:
 // The http post url is:
 //  POST /events
@@ -85,7 +76,7 @@ func Add(balloon balloon.Balloon) http.HandlerFunc {
 			return
 		}
 
-		var event event
+		var event Event
 		err := json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -117,7 +108,7 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 			return
 		}
 
-		var query membershipQuery
+		var query MembershipQuery
 		err := json.NewDecoder(r.Body).Decode(&query)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

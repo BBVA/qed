@@ -24,6 +24,10 @@ func NewProof(auditPath []Node, lh LeafHasher, ih InteriorHasher) *Proof {
 	}
 }
 
+func (p Proof) String() string {
+	return fmt.Sprintf(`{"auditPathLen": "%d"}`, len(p.auditPath))
+}
+
 func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint) bool {
 	p.log.Debug("\nVerifying commitment %v with auditpath %v, key %v and version %v\n", expectedDigest, p.auditPath, key, version)
 	depth := p.getDepth(version)

@@ -5,6 +5,15 @@ import (
 	"verifiabledata/balloon/history"
 )
 
+type Event struct {
+	Event []byte
+}
+
+type MembershipQuery struct {
+	Key     []byte
+	Version uint
+}
+
 type Snapshot struct {
 	HyperDigest   []byte
 	HistoryDigest []byte

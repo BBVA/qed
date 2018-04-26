@@ -7,6 +7,7 @@ package hyper
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"os"
 	"verifiabledata/log"
 )
@@ -30,6 +31,10 @@ func NewProof(id string, auditPath [][]byte, leafHasher LeafHasher, interiorHash
 		interiorHasher,
 		log.NewError(os.Stdout, "HyperProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
+}
+
+func (p Proof) String() string {
+	return fmt.Sprintf(`{"id": "%s", "auditPathLen": "%d"}`, p.id, len(p.auditPath))
 }
 
 func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint) bool {
