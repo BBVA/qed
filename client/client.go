@@ -11,9 +11,9 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"verifiabledata/api/apihttp"
 	"verifiabledata/balloon"
 	"verifiabledata/balloon/hashing"
@@ -21,100 +21,94 @@ import (
 	"verifiabledata/balloon/hyper"
 )
 
-// TODO: write documentation
-type Client interface {
-	InsertEvent([]byte) *apihttp.Snapshot
-	Membership([]byte, uint64) *apihttp.MembershipProof
-	Verify([]byte, *balloon.Commitment, *apihttp.MembershipProof) bool
-}
-
 type HttpClient struct {
-	httpEndpoint string
-	apiKey       string
-	client       *http.Client
+	endpoint string
+	apiKey   string
+	http.Client
 }
 
-func NewHttpClient(endpoint, apiKey string, c *http.Client) *HttpClient {
+func NewHttpClient(endpoint, apiKey string) *HttpClient {
 	return &HttpClient{
 		endpoint,
 		apiKey,
-		c,
+		*http.DefaultClient,
 	}
+}
+
+func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
+	req, err := http.NewRequest(method, c.endpoint+path, bytes.NewBuffer(data))
+	if err != nil {
+		panic(err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Api-Key", c.apiKey)
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	return bodyBytes, nil
 }
 
 func (c HttpClient) InsertEvent(event string) *apihttp.Snapshot {
 
 	// TODO: rename message to event also in apiHttp
-	data := []byte(strings.Join([]string{`{"message": "`, event, `"}`}, ""))
+	data := []byte(fmt.Sprintf("{\"message\": %+q}", event))
 
-	req, err := http.NewRequest("POST", c.httpEndpoint+"/events", bytes.NewBuffer(data))
+	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
 		panic(err)
 	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Api-Key", c.apiKey)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-
-	defer resp.Body.Close()
-
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 
 	var snapshot apihttp.Snapshot
 
-	json.Unmarshal([]byte(bodyBytes), &snapshot)
+	json.Unmarshal(body, &snapshot)
 
 	return &snapshot
 
 }
 
-func (c HttpClient) Membership(event []byte, version uint64) *apihttp.MembershipProof {
+func (c HttpClient) Membership(event []byte, version uint64) *balloon.Proof {
 
-	req, err := http.NewRequest("GET", c.httpEndpoint+"/proofs/membership", nil)
+	// data := "{}"
+	body, err := c.doReq("GET", "/proofs/membership", nil)
 	if err != nil {
 		panic(err)
 	}
 
-	q := req.URL.Query()
-	q.Set("key", string(version))
-	q.Set("version", string(version))
-	req.URL.RawQuery = q.Encode()
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Api-Key", c.apiKey)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-
-	defer resp.Body.Close()
-
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	// q := req.URL.Query()
+	//q.Set("key", string(version))
+	//q.Set("version", string(version))
+	//req.URL.RawQuery = q.Encode()
 
 	var proof apihttp.MembershipProof
 
-	json.Unmarshal([]byte(bodyBytes), &proof)
+	json.Unmarshal(body, &proof)
 
-	return &proof
+	return toBalloonProof(&proof)
 
 }
 
-func (c HttpClient) Verify(event []byte, cm *balloon.Commitment, p *apihttp.MembershipProof) bool {
+func toBalloonProof(p *apihttp.MembershipProof) *balloon.Proof {
 	htlh := history.LeafHasherF(hashing.Sha256Hasher)
 	htih := history.InteriorHasherF(hashing.Sha256Hasher)
 
 	hylh := hyper.LeafHasherF(hashing.Sha256Hasher)
 	hyih := hyper.InteriorHasherF(hashing.Sha256Hasher)
 
-	historyProof := history.NewProof(p.Proofs.HistoryAuditPath, htlf, htih)
-	hyperProof := hyper.NewProof(p.Proofs.HyperAuditPath, hylf, hyih)
+	historyProof := history.NewProof(apihttp.ToHistoryNode(p.Proofs.HistoryAuditPath), htlh, htih)
+	hyperProof := hyper.NewProof("", p.Proofs.HyperAuditPath, hylh, hyih)
 
-	proof := balloon.NewProof(p.IsMember, hyperProof, historyProof, p.QueryVersion, p.ActualVersion)
+	return balloon.NewProof(p.IsMember, hyperProof, historyProof, p.QueryVersion, p.ActualVersion)
 
-	return proof.Verify(cm, event)
+}
+
+func (c HttpClient) Verify(event []byte, cm *balloon.Commitment, b *balloon.Proof) bool {
+	return b.Verify(cm, event)
 }
