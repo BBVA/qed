@@ -7,6 +7,7 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	// "io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -98,7 +99,7 @@ func TestInsertEvent(t *testing.T) {
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	addch := make(chan *balloon.Commitment)
-	handler := InsertEvent(newAddOpFakeBalloon(addch))
+	handler := Add(newAddOpFakeBalloon(addch))
 
 	go func() {
 		addch <- &balloon.Commitment{
@@ -122,39 +123,33 @@ func TestInsertEvent(t *testing.T) {
 	snapshot := &Snapshot{}
 	json.Unmarshal([]byte(rr.Body.String()), snapshot)
 
-	if snapshot.HyperDigest != "0000000000000000000000000000000000000000000000000000000000000001" {
+	if !bytes.Equal(snapshot.HyperDigest, []byte{0x1}) {
 		t.Errorf("HyperDigest is not consistent: %s", snapshot.HyperDigest)
 	}
 
-	if snapshot.HistoryDigest != "0000000000000000000000000000000000000000000000000000000000000000" {
+	if !bytes.Equal(snapshot.HistoryDigest, []byte{0x0}) {
 		t.Errorf("HistoryDigest is not consistent %s", snapshot.HistoryDigest)
 	}
 
 	if snapshot.Version != 0 {
 		t.Errorf("Version is not consistent")
 	}
-	if snapshot.Event != "this is a sample event" {
+	if string(snapshot.Event) != "this is a sample event" {
 		t.Errorf("Event is not consistent ")
 	}
 
 }
 
 func TestMembership(t *testing.T) {
-	// Create a request to pass to our handler. We pass a parameters as query params.
-	// If it's nil it will fail.
-	req, err := http.NewRequest("GET", "/proof/membership", nil)
+
+	key := []byte("this is a sample event")
+	version := uint(1)
+	payload := []byte(fmt.Sprintf("{ \"key\": %+q, \"version\": %d }", key, version))
+
+	req, err := http.NewRequest("GET", "/proof/membership", bytes.NewBuffer(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	q := req.URL.Query()
-
-	key := "this is a sample event"
-	q.Set("key", key)
-
-	version := uint(1)
-	q.Set("version", "1")
-	req.URL.RawQuery = q.Encode()
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
@@ -186,11 +181,11 @@ func TestMembership(t *testing.T) {
 	membershipProof := &MembershipProof{}
 	json.Unmarshal([]byte(rr.Body.String()), membershipProof)
 
-	if membershipProof.Key != key {
+	if !bytes.Equal(membershipProof.Key, key) {
 		t.Errorf("Key is not consistent ")
 	}
 
-	if membershipProof.KeyDigest == "" {
+	if !bytes.Equal(membershipProof.KeyDigest, []byte{0x0}) {
 		t.Errorf("KeyDigest is not consistent ")
 	}
 
@@ -202,8 +197,7 @@ func TestMembership(t *testing.T) {
 		t.Errorf("Proofs.HyperAuditPath is not consistent ")
 	}
 
-	if membershipProof.Proofs.HyperAuditPath[0] !=
-		"0000000000000000000000000000000000000000000000000000000000000000" {
+	if !bytes.Equal(membershipProof.Proofs.HyperAuditPath[0], []byte{0x1}) {
 		t.Errorf("Proofs.HyperAuditPath is not consistent ")
 	}
 
@@ -211,8 +205,7 @@ func TestMembership(t *testing.T) {
 		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
 	}
 
-	if membershipProof.Proofs.HistoryAuditPath[0].Digest !=
-		"0000000000000000000000000000000000000000000000000000000000000000" {
+	if !bytes.Equal(membershipProof.Proofs.HistoryAuditPath[0].Digest, []byte{0x0}) {
 		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
 	}
 

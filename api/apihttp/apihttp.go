@@ -70,7 +70,7 @@ type membershipQuery struct {
 //	"index": 1
 //	}
 
-func InsertEvent(balloon balloon.Balloon) http.HandlerFunc {
+func Add(balloon balloon.Balloon) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -166,7 +166,7 @@ func NewApiHttp(balloon balloon.Balloon) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
-	api.HandleFunc("/events", AuthHandlerMiddleware(InsertEvent(balloon)))
+	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 
 	return api
