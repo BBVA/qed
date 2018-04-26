@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"os"
 	"verifiabledata/client"
+	"verifiabledata/log"
 
 	"github.com/spf13/cobra"
 )
@@ -27,12 +29,13 @@ func NewQedCommand(ctx *Context) *cobra.Command {
 			//ctx.viper.Set("verbose", verbose)
 			//ctx.viper.Set("apikey", apikey)
 			//ctx.viper.Set("endpoint", endpoint)
+			var logger log.Logger
 			if verbose == 1 {
-				ctx.Logger() // should set level to info
+				logger = log.NewInfo(os.Stdout, "QedClient", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 			} else if verbose > 1 {
-				ctx.Logger() // should set level to debug
+				logger = log.NewDebug(os.Stdout, "QedClient", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 			}
-			ctx.client = client.NewHttpClient(endpoint, apikey)
+			ctx.client = client.NewHttpClient(endpoint, apikey, logger)
 		},
 		TraverseChildren: true,
 	}
@@ -44,5 +47,6 @@ func NewQedCommand(ctx *Context) *cobra.Command {
 	cmd.MarkPersistentFlagRequired("apikey")
 
 	cmd.AddCommand(newAddCommand(ctx))
+	cmd.AddCommand(newMembershipCommand(ctx))
 	return cmd
 }

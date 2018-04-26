@@ -5,6 +5,7 @@
 package balloon
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
@@ -14,11 +15,11 @@ type Verifiable interface {
 }
 
 type Proof struct {
-	exists        bool
-	hyperProof    Verifiable
-	historyProof  Verifiable
-	queryVersion  uint
-	actualVersion uint
+	Exists        bool
+	HyperProof    Verifiable
+	HistoryProof  Verifiable
+	QueryVersion  uint
+	ActualVersion uint
 	log           *log.Logger
 }
 
@@ -39,19 +40,24 @@ func NewProof(
 	}
 }
 
+func (p *Proof) String() string {
+	return fmt.Sprintf(`{"Exists":%v, "HyperProof": "%v", "HistoryProof": "%v", "QueryVersion": "%d", "ActualVersion": "%d"}`,
+		p.Exists, p.HyperProof, p.HistoryProof, p.QueryVersion, p.ActualVersion)
+}
+
 func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
-	hyperCorrect := p.hyperProof.Verify(
+	hyperCorrect := p.HyperProof.Verify(
 		commitment.HyperDigest,
 		event,
-		p.queryVersion,
+		p.QueryVersion,
 	)
 
-	if p.exists {
-		if p.queryVersion <= p.actualVersion {
-			historyCorrect := p.historyProof.Verify(
+	if p.Exists {
+		if p.QueryVersion <= p.ActualVersion {
+			historyCorrect := p.HistoryProof.Verify(
 				commitment.HistoryDigest,
 				event,
-				p.queryVersion,
+				p.QueryVersion,
 			)
 			return hyperCorrect && historyCorrect
 		}

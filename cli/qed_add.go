@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -13,15 +15,14 @@ func newAddCommand(ctx *Context) *cobra.Command {
 		Short: "Add an event",
 		Long:  `Add an event to the authenticated data structure`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx.Logger().Printf("Adding key [ %s ] with value [ %s ]\n", key, value)
+			fmt.Printf("Adding key [ %s ] with value [ %s ]\n", key, value)
 
 			snapshot, err := ctx.client.Add(key)
 			if err != nil {
-				ctx.logger.Println(err)
 				return err
 			}
 
-			ctx.logger.Printf("Received snapshot with values: \nEvent: %s\nHyperDigest: %x\nHistoryDigest: %x\nVersion: %d\n",
+			fmt.Printf("Received snapshot with values: \n\tEvent: %s\n\tHyperDigest: %x\n\tHistoryDigest: %x\n\tVersion: %d\n",
 				snapshot.Event, snapshot.HyperDigest, snapshot.HistoryDigest, snapshot.Version)
 			// ctx.Logger().Printf("Reponse Status: %s\n", resp.Status)
 			// ctx.Logger().Printf("Reponse Headers: %v\n", resp.Header)

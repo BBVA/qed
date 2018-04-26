@@ -11,7 +11,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"verifiabledata/api/apihttp"
@@ -25,15 +24,15 @@ import (
 type HttpClient struct {
 	endpoint string
 	apiKey   string
-	log      *log.Logger
+	log      log.Logger
 	http.Client
 }
 
-func NewHttpClient(endpoint, apiKey string) *HttpClient {
+func NewHttpClient(endpoint, apiKey string, logger log.Logger) *HttpClient {
 	return &HttpClient{
 		endpoint,
 		apiKey,
-		log.NewDebug(),
+		logger,
 		*http.DefaultClient,
 	}
 }
@@ -61,7 +60,7 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 
 func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
-	data := []byte(fmt.Sprintf("{\"event\": %+q}", event))
+	data, _ := json.Marshal(&apihttp.Event{[]byte(event)})
 
 	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
@@ -76,19 +75,22 @@ func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
 }
 
-func (c HttpClient) Membership(key []byte, version uint64) *balloon.Proof {
+func (c HttpClient) Membership(key []byte, version uint) (*balloon.Proof, error) {
 
-	data := []byte(fmt.Sprintf("{\"key\": %+q, \"version\": %d}", key, version))
-	body, err := c.doReq("POST", "/proofs/membership", data)
+	query, _ := json.Marshal(&apihttp.MembershipQuery{
+		key,
+		version,
+	})
+	body, err := c.doReq("POST", "/proofs/membership", query)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var proof apihttp.MembershipProof
 
 	json.Unmarshal(body, &proof)
 
-	return toBalloonProof(&proof)
+	return toBalloonProof(&proof), nil
 
 }
 
