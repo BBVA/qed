@@ -56,21 +56,21 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 	return bodyBytes, nil
 }
 
-func (c HttpClient) Add(event string) *apihttp.Snapshot {
+func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
 	// TODO: rename message to event also in apiHttp
 	data := []byte(fmt.Sprintf("{\"message\": %+q}", event))
 
 	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	var snapshot apihttp.Snapshot
 
 	json.Unmarshal(body, &snapshot)
 
-	return &snapshot
+	return &snapshot, nil
 
 }
 
