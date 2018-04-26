@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"os"
-	"verifiabledata/balloon/hashing"
 	"verifiabledata/log"
 )
 
@@ -21,8 +20,8 @@ type Proof struct {
 	log            log.Logger
 }
 
-func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher, leafHasher LeafHasher, interiorHasher InteriorHasher) *Proof {
-	digestLength := len(hasher([]byte("x"))) * 8
+func NewProof(id string, auditPath [][]byte, leafHasher LeafHasher, interiorHasher InteriorHasher) *Proof {
+	digestLength := len(leafHasher([]byte{0x0}, []byte{0x0}, []byte{0x0})) * 8
 	return &Proof{
 		[]byte(id),
 		auditPath,
