@@ -7,7 +7,6 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	// "io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -86,7 +85,7 @@ func TestHealthCheckHandler(t *testing.T) {
 	}
 }
 
-func TestInsertEvent(t *testing.T) {
+func TestAdd(t *testing.T) {
 	// Create a request to pass to our handler. We pass a message as a data.
 	// If it's nil it will fail.
 	data := []byte(`{"message": "this is a sample event"}`)
@@ -134,19 +133,21 @@ func TestInsertEvent(t *testing.T) {
 	if snapshot.Version != 0 {
 		t.Errorf("Version is not consistent")
 	}
-	if string(snapshot.Event) != "this is a sample event" {
+	if bytes.Equal(snapshot.Event, []byte("this is a sample event")) {
 		t.Errorf("Event is not consistent ")
 	}
 
 }
 
 func TestMembership(t *testing.T) {
-
-	key := []byte("this is a sample event")
 	version := uint(1)
-	payload := []byte(fmt.Sprintf("{ \"key\": %+q, \"version\": %d }", key, version))
+	key := []byte("this is a sample event")
+	query, _ := json.Marshal(membershipQuery{
+		key,
+		version,
+	})
 
-	req, err := http.NewRequest("GET", "/proof/membership", bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", "/proof/membership", bytes.NewBuffer(query))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +174,7 @@ func TestMembership(t *testing.T) {
 
 	// Check the status code is what we expect.
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
+		t.Fatalf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
 
@@ -197,8 +198,8 @@ func TestMembership(t *testing.T) {
 		t.Errorf("Proofs.HyperAuditPath is not consistent ")
 	}
 
-	if !bytes.Equal(membershipProof.Proofs.HyperAuditPath[0], []byte{0x1}) {
-		t.Errorf("Proofs.HyperAuditPath is not consistent ")
+	if !bytes.Equal(membershipProof.Proofs.HyperAuditPath[0], []byte{0x0}) {
+		t.Errorf("Proofs.HyperAuditPath is not consistent %v", membershipProof.Proofs.HyperAuditPath[0])
 	}
 
 	if len(membershipProof.Proofs.HistoryAuditPath) != 1 {
