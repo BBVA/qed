@@ -9,10 +9,8 @@ import (
 // Context is used to create varios objects across the project and is being passed
 // to every command as a constructor argument.
 type Context struct {
-	logger   *log.Logger
-	client   *client.HttpClient
-	endpoint string
-	apikey   string
+	logger *log.Logger
+	client *client.HttpClient
 }
 
 func NewContext() *Context {

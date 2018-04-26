@@ -15,8 +15,14 @@ func newAddCommand(ctx *Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx.Logger().Printf("Adding key [ %s ] with value [ %s ]\n", key, value)
 
-			snapshot := ctx.client.Add(key)
-			ctx.logger.Println(snapshot)
+			snapshot, err := ctx.client.Add(key)
+			if err != nil {
+				ctx.logger.Println(err)
+				return err
+			}
+
+			ctx.logger.Printf("Received snapshot with values: \nEvent: %s\nHyperDigest: %x\nHistoryDigest: %x\nVersion: %d\n",
+				snapshot.Event, snapshot.HyperDigest, snapshot.HistoryDigest, snapshot.Version)
 			// ctx.Logger().Printf("Reponse Status: %s\n", resp.Status)
 			// ctx.Logger().Printf("Reponse Headers: %v\n", resp.Header)
 			// body, _ := ioutil.ReadAll(resp.Body)
