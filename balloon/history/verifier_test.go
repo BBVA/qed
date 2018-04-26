@@ -88,3 +88,25 @@ func TestVerify(t *testing.T) {
 		}
 	}
 }
+
+func TestAddAndVerify(t *testing.T) {
+
+	store, closeF := openBPlusStorage()
+	defer closeF()
+
+	hasher := hashing.Sha256Hasher
+	ht := NewTree(store, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+
+	key := []byte("I AM A STRANGE LOOP")
+	value := uint(0)
+
+	commitment := <-ht.Add(key, uInt64AsBytes(value))
+	membershipProof := <-ht.Prove(key, value)
+
+	proof := NewProof(membershipProof.Nodes, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+	correct := proof.Verify(commitment, key, value)
+
+	if !correct {
+		t.Errorf("incorrect")
+	}
+}
