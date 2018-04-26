@@ -9,14 +9,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
-	"verifiabledata/agent"
+	"verifiabledata/client"
 )
 
 var (
 	httpEndpoint string
+	apiKey       string
 )
 
 func main() {
@@ -24,12 +24,9 @@ func main() {
 	flag.StringVar(&apiKey, "api_key", "this-is-my-api-key", "Api auth key")
 	flag.Parse()
 
-	log.Println("Starting agent")
+	log.Println("Starting client")
 
-	auditor, err := agent.NewAgent(httpEndpoint, apiKey, &http.DefaultClient)
-	if err != nil {
-		log.Panicln("Agent exited with error:", err)
-	}
+	auditor := client.NewHttpClient(httpEndpoint, apiKey)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
