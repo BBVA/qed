@@ -31,7 +31,7 @@ func TestVerify(t *testing.T) {
 		[]byte{0x00},
 	}
 
-	proof := NewProof("test", auditPath, hasher, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+	proof := NewProof("test", auditPath, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
 
 	correct := proof.Verify(expectedCommitment, key, value)
 
@@ -65,7 +65,7 @@ func TestAddAndVerify(t *testing.T) {
 	copy(fullPath[:1], [][]byte{key})
 	copy(fullPath[1:], membershipProof.AuditPath)
 
-	proof := NewProof(string(0x0), fullPath, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
+	proof := NewProof(string(0x0), fullPath, LeafHasherF(hasher), InteriorHasherF(hasher))
 
 	isMembership := proof.Verify(commitment, key, value)
 
