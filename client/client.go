@@ -56,7 +56,7 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 	return bodyBytes, nil
 }
 
-func (c HttpClient) InsertEvent(event string) *apihttp.Snapshot {
+func (c HttpClient) Add(event string) *apihttp.Snapshot {
 
 	// TODO: rename message to event also in apiHttp
 	data := []byte(fmt.Sprintf("{\"message\": %+q}", event))

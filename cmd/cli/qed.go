@@ -6,7 +6,8 @@ import (
 )
 
 func main() {
-	if err := cli.NewQedCommand().Execute(); err != nil {
+	ctx := cli.NewContext()
+	if err := cli.NewQedCommand(ctx).Execute(); err != nil {
 		os.Exit(-1)
 	}
 }
