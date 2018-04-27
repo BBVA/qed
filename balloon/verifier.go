@@ -10,8 +10,6 @@ import (
 	"os"
 
 	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/history"
-	"verifiabledata/balloon/hyper"
 )
 
 type Verifiable interface {
@@ -72,19 +70,5 @@ func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
 	}
 
 	return hyperCorrect
-
-}
-
-func ToBalloonProof(id string, p *MembershipProof, hasher hashing.Hasher) *Proof {
-	htlh := history.LeafHasherF(hasher)
-	htih := history.InteriorHasherF(hasher)
-
-	hylh := hyper.LeafHasherF(hasher)
-	hyih := hyper.InteriorHasherF(hasher)
-
-	historyProof := history.NewProof(p.HistoryProof, p.QueryVersion, htlh, htih)
-	hyperProof := hyper.NewProof("", p.HyperProof, hylh, hyih)
-
-	return NewProof(p.Exists, hyperProof, historyProof, p.QueryVersion, p.ActualVersion, hasher)
 
 }

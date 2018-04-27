@@ -2,7 +2,9 @@ package apihttp
 
 import (
 	"verifiabledata/balloon"
+	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
+	"verifiabledata/balloon/hyper"
 )
 
 type Event struct {
@@ -78,4 +80,18 @@ func ToHistoryNode(path []HistoryNode) []history.Node {
 		result = append(result, history.Node{elem.Digest, elem.Index, elem.Layer})
 	}
 	return result
+}
+
+func ToBalloonProof(id string, p *MembershipProof, hasher hashing.Hasher) *balloon.Proof {
+	htlh := history.LeafHasherF(hasher)
+	htih := history.InteriorHasherF(hasher)
+
+	hylh := hyper.LeafHasherF(hasher)
+	hyih := hyper.InteriorHasherF(hasher)
+
+	historyProof := history.NewProof(ToHistoryNode(p.Proofs.HistoryAuditPath), p.QueryVersion, htlh, htih)
+	hyperProof := hyper.NewProof(id, p.Proofs.HyperAuditPath, hylh, hyih)
+
+	return balloon.NewProof(p.IsMember, hyperProof, historyProof, p.QueryVersion, p.ActualVersion, hasher)
+
 }
