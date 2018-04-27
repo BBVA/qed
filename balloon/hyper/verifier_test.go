@@ -46,9 +46,41 @@ func TestAddAndVerify(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	ht := NewTree(string(0x0), 30, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
+	ht := NewTree("/tmp/balloon.db", 30, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
 
-	key := hasher([]byte("test event 1"))
+	key := hasher([]byte("pollengorden"))
+	value := uint(0)
+
+	valueBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
+
+	commitment := <-ht.Add(key, valueBytes)
+	fmt.Printf("%x\n", commitment)
+	membershipProof := <-ht.Prove(key)
+
+	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
+		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
+	}
+
+	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, LeafHasherF(hasher), InteriorHasherF(hasher))
+
+	correct := proof.Verify(commitment, key, value)
+
+	if !correct {
+		t.Errorf("Key %v should be a member", key)
+	}
+
+}
+
+func TestAddAndVerifyXor(t *testing.T) {
+
+	store, closeF := openBPlusStorage()
+	defer closeF()
+
+	hasher := hashing.XorHasher
+	ht := NewTree("/tmp/balloon.db", 0, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
+
+	key := hasher([]byte("pollengorden"))
 	value := uint(0)
 
 	valueBytes := make([]byte, 8)
@@ -61,12 +93,12 @@ func TestAddAndVerify(t *testing.T) {
 		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
-	proof := NewProof(string(0x0), membershipProof.AuditPath, LeafHasherF(hasher), InteriorHasherF(hasher))
+	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, LeafHasherF(hasher), InteriorHasherF(hasher))
 
 	correct := proof.Verify(commitment, key, value)
 
 	if !correct {
-		fmt.Errorf("Key %v should be a member", key)
+		t.Errorf("Key %v should be a member", key)
 	}
 
 }

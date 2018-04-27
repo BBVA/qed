@@ -11,10 +11,12 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"verifiabledata/api/apihttp"
 	"verifiabledata/balloon"
+	"verifiabledata/balloon/hashing"
 	"verifiabledata/log"
 )
 
@@ -57,6 +59,7 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 
 func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
+	fmt.Println(event)
 	data, _ := json.Marshal(&apihttp.Event{[]byte(event)})
 
 	body, err := c.doReq("POST", "/events", data)
@@ -87,6 +90,6 @@ func (c HttpClient) Membership(key []byte, version uint) (*balloon.Proof, error)
 
 	json.Unmarshal(body, &proof)
 
-	return balloon.ToBalloonProof(&proof), nil
+	return apihttp.ToBalloonProof("/tmp/balloon.db", &proof, hashing.Sha256Hasher), nil
 
 }

@@ -42,12 +42,9 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint) bool {
 	valueBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
 
-	fullPath := make([][]byte, len(p.auditPath)+1)
-	copy(fullPath[:1], [][]byte{key})
-	copy(fullPath[1:], p.auditPath)
-
-	recomputed := p.rootHash(fullPath, rootPosition(p.digestLength), key, valueBytes)
-
+	recomputed := p.rootHash(p.auditPath, rootPosition(p.digestLength), key, valueBytes)
+	fmt.Printf("Recomputed: %x\n", recomputed)
+	fmt.Printf("Expected:   %x\n", expectedDigest)
 	return bytes.Equal(expectedDigest, recomputed)
 }
 
@@ -58,12 +55,10 @@ func (p *Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) [
 	}
 	if !bitIsSet(key, p.digestLength-pos.height) { // if k_j == 0
 		left := p.rootHash(auditPath, pos.left(), key, value)
-		right := auditPath[pos.height]
-		next := pos.right()
-		return p.interiorHasher(left, right, next.base, next.heightBytes())
+		right := auditPath[pos.height-1]
+		return p.interiorHasher(left, right, pos.base, pos.heightBytes())
 	}
-	left := auditPath[pos.height]
+	left := auditPath[pos.height-1]
 	right := p.rootHash(auditPath, pos.right(), key, value)
-	next := pos.left()
-	return p.interiorHasher(left, right, next.base, next.heightBytes())
+	return p.interiorHasher(left, right, pos.base, pos.heightBytes())
 }
