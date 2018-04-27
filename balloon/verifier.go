@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"verifiabledata/balloon/hashing"
 )
 
 type Verifiable interface {
@@ -20,6 +21,7 @@ type Proof struct {
 	HistoryProof  Verifiable
 	QueryVersion  uint
 	ActualVersion uint
+	hasher        hashing.Hasher
 	log           *log.Logger
 }
 
@@ -29,6 +31,7 @@ func NewProof(
 	historyProof Verifiable,
 	queryVersion uint,
 	actualVersion uint,
+	hasher hashing.Hasher,
 ) *Proof {
 	return &Proof{
 		exists,
@@ -36,6 +39,7 @@ func NewProof(
 		historyProof,
 		queryVersion,
 		actualVersion,
+		hasher,
 		log.New(os.Stdout, "BalloonProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
@@ -46,9 +50,10 @@ func (p *Proof) String() string {
 }
 
 func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
+	digest := p.hasher(event)
 	hyperCorrect := p.HyperProof.Verify(
 		commitment.HyperDigest,
-		event,
+		digest,
 		p.QueryVersion,
 	)
 
@@ -56,7 +61,7 @@ func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
 		if p.QueryVersion <= p.ActualVersion {
 			historyCorrect := p.HistoryProof.Verify(
 				commitment.HistoryDigest,
-				event,
+				digest,
 				p.QueryVersion,
 			)
 			return hyperCorrect && historyCorrect
