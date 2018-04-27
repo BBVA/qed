@@ -82,7 +82,7 @@ func ToBalloonProof(id string, p *MembershipProof, hasher hashing.Hasher) *Proof
 	hylh := hyper.LeafHasherF(hasher)
 	hyih := hyper.InteriorHasherF(hasher)
 
-	historyProof := history.NewProof(p.HistoryProof, htlh, htih)
+	historyProof := history.NewProof(p.HistoryProof, p.QueryVersion, htlh, htih)
 	hyperProof := hyper.NewProof("", p.HyperProof, hylh, hyih)
 
 	return NewProof(p.Exists, hyperProof, historyProof, p.QueryVersion, p.ActualVersion, hasher)
