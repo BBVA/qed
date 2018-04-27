@@ -62,15 +62,11 @@ func TestAddAndVerify(t *testing.T) {
 		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
-	fullPath := make([][]byte, len(membershipProof.AuditPath)+1)
-	copy(fullPath[:1], [][]byte{key})
-	copy(fullPath[1:], membershipProof.AuditPath)
+	proof := NewProof(string(0x0), membershipProof.AuditPath, LeafHasherF(hasher), InteriorHasherF(hasher))
 
-	proof := NewProof(string(0x0), fullPath, LeafHasherF(hasher), InteriorHasherF(hasher))
+	correct := proof.Verify(commitment, key, value)
 
-	isMembership := proof.Verify(commitment, key, value)
-
-	if !isMembership {
+	if !correct {
 		fmt.Errorf("Key %v should be a member", key)
 	}
 

@@ -41,7 +41,13 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint) bool {
 	p.log.Infof("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
 	valueBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
-	recomputed := p.rootHash(p.auditPath, rootPosition(p.digestLength), key, valueBytes)
+
+	fullPath := make([][]byte, len(p.auditPath)+1)
+	copy(fullPath[:1], [][]byte{key})
+	copy(fullPath[1:], p.auditPath)
+
+	recomputed := p.rootHash(fullPath, rootPosition(p.digestLength), key, valueBytes)
+
 	return bytes.Equal(expectedDigest, recomputed)
 }
 
