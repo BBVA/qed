@@ -42,8 +42,8 @@ func newMembershipCommand(ctx *Context) *cobra.Command {
 			fmt.Printf("Received proof: %+v\n", proof)
 
 			if verify {
-				hdBytes, _ := hex.DecodeString(historyDigest)
-				htdBytes, _ := hex.DecodeString(hyperDigest)
+				hdBytes, _ := hex.DecodeString(hyperDigest)
+				htdBytes, _ := hex.DecodeString(historyDigest)
 				commitment := &balloon.Commitment{htdBytes, hdBytes, uint(version)}
 
 				fmt.Printf("Verifying with commitment: \n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",

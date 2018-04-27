@@ -15,9 +15,6 @@ import (
 	"net/http"
 	"verifiabledata/api/apihttp"
 	"verifiabledata/balloon"
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/history"
-	"verifiabledata/balloon/hyper"
 	"verifiabledata/log"
 )
 
@@ -92,8 +89,4 @@ func (c HttpClient) Membership(key []byte, version uint) (*balloon.Proof, error)
 
 	return balloon.ToBalloonProof(&proof), nil
 
-}
-
-func (c HttpClient) Verify(event []byte, cm *balloon.Commitment, b *balloon.Proof) bool {
-	return b.Verify(cm, event)
 }

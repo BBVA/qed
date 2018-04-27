@@ -133,7 +133,8 @@ func TestAdd(t *testing.T) {
 	if snapshot.Version != 0 {
 		t.Errorf("Version is not consistent")
 	}
-	if bytes.Equal(snapshot.Event, []byte("this is a sample event")) {
+
+	if !bytes.Equal(snapshot.Event, []byte("this is a sample event")) {
 		t.Errorf("Event is not consistent ")
 	}
 
@@ -142,7 +143,7 @@ func TestAdd(t *testing.T) {
 func TestMembership(t *testing.T) {
 	version := uint(1)
 	key := []byte("this is a sample event")
-	query, _ := json.Marshal(membershipQuery{
+	query, _ := json.Marshal(MembershipQuery{
 		key,
 		version,
 	})

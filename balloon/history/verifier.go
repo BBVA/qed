@@ -10,14 +10,16 @@ import (
 
 type Proof struct {
 	auditPath      []Node
+	index          uint
 	leafHasher     LeafHasher
 	interiorHasher InteriorHasher
 	log            log.Logger
 }
 
-func NewProof(auditPath []Node, lh LeafHasher, ih InteriorHasher) *Proof {
+func NewProof(auditPath []Node, index uint, lh LeafHasher, ih InteriorHasher) *Proof {
 	return &Proof{
 		auditPath,
+		index,
 		lh,
 		ih,
 		log.NewError(os.Stdout, "HistoryProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
@@ -35,6 +37,7 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint) bool {
 	for _, n := range p.auditPath {
 		pathMap[pathKey(n.Index, n.Layer)] = n.Digest
 	}
+	pathMap[pathKey(p.index, 0)] = p.leafHasher(Zero, key)
 	recomputed := p.rootHash(pathMap, key, 0, depth, version)
 	return bytes.Equal(expectedDigest, recomputed)
 }
@@ -58,7 +61,7 @@ func (p *Proof) rootHash(auditPath map[string][]byte, key []byte, index, layer, 
 		return digest
 	}
 	p.log.Info("not found")
-	//	}
+	//}
 
 	switch {
 	// we are at a leaf: A_v(i,0)
