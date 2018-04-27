@@ -6,8 +6,24 @@ package balloon
 
 import (
 	"testing"
+
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/history"
+	"verifiabledata/balloon/hyper"
+	"verifiabledata/balloon/storage/cache"
 )
+
+type FakeVerifiable struct {
+	result bool
+}
+
+func NewFakeVerifiable(result bool) *FakeVerifiable {
+	return &FakeVerifiable{result}
+}
+
+func (f *FakeVerifiable) Verify(commitment, event []byte, version uint) bool {
+	return f.result
+}
 
 func TestVerify(t *testing.T) {
 
@@ -60,14 +76,43 @@ func TestVerify(t *testing.T) {
 	}
 }
 
-type FakeVerifiable struct {
-	result bool
+func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, func()) {
+	frozen, frozenCloseF := openBPlusStorage()
+	leaves, leavesCloseF := openBPlusStorage()
+	cache := cache.NewSimpleCache(5000)
+
+	//TODO: this should not be part of the test
+
+	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher,
+		hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
+	historyT := history.NewTree(frozen,
+		history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+
+	return balloon, func() {
+		frozenCloseF()
+		leavesCloseF()
+	}
 }
 
-func NewFakeVerifiable(result bool) *FakeVerifiable {
-	return &FakeVerifiable{result}
-}
+func TestAddAndVerify(t *testing.T) {
+	id := string(0x0)
+	hasher := hashing.Sha256Hasher
 
-func (f *FakeVerifiable) Verify(commitment, event []byte, version uint) bool {
-	return f.result
+	balloon, closeF := createBalloon(id, hasher)
+	defer closeF()
+
+	key := []byte("Never knows best")
+	// keyDigest := hasher(key)
+
+	commitment := <-balloon.Add(key)
+	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	proof := ToBalloonProof(id, membershipProof, hasher)
+	correct := proof.Verify(commitment, key)
+
+	if !correct {
+		t.Errorf("Proof is incorrect")
+	}
+
 }

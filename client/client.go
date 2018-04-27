@@ -90,21 +90,7 @@ func (c HttpClient) Membership(key []byte, version uint) (*balloon.Proof, error)
 
 	json.Unmarshal(body, &proof)
 
-	return toBalloonProof(&proof), nil
-
-}
-
-func toBalloonProof(p *apihttp.MembershipProof) *balloon.Proof {
-	htlh := history.LeafHasherF(hashing.Sha256Hasher)
-	htih := history.InteriorHasherF(hashing.Sha256Hasher)
-
-	hylh := hyper.LeafHasherF(hashing.Sha256Hasher)
-	hyih := hyper.InteriorHasherF(hashing.Sha256Hasher)
-
-	historyProof := history.NewProof(apihttp.ToHistoryNode(p.Proofs.HistoryAuditPath), htlh, htih)
-	hyperProof := hyper.NewProof("", p.Proofs.HyperAuditPath, hylh, hyih)
-
-	return balloon.NewProof(p.IsMember, hyperProof, historyProof, p.QueryVersion, p.ActualVersion)
+	return balloon.ToBalloonProof(&proof), nil
 
 }
 
