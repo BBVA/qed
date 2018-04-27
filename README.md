@@ -62,11 +62,16 @@ amounts of data for:
      
      go test -bench="." -v verifiabledata/balloon
      
-     go test -v -bench="BenchmarkAdd" -cpuprofile cpu.out -memprofile mem.out verifiabledata/balloon/hyper -run ^$
+### Go profiling
+
+    go run  -cpuprofile cpu.out -memprofile mem.out program.go
+    go test -v -bench="BenchmarkAdd" -cpuprofile cpu.out -memprofile mem.out verifiabledata/balloon/hyper -run ^$
      
-     go tool pprof hyper.test cpu.out mem.out
+    go tool pprof hyper.test cpu.out 
+    go tool pprof hyper.test cpu.out mem.out
      
 ## Acme section
 
 uncomment Edit .s/^(	| *)\/\//\1/g
 comment Edit .s/^(	| *)/\1\/\//g
+
