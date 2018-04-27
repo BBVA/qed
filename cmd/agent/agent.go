@@ -8,8 +8,8 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"log"
 	"os"
+	"verifiabledata/log"
 
 	"verifiabledata/client"
 )
@@ -24,9 +24,11 @@ func main() {
 	flag.StringVar(&apiKey, "api_key", "this-is-my-api-key", "Api auth key")
 	flag.Parse()
 
-	log.Println("Starting client")
+	logger := log.NewError(os.Stdout, "QedAgent", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 
-	auditor := client.NewHttpClient(httpEndpoint, apiKey)
+	logger.Info("Starting client")
+
+	auditor := client.NewHttpClient(httpEndpoint, apiKey, logger)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {

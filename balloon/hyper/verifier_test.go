@@ -21,7 +21,6 @@ func TestVerify(t *testing.T) {
 	key := []byte{0x5a}
 	value := uint(1)
 	auditPath := [][]byte{
-		[]byte{0x5a},
 		[]byte{0x00},
 		[]byte{0x00},
 		[]byte{0x00},
