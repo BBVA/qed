@@ -4,7 +4,10 @@
 
 package balloon
 
-import "testing"
+import (
+	"testing"
+	"verifiabledata/balloon/hashing"
+)
 
 func TestVerify(t *testing.T) {
 
@@ -47,6 +50,7 @@ func TestVerify(t *testing.T) {
 			NewFakeVerifiable(c.historyOK),
 			c.queryVersion,
 			c.actualVersion,
+			hashing.XorHasher,
 		)
 		result := proof.Verify(commitment, event)
 
