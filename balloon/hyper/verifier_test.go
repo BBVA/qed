@@ -56,7 +56,7 @@ func TestAddAndVerify(t *testing.T) {
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
 
 	commitment := <-ht.Add(key, valueBytes)
-	fmt.Printf("%x\n", commitment)
+
 	membershipProof := <-ht.Prove(key)
 
 	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
