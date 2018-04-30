@@ -48,7 +48,7 @@ func TestAddAndVerify(t *testing.T) {
 	hasher := hashing.Sha256Hasher
 	ht := NewTree("/tmp/balloon.db", 30, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
 
-	key := hasher([]byte("pollengorden"))
+	key := hasher([]byte("a test event"))
 	value := uint(0)
 
 	valueBytes := make([]byte, 8)
@@ -80,7 +80,7 @@ func TestAddAndVerifyXor(t *testing.T) {
 	hasher := hashing.XorHasher
 	ht := NewTree("/tmp/balloon.db", 0, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
 
-	key := hasher([]byte("pollengorden"))
+	key := hasher([]byte("a test event"))
 	value := uint(0)
 
 	valueBytes := make([]byte, 8)
