@@ -48,7 +48,7 @@ func main() {
 
 	cache := cache.NewSimpleCache(cacheSize)
 	hasher := hashing.Sha256Hasher
-	history := history.NewTree(frozen)
+	history := history.NewTree(frozen, hasher)
 	hyper := hyper.NewTree(dbPath, cache, leaves, hasher)
 	balloon := balloon.NewHyperBalloon(hasher, history, hyper)
 
