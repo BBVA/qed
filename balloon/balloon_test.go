@@ -31,7 +31,7 @@ func TestAdd(t *testing.T) {
 	hasher := hashing.XorHasher
 
 	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
-	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	historyT := history.NewFakeTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	var testCases = []struct {
@@ -83,7 +83,7 @@ func TestGenMembershipProof(t *testing.T) {
 	hasher := hashing.XorHasher
 
 	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
-	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	historyT := history.NewFakeTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	key := []byte{0x5a}
@@ -189,7 +189,7 @@ func BenchmarkAddBolt(b *testing.B) {
 	hasher := hashing.Sha256Hasher
 
 	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
-	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	historyT := history.NewFakeTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	b.ResetTimer()
@@ -216,7 +216,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	hasher := hashing.Sha256Hasher
 
 	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
-	historyT := history.NewTree(frozen, history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	historyT := history.NewTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	b.ResetTimer()
