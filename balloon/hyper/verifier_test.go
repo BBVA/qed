@@ -17,8 +17,8 @@ import (
 func TestVerify(t *testing.T) {
 	hasher := hashing.XorHasher
 
-	expectedCommitment := []byte{0x5a}
-	key := []byte{0x5a}
+	expectedCommitment := []byte{0xff}
+	key := []byte{0xff}
 	value := uint(1)
 	auditPath := [][]byte{
 		[]byte{0x00},
@@ -87,6 +87,38 @@ func TestAddAndVerifyXor(t *testing.T) {
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
 
 	commitment := <-ht.Add(key, valueBytes)
+	membershipProof := <-ht.Prove(key)
+
+	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
+		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
+	}
+
+	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, LeafHasherF(hasher), InteriorHasherF(hasher))
+
+	correct := proof.Verify(commitment, key, value)
+
+	if !correct {
+		t.Errorf("Key %v should be a member", key)
+	}
+
+}
+
+func TestAddAndVerifyPearson(t *testing.T) {
+
+	store, closeF := openBadgerStorage("/tmp/balloon.db") // openBPlusStorage()
+	defer closeF()
+
+	hasher := hashing.Pearson
+	ht := NewTree("/tmp/balloon.db", 0, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
+
+	key := hasher([]byte("a test event"))
+	value := uint(0)
+
+	valueBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
+
+	commitment := <-ht.Add(key, valueBytes)
+
 	membershipProof := <-ht.Prove(key)
 
 	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
