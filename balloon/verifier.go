@@ -57,7 +57,7 @@ func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
 		digest,
 		p.QueryVersion,
 	)
-	fmt.Printf("Hyper correct: %v\n", hyperCorrect)
+
 	if p.Exists {
 		if p.QueryVersion <= p.ActualVersion {
 			historyCorrect := p.HistoryProof.Verify(
