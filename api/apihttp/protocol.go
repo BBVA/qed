@@ -83,14 +83,9 @@ func ToHistoryNode(path []HistoryNode) []history.Node {
 }
 
 func ToBalloonProof(id string, p *MembershipProof, hasher hashing.Hasher) *balloon.Proof {
-	htlh := history.LeafHasherF(hasher)
-	htih := history.InteriorHasherF(hasher)
 
-	hylh := hyper.LeafHasherF(hasher)
-	hyih := hyper.InteriorHasherF(hasher)
-
-	historyProof := history.NewProof(ToHistoryNode(p.Proofs.HistoryAuditPath), p.QueryVersion, htlh, htih)
-	hyperProof := hyper.NewProof(id, p.Proofs.HyperAuditPath, hylh, hyih)
+	historyProof := history.NewProof(ToHistoryNode(p.Proofs.HistoryAuditPath), p.QueryVersion, hasher)
+	hyperProof := hyper.NewProof(id, p.Proofs.HyperAuditPath, hasher)
 
 	return balloon.NewProof(p.IsMember, hyperProof, historyProof, p.QueryVersion, p.ActualVersion, hasher)
 
