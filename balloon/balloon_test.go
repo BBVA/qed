@@ -14,6 +14,7 @@ import (
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
+	"verifiabledata/balloon/storage"
 	"verifiabledata/balloon/storage/badger"
 	"verifiabledata/balloon/storage/bolt"
 	"verifiabledata/balloon/storage/bplus"
@@ -27,10 +28,10 @@ func TestAdd(t *testing.T) {
 	defer frozenCloseF()
 	defer leavesCloseF()
 
-	cache := cache.NewSimpleCache(5000)
+	cache := cache.NewSimpleCache(0)
 	hasher := hashing.XorHasher
 
-	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
+	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher)
 	historyT := history.NewFakeTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
@@ -79,10 +80,10 @@ func TestGenMembershipProof(t *testing.T) {
 	defer frozenCloseF()
 	defer leavesCloseF()
 
-	cache := cache.NewSimpleCache(5000)
+	cache := cache.NewSimpleCache(0)
 	hasher := hashing.XorHasher
 
-	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
+	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher)
 	historyT := history.NewFakeTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
@@ -185,11 +186,11 @@ func BenchmarkAddBolt(b *testing.B) {
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
 
-	cache := cache.NewSimpleCache(500000)
+	cache := cache.NewSimpleCache(storage.SIZE30)
 	hasher := hashing.Sha256Hasher
 
-	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
-	historyT := history.NewFakeTree(frozen, hasher)
+	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
+	historyT := history.NewTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	b.ResetTimer()
@@ -212,10 +213,10 @@ func BenchmarkAddBadger(b *testing.B) {
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
 
-	cache := cache.NewSimpleCache(500000)
+	cache := cache.NewSimpleCache(storage.SIZE30)
 	hasher := hashing.Sha256Hasher
 
-	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher, hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
+	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
 	historyT := history.NewTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 

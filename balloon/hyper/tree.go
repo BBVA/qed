@@ -12,6 +12,8 @@
 package hyper
 
 import (
+	"fmt"
+	"math"
 	"os"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
@@ -38,9 +40,9 @@ import (
 // that can be made to the tree, ensuring its integrity, and the strcutres returned by
 // those public methods.
 type Tree struct {
-	id []byte // tree-wide constant
-	LeafHasher
-	interiorHasher InteriorHasher
+	id             []byte // tree-wide constant
+	leafHasher     leafHasher
+	interiorHasher interiorHasher
 	defaultHashes  [][]byte
 	cache          storage.Cache
 	leaves         storage.Store
@@ -59,14 +61,15 @@ type MembershipProof struct {
 }
 
 // NewTree returns  a new Hyper Tree given all its dependencies
-func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher, lh LeafHasher, ih InteriorHasher) *Tree {
+func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
 
+	cacheLevels := int(math.Max(0.0, math.Floor(math.Log(float64(cache.Size()))/math.Log(2.0))))
 	digestLength := len(hasher([]byte("a test event"))) * 8
 
 	tree := &Tree{
 		[]byte(id),
-		lh,
-		ih,
+		leafHasherF(hasher),
+		interiorHasherF(hasher),
 		make([][]byte, digestLength),
 		cache,
 		leaves,
@@ -241,6 +244,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	}
 
 	// if not, the node hash is the hash of our left and right child
+	fmt.Println(key, t.digestLength-pos.height)
 	isleft := !bitIsSet(key, t.digestLength-pos.height)
 	if isleft {
 		left = t.toCache(key, value, pos.left())
@@ -284,7 +288,7 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 	if len(d) == 1 && pos.height == 0 {
 		t.stats.leaf += 1
 		t.stats.lh += 1
-		return t.LeafHasher(t.id, value, pos.base)
+		return t.leafHasher(t.id, value, pos.base)
 	}
 
 	// if there are no more childs,

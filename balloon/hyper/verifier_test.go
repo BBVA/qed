@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/storage"
 	"verifiabledata/balloon/storage/cache"
 )
 
@@ -31,7 +32,7 @@ func TestVerify(t *testing.T) {
 		[]byte{0x00},
 	}
 
-	proof := NewProof("test", auditPath, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+	proof := NewFakeProof("test", auditPath, hasher)
 
 	correct := proof.Verify(expectedCommitment, key, value)
 
@@ -46,7 +47,7 @@ func TestAddAndVerify(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	ht := NewTree("/tmp/balloon.db", 30, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
+	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(storage.SIZE20), store, hasher)
 
 	key := hasher([]byte("a test event"))
 	value := uint(0)
@@ -62,7 +63,7 @@ func TestAddAndVerify(t *testing.T) {
 		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
-	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, LeafHasherF(hasher), InteriorHasherF(hasher))
+	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, hasher)
 
 	correct := proof.Verify(commitment, key, value)
 
@@ -78,7 +79,7 @@ func TestAddAndVerifyXor(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.XorHasher
-	ht := NewTree("/tmp/balloon.db", 0, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
+	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
 
 	key := hasher([]byte("a test event"))
 	value := uint(0)
@@ -93,7 +94,7 @@ func TestAddAndVerifyXor(t *testing.T) {
 		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
-	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, LeafHasherF(hasher), InteriorHasherF(hasher))
+	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, hasher)
 
 	correct := proof.Verify(commitment, key, value)
 
@@ -109,7 +110,7 @@ func TestAddAndVerifyPearson(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Pearson
-	ht := NewTree("/tmp/balloon.db", 0, cache.NewSimpleCache(5000000), store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
+	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
 
 	key := hasher([]byte("a test event"))
 	value := uint(0)
@@ -125,7 +126,7 @@ func TestAddAndVerifyPearson(t *testing.T) {
 		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
-	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, LeafHasherF(hasher), InteriorHasherF(hasher))
+	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, hasher)
 
 	correct := proof.Verify(commitment, key, value)
 
