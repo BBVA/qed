@@ -56,7 +56,6 @@ func TestAdd(t *testing.T) {
 	for i, e := range testCases {
 
 		commitment := <-balloon.Add([]byte(e.event))
-		fmt.Println(commitment)
 
 		if commitment.Version != e.version {
 			t.Fatalf("Wrong version for test %d: expected %d, actual %d", i, e.version, commitment.Version)

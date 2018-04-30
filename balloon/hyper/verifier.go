@@ -45,8 +45,7 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint) bool {
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
 
 	recomputed := p.rootHash(p.auditPath, rootPosition(p.digestLength), key, valueBytes)
-	fmt.Printf("Recomputed: %x\n", recomputed)
-	fmt.Printf("Expected:   %x\n", expectedDigest)
+
 	return bytes.Equal(expectedDigest, recomputed)
 }
 
