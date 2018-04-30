@@ -79,13 +79,12 @@ func TestVerify(t *testing.T) {
 func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, func()) {
 	frozen, frozenCloseF := openBPlusStorage()
 	leaves, leavesCloseF := openBPlusStorage()
-	cache := cache.NewSimpleCache(5000)
+	cache := cache.NewSimpleCache(0)
 
 	//TODO: this should not be part of the test
 
-	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher,
-		hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
-	historyT := history.NewTree(frozen, hasher)
+	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher)
+	historyT := history.NewFakeTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	return balloon, func() {

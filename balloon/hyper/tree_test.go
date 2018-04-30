@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"testing"
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/storage"
 	"verifiabledata/balloon/storage/cache"
 )
 
@@ -16,25 +17,25 @@ func TestAdd(t *testing.T) {
 	store, closeF := openBPlusStorage()
 	defer closeF()
 
-	cache := cache.NewSimpleCache(5000)
+	cache := cache.NewSimpleCache(0)
 	hasher := hashing.XorHasher
 
-	ht := NewTree(string(0x0), 2, cache, store, hasher, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+	ht := NewTree(string(0x0), cache, store, hasher)
 
 	var testCases = []struct {
 		key        []byte
 		commitment []byte
 	}{
 		{[]byte{0x00}, []byte{0x0}},
-		{[]byte{0x1}, []byte{0x1}},
-		{[]byte{0x2}, []byte{0x3}},
+		{[]byte{0x01}, []byte{0x0}},
+		{[]byte{0x2}, []byte{0x0}},
 		{[]byte{0x3}, []byte{0x0}},
-		{[]byte{0x4}, []byte{0x4}},
-		{[]byte{0x5}, []byte{0x1}},
-		{[]byte{0x6}, []byte{0x7}},
+		{[]byte{0x4}, []byte{0x0}},
+		{[]byte{0x5}, []byte{0x0}},
+		{[]byte{0x6}, []byte{0x0}},
 		{[]byte{0x7}, []byte{0x0}},
-		{[]byte{0x8}, []byte{0x8}},
-		{[]byte{0x9}, []byte{0x1}},
+		{[]byte{0x8}, []byte{0x0}},
+		{[]byte{0x9}, []byte{0x06}},
 	}
 	value := []byte{0x01}
 
@@ -53,10 +54,10 @@ func TestProve(t *testing.T) {
 	store, closeF := openBPlusStorage()
 	defer closeF()
 
-	cache := cache.NewSimpleCache(5000)
+	cache := cache.NewSimpleCache(0)
 	hasher := hashing.XorHasher
 
-	ht := NewTree(string(0x0), 2, cache, store, hasher, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+	ht := NewTree(string(0x0), cache, store, hasher)
 
 	key := []byte{0x5a}
 	value := []byte{0x01}
@@ -103,9 +104,10 @@ func randomBytes(n int) []byte {
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage("/tmp/hyper_tree_test.db") //openBoltStorage()
 	defer closeF()
-	cache := cache.NewSimpleCache(5000000)
+
+	cache := cache.NewSimpleCache(storage.SIZE20)
 	hasher := hashing.Sha256Hasher
-	ht := NewTree("my test tree", 30, cache, store, hasher, LeafHasherF(hasher), InteriorHasherF(hasher))
+	ht := NewTree("my test tree", cache, store, hasher)
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
 		key := hashing.Sha256Hasher(randomBytes(32))
