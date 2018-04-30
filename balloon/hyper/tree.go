@@ -38,8 +38,8 @@ import (
 // that can be made to the tree, ensuring its integrity, and the strcutres returned by
 // those public methods.
 type Tree struct {
-	id             []byte // tree-wide constant
-	leafHasher     LeafHasher
+	id []byte // tree-wide constant
+	LeafHasher
 	interiorHasher InteriorHasher
 	defaultHashes  [][]byte
 	cache          storage.Cache
@@ -67,7 +67,7 @@ func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Sto
 		[]byte(id),
 		lh,
 		ih,
-		make([][]byte, digestLength+1),
+		make([][]byte, digestLength),
 		cache,
 		leaves,
 		new(stats),
@@ -79,10 +79,11 @@ func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Sto
 
 	// init default hashes cache
 	tree.defaultHashes[0] = hasher(tree.id, Empty)
-	for i := 1; i <= int(digestLength); i++ {
+	for i := 1; i < int(digestLength); i++ {
 		tree.defaultHashes[i] = hasher(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
 	tree.ops = tree.operations()
+
 	return tree
 }
 
@@ -199,6 +200,7 @@ func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
 		return nil, err
 	}
 	path := t.calcAuditPathFromCache(key, rootPosition(t.digestLength))
+
 	return &MembershipProof{
 		path,
 		value,
@@ -234,7 +236,8 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	// nodes
 	if !t.cacheArea.has(pos) {
 		t.stats.disk += 1
-		return t.fromStorage(t.leaves.GetRange(pos.base, pos.split), value, pos)
+		d := t.leaves.GetRange(pos.base, pos.end())
+		return t.fromStorage(d, value, pos)
 	}
 
 	// if not, the node hash is the hash of our left and right child
@@ -281,12 +284,12 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 	if len(d) == 1 && pos.height == 0 {
 		t.stats.leaf += 1
 		t.stats.lh += 1
-		return t.leafHasher(t.id, value, pos.base)
+		return t.LeafHasher(t.id, value, pos.base)
 	}
 
 	// if there are no more childs,
-	// return a default hash
-	if len(d) == 0 {
+	// return a default hash if i'm not in root node
+	if len(d) == 0 && pos.height != pos.n {
 		t.stats.dh += 1
 		return t.defaultHashes[pos.height]
 	}
@@ -308,7 +311,7 @@ func (t *Tree) calcAuditPathFromCache(key []byte, pos *Position) [][]byte {
 	// we need to go to database to get
 	// nodes
 	if !t.cacheArea.has(pos) {
-		leaves := t.leaves.GetRange(pos.base, pos.split)
+		leaves := t.leaves.GetRange(pos.base, pos.end())
 		return t.calcAuditPathFromStorage(leaves, key, pos)
 	}
 
@@ -329,7 +332,7 @@ func (t *Tree) calcAuditPathFromStorage(d storage.LeavesSlice, key []byte, pos *
 	}
 	left, right := d.Split(pos.split)
 
-	if !bitIsSet(key, t.digestLength-pos.height) { // if k_j ==
+	if !bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
 		return append(
 			t.calcAuditPathFromStorage(left, key, pos.left()),
 			t.fromStorage(right, key, pos.right()))
