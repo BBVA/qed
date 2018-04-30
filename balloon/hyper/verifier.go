@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"verifiabledata/balloon/hashing"
 	"verifiabledata/log"
 )
 
@@ -16,19 +17,20 @@ type Proof struct {
 	id             []byte
 	auditPath      [][]byte
 	digestLength   int
-	leafHasher     LeafHasher
-	interiorHasher InteriorHasher
+	leafHasher     leafHasher
+	interiorHasher interiorHasher
 	log            log.Logger
 }
 
-func NewProof(id string, auditPath [][]byte, leafHasher LeafHasher, interiorHasher InteriorHasher) *Proof {
-	digestLength := len(leafHasher([]byte{0x0}, []byte{0x0}, []byte{0x0})) * 8
+func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher) *Proof {
+	digestLength := len(hasher([]byte{0x0})) * 8
+
 	return &Proof{
 		[]byte(id),
 		auditPath,
 		digestLength,
-		leafHasher,
-		interiorHasher,
+		leafHasherF(hasher),
+		interiorHasherF(hasher),
 		log.NewError(os.Stdout, "HyperProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }

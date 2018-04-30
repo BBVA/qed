@@ -54,3 +54,12 @@ func NewFakeCleanTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 
 	return tree
 }
+
+func NewFakeProof(auditPath []Node, index uint, hasher hashing.Hasher) *Proof {
+
+	proof := NewProof(auditPath, index, hasher)
+	proof.leafHasher = fakeLeafHasherF(hasher)
+	proof.interiorHasher = fakeInteriorHasherF(hasher)
+
+	return proof
+}

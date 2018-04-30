@@ -80,7 +80,7 @@ func TestVerify(t *testing.T) {
 	hasher := hashing.XorHasher
 
 	for i, c := range testCases {
-		proof := NewProof(c.auditPath, c.version, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+		proof := NewProof(c.auditPath, c.version, hasher)
 		correct := proof.Verify(c.expectedCommitment, c.key, c.version)
 
 		if !correct {
@@ -95,7 +95,7 @@ func TestAddAndVerify(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	ht := NewTree(store, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+	ht := NewFakeTree(store, hasher)
 
 	key := []byte("I AM A STRANGE LOOP")
 	value := uint(0)
@@ -103,7 +103,7 @@ func TestAddAndVerify(t *testing.T) {
 	commitment := <-ht.Add(key, uInt64AsBytes(value))
 	membershipProof := <-ht.Prove(key, value)
 
-	proof := NewProof(membershipProof.Nodes, value, FakeLeafHasherF(hasher), FakeInteriorHasherF(hasher))
+	proof := NewProof(membershipProof.Nodes, value, hasher)
 	correct := proof.Verify(commitment, key, value)
 
 	if !correct {
