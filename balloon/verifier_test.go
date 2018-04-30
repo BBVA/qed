@@ -106,7 +106,18 @@ func TestAddAndVerify(t *testing.T) {
 	commitment := <-balloon.Add(key)
 	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
 
-	proof := ToBalloonProof(id, membershipProof, hasher)
+	historyProof := history.NewFakeProof(membershipProof.HistoryProof, commitment.Version, hasher)
+	hyperProof := hyper.NewFakeProof(id, membershipProof.HyperProof, hasher)
+
+	proof := NewProof(
+		membershipProof.Exists,
+		hyperProof,
+		historyProof,
+		membershipProof.QueryVersion,
+		membershipProof.ActualVersion,
+		hasher,
+	)
+
 	correct := proof.Verify(commitment, key)
 
 	if !correct {
