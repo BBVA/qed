@@ -6,6 +6,8 @@ package hyper
 
 import (
 	"bytes"
+	"fmt"
+	"runtime"
 	"verifiabledata/balloon/hashing"
 )
 
@@ -18,11 +20,21 @@ var Set = []byte{0x01}
 type LeafHasher func([]byte, []byte, []byte) []byte
 type InteriorHasher func([]byte, []byte, []byte, []byte) []byte
 
+func where(calldepth int) string {
+	_, file, line, ok := runtime.Caller(calldepth)
+	if !ok {
+		file = "???"
+		line = 0
+	}
+	return fmt.Sprintf("%s:%d", file, line)
+}
+
 func LeafHasherF(hasher hashing.Hasher) LeafHasher {
 	return func(id, a, base []byte) []byte {
 		if bytes.Equal(a, Empty) {
 			return hasher(id)
 		}
+
 		return hasher(id, base)
 	}
 }
@@ -32,6 +44,7 @@ func InteriorHasherF(hasher hashing.Hasher) InteriorHasher {
 		if bytes.Equal(left, right) {
 			return hasher(left, right)
 		}
+
 		return hasher(left, right, base, height)
 	}
 }
