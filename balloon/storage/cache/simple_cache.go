@@ -9,6 +9,7 @@ const keySize = 36
 // SimpleCache is a cache that contains the hashes of the pre-computed nodes
 type SimpleCache struct {
 	nodes map[[keySize]byte][]byte // node map containing the cached hashes
+	size  uint64
 }
 
 func (c *SimpleCache) Put(key []byte, value []byte) error {
@@ -33,11 +34,11 @@ func (c *SimpleCache) Exists(key []byte) bool {
 }
 
 func (c *SimpleCache) Size() uint64 {
-	return uint64(len(c.nodes))
+	return c.size
 }
 
 // NewSimpleCache creates a new cache structure, already initialized
 // with a specified size
 func NewSimpleCache(size int) *SimpleCache {
-	return &SimpleCache{make(map[[keySize]byte][]byte, size)}
+	return &SimpleCache{make(map[[keySize]byte][]byte, size), uint64(size)}
 }
