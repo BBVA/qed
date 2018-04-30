@@ -61,7 +61,7 @@ type MembershipProof struct {
 // NewTree returns  a new Hyper Tree given all its dependencies
 func NewTree(id string, cacheLevels int, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher, lh LeafHasher, ih InteriorHasher) *Tree {
 
-	digestLength := len(hasher([]byte("x"))) * 8
+	digestLength := len(hasher([]byte("a test event"))) * 8
 
 	tree := &Tree{
 		[]byte(id),
@@ -309,14 +309,7 @@ func (t *Tree) calcAuditPathFromCache(key []byte, pos *Position) [][]byte {
 	// nodes
 	if !t.cacheArea.has(pos) {
 		leaves := t.leaves.GetRange(pos.base, pos.split)
-		if !bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
-			return append(
-				t.calcAuditPath(leaves, key, pos.left()),
-				t.fromCache(pos.right()))
-		}
-		return append(
-			t.calcAuditPath(leaves, key, pos.right()),
-			t.fromCache(pos.left()))
+		return t.calcAuditPathFromStorage(leaves, key, pos)
 	}
 
 	if !bitIsSet(key, t.digestLength-pos.height) { // if k_j == 0
@@ -330,7 +323,7 @@ func (t *Tree) calcAuditPathFromCache(key []byte, pos *Position) [][]byte {
 
 }
 
-func (t *Tree) calcAuditPath(d storage.LeavesSlice, key []byte, pos *Position) [][]byte {
+func (t *Tree) calcAuditPathFromStorage(d storage.LeavesSlice, key []byte, pos *Position) [][]byte {
 	if pos.height == 0 {
 		return nil
 	}
@@ -338,10 +331,10 @@ func (t *Tree) calcAuditPath(d storage.LeavesSlice, key []byte, pos *Position) [
 
 	if !bitIsSet(key, t.digestLength-pos.height) { // if k_j ==
 		return append(
-			t.calcAuditPath(left, key, pos.left()),
+			t.calcAuditPathFromStorage(left, key, pos.left()),
 			t.fromStorage(right, key, pos.right()))
 	}
 	return append(
-		t.calcAuditPath(right, key, pos.right()),
+		t.calcAuditPathFromStorage(right, key, pos.right()),
 		t.fromStorage(left, key, pos.left()))
 }
