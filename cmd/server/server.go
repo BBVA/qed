@@ -48,8 +48,8 @@ func main() {
 
 	cache := cache.NewSimpleCache(cacheSize)
 	hasher := hashing.Sha256Hasher
-	history := history.NewTree(frozen, history.LeafHasherF(hasher), history.InteriorHasherF(hasher))
-	hyper := hyper.NewTree(dbPath, 30, cache, leaves, hasher, hyper.LeafHasherF(hasher), hyper.InteriorHasherF(hasher))
+	history := history.NewTree(frozen)
+	hyper := hyper.NewTree(dbPath, cache, leaves, hasher)
 	balloon := balloon.NewHyperBalloon(hasher, history, hyper)
 
 	err := http.ListenAndServe(httpEndpoint, apihttp.NewApiHttp(balloon))

@@ -36,7 +36,7 @@ func TestAdd(t *testing.T) {
 	store, closeF := openBPlusStorage()
 	defer closeF()
 
-	ht := NewTree(store, FakeLeafHasherF(hashing.XorHasher), FakeInteriorHasherF(hashing.XorHasher))
+	ht := NewFakeTree(store, hashing.XorHasher)
 
 	for i, e := range testCases {
 		commitment := <-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
@@ -65,15 +65,15 @@ func TestProve(t *testing.T) {
 		{6, []byte{0x01}, []byte{0x52}}, // 82
 	}
 
-	ht := NewTree(store, FakeLeafHasherCleanF(hashing.XorHasher), FakeInteriorHasherCleanF(hashing.XorHasher))
+	ht := NewFakeTree(store, hashing.XorHasher)
 
 	for _, e := range testCases {
 		<-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
 	}
 
 	expectedPath := [][]byte{
-		[]byte{0x00},
-		[]byte{0x52},
+		[]byte{0x01},
+		[]byte{0x53},
 		[]byte{0x50},
 	}
 	proof := <-ht.Prove([]byte{0x5}, 6)
@@ -110,7 +110,7 @@ func randomBytes(n int) []byte {
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage()
 	defer closeF()
-	ht := NewTree(store, LeafHasherF(hashing.Sha256Hasher), InteriorHasherF(hashing.Sha256Hasher))
+	ht := NewTree(store, hashing.Sha256Hasher)
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)

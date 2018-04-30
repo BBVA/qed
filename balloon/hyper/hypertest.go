@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/storage"
 	"verifiabledata/balloon/storage/badger"
 	"verifiabledata/balloon/storage/bolt"
 	"verifiabledata/balloon/storage/bplus"
 )
 
-func FakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
+func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
 	return func(id, value, base []byte) []byte {
 		if bytes.Equal(value, Empty) {
 			return hasher(Empty)
@@ -19,7 +20,7 @@ func FakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
 	}
 }
 
-func FakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
+func fakeInteriorHasherF(hasher hashing.Hasher) interiorHasher {
 	return func(left, right, base, height []byte) []byte {
 		return hasher(left, right)
 	}
@@ -53,4 +54,22 @@ func deleteFile(path string) {
 	if err != nil {
 		fmt.Printf("Unable to remove db file %s", err)
 	}
+}
+
+func NewFakeTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
+
+	tree := NewTree(id, cache, leaves, hasher)
+	tree.leafHasher = fakeLeafHasherF(hasher)
+	tree.interiorHasher = fakeInteriorHasherF(hasher)
+
+	return tree
+}
+
+func NewFakeProof(id string, auditPath [][]byte, hasher hashing.Hasher) *Proof {
+
+	proof := NewProof(id, auditPath, hasher)
+	proof.leafHasher = fakeLeafHasherF(hasher)
+	proof.interiorHasher = fakeInteriorHasherF(hasher)
+
+	return proof
 }
