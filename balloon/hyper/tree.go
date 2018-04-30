@@ -12,7 +12,6 @@
 package hyper
 
 import (
-	"fmt"
 	"math"
 	"os"
 	"verifiabledata/balloon/hashing"
@@ -244,7 +243,6 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	}
 
 	// if not, the node hash is the hash of our left and right child
-	fmt.Println(key, t.digestLength-pos.height)
 	isleft := !bitIsSet(key, t.digestLength-pos.height)
 	if isleft {
 		left = t.toCache(key, value, pos.left())
