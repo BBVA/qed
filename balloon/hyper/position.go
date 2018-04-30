@@ -77,6 +77,16 @@ func (p Position) heightBytes() []byte {
 	return bytes
 }
 
+func (p Position) end() []byte {
+	end := make([]byte, p.len())
+	layer := p.n - p.height
+	copy(end, p.base)
+	for b := layer; b < p.n; b++ {
+		bitSet(end, b)
+	}
+	return end
+}
+
 // creates the tree root position
 func rootPosition(n int) *Position {
 	var p Position
@@ -93,4 +103,3 @@ func rootPosition(n int) *Position {
 func bitIsSet(bits []byte, i int) bool { return bits[i/8]&(1<<uint(7-i%8)) != 0 }
 func bitSet(bits []byte, i int)        { bits[i/8] |= 1 << uint(7-i%8) }
 func bitUnset(bits []byte, i int)      { bits[i/8] &= 0 << uint(7-i%8) }
-
