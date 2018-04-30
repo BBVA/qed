@@ -13,6 +13,7 @@ import (
 	"encoding/binary"
 	"math"
 	"os"
+	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 	"verifiabledata/log"
 )
@@ -59,19 +60,20 @@ import (
 //
 type Tree struct {
 	frozen         storage.Store // already computed nodes, that will not change
-	leafHasher     LeafHasher
-	interiorHasher InteriorHasher
+	leafHasher     leafHasher
+	interiorHasher interiorHasher
 	stats          *stats
 	ops            chan interface{} // serialize operations
 	log            log.Logger
 }
 
 // NewTree returns a new history tree
-func NewTree(frozen storage.Store, lh LeafHasher, ih InteriorHasher) *Tree {
+func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+
 	t := &Tree{
 		frozen,
-		lh,
-		ih,
+		leafHasherF(hasher),
+		interiorHasherF(hasher),
 		new(stats),
 		nil,
 		log.NewError(os.Stdout, "HistoryTree", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),

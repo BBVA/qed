@@ -85,8 +85,7 @@ func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, func()) {
 
 	hyperT := hyper.NewTree(string(0x0), 2, cache, leaves, hasher,
 		hyper.FakeLeafHasherF(hasher), hyper.FakeInteriorHasherF(hasher))
-	historyT := history.NewTree(frozen,
-		history.FakeLeafHasherF(hasher), history.FakeInteriorHasherF(hasher))
+	historyT := history.NewTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	return balloon, func() {

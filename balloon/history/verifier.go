@@ -5,23 +5,25 @@ import (
 	"fmt"
 	"math"
 	"os"
+
+	"verifiabledata/balloon/hashing"
 	"verifiabledata/log"
 )
 
 type Proof struct {
 	auditPath      []Node
 	index          uint
-	leafHasher     LeafHasher
-	interiorHasher InteriorHasher
+	leafHasher     leafHasher
+	interiorHasher interiorHasher
 	log            log.Logger
 }
 
-func NewProof(auditPath []Node, index uint, lh LeafHasher, ih InteriorHasher) *Proof {
+func NewProof(auditPath []Node, index uint, hasher hashing.Hasher) *Proof {
 	return &Proof{
 		auditPath,
 		index,
-		lh,
-		ih,
+		leafHasherF(hasher),
+		interiorHasherF(hasher),
 		log.NewError(os.Stdout, "HistoryProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }

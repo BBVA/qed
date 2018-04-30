@@ -6,9 +6,10 @@ package history
 import (
 	// "verifiabledata/log"
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/balloon/storage"
 )
 
-func FakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
+func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
 	return func(a, key []byte) []byte {
 		digest := hasher(a, key)
 		//log.Debug("Hashing leaf: a-> %b key-> %b :=> %b\n", a, key, digest)
@@ -16,7 +17,7 @@ func FakeLeafHasherF(hasher hashing.Hasher) LeafHasher {
 	}
 }
 
-func FakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
+func fakeInteriorHasherF(hasher hashing.Hasher) interiorHasher {
 	return func(a, left, right []byte) []byte {
 		digest := hasher(a, left, right)
 		//log.Debug("Hashing interior: a-> %b left-> %b right-> %b :=> %b\n", a, left, right, digest)
@@ -24,14 +25,32 @@ func FakeInteriorHasherF(hasher hashing.Hasher) InteriorHasher {
 	}
 }
 
-func FakeLeafHasherCleanF(hasher hashing.Hasher) LeafHasher {
+func fakeLeafHasherCleanF(hasher hashing.Hasher) leafHasher {
 	return func(a, key []byte) []byte {
 		return hasher(key)
 	}
 }
 
-func FakeInteriorHasherCleanF(hasher hashing.Hasher) InteriorHasher {
+func fakeInteriorHasherCleanF(hasher hashing.Hasher) interiorHasher {
 	return func(a, left, right []byte) []byte {
 		return hasher(left, right)
 	}
+}
+
+func NewFakeTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+
+	tree := NewTree(frozen, hasher)
+	tree.leafHasher = fakeLeafHasherF(hasher)
+	tree.interiorHasher = fakeInteriorHasherF(hasher)
+
+	return tree
+}
+
+func NewFakeCleanTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+
+	tree := NewTree(frozen, hasher)
+	tree.leafHasher = fakeLeafHasherCleanF(hasher)
+	tree.interiorHasher = fakeInteriorHasherCleanF(hasher)
+
+	return tree
 }

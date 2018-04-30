@@ -12,16 +12,16 @@ var Zero = []byte{0x0}
 // if a node has a non-zero digest.
 var One = []byte{0x1}
 
-type LeafHasher func([]byte, []byte) []byte
-type InteriorHasher func([]byte, []byte, []byte) []byte
+type leafHasher func([]byte, []byte) []byte
+type interiorHasher func([]byte, []byte, []byte) []byte
 
-func LeafHasherF(hasher hashing.Hasher) LeafHasher {
+func leafHasherF(hasher hashing.Hasher) leafHasher {
 	return func(a, key []byte) []byte {
 		return hasher(a, key)
 	}
 }
 
-func InteriorHasherF(hasher hashing.Hasher) InteriorHasher {
+func interiorHasherF(hasher hashing.Hasher) interiorHasher {
 	return func(a, left, right []byte) []byte {
 		return hasher(a, left, right)
 	}
