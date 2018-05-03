@@ -10,6 +10,7 @@ import (
 	"verifiabledata/balloon/storage/badger"
 	"verifiabledata/balloon/storage/bolt"
 	"verifiabledata/balloon/storage/bplus"
+	"verifiabledata/log"
 )
 
 func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
@@ -57,9 +58,9 @@ func deleteFile(path string) {
 	}
 }
 
-func NewFakeTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
+func NewFakeTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
 
-	tree := NewTree(id, cache, leaves, hasher)
+	tree := NewTree(id, cache, leaves, hasher, l)
 	tree.leafHasher = fakeLeafHasherF(hasher)
 	tree.interiorHasher = fakeInteriorHasherF(hasher)
 

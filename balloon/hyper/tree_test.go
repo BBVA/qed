@@ -7,11 +7,13 @@ package hyper
 import (
 	"bytes"
 	"crypto/rand"
+	"os"
 	"testing"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 	"verifiabledata/balloon/storage/cache"
+	"verifiabledata/log"
 )
 
 func TestAdd(t *testing.T) {
@@ -20,8 +22,8 @@ func TestAdd(t *testing.T) {
 
 	cache := cache.NewSimpleCache(0)
 	hasher := hashing.XorHasher
-
-	ht := NewTree(string(0x0), cache, store, hasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewTree(string(0x0), cache, store, hasher, l)
 
 	var testCases = []struct {
 		key        []byte
@@ -58,7 +60,8 @@ func TestProve(t *testing.T) {
 	cache := cache.NewSimpleCache(0)
 	hasher := hashing.XorHasher
 
-	ht := NewTree(string(0x0), cache, store, hasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewTree(string(0x0), cache, store, hasher, l)
 
 	key := []byte{0x5a}
 	value := []byte{0x01}
@@ -108,7 +111,8 @@ func BenchmarkAdd(b *testing.B) {
 
 	cache := cache.NewSimpleCache(storage.SIZE25)
 	hasher := hashing.Sha256Hasher
-	ht := NewTree("my test tree", cache, store, hasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewTree(string(0x0), cache, store, hasher, l)
 
 	b.N = 1000000
 	for i := 0; i < b.N; i++ {
