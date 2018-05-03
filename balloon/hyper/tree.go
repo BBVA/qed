@@ -13,7 +13,6 @@ package hyper
 
 import (
 	"math"
-	"os"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
@@ -61,7 +60,7 @@ type MembershipProof struct {
 }
 
 // NewTree returns  a new Hyper Tree given all its dependencies
-func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
+func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
 
 	cacheLevels := int(math.Max(0.0, math.Floor(math.Log(float64(cache.Size()))/math.Log(2.0))))
 	digestLength := len(hasher([]byte("a test event"))) * 8
@@ -77,7 +76,7 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 		newArea(digestLength-cacheLevels, digestLength),
 		digestLength,
 		nil,
-		log.NewError(os.Stdout, "HyperTree", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		l,
 	}
 
 	// init default hashes cache

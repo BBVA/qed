@@ -8,11 +8,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"os"
 	"testing"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 	"verifiabledata/balloon/storage/cache"
+	"verifiabledata/log"
 )
 
 func TestVerify(t *testing.T) {
@@ -47,7 +49,8 @@ func TestAddAndVerify(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(storage.SIZE20), store, hasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(storage.SIZE20), store, hasher, l)
 
 	key := hasher([]byte("a test event"))
 	value := uint(0)
@@ -79,7 +82,8 @@ func TestAddAndVerifyXor(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.XorHasher
-	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher, l)
 
 	key := hasher([]byte("a test event"))
 	value := uint(0)
@@ -110,7 +114,8 @@ func TestAddAndVerifyPearson(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Pearson
-	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher, l)
 
 	key := hasher([]byte("a test event"))
 	value := uint(0)
