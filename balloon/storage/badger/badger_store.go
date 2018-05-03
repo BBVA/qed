@@ -7,10 +7,9 @@ package badger
 import (
 	"bytes"
 	"log"
+	"verifiabledata/balloon/storage"
 
 	b "github.com/dgraph-io/badger"
-
-	"verifiabledata/balloon/storage"
 )
 
 type BadgerStorage struct {
@@ -78,6 +77,7 @@ func NewBadgerStorage(path string) *BadgerStorage {
 	opts := b.DefaultOptions
 	opts.Dir = path
 	opts.ValueDir = path
+	opts.SyncWrites = true
 	db, err := b.Open(opts)
 	if err != nil {
 		log.Fatal(err)
