@@ -4,7 +4,6 @@
 package history
 
 import (
-	// "verifiabledata/log"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 )
