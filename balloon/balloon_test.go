@@ -176,11 +176,11 @@ func deleteFilesInDir(path string) {
 }
 
 func BenchmarkAddBolt(b *testing.B) {
-	path := "/tmp/benchAdd"
+	path := "/mnt/bench_balloon_add"
 	os.MkdirAll(path, os.FileMode(0755))
 
-	frozen, frozenCloseF := openBoltStorage(path)
-	leaves, leavesCloseF := openBoltStorage(path)
+	frozen, frozenCloseF := openBoltStorage(fmt.Sprintf("%s/frozen", path))
+	leaves, leavesCloseF := openBoltStorage(fmt.Sprintf("%s/leaves", path))
 	defer frozenCloseF()
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
@@ -220,7 +220,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	b.ResetTimer()
-	b.N = 100000
+	b.N = 10000
 	for i := 0; i < b.N; i++ {
 		event := randomBytes(128)
 		r := balloon.Add(event)
