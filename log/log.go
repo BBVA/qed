@@ -26,21 +26,24 @@ type Logger interface {
 	Debug(v ...interface{})
 	Errorf(format string, v ...interface{})
 	Infof(format string, v ...interface{})
-	Debugf(format string, v ...interface{})	
+	Debugf(format string, v ...interface{})
 }
 
-type NoLogger struct {
+type SilentLogger struct {
 	log.Logger
 }
 
-// A impl 'l Nologger' verifiabledata/log.Logger
-func (l NoLogger) Error(v ...interface{}) {return}
-func (l NoLogger) Info(v ...interface{}) {return}
-func (l NoLogger) Debug(v ...interface{}) {return}
-func (l NoLogger) Errorf(format string, v ...interface{}) {return}
-func (l NoLogger) Infof(format string, v ...interface{}) {return}
-func (l NoLogger) Debugf(format string, v ...interface{}) {return}
+func NewSilent() *SilentLogger {
+	return &SilentLogger{}
+}
 
+// A impl 'l Nologger' verifiabledata/log.Logger
+func (l SilentLogger) Error(v ...interface{})                 { return }
+func (l SilentLogger) Info(v ...interface{})                  { return }
+func (l SilentLogger) Debug(v ...interface{})                 { return }
+func (l SilentLogger) Errorf(format string, v ...interface{}) { return }
+func (l SilentLogger) Infof(format string, v ...interface{})  { return }
+func (l SilentLogger) Debugf(format string, v ...interface{}) { return }
 
 type ErrorLogger struct {
 	log.Logger
@@ -66,16 +69,14 @@ func (l ErrorLogger) Errorf(format string, v ...interface{}) {
 	os.Exit(1)
 }
 
-func (l ErrorLogger) Info(v ...interface{}) {return}
-func (l ErrorLogger) Debug(v ...interface{}) {return}
-func (l ErrorLogger) Infof(format string, v ...interface{}) {return}
-func (l ErrorLogger) Debugf(format string, v ...interface{}) {return}
-
+func (l ErrorLogger) Info(v ...interface{})                  { return }
+func (l ErrorLogger) Debug(v ...interface{})                 { return }
+func (l ErrorLogger) Infof(format string, v ...interface{})  { return }
+func (l ErrorLogger) Debugf(format string, v ...interface{}) { return }
 
 type InfoLogger struct {
 	log.Logger
 }
-
 
 func NewInfo(out io.Writer, prefix string, flag int) *InfoLogger {
 	var l InfoLogger
@@ -105,9 +106,8 @@ func (l InfoLogger) Infof(format string, v ...interface{}) {
 	l.Output(2, fmt.Sprintf(format, v...))
 }
 
-func (l InfoLogger) Debug(v ...interface{}) {return}
-func (l InfoLogger) Debugf(format string, v ...interface{}) {return}
-
+func (l InfoLogger) Debug(v ...interface{})                 { return }
+func (l InfoLogger) Debugf(format string, v ...interface{}) { return }
 
 type DebugLogger struct {
 	log.Logger
@@ -148,4 +148,3 @@ func (l DebugLogger) Infof(format string, v ...interface{}) {
 func (l DebugLogger) Debugf(format string, v ...interface{}) {
 	l.Output(2, fmt.Sprintf(format, v...))
 }
-
