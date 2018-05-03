@@ -5,12 +5,14 @@
 package balloon
 
 import (
+	"os"
 	"testing"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
 	"verifiabledata/balloon/hyper"
 	"verifiabledata/balloon/storage/cache"
+	"verifiabledata/log"
 )
 
 type FakeVerifiable struct {
@@ -85,7 +87,8 @@ func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, func()) {
 
 	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher)
 	historyT := history.NewFakeTree(frozen, hasher)
-	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
 
 	return balloon, func() {
 		frozenCloseF()
