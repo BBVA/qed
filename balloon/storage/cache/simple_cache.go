@@ -4,6 +4,7 @@
 
 package cache
 
+// keySize == len( H(x) ) + pos.heightBytes
 const keySize = 36
 
 // SimpleCache is a cache that contains the hashes of the pre-computed nodes
@@ -39,6 +40,6 @@ func (c *SimpleCache) Size() uint64 {
 
 // NewSimpleCache creates a new cache structure, already initialized
 // with a specified size
-func NewSimpleCache(size int) *SimpleCache {
-	return &SimpleCache{make(map[[keySize]byte][]byte, size), uint64(size)}
+func NewSimpleCache(size uint64) *SimpleCache {
+	return &SimpleCache{make(map[[keySize]byte][]byte, size), size}
 }
