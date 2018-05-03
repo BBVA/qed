@@ -14,6 +14,7 @@ import (
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage/badger"
 	"verifiabledata/balloon/storage/bplus"
+	"verifiabledata/log"
 )
 
 func TestAdd(t *testing.T) {
@@ -37,7 +38,8 @@ func TestAdd(t *testing.T) {
 	store, closeF := openBPlusStorage()
 	defer closeF()
 
-	ht := NewFakeTree(store, hashing.XorHasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewFakeTree(store, hashing.XorHasher, l)
 
 	for i, e := range testCases {
 		commitment := <-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
@@ -66,7 +68,8 @@ func TestProve(t *testing.T) {
 		{6, []byte{0x01}, []byte{0x52}}, // 82
 	}
 
-	ht := NewFakeTree(store, hashing.XorHasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewFakeTree(store, hashing.XorHasher, l)
 
 	for _, e := range testCases {
 		<-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
@@ -111,7 +114,8 @@ func randomBytes(n int) []byte {
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage()
 	defer closeF()
-	ht := NewTree(store, hashing.Sha256Hasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewTree(store, hashing.Sha256Hasher, l)
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
