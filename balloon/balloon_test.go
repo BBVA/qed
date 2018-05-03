@@ -34,7 +34,7 @@ func TestAdd(t *testing.T) {
 
 	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewFakeTree(frozen, hasher)
+	historyT := history.NewFakeTree(frozen, hasher, l)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
 
 	var testCases = []struct {
@@ -86,7 +86,7 @@ func TestGenMembershipProof(t *testing.T) {
 
 	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewFakeTree(frozen, hasher)
+	historyT := history.NewFakeTree(frozen, hasher, l)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
 
 	key := []byte{0x5a}
@@ -193,7 +193,7 @@ func BenchmarkAddBolt(b *testing.B) {
 
 	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewTree(frozen, hasher)
+	historyT := history.NewTree(frozen, hasher, l)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
 
 	b.ResetTimer()
@@ -221,7 +221,7 @@ func BenchmarkAddBadger(b *testing.B) {
 
 	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewTree(frozen, hasher)
+	historyT := history.NewTree(frozen, hasher, l)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
 
 	b.ResetTimer()

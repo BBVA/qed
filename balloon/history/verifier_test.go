@@ -1,9 +1,11 @@
 package history
 
 import (
+	"os"
 	"testing"
 
 	"verifiabledata/balloon/hashing"
+	"verifiabledata/log"
 )
 
 func TestVerify(t *testing.T) {
@@ -96,7 +98,8 @@ func TestAddAndVerify(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	ht := NewFakeTree(store, hasher)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewFakeTree(store, hasher, l)
 
 	key := []byte("I AM A STRANGE LOOP")
 	value := uint(0)

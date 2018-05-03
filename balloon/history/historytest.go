@@ -6,6 +6,7 @@ package history
 import (
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
+	"verifiabledata/log"
 )
 
 func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
@@ -36,18 +37,18 @@ func fakeInteriorHasherCleanF(hasher hashing.Hasher) interiorHasher {
 	}
 }
 
-func NewFakeTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+func NewFakeTree(frozen storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
 
-	tree := NewTree(frozen, hasher)
+	tree := NewTree(frozen, hasher, l)
 	tree.leafHasher = fakeLeafHasherF(hasher)
 	tree.interiorHasher = fakeInteriorHasherF(hasher)
 
 	return tree
 }
 
-func NewFakeCleanTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+func NewFakeCleanTree(frozen storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
 
-	tree := NewTree(frozen, hasher)
+	tree := NewTree(frozen, hasher, l)
 	tree.leafHasher = fakeLeafHasherCleanF(hasher)
 	tree.interiorHasher = fakeInteriorHasherCleanF(hasher)
 

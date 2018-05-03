@@ -12,7 +12,6 @@ package history
 import (
 	"encoding/binary"
 	"math"
-	"os"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
@@ -69,7 +68,7 @@ type Tree struct {
 }
 
 // NewTree returns a new history tree
-func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+func NewTree(frozen storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
 
 	t := &Tree{
 		frozen,
@@ -77,7 +76,7 @@ func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 		interiorHasherF(hasher),
 		new(stats),
 		nil,
-		log.NewError(os.Stdout, "HistoryTree", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		l,
 	}
 	// start tree goroutine to handle
 	// tree operations
