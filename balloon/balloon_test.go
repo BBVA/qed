@@ -185,7 +185,7 @@ func BenchmarkAddBolt(b *testing.B) {
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
 
-	cache := cache.NewSimpleCache(storage.SIZE30)
+	cache := cache.NewSimpleCache(storage.SIZE25)
 	hasher := hashing.Sha256Hasher
 
 	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
@@ -203,7 +203,7 @@ func BenchmarkAddBolt(b *testing.B) {
 }
 
 func BenchmarkAddBadger(b *testing.B) {
-	path := "/tmp/benchAdd"
+	path := "/mnt/bench_balloon_add"
 	os.MkdirAll(path, os.FileMode(0755))
 
 	frozen, frozenCloseF := openBadgerStorage(fmt.Sprintf("%s/frozen", path))
@@ -212,7 +212,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
 
-	cache := cache.NewSimpleCache(storage.SIZE30)
+	cache := cache.NewSimpleCache(storage.SIZE25)
 	hasher := hashing.Sha256Hasher
 
 	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
@@ -220,7 +220,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	b.ResetTimer()
-	b.N = 10
+	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		event := randomBytes(128)
 		r := balloon.Add(event)
