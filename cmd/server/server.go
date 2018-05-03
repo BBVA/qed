@@ -23,14 +23,14 @@ import (
 
 var (
 	httpEndpoint, dbPath, storageName string
-	cacheSize                         int
+	cacheSize                         uint64
 )
 
 func main() {
 	// We use the TypeVar flag syntax becouse balloon requires parameters as *type
 	flag.StringVar(&httpEndpoint, "http_endpoint", ":8080", "Endpoint for REST requests on (host:port)")
 	flag.StringVar(&dbPath, "path", "/tmp/balloon.db", "Set default storage path.")
-	flag.IntVar(&cacheSize, "cache", 5000000, "Initialize and reserve custom cache size.")
+	flag.Uint64Var(&cacheSize, "cache", storage.SIZE25, "Initialize and reserve custom cache size.")
 	flag.StringVar(&storageName, "storage", "badger", "Choose between different storage backends. Eg badge|bolt")
 	flag.Parse()
 
