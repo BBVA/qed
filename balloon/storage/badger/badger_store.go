@@ -77,7 +77,7 @@ func NewBadgerStorage(path string) *BadgerStorage {
 	opts := b.DefaultOptions
 	opts.Dir = path
 	opts.ValueDir = path
-	opts.SyncWrites = true
+	opts.SyncWrites = false
 	db, err := b.Open(opts)
 	if err != nil {
 		log.Fatal(err)
