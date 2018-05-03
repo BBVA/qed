@@ -7,7 +7,6 @@ package balloon
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/history"
@@ -45,7 +44,7 @@ type MembershipProof struct {
 	KeyDigest     []byte
 }
 
-func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree) *HyperBalloon {
+func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree, l log.Logger) *HyperBalloon {
 
 	b := HyperBalloon{
 		history,
@@ -53,7 +52,7 @@ func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.
 		hasher,
 		0,
 		nil,
-		log.NewError(os.Stdout, "HyperBalloon", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		l,
 	}
 	b.ops = b.operations()
 	return &b
