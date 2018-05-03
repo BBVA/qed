@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 
@@ -68,9 +69,14 @@ func main() {
 
 	cache := cache.NewSimpleCache(cacheSize)
 	hasher := hashing.Sha256Hasher
-	history := history.NewTree(frozen, hasher)
-	hyper := hyper.NewTree(dbPath, cache, leaves, hasher)
+	history := history.NewTree(frozen, hasher, l)
+	hyper := hyper.NewTree(dbPath, cache, leaves, hasher, l)
 	balloon := balloon.NewHyperBalloon(hasher, history, hyper, l)
+
+	// start profiler
+	go func() {
+		l.Info(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	router := apihttp.NewApiHttp(balloon)
 
