@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
 	"verifiabledata/api/apihttp"
 	"verifiabledata/balloon"
 	"verifiabledata/balloon/hashing"
@@ -24,6 +25,7 @@ type HttpClient struct {
 	endpoint string
 	apiKey   string
 	log      log.Logger
+
 	http.Client
 }
 
@@ -81,6 +83,7 @@ func (c HttpClient) Membership(key []byte, version uint) (*balloon.Proof, error)
 		key,
 		version,
 	})
+
 	body, err := c.doReq("POST", "/proofs/membership", query)
 	if err != nil {
 		return nil, err

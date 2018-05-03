@@ -7,9 +7,10 @@ package badger
 import (
 	"bytes"
 	"log"
-	"verifiabledata/balloon/storage"
 
 	b "github.com/dgraph-io/badger"
+
+	"verifiabledata/balloon/storage"
 )
 
 type BadgerStorage struct {

@@ -6,9 +6,10 @@ package bplus
 
 import (
 	"bytes"
-	"verifiabledata/balloon/storage"
 
 	"github.com/cznic/b"
+
+	"verifiabledata/balloon/storage"
 )
 
 type BPlusTreeStorage struct {
