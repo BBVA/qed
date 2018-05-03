@@ -87,8 +87,6 @@ func Add(balloon balloon.Balloon) http.HandlerFunc {
 
 		// Wait for the response
 		response := <-balloon.Add(event.Event)
-
-		fmt.Printf("%x\n", ToSnapshot(response, event.Event).HyperDigest)
 		out, err := json.Marshal(ToSnapshot(response, event.Event))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
