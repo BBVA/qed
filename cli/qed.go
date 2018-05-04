@@ -50,6 +50,9 @@ func NewQedCommand(ctx *Context) *cobra.Command {
 	cmd.MarkPersistentFlagRequired("endpoint")
 	cmd.MarkPersistentFlagRequired("apikey")
 
+	cmd.AddCommand(newClientCommand(ctx))
+	cmd.AddCommand(newAuditorCommand(ctx))
+
 	cmd.AddCommand(newAddCommand(ctx))
 	cmd.AddCommand(newMembershipCommand(ctx))
 	return cmd
