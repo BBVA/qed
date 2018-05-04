@@ -7,7 +7,6 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"verifiabledata/balloon"
