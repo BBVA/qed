@@ -32,6 +32,18 @@ func main() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
-		fmt.Println(auditor.Add(scanner.Text()))
+		snapshot, err := auditor.Add(scanner.Text())
+		if err != nil {
+			panic(err)
+		}
+
+		proof, err := auditor.Membership(snapshot.Event, snapshot.Version)
+		if err != nil {
+			panic(err)
+		}
+
+		correct := auditor.Verify(proof, snapshot)
+
+		fmt.Println(correct)
 	}
 }

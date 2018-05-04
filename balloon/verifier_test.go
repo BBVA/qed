@@ -86,7 +86,7 @@ func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, func()) {
 	//TODO: this should not be part of the test
 	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewFakeTree(frozen, hasher,l)
+	historyT := history.NewFakeTree(frozen, hasher, l)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
 
 	return balloon, func() {
