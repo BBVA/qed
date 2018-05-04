@@ -283,7 +283,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 		break
 	// A_v(i,r)
 	case version < index+pow(2, layer-1):
-		fmt.Println("verion ", version, " index ", index, " pow ", index+pow(2, layer-1))
+		fmt.Println("version ", version, " index ", index, " pow ", index+pow(2, layer-1))
 		hash, err := t.rootHash(eventDigest, index, layer-1, version)
 		if err != nil {
 			return nil, err
