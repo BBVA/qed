@@ -42,7 +42,7 @@ func TestAdd(t *testing.T) {
 	ht := NewFakeTree(store, hashing.XorHasher, l)
 
 	for i, e := range testCases {
-		commitment := <-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
+		commitment := <-ht.Add(e.event, uInt64AsBytes(e.index))
 
 		if !bytes.Equal(e.commitment, commitment) {
 			t.Fatalf("Incorrect commitment for test %d: expected %x, actual %x", i, e.commitment, commitment)
@@ -72,7 +72,7 @@ func TestProve(t *testing.T) {
 	ht := NewFakeTree(store, hashing.XorHasher, l)
 
 	for _, e := range testCases {
-		<-ht.Add(e.event, uInt64AsBytes(uint(e.index)))
+		<-ht.Add(e.event, uInt64AsBytes(e.index))
 	}
 
 	expectedPath := [][]byte{
@@ -119,7 +119,7 @@ func BenchmarkAdd(b *testing.B) {
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := randomBytes(64)
-		<-ht.Add(key, uInt64AsBytes(uint(i)))
+		<-ht.Add(key, uInt64AsBytes(uint64(i)))
 	}
 	b.Logf("stats = %+v\n", ht.stats)
 }
@@ -149,7 +149,7 @@ func deleteFile(path string) {
 
 // Utility to generate graphviz code to visualize
 // the frozen tree
-func graphTree(t *Tree, key []byte, version uint) {
+func graphTree(t *Tree, key []byte, version uint64) {
 	fmt.Println("digraph BST {")
 	fmt.Println("	node [style=filled];")
 
@@ -169,7 +169,7 @@ func atob(a, b *node, color string) {
 }
 
 type node struct {
-	index, layer uint
+	index, layer uint64
 	digest       string
 }
 
@@ -177,10 +177,10 @@ func (n node) String() string {
 	return fmt.Sprintf("[%s] (%d,%d)", n.digest, n.layer, n.index)
 }
 
-func rootnode(t *Tree, version uint) *node {
-	index := uint(0)
+func rootnode(t *Tree, version uint64) *node {
+	index := uint64(0)
 	layer := t.getDepth(version)
-	digest, _ := t.frozen.Get(frozenKey(uint(index), uint(layer)))
+	digest, _ := t.frozen.Get(frozenKey(index, layer))
 	return &node{index, layer, fmt.Sprintf("0x%x", digest)}
 }
 
