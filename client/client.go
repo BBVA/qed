@@ -29,15 +29,18 @@ type HttpClient struct {
 }
 
 func NewHttpClient(endpoint, apiKey string, logger log.Logger) *HttpClient {
+
 	return &HttpClient{
 		endpoint,
 		apiKey,
 		logger,
 		*http.DefaultClient,
 	}
+
 }
 
 func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
+
 	req, err := http.NewRequest(method, c.endpoint+path, bytes.NewBuffer(data))
 	if err != nil {
 		panic(err)
@@ -56,6 +59,7 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 
 	return bodyBytes, nil
+
 }
 
 func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {

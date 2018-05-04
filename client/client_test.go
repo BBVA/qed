@@ -70,13 +70,18 @@ func TestVerify(t *testing.T) {
 	}
 }
 
-func BenchmarkVerify(b *testing.B) {
+func BenchmarkAdd(b *testing.B) {
+	b.N = 10000
+	for n := 0; n < b.N; n++ {
+		client.Add(string(n))
+	}
+}
+
+func BenchmarkAddAndVerify(b *testing.B) {
+	b.N = 10000
 	for n := 0; n < b.N; n++ {
 		snapshot, _ := client.Add(string(n))
 		proof, _ := client.Membership(snapshot.Event, snapshot.Version)
-		correct := client.Verify(proof, snapshot)
-		if !correct {
-			b.Fatal("correct should be true")
-		}
+		client.Verify(proof, snapshot)
 	}
 }
