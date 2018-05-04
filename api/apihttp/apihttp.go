@@ -119,10 +119,6 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 		// Wait for the response
 		proof := <-balloon.GenMembershipProof(query.Key, query.Version)
 
-		for _, elem := range proof.HyperProof {
-			fmt.Printf("%x\n", elem)
-		}
-
 		out, err := json.Marshal(ToMembershipProof(query.Key, proof))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
