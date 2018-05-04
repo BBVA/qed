@@ -33,7 +33,7 @@ func TestAdd(t *testing.T) {
 	hasher := hashing.XorHasher
 
 	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher, l)
+	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher, l)
 	historyT := history.NewFakeTree(frozen, hasher, l)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
 
