@@ -96,3 +96,13 @@ func (c HttpClient) Membership(key []byte, version uint) (*balloon.Proof, error)
 	return apihttp.ToBalloonProof("/tmp/balloon.db", &proof, hashing.Sha256Hasher), nil
 
 }
+
+func (c HttpClient) Verify(proof *balloon.Proof, snap *apihttp.Snapshot) bool {
+
+	return proof.Verify(&balloon.Commitment{
+		snap.HyperDigest,
+		snap.HistoryDigest,
+		snap.Version,
+	}, snap.Event)
+
+}
