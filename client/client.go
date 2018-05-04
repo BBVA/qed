@@ -61,7 +61,6 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 
 func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
-	fmt.Println(event)
 	data, _ := json.Marshal(&apihttp.Event{[]byte(event)})
 
 	body, err := c.doReq("POST", "/events", data)
