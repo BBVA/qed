@@ -1,6 +1,7 @@
 package history
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -13,7 +14,7 @@ func TestVerify(t *testing.T) {
 	var testCases = []struct {
 		key                []byte
 		auditPath          []Node
-		version            uint
+		version            uint64
 		expectedCommitment []byte
 	}{
 		// INCREMENTAL
@@ -102,7 +103,7 @@ func TestAddAndVerify(t *testing.T) {
 	ht := NewFakeTree(store, hasher, l)
 
 	key := []byte("I AM A STRANGE LOOP")
-	value := uint(0)
+	value := uint64(0)
 
 	commitment := <-ht.Add(key, uInt64AsBytes(value))
 	membershipProof := <-ht.Prove(key, value)
@@ -112,5 +113,32 @@ func TestAddAndVerify(t *testing.T) {
 
 	if !correct {
 		t.Errorf("incorrect")
+	}
+}
+
+func TestAddAndVerify129(t *testing.T) {
+
+	store, closeF := openBPlusStorage()
+	defer closeF()
+
+	hasher := hashing.Sha256Hasher
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	ht := NewFakeTree(store, hasher, l)
+
+	for i := 0; i < 129; i++ {
+		key := randomBytes(128)
+		value := uint64(i)
+		fmt.Printf("Adding event %d: %x\n", i, key)
+		// commitment :=
+		<-ht.Add(key, uInt64AsBytes(value))
+		// membershipProof :=
+		<-ht.Prove(key, value)
+		/*
+			proof := NewProof(membershipProof.Nodes, value, hasher)
+			correct := proof.Verify(commitment, key, value)
+
+			if !correct {
+				t.Errorf("incorrect: %d", i)
+			} */
 	}
 }

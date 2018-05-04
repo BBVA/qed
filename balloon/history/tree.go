@@ -11,6 +11,7 @@ package history
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 
 	"verifiabledata/balloon/hashing"
@@ -97,7 +98,7 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 	return result
 }
 
-func (t Tree) Prove(key []byte, version uint) chan *MembershipProof {
+func (t Tree) Prove(key []byte, version uint64) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
 	t.ops <- &proof{
 		key,
@@ -131,7 +132,7 @@ type add struct {
 
 type proof struct {
 	key     []byte
-	version uint
+	version uint64
 	result  chan *MembershipProof
 }
 
@@ -178,7 +179,7 @@ func (t *Tree) operations() chan interface{} {
 // the i:th entry and then outputs a root hash as a commitment
 // t.ps://eprint.iacr.org/2015/007.pdf
 func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
-	version := uint(binary.LittleEndian.Uint64(index))
+	version := binary.LittleEndian.Uint64(index)
 
 	// calculate commitment as C_n = A_n(0,d)
 	depth := t.getDepth(version)
@@ -189,10 +190,10 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	return rootDigest, nil
 }
 
-func (t Tree) prove(key []byte, version uint) (*MembershipProof, error) {
+func (t Tree) prove(key []byte, version uint64) (*MembershipProof, error) {
 	var proof MembershipProof
 	index, _ := binary.Uvarint(key)
-	err := t.auditPath(key, uint(index), 0, t.getDepth(version), version, &proof)
+	err := t.auditPath(key, index, 0, t.getDepth(version), version, &proof)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +202,7 @@ func (t Tree) prove(key []byte, version uint) (*MembershipProof, error) {
 
 type Node struct {
 	Digest       []byte
-	Index, Layer uint
+	Index, Layer uint64
 }
 
 // MembershipProof is a proof of membership of an event.
@@ -209,7 +210,7 @@ type MembershipProof struct {
 	Nodes []Node
 }
 
-func (t Tree) auditPath(key []byte, target, index, layer, version uint, proof *MembershipProof) (err error) {
+func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof *MembershipProof) (err error) {
 	if layer == 0 {
 		return
 	}
@@ -235,6 +236,7 @@ func (t Tree) auditPath(key []byte, target, index, layer, version uint, proof *M
 	node := new(Node)
 	node.Index = index
 	node.Layer = layer - 1
+	fmt.Println("NODE INDEX = ", index)
 	node.Digest, err = t.rootHash(key, node.Index, node.Layer, version)
 	if err != nil {
 		return
@@ -245,21 +247,21 @@ func (t Tree) auditPath(key []byte, target, index, layer, version uint, proof *M
 }
 
 // Returns the current layer or depth of the tree
-func (t Tree) getDepth(index uint) uint {
-	return uint(math.Ceil(math.Log2(float64(index + 1))))
+func (t Tree) getDepth(index uint64) uint64 {
+	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
 
-func uInt64AsBytes(i uint) []byte {
+func uInt64AsBytes(i uint64) []byte {
 	valuebytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valuebytes, uint64(i))
+	binary.LittleEndian.PutUint64(valuebytes, i)
 	return valuebytes
 }
 
-func frozenKey(index, layer uint) []byte {
+func frozenKey(index, layer uint64) []byte {
 	return append(uInt64AsBytes(index), uInt64AsBytes(layer)...)
 }
 
-func (t *Tree) rootHash(eventDigest []byte, index, layer uint, version uint) ([]byte, error) {
+func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byte, error) {
 
 	var digest []byte
 
@@ -281,6 +283,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint, version uint) ([]
 		break
 	// A_v(i,r)
 	case version < index+pow(2, layer-1):
+		fmt.Println("verion ", version, " index ", index, " pow ", index+pow(2, layer-1))
 		hash, err := t.rootHash(eventDigest, index, layer-1, version)
 		if err != nil {
 			return nil, err
@@ -316,6 +319,6 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer uint, version uint) ([]
 }
 
 // Utility to calculate arbitraty pow and return an int64
-func pow(x, y uint) uint {
-	return uint(math.Pow(float64(x), float64(y)))
+func pow(x, y uint64) uint64 {
+	return uint64(math.Pow(float64(x), float64(y)))
 }

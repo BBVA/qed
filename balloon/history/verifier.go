@@ -12,13 +12,13 @@ import (
 
 type Proof struct {
 	auditPath      []Node
-	index          uint
+	index          uint64
 	leafHasher     leafHasher
 	interiorHasher interiorHasher
 	log            log.Logger
 }
 
-func NewProof(auditPath []Node, index uint, hasher hashing.Hasher) *Proof {
+func NewProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof {
 	return &Proof{
 		auditPath,
 		index,
@@ -32,7 +32,7 @@ func (p Proof) String() string {
 	return fmt.Sprintf(`{"auditPathLen": "%d"}`, len(p.auditPath))
 }
 
-func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint) bool {
+func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint64) bool {
 	p.log.Debug("\nVerifying commitment %v with auditpath %v, key %v and version %v\n", expectedDigest, p.auditPath, key, version)
 	depth := p.getDepth(version)
 	pathMap := make(map[string][]byte)
@@ -44,15 +44,15 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint) bool {
 	return bytes.Equal(expectedDigest, recomputed)
 }
 
-func (p *Proof) getDepth(index uint) uint {
-	return uint(math.Ceil(math.Log2(float64(index + 1))))
+func (p *Proof) getDepth(index uint64) uint64 {
+	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
 
-func pathKey(index, layer uint) string {
+func pathKey(index, layer uint64) string {
 	return fmt.Sprintf("%d|%d", index, layer)
 }
 
-func (p *Proof) rootHash(auditPath map[string][]byte, key []byte, index, layer, version uint) []byte {
+func (p *Proof) rootHash(auditPath map[string][]byte, key []byte, index, layer, version uint64) []byte {
 	var digest []byte
 	p.log.Debug("Calling rootHash with auditpath %v, key %v, index %v, layer %v and version %v\n", auditPath, key, index, layer, version)
 	//if version >= index+pow(2, layer)-1 {

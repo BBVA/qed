@@ -55,7 +55,7 @@ func NewFakeCleanTree(frozen storage.Store, hasher hashing.Hasher, l log.Logger)
 	return tree
 }
 
-func NewFakeProof(auditPath []Node, index uint, hasher hashing.Hasher) *Proof {
+func NewFakeProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof {
 
 	proof := NewProof(auditPath, index, hasher)
 	proof.leafHasher = fakeLeafHasherF(hasher)
