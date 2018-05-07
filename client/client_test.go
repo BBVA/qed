@@ -78,10 +78,14 @@ func BenchmarkAdd(b *testing.B) {
 }
 
 func BenchmarkAddAndVerify(b *testing.B) {
+	b.ResetTimer()
 	b.N = 10000
 	for n := 0; n < b.N; n++ {
 		snapshot, _ := client.Add(string(n))
 		proof, _ := client.Membership(snapshot.Event, snapshot.Version)
-		client.Verify(proof, snapshot)
+		correct := client.Verify(proof, snapshot)
+		if !correct {
+			b.Fatal("correct should be true")
+		}
 	}
 }

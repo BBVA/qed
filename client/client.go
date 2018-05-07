@@ -102,8 +102,8 @@ func (c HttpClient) Membership(key []byte, version uint64) (*balloon.Proof, erro
 func (c HttpClient) Verify(proof *balloon.Proof, snap *apihttp.Snapshot) bool {
 
 	return proof.Verify(&balloon.Commitment{
-		snap.HyperDigest,
 		snap.HistoryDigest,
+		snap.HyperDigest,
 		snap.Version,
 	}, snap.Event)
 
