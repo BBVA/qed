@@ -220,7 +220,7 @@ type MembershipProof struct {
 }
 
 func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof *MembershipProof) (err error) {
-	if layer == 0 {
+	if layer == 0 || index > version {
 		return
 	}
 
