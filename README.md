@@ -75,7 +75,7 @@ amounts of data for:
     go run qed.go -k path -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key "test event"
 	
 - verify event
-    go run qed.go -k path -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key "test event --verify
+    go run qed.go -k path -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key "test event" --verify
 
 ### Go profiling
 
@@ -85,6 +85,8 @@ amounts of data for:
     go tool pprof hyper.test cpu.out 
     go tool pprof hyper.test cpu.out mem.out
      
+The server spawns an http server in port 6060 with the pprof api as described in https://golang.org/pkg/net/http/pprof/
+
 ## Acme section
 
     uncomment Edit .s/^(	| *)\/\//\1/g
