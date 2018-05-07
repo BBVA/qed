@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
-vegeta attack -connections 1 -workers 1 -rate 1500 -duration=10s -targets=stress/targets.txt > result.bin
-cat result.bin | vegeta report -reporter='hist[10ms,100ms,500ms,1s,10s,1m]'
+echo Clean old data
+rm /tmp/targets.txt
+
+echo Generate event json
+for i in {1..100000}; do echo -e "{\"message\": \"Load Test $i\"}" > /tmp/event$i.json;done
+
+echo Generate targets file
+for i in {1..100000}; do echo -e "POST http://localhost:8080/events\nContent-Type: application/json\nApi-key: this-is-my-dummy-key\n@/tmp/event$i.json\n" >> /tmp/targets.txt;done
+
+echo Execute Vegeta benchmark
+vegeta attack -timeout 100s -rate 1500 -duration=60s -targets=/tmp/targets.txt > result.bin 
+cat result.bin | vegeta report
 cat result.bin | vegeta report -reporter='plot' > plot.html
