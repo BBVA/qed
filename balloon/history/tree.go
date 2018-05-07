@@ -97,10 +97,11 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 	return result
 }
 
-func (t Tree) Prove(key []byte, version uint64) chan *MembershipProof {
+func (t Tree) Prove(key []byte, index, version uint64) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
 	t.ops <- &proof{
 		key,
+		index,
 		version,
 		result,
 	}
@@ -130,9 +131,9 @@ type add struct {
 }
 
 type proof struct {
-	key     []byte
-	version uint64
-	result  chan *MembershipProof
+	key            []byte
+	index, version uint64
+	result         chan *MembershipProof
 }
 
 type close struct {
@@ -155,7 +156,7 @@ func (t *Tree) operations() chan interface{} {
 					}
 					msg.result <- digest
 				case *proof:
-					proof, err := t.prove(msg.key, msg.version)
+					proof, err := t.prove(msg.key, msg.index, msg.version)
 					if err != nil {
 						t.log.Errorf("Operations error: %v", err)
 					}
@@ -189,9 +190,8 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	return rootDigest, nil
 }
 
-func (t Tree) prove(key []byte, version uint64) (*MembershipProof, error) {
+func (t Tree) prove(key []byte, index, version uint64) (*MembershipProof, error) {
 	var proof MembershipProof
-	index, _ := binary.Uvarint(key)
 	err := t.auditPath(key, index, 0, t.getDepth(version), version, &proof)
 	if err != nil {
 		return nil, err
@@ -210,7 +210,7 @@ type MembershipProof struct {
 }
 
 func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof *MembershipProof) (err error) {
-	if layer == 0 || index > version {
+	if layer == 0 {
 		return
 	}
 

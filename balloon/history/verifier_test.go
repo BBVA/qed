@@ -106,7 +106,7 @@ func TestAddAndVerify(t *testing.T) {
 	value := uint64(0)
 
 	commitment := <-ht.Add(key, uInt64AsBytes(value))
-	membershipProof := <-ht.Prove(key, value)
+	membershipProof := <-ht.Prove(key, 0, value)
 
 	proof := NewProof(membershipProof.Nodes, value, hasher)
 	correct := proof.Verify(commitment, key, value)
@@ -122,14 +122,14 @@ func TestAddAndVerify256(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	l := log.NewDebug(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	ht := NewTree(store, hasher, l)
 
-	for i := 0; i < 256; i++ {
+	for i := uint64(0); i < 256; i++ {
 		key := randomBytes(128)
 		value := uint64(i)
 		commitment := <-ht.Add(key, uInt64AsBytes(value))
-		membershipProof := <-ht.Prove(key, value)
+		membershipProof := <-ht.Prove(key, i, value)
 		proof := NewProof(membershipProof.Nodes, value, hasher)
 		correct := proof.Verify(commitment, key, value)
 
@@ -137,7 +137,7 @@ func TestAddAndVerify256(t *testing.T) {
 			fmt.Printf("C %+v\n", commitment)
 			fmt.Printf("MP %+v\n", membershipProof)
 			fmt.Printf("P %+v\n", proof)
-			// graphTree(ht, key, value)
+			graphTree(ht, key, value)
 			t.Fatalf("incorrect test case: %d", i)
 		}
 	}
