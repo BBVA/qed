@@ -77,10 +77,9 @@ func TestProve(t *testing.T) {
 
 	expectedPath := [][]byte{
 		[]byte{0x01},
-		[]byte{0x53},
-		[]byte{0x50},
+		[]byte{0x00},
 	}
-	proof := <-ht.Prove([]byte{0x5}, 6)
+	proof := <-ht.Prove([]byte{0x5}, 6, 6)
 	graphTree(ht, []byte{0x5}, 6)
 	fmt.Println(proof)
 	if !comparePaths(expectedPath, proof.Nodes) {
@@ -174,7 +173,7 @@ type node struct {
 }
 
 func (n node) String() string {
-	return fmt.Sprintf("[%s] (%d,%d)", n.digest, n.layer, n.index)
+	return fmt.Sprintf("[%s] (%d,%d)", n.digest, n.index, n.layer)
 }
 
 func rootnode(t *Tree, version uint64) *node {
