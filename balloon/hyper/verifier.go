@@ -40,7 +40,7 @@ func (p Proof) String() string {
 	return fmt.Sprintf(`{"id": "%s", "auditPathLen": "%d"}`, p.id, len(p.auditPath))
 }
 
-func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint) bool {
+func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
 	p.log.Infof("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
 	valueBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))

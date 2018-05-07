@@ -29,7 +29,7 @@ func (b fakeBalloon) Close() chan bool {
 	return b.stopch
 }
 
-func (b fakeBalloon) GenMembershipProof(event []byte, version uint) chan *balloon.MembershipProof {
+func (b fakeBalloon) GenMembershipProof(event []byte, version uint64) chan *balloon.MembershipProof {
 	return b.proof
 }
 
@@ -141,7 +141,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestMembership(t *testing.T) {
-	version := uint(1)
+	version := uint64(1)
 	key := []byte("this is a sample event")
 	query, _ := json.Marshal(MembershipQuery{
 		key,

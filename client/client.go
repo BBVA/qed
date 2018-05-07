@@ -79,7 +79,7 @@ func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
 }
 
-func (c HttpClient) Membership(key []byte, version uint) (*balloon.Proof, error) {
+func (c HttpClient) Membership(key []byte, version uint64) (*balloon.Proof, error) {
 
 	query, _ := json.Marshal(&apihttp.MembershipQuery{
 		key,

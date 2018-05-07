@@ -23,7 +23,7 @@ func NewFakeVerifiable(result bool) *FakeVerifiable {
 	return &FakeVerifiable{result}
 }
 
-func (f *FakeVerifiable) Verify(commitment, event []byte, version uint) bool {
+func (f *FakeVerifiable) Verify(commitment, event []byte, version uint64) bool {
 	return f.result
 }
 
@@ -33,26 +33,26 @@ func TestVerify(t *testing.T) {
 		exists         bool
 		hyperOK        bool
 		historyOK      bool
-		queryVersion   uint
-		actualVersion  uint
+		queryVersion   uint64
+		actualVersion  uint64
 		expectedResult bool
 	}{
 		// Event exists, queryVersion <= actualVersion, and both trees verify it
-		{true, true, true, uint(0), uint(0), true},
+		{true, true, true, uint64(0), uint64(0), true},
 		// Event exists, queryVersion <= actualVersion, but HyperTree does not verify it
-		{true, false, true, uint(0), uint(0), false},
+		{true, false, true, uint64(0), uint64(0), false},
 		// Event exists, queryVersion <= actualVersion, but HistoryTree does not verify it
-		{true, true, false, uint(0), uint(0), false},
+		{true, true, false, uint64(0), uint64(0), false},
 
 		// Event exists, queryVersion > actualVersion, and both trees verify it
-		{true, true, true, uint(1), uint(0), true},
+		{true, true, true, uint64(1), uint64(0), true},
 		// Event exists, queryVersion > actualVersion, but HyperTree does not verify it
-		{true, false, true, uint(1), uint(0), false},
+		{true, false, true, uint64(1), uint64(0), false},
 
 		// Event does not exist, HyperTree verifies it
-		{false, true, false, uint(0), uint(0), true},
+		{false, true, false, uint64(0), uint64(0), true},
 		// Event does not exist, HyperTree does not verify it
-		{false, false, false, uint(0), uint(0), false},
+		{false, false, false, uint64(0), uint64(0), false},
 	}
 
 	for i, c := range testCases {

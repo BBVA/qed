@@ -41,7 +41,7 @@ func TestAdd(t *testing.T) {
 		event         string
 		hyperDigest   []byte
 		historyDigest []byte
-		version       uint
+		version       uint64
 	}{
 		{"test event 0", []byte{0x4a}, []byte{0x4a}, 0},
 		{"test event 1", []byte{0x1}, []byte{0x00}, 1},
@@ -90,7 +90,7 @@ func TestGenMembershipProof(t *testing.T) {
 	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
 
 	key := []byte{0x5a}
-	var version uint = 0
+	var version uint64 = 0
 	expectedHyperProof := [][]byte{
 		[]byte{0x00},
 		[]byte{0x00},

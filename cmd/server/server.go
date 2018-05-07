@@ -22,7 +22,7 @@ func main() {
 	flag.StringVar(&dbPath, "path", "/tmp/balloon.db", "Set default storage path.")
 	flag.Uint64Var(&cacheSize, "cache", storage.SIZE25, "Initialize and reserve custom cache size.")
 	flag.StringVar(&storageName, "storage", "badger", "Choose between different storage backends. Eg badge|bolt")
-	flag.StringVar(&logLevel, "log", "silent", "Choose between log levels: silent, error, info and debug")
+	flag.StringVar(&logLevel, "log", "error", "Choose between log levels: silent, error, info and debug")
 	flag.Parse()
 
 	s, logger := server.NewServer(httpEndpoint, dbPath, cacheSize, storageName, logLevel)
