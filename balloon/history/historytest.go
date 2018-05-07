@@ -4,6 +4,8 @@
 package history
 
 import (
+	"fmt"
+	"runtime"
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/balloon/storage"
 	"verifiabledata/log"
@@ -62,4 +64,13 @@ func NewFakeProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof 
 	proof.interiorHasher = fakeInteriorHasherF(hasher)
 
 	return proof
+}
+
+func where(calldepth int) string {
+	_, file, line, ok := runtime.Caller(calldepth)
+	if !ok {
+		file = "???"
+		line = 0
+	}
+	return fmt.Sprintf("%s:%d", file, line)
 }
