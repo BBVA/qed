@@ -7,7 +7,7 @@ package cli
 import (
 	"encoding/hex"
 	"fmt"
-	"verifiabledata/balloon"
+	"verifiabledata/api/apihttp"
 
 	"github.com/spf13/cobra"
 )
@@ -48,11 +48,12 @@ func newMembershipCommand(ctx *Context) *cobra.Command {
 			if verify {
 				hdBytes, _ := hex.DecodeString(hyperDigest)
 				htdBytes, _ := hex.DecodeString(historyDigest)
-				commitment := &balloon.Commitment{htdBytes, hdBytes, version}
+				//commitment := &balloon.Commitment{htdBytes, hdBytes, version}
+				snapshot := &apihttp.Snapshot{hdBytes, htdBytes, version, event}
 
 				fmt.Printf("Verifying with commitment: \n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
 					hyperDigest, historyDigest, version)
-				if proof.Verify(commitment, event) {
+				if ctx.client.Verify(proof, snapshot) { //proof.Verify(commitment, event) {
 					fmt.Println("Verify: OK")
 				} else {
 					fmt.Println("Verify: KO")
