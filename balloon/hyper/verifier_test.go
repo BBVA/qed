@@ -22,7 +22,7 @@ func TestVerify(t *testing.T) {
 
 	expectedCommitment := []byte{0xff}
 	key := []byte{0xff}
-	value := uint(1)
+	value := uint64(1)
 	auditPath := [][]byte{
 		[]byte{0x00},
 		[]byte{0x00},
@@ -53,10 +53,10 @@ func TestAddAndVerify(t *testing.T) {
 	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(storage.SIZE20), store, hasher, l)
 
 	key := hasher([]byte("a test event"))
-	value := uint(0)
+	value := uint64(0)
 
 	valueBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
+	binary.LittleEndian.PutUint64(valueBytes, value)
 
 	commitment := <-ht.Add(key, valueBytes)
 
@@ -86,10 +86,10 @@ func TestAddAndVerifyXor(t *testing.T) {
 	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher, l)
 
 	key := hasher([]byte("a test event"))
-	value := uint(0)
+	value := uint64(0)
 
 	valueBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
+	binary.LittleEndian.PutUint64(valueBytes, value)
 
 	commitment := <-ht.Add(key, valueBytes)
 	membershipProof := <-ht.Prove(key)
@@ -118,10 +118,10 @@ func TestAddAndVerifyPearson(t *testing.T) {
 	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher, l)
 
 	key := hasher([]byte("a test event"))
-	value := uint(0)
+	value := uint64(0)
 
 	valueBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
+	binary.LittleEndian.PutUint64(valueBytes, value)
 
 	commitment := <-ht.Add(key, valueBytes)
 

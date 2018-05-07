@@ -13,15 +13,15 @@ import (
 )
 
 type Verifiable interface {
-	Verify([]byte, []byte, uint) bool
+	Verify([]byte, []byte, uint64) bool
 }
 
 type Proof struct {
 	Exists        bool
 	HyperProof    Verifiable
 	HistoryProof  Verifiable
-	QueryVersion  uint
-	ActualVersion uint
+	QueryVersion  uint64
+	ActualVersion uint64
 	hasher        hashing.Hasher
 	log           *log.Logger
 }
@@ -30,8 +30,8 @@ func NewProof(
 	exists bool,
 	hyperProof Verifiable,
 	historyProof Verifiable,
-	queryVersion uint,
-	actualVersion uint,
+	queryVersion uint64,
+	actualVersion uint64,
 	hasher hashing.Hasher,
 ) *Proof {
 	return &Proof{

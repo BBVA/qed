@@ -13,13 +13,13 @@ type Event struct {
 
 type MembershipQuery struct {
 	Key     []byte
-	Version uint
+	Version uint64
 }
 
 type Snapshot struct {
 	HyperDigest   []byte
 	HistoryDigest []byte
-	Version       uint
+	Version       uint64
 	Event         []byte
 	//TODO: implement this
 	// EventDigest   string
@@ -27,7 +27,7 @@ type Snapshot struct {
 
 type HistoryNode struct {
 	Digest       []byte
-	Index, Layer uint
+	Index, Layer uint64
 }
 
 type Proofs struct {
@@ -40,7 +40,7 @@ type MembershipProof struct {
 	KeyDigest                   []byte
 	IsMember                    bool
 	Proofs                      *Proofs
-	QueryVersion, ActualVersion uint
+	QueryVersion, ActualVersion uint64
 }
 
 func ToSnapshot(commitment *balloon.Commitment, event []byte) *Snapshot {

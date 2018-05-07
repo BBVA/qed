@@ -16,7 +16,7 @@ import (
 
 type Balloon interface {
 	Add(event []byte) chan *Commitment
-	GenMembershipProof(event []byte, version uint) chan *MembershipProof
+	GenMembershipProof(event []byte, version uint64) chan *MembershipProof
 	Close() chan bool
 }
 
@@ -24,7 +24,7 @@ type HyperBalloon struct {
 	history *history.Tree
 	hyper   *hyper.Tree
 	hasher  hashing.Hasher
-	version uint
+	version uint64
 	ops     chan interface{} // serialize operations
 	log     log.Logger
 }
@@ -32,15 +32,15 @@ type HyperBalloon struct {
 type Commitment struct {
 	HistoryDigest []byte
 	HyperDigest   []byte
-	Version       uint
+	Version       uint64
 }
 
 type MembershipProof struct {
 	Exists        bool
 	HyperProof    [][]byte
 	HistoryProof  []history.Node
-	QueryVersion  uint
-	ActualVersion uint
+	QueryVersion  uint64
+	ActualVersion uint64
 	KeyDigest     []byte
 }
 
@@ -68,7 +68,7 @@ func (b HyperBalloon) Add(event []byte) chan *Commitment {
 	return result
 }
 
-func (b HyperBalloon) GenMembershipProof(event []byte, version uint) chan *MembershipProof {
+func (b HyperBalloon) GenMembershipProof(event []byte, version uint64) chan *MembershipProof {
 	result := make(chan *MembershipProof)
 	b.ops <- &membership{
 		event,
@@ -97,7 +97,7 @@ type add struct {
 
 type membership struct {
 	event   []byte
-	version uint
+	version uint64
 	result  chan *MembershipProof
 }
 
@@ -152,7 +152,7 @@ func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
 	}, nil
 }
 
-func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*MembershipProof, error) {
+func (b *HyperBalloon) genMembershipProof(event []byte, version uint64) (*MembershipProof, error) {
 	digest := b.hasher(event)
 
 	var hyperProof *hyper.MembershipProof
@@ -161,11 +161,11 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint) (*Membersh
 	hyperProof = <-b.hyper.Prove(digest)
 
 	var exists bool
-	var actualVersion uint
+	var actualVersion uint64
 
 	if len(hyperProof.ActualValue) > 0 {
 		exists = true
-		actualVersion = uint(binary.LittleEndian.Uint64(hyperProof.ActualValue))
+		actualVersion = uint64(binary.LittleEndian.Uint64(hyperProof.ActualValue))
 	}
 
 	if exists && actualVersion <= version {

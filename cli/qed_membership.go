@@ -14,7 +14,7 @@ import (
 
 func newMembershipCommand(ctx *Context) *cobra.Command {
 
-	var version uint
+	var version uint64
 	var verify bool
 	var key, hyperDigest, historyDigest string
 
@@ -48,7 +48,7 @@ func newMembershipCommand(ctx *Context) *cobra.Command {
 			if verify {
 				hdBytes, _ := hex.DecodeString(hyperDigest)
 				htdBytes, _ := hex.DecodeString(historyDigest)
-				commitment := &balloon.Commitment{htdBytes, hdBytes, uint(version)}
+				commitment := &balloon.Commitment{htdBytes, hdBytes, version}
 
 				fmt.Printf("Verifying with commitment: \n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
 					hyperDigest, historyDigest, version)
@@ -64,7 +64,7 @@ func newMembershipCommand(ctx *Context) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&key, "key", "", "Key to query")
-	cmd.Flags().UintVar(&version, "version", 0, "Version to query")
+	cmd.Flags().Uint64Var(&version, "version", 0, "Version to query")
 	cmd.Flags().BoolVar(&verify, "verify", false, "Do verify received proof")
 	cmd.Flags().StringVar(&hyperDigest, "hyperDigest", "", "Digest of the hyper tree")
 	cmd.Flags().StringVar(&historyDigest, "historyDigest", "", "Digest of the history tree")
