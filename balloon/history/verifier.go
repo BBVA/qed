@@ -24,7 +24,7 @@ func NewProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof {
 		index,
 		leafHasherF(hasher),
 		interiorHasherF(hasher),
-		log.NewError(os.Stdout, "HistoryProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
+		log.NewDebug(os.Stdout, "HistoryProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 
@@ -33,7 +33,7 @@ func (p Proof) String() string {
 }
 
 func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint64) bool {
-	p.log.Debug("\nVerifying commitment %v with auditpath %v, key %v and version %v\n", expectedDigest, p.auditPath, key, version)
+	p.log.Debugf("\nVerifying commitment %v with auditpath %v, key %x and version %v\n", expectedDigest, p.auditPath, key, version)
 	depth := p.getDepth(version)
 	pathMap := make(map[string][]byte)
 	for _, n := range p.auditPath {
@@ -54,9 +54,9 @@ func pathKey(index, layer uint64) string {
 
 func (p *Proof) rootHash(auditPath map[string][]byte, key []byte, index, layer, version uint64) []byte {
 	var digest []byte
-	p.log.Debug("Calling rootHash with auditpath %v, key %v, index %v, layer %v and version %v\n", auditPath, key, index, layer, version)
+	p.log.Debugf("Calling rootHash with auditpath %v, key %x, index %v, layer %v and version %v\n", auditPath, key, index, layer, version)
 	//if version >= index+pow(2, layer)-1 {
-	p.log.Debug("Extracting hash from audit path at index %v and layer %v :=> ", index, layer)
+	p.log.Debugf("Extracting hash from audit path at index %v and layer %v :=> ", index, layer)
 	digest, ok := auditPath[pathKey(index, layer)]
 	if ok {
 		p.log.Debug("found")
@@ -68,20 +68,20 @@ func (p *Proof) rootHash(auditPath map[string][]byte, key []byte, index, layer, 
 	switch {
 	// we are at a leaf: A_v(i,0)
 	case layer == 0 && version >= index:
-		p.log.Debug("Hashing leaf with key %v\n", key)
+		p.log.Debugf("Hashing leaf with key %x\n", key)
 		digest = p.leafHasher(Zero, key)
 		break
 		// A_v(i,r) with one empty children
 	case version < index+pow(2, layer-1):
 		hash := p.rootHash(auditPath, key, index, layer-1, version)
-		p.log.Debug("Hashing node with empty at index %v and layer %v\n", index, layer)
+		p.log.Debugf("Hashing node with empty at index %v and layer %v\n", index, layer)
 		digest = p.leafHasher(One, hash)
 		break
 		// A_v(i,r) with no non-empty children
 	case version >= index+pow(2, layer-1):
 		hash1 := p.rootHash(auditPath, key, index, layer-1, version)
 		hash2 := p.rootHash(auditPath, key, index+pow(2, layer-1), layer-1, version)
-		p.log.Debug("Hashing node at index %v and layer %v\n", index, layer)
+		p.log.Debugf("Hashing node at index %v and layer %v\n", index, layer)
 		digest = p.interiorHasher(One, hash1, hash2)
 		break
 	}
