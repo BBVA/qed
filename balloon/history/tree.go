@@ -11,7 +11,6 @@ package history
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math"
 
 	"verifiabledata/balloon/hashing"
@@ -211,9 +210,10 @@ type MembershipProof struct {
 }
 
 func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof *MembershipProof) (err error) {
-	if layer == 0 {
+	if layer == 0 || index > version {
 		return
 	}
+
 	// the number of events to the left of the node
 	n := index + pow(2, layer-1)
 	if target < n {
@@ -236,7 +236,7 @@ func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof 
 	node := new(Node)
 	node.Index = index
 	node.Layer = layer - 1
-	fmt.Println("NODE INDEX = ", index)
+
 	node.Digest, err = t.rootHash(key, node.Index, node.Layer, version)
 	if err != nil {
 		return
@@ -283,7 +283,6 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 		break
 	// A_v(i,r)
 	case version < index+pow(2, layer-1):
-		fmt.Println("version ", version, " index ", index, " pow ", index+pow(2, layer-1))
 		hash, err := t.rootHash(eventDigest, index, layer-1, version)
 		if err != nil {
 			return nil, err
