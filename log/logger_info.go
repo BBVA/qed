@@ -26,21 +26,21 @@ func newInfo(out io.Writer, prefix string, flag int) *infoLogger {
 
 // A impl 'l infoLogger' verifiabledata/log.Logger
 func (l infoLogger) Error(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
+	l.Output(caller, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 func (l infoLogger) Info(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
+	l.Output(caller, fmt.Sprint(v...))
 }
 
 func (l infoLogger) Errorf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
+	l.Output(caller, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
 func (l infoLogger) Infof(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
+	l.Output(caller, fmt.Sprintf(format, v...))
 }
 
 func (l infoLogger) Debug(v ...interface{})                 { return }

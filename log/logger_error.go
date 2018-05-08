@@ -26,12 +26,12 @@ func newError(out io.Writer, prefix string, flag int) *errorLogger {
 
 // A impl 'l errorLogger' verifiabledata/log.Logger
 func (l errorLogger) Error(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
+	l.Output(caller, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 func (l errorLogger) Errorf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
+	l.Output(caller, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
