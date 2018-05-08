@@ -14,12 +14,17 @@ import (
 
 var (
 	client *HttpClient
+	path   string
 )
 
-func init() {
-	path := "/var/tmp/balloonClientTest"
+func resetPath() {
 	os.RemoveAll(path)
 	os.MkdirAll(path, os.FileMode(0755))
+}
+
+func init() {
+	path = "/var/tmp/balloonClientTest"
+	resetPath()
 
 	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger")
 
@@ -72,22 +77,29 @@ func TestVerify(t *testing.T) {
 	}
 }
 
-func BenchmarkAdd(b *testing.B) {
-	b.N = 10000
-	for n := 0; n < b.N; n++ {
+func benchmarkAdd(i int, b *testing.B) {
+	resetPath()
+	b.ResetTimer()
+	for n := 0; n < i; n++ {
 		client.Add(string(n))
 	}
 }
 
-func BenchmarkAddAndVerify(b *testing.B) {
+func BenchmarkAdd10(b *testing.B)       { benchmarkAdd(10, b) }
+func BenchmarkAdd100(b *testing.B)      { benchmarkAdd(100, b) }
+func BenchmarkAdd1000(b *testing.B)     { benchmarkAdd(1000, b) }
+func BenchmarkAdd10000(b *testing.B)    { benchmarkAdd(10000, b) }
+func BenchmarkAdd100000(b *testing.B)   { benchmarkAdd(100000, b) }
+func BenchmarkAdd10000000(b *testing.B) { benchmarkAdd(10000000, b) }
+
+func BenchmarkVerify(b *testing.B) {
 	b.ResetTimer()
-	b.N = 10000
+	b.N = 100000
 	for n := 0; n < b.N; n++ {
 		snapshot, _ := client.Add(string(n))
 		proof, _ := client.Membership(snapshot.Event, snapshot.Version)
-		correct := client.Verify(proof, snapshot)
-		if !correct {
-			b.Fatal("correct should be true")
+		if !client.Verify(proof, snapshot) {
+			b.Fatalf("correct  at %d should be true", n)
 		}
 	}
 }
