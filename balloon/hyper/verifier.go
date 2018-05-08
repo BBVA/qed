@@ -38,7 +38,7 @@ func (p Proof) String() string {
 }
 
 func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
-	log.Infof("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
+	log.Debugf("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
 	valueBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
 
