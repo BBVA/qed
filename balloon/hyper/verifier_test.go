@@ -47,7 +47,7 @@ func TestAddAndVerify(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(storage.SIZE20), store, hasher)
+	ht := NewTree("/var/tmp/balloon.db", cache.NewSimpleCache(storage.SIZE20), store, hasher)
 
 	key := hasher([]byte("a test event"))
 	value := uint64(0)
@@ -63,7 +63,7 @@ func TestAddAndVerify(t *testing.T) {
 		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
-	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, hasher)
+	proof := NewProof("/var/tmp/balloon.db", membershipProof.AuditPath, hasher)
 
 	correct := proof.Verify(commitment, key, value)
 
@@ -79,7 +79,7 @@ func TestAddAndVerifyXor(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.XorHasher
-	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
+	ht := NewTree("/var/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
 
 	key := hasher([]byte("a test event"))
 	value := uint64(0)
@@ -94,7 +94,7 @@ func TestAddAndVerifyXor(t *testing.T) {
 		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
-	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, hasher)
+	proof := NewProof("/var/tmp/balloon.db", membershipProof.AuditPath, hasher)
 
 	correct := proof.Verify(commitment, key, value)
 
@@ -106,11 +106,11 @@ func TestAddAndVerifyXor(t *testing.T) {
 
 func TestAddAndVerifyPearson(t *testing.T) {
 
-	store, closeF := openBadgerStorage("/tmp/balloon.db") // openBPlusStorage()
+	store, closeF := openBadgerStorage("/var/tmp/balloon.db") // openBPlusStorage()
 	defer closeF()
 
 	hasher := hashing.Pearson
-	ht := NewTree("/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
+	ht := NewTree("/var/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
 
 	key := hasher([]byte("a test event"))
 	value := uint64(0)
@@ -126,7 +126,7 @@ func TestAddAndVerifyPearson(t *testing.T) {
 		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
-	proof := NewProof("/tmp/balloon.db", membershipProof.AuditPath, hasher)
+	proof := NewProof("/var/tmp/balloon.db", membershipProof.AuditPath, hasher)
 
 	correct := proof.Verify(commitment, key, value)
 

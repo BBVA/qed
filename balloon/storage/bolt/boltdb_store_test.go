@@ -165,10 +165,10 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 }
 
 func openBoltStorage() (*BoltStorage, func()) {
-	store := NewBoltStorage("/tmp/bolt_store_test.db", "test")
+	store := NewBoltStorage("/var/tmp/bolt_store_test.db", "test")
 	return store, func() {
 		store.Close()
-		deleteFile("/tmp/bolt_store_test.db")
+		deleteFile("/var/tmp/bolt_store_test.db")
 	}
 }
 

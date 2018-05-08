@@ -127,11 +127,11 @@ func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
 }
 
 func openBadgerStorage() (*badger.BadgerStorage, func()) {
-	store := badger.NewBadgerStorage("/tmp/history_store_test.db")
+	store := badger.NewBadgerStorage("/var/tmp/history_store_test.db")
 	return store, func() {
 		fmt.Println("Cleaning...")
 		store.Close()
-		deleteFile("/tmp/history_store_test.db")
+		deleteFile("/var/tmp/history_store_test.db")
 	}
 }
 
