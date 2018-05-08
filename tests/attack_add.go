@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"net/http"
@@ -58,7 +59,7 @@ func myTargeter(endpoint string, hdr http.Header) vegeta.Targeter {
 			return vegeta.ErrNilTarget
 		}
 
-		tgt.Body = []byte(fmt.Sprintf(`{"event": "%d"}`, time.Now().UnixNano()))
+		tgt.Body = []byte(fmt.Sprintf(`{"event": "%s"}`, []byte(base64.StdEncoding.EncodeToString([]byte(time.Now().String())))))
 		tgt.Header = hdr
 		tgt.Method = "POST"
 		tgt.URL = endpoint
