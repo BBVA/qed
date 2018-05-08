@@ -31,7 +31,7 @@ func NewQedCommand(ctx *Context) *cobra.Command {
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 
-			log.SetLogger("QedServer", logLevel)
+			log.SetLogger("QedClient", logLevel)
 			ctx.client = client.NewHttpClient(endpoint, apiKey)
 
 		},
