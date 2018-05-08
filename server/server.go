@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"time"
 
 	"verifiabledata/api/apihttp"
@@ -23,10 +22,9 @@ import (
 	"verifiabledata/log"
 )
 
-func NewServer(httpEndpoint string, dbPath string, cacheSize uint64, storageName string, logLevel string) (*http.Server, log.Logger) {
+func NewServer(httpEndpoint string, dbPath string, apiKey string, cacheSize uint64, storageName string) *http.Server {
 
 	var frozen, leaves storage.Store
-	var l log.Logger
 
 	switch storageName {
 	case "badger":
@@ -36,41 +34,26 @@ func NewServer(httpEndpoint string, dbPath string, cacheSize uint64, storageName
 		frozen = bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", dbPath), "frozen")
 		leaves = bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", dbPath), "leaves")
 	default:
-		fmt.Print("Please select a valid storage backend")
-		os.Exit(-1)
-	}
-
-	switch logLevel {
-	case "silent":
-		l = log.NewSilent()
-	case "error":
-		l = log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	case "info":
-		l = log.NewInfo(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	case "debug":
-		l = log.NewDebug(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	default:
-		fmt.Print("Please select a valid log level")
-		os.Exit(-1)
+		log.Error("Please select a valid storage backend")
 	}
 
 	cache := cache.NewSimpleCache(cacheSize)
 	hasher := hashing.Sha256Hasher
-	history := history.NewTree(frozen, hasher, l)
-	hyper := hyper.NewTree(dbPath, cache, leaves, hasher, l)
-	balloon := balloon.NewHyperBalloon(hasher, history, hyper, l)
+	history := history.NewTree(frozen, hasher)
+	hyper := hyper.NewTree(apiKey, cache, leaves, hasher)
+	balloon := balloon.NewHyperBalloon(hasher, history, hyper)
 
 	// start profiler
 	go func() {
-		l.Info(http.ListenAndServe("localhost:6060", nil))
+		log.Info(http.ListenAndServe("localhost:6060", nil))
 	}()
 
 	router := apihttp.NewApiHttp(balloon)
 
 	return &http.Server{
 		Addr:    httpEndpoint,
-		Handler: logHandler(router, l),
-	}, l
+		Handler: logHandler(router),
+	}
 
 }
 
@@ -93,17 +76,18 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-// WriteLog Logs the Http Status for a request into fileHandler and returns a httphandler function which is a wrapper to log the requests.
-func logHandler(handle http.Handler, l log.Logger) http.HandlerFunc {
+// WriteLog Logs the Http Status for a request into fileHandler and returns a
+// httphandler function which is a wrapper to log the requests.
+func logHandler(handle http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
 		start := time.Now()
 		writer := statusWriter{w, 0, 0}
 		handle.ServeHTTP(&writer, request)
 		latency := time.Now().Sub(start)
 
-		l.Debugf("Request: lat %d %+v", latency, request)
+		log.Debugf("Request: lat %d %+v", latency, request)
 		if writer.status >= 400 {
-			l.Infof("Bad Request: %d %+v", latency, request)
+			log.Infof("Bad Request: %d %+v", latency, request)
 		}
 	}
 }

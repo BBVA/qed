@@ -64,11 +64,10 @@ type Tree struct {
 	interiorHasher interiorHasher
 	stats          *stats
 	ops            chan interface{} // serialize operations
-	log            log.Logger
 }
 
 // NewTree returns a new history tree
-func NewTree(frozen storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
+func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 
 	t := &Tree{
 		frozen,
@@ -76,7 +75,6 @@ func NewTree(frozen storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
 		interiorHasherF(hasher),
 		new(stats),
 		nil,
-		l,
 	}
 	// start tree goroutine to handle
 	// tree operations
@@ -152,13 +150,13 @@ func (t *Tree) operations() chan interface{} {
 				case *add:
 					digest, err := t.add(msg.digest, msg.index)
 					if err != nil {
-						t.log.Errorf("Operations error: %v", err)
+						log.Errorf("Operations error: %v", err)
 					}
 					msg.result <- digest
 				case *proof:
 					proof, err := t.prove(msg.key, msg.index, msg.version)
 					if err != nil {
-						t.log.Errorf("Operations error: %v", err)
+						log.Errorf("Operations error: %v", err)
 					}
 					msg.result <- proof
 				case *close:
@@ -166,7 +164,7 @@ func (t *Tree) operations() chan interface{} {
 					msg.result <- true
 					return
 				default:
-					t.log.Error("Hyper tree Run() message not implemented!!")
+					log.Error("Hyper tree Run() message not implemented!!")
 				}
 
 			}

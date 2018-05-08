@@ -6,8 +6,6 @@ package balloon
 
 import (
 	"fmt"
-	"log"
-	"os"
 
 	"verifiabledata/balloon/hashing"
 )
@@ -23,7 +21,6 @@ type Proof struct {
 	QueryVersion  uint64
 	ActualVersion uint64
 	hasher        hashing.Hasher
-	log           *log.Logger
 }
 
 func NewProof(
@@ -41,7 +38,6 @@ func NewProof(
 		queryVersion,
 		actualVersion,
 		hasher,
-		log.New(os.Stdout, "BalloonProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 

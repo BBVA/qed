@@ -2,7 +2,6 @@ package hyper
 
 import (
 	"bytes"
-	"fmt"
 	"os"
 
 	"verifiabledata/balloon/hashing"
@@ -54,13 +53,13 @@ func openBoltStorage(path string) (*bolt.BoltStorage, func()) {
 func deleteFile(path string) {
 	err := os.RemoveAll(path)
 	if err != nil {
-		fmt.Printf("Unable to remove db file %s", err)
+		log.Debugf("Unable to remove db file %s", err)
 	}
 }
 
-func NewFakeTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
+func NewFakeTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
 
-	tree := NewTree(id, cache, leaves, hasher, l)
+	tree := NewTree(id, cache, leaves, hasher)
 	tree.leafHasher = fakeLeafHasherF(hasher)
 	tree.interiorHasher = fakeInteriorHasherF(hasher)
 

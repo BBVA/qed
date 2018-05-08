@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"os"
 
 	"verifiabledata/balloon/hashing"
 	"verifiabledata/log"
@@ -20,7 +19,6 @@ type Proof struct {
 	digestLength   int
 	leafHasher     leafHasher
 	interiorHasher interiorHasher
-	log            log.Logger
 }
 
 func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher) *Proof {
@@ -32,7 +30,6 @@ func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher) *Proof {
 		digestLength,
 		leafHasherF(hasher),
 		interiorHasherF(hasher),
-		log.NewError(os.Stdout, "HyperProof", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile),
 	}
 }
 
@@ -41,7 +38,7 @@ func (p Proof) String() string {
 }
 
 func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
-	p.log.Infof("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
+	log.Infof("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
 	valueBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
 
@@ -51,7 +48,7 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
 }
 
 func (p *Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
-	p.log.Infof("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
+	log.Infof("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
 	if pos.height == 0 {
 		return p.leafHasher(p.id, value, pos.base)
 	}

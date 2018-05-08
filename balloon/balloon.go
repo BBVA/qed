@@ -26,7 +26,6 @@ type HyperBalloon struct {
 	hasher  hashing.Hasher
 	version uint64
 	ops     chan interface{} // serialize operations
-	log     log.Logger
 }
 
 type Commitment struct {
@@ -44,7 +43,7 @@ type MembershipProof struct {
 	KeyDigest     []byte
 }
 
-func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree, l log.Logger) *HyperBalloon {
+func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree) *HyperBalloon {
 
 	b := HyperBalloon{
 		history,
@@ -52,7 +51,6 @@ func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.
 		hasher,
 		0,
 		nil,
-		l,
 	}
 	b.ops = b.operations()
 	return &b
@@ -120,17 +118,17 @@ func (b *HyperBalloon) operations() chan interface{} {
 				case *add:
 					digest, err := b.add(msg.event)
 					if err != nil {
-						b.log.Error("Operations error: %v", err)
+						log.Error("Operations error: %v", err)
 					}
 					msg.result <- digest
 				case *membership:
 					proof, err := b.genMembershipProof(msg.event, msg.version)
 					if err != nil {
-						b.log.Error("Operations error: %v", err)
+						log.Error("Operations error: %v", err)
 					}
 					msg.result <- proof
 				default:
-					b.log.Error("Hyper tree Run() message not implemented!!")
+					log.Error("Hyper tree Run() message not implemented!!")
 				}
 
 			}

@@ -6,12 +6,11 @@ package bolt
 
 import (
 	"bytes"
-	"fmt"
-	"log"
 
 	b "github.com/coreos/bbolt"
 
 	"verifiabledata/balloon/storage"
+	"verifiabledata/log"
 )
 
 type BoltStorage struct {
@@ -69,14 +68,14 @@ func (s *BoltStorage) Close() error {
 func NewBoltStorage(path, bucketName string) *BoltStorage {
 	db, err := b.Open(path, 0600, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 	}
 
 	// create bucket
 	db.Update(func(tx *b.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(bucketName))
 		if err != nil {
-			return fmt.Errorf("create bucket: %s", err)
+			log.Errorf("create bucket: %s", err)
 		}
 		return nil
 	})

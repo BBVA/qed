@@ -17,23 +17,20 @@ import (
 	"verifiabledata/api/apihttp"
 	"verifiabledata/balloon"
 	"verifiabledata/balloon/hashing"
-	"verifiabledata/log"
 )
 
 type HttpClient struct {
 	endpoint string
 	apiKey   string
-	log      log.Logger
 
 	http.Client
 }
 
-func NewHttpClient(endpoint, apiKey string, logger log.Logger) *HttpClient {
+func NewHttpClient(endpoint, apiKey string) *HttpClient {
 
 	return &HttpClient{
 		endpoint,
 		apiKey,
-		logger,
 		*http.DefaultClient,
 	}
 
@@ -95,7 +92,7 @@ func (c HttpClient) Membership(key []byte, version uint64) (*balloon.Proof, erro
 
 	json.Unmarshal(body, &proof)
 
-	return apihttp.ToBalloonProof("/tmp/balloon.db", &proof, hashing.Sha256Hasher), nil
+	return apihttp.ToBalloonProof(c.apiKey, &proof, hashing.Sha256Hasher), nil
 
 }
 

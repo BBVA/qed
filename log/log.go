@@ -1,150 +1,92 @@
+// copyright © 2018 banco bilbao vizcaya argentaria s.a.  all rights reserved.
+// use of this source code is governed by an apache 2 license
+// that can be found in the license file
+
 package log
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 )
 
-// export flags from here, so we do not need to
-// import standard log every time and still
-// give the same constructor signature
+// Log levels constants
 const (
-	Ldate         = 1 << iota     // the date in the local time zone: 2009/01/23
-	Ltime                         // the time in the local time zone: 01:23:23
-	Lmicroseconds                 // microsecond resolution: 01:23:23.123123.  assumes Ltime.
-	Llongfile                     // full file name and line number: /a/b/c/d.go:23
-	Lshortfile                    // final file name element and line number: d.go:23. overrides Llongfile
-	LUTC                          // if Ldate or Ltime is set, use UTC rather than the local time zone
-	LstdFlags     = Ldate | Ltime // initial values for the standard logger
+	SILENT = "silent"
+	ERROR  = "error"
+	INFO   = "info"
+	DEBUG  = "debug"
 )
 
-type Logger interface {
+// Private interface for the std variable
+type logger interface {
 	Error(v ...interface{})
-	Info(v ...interface{})
-	Debug(v ...interface{})
 	Errorf(format string, v ...interface{})
+
+	Info(v ...interface{})
 	Infof(format string, v ...interface{})
+
+	Debug(v ...interface{})
 	Debugf(format string, v ...interface{})
 }
 
-type SilentLogger struct {
-	log.Logger
+// The default logger is an log.ERROR level.
+var std logger = newError(os.Stdout, "Qed: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+
+// Below is the public interface for the logger, a proxy for the switchable
+// implementation defined in std
+
+func Error(v ...interface{}) {
+	std.Error(v)
 }
 
-func NewSilent() *SilentLogger {
-	return &SilentLogger{}
+var (
+	Fatal func(...interface{}) = Error
+	Panic func(...interface{}) = Error
+)
+
+func Errorf(format string, v ...interface{}) {
+	std.Errorf(format, v)
 }
 
-// A impl 'l Nologger' verifiabledata/log.Logger
-func (l SilentLogger) Error(v ...interface{})                 { return }
-func (l SilentLogger) Info(v ...interface{})                  { return }
-func (l SilentLogger) Debug(v ...interface{})                 { return }
-func (l SilentLogger) Errorf(format string, v ...interface{}) { return }
-func (l SilentLogger) Infof(format string, v ...interface{})  { return }
-func (l SilentLogger) Debugf(format string, v ...interface{}) { return }
+var (
+	Fatalf func(string, ...interface{}) = Errorf
+	Panicf func(string, ...interface{}) = Errorf
+)
 
-type ErrorLogger struct {
-	log.Logger
+func Info(v ...interface{}) {
+	std.Info(v)
 }
 
-func NewError(out io.Writer, prefix string, flag int) *ErrorLogger {
-	var l ErrorLogger
-
-	l.SetOutput(out)
-	l.SetPrefix(prefix)
-	l.SetFlags(flag)
-	return &l
+func Infof(format string, v ...interface{}) {
+	std.Infof(format, v)
 }
 
-// A impl 'l ErrorLogger' verifiabledata/log.Logger
-func (l ErrorLogger) Error(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
-	os.Exit(1)
+func Debug(v ...interface{}) {
+	std.Debug(v)
 }
 
-func (l ErrorLogger) Errorf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
-	os.Exit(1)
+func Debugf(format string, v ...interface{}) {
+	std.Debugf(format, v)
 }
 
-func (l ErrorLogger) Info(v ...interface{})                  { return }
-func (l ErrorLogger) Debug(v ...interface{})                 { return }
-func (l ErrorLogger) Infof(format string, v ...interface{})  { return }
-func (l ErrorLogger) Debugf(format string, v ...interface{}) { return }
+func SetLogger(namespace, level string) {
 
-type InfoLogger struct {
-	log.Logger
-}
+	prefix := fmt.Sprintf("%s: ", namespace)
 
-func NewInfo(out io.Writer, prefix string, flag int) *InfoLogger {
-	var l InfoLogger
+	switch level {
+	case SILENT:
+		std = newSilent()
+	case ERROR:
+		std = newError(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	case INFO:
+		std = newInfo(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	case DEBUG:
+		std = newDebug(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+	default:
+		l := newInfo(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		l.Infof("Incorrect level of verbosity (%d) fallback to log.INFO", level)
+		std = l
+	}
 
-	l.SetOutput(out)
-	l.SetPrefix(prefix)
-	l.SetFlags(flag)
-	return &l
-}
-
-// A impl 'l InfoLogger' verifiabledata/log.Logger
-func (l InfoLogger) Error(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
-	os.Exit(1)
-}
-
-func (l InfoLogger) Info(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
-}
-
-func (l InfoLogger) Errorf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
-	os.Exit(1)
-}
-
-func (l InfoLogger) Infof(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
-}
-
-func (l InfoLogger) Debug(v ...interface{})                 { return }
-func (l InfoLogger) Debugf(format string, v ...interface{}) { return }
-
-type DebugLogger struct {
-	log.Logger
-}
-
-func NewDebug(out io.Writer, prefix string, flag int) *DebugLogger {
-	var l DebugLogger
-
-	l.SetOutput(out)
-	l.SetPrefix(prefix)
-	l.SetFlags(flag)
-	return &l
-}
-
-// A impl 'l DebugLogger' verifiabledata/log.Logger
-func (l DebugLogger) Error(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
-	os.Exit(1)
-}
-
-func (l DebugLogger) Info(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
-}
-
-func (l DebugLogger) Debug(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
-}
-
-func (l DebugLogger) Errorf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
-	os.Exit(1)
-}
-
-func (l DebugLogger) Infof(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
-}
-
-func (l DebugLogger) Debugf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
 }

@@ -7,10 +7,11 @@ package cli
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"verifiabledata/log"
 )
 
 func newClientCommand(ctx *Context) *cobra.Command {
@@ -29,7 +30,7 @@ func newClientCommand(ctx *Context) *cobra.Command {
 				if err != nil {
 					panic(err)
 				}
-				fmt.Printf("%s\n", resp)
+				log.Infof("%s\n", resp)
 
 			}
 
