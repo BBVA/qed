@@ -14,13 +14,13 @@ import (
 )
 
 func main() {
-	conn := flag.Int("c", 1, "request per second")
-	workers := flag.Uint64("w", 1, "request per second")
-	timeout := flag.Duration("t", 30*time.Second, "timeout")
-	duration := flag.Duration("d", 10*time.Second, "duration")
-	endpoint := flag.String("e", "http://localhost:8080/events", "endpoint")
+	conn := flag.Int("c", 1, "Max open idle connections")
+	workers := flag.Uint64("w", 1, "Request per second")
+	timeout := flag.Duration("t", 30*time.Second, "Timeout")
+	duration := flag.Duration("d", 10*time.Second, "Duration")
+	endpoint := flag.String("e", "http://localhost:8080/events", "Endpoint")
 	apikey := flag.String("k", "apikey", "apikey")
-	rate := flag.Uint64("r", 100, "request per second")
+	rate := flag.Uint64("r", 100, "Request per second")
 	flag.Parse()
 
 	targeter := myTargeter(*endpoint, http.Header{"Api-Key": []string{*apikey}})
