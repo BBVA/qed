@@ -26,27 +26,27 @@ func newDebug(out io.Writer, prefix string, flag int) *debugLogger {
 
 // A impl 'l debugLogger' verifiabledata/log.Logger
 func (l debugLogger) Error(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
+	l.Output(caller, fmt.Sprint(v...))
 	os.Exit(1)
 }
 
 func (l debugLogger) Info(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
+	l.Output(caller, fmt.Sprint(v...))
 }
 
 func (l debugLogger) Debug(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
+	l.Output(caller, fmt.Sprint(v...))
 }
 
 func (l debugLogger) Errorf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
+	l.Output(caller, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
 
 func (l debugLogger) Infof(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
+	l.Output(caller, fmt.Sprintf(format, v...))
 }
 
 func (l debugLogger) Debugf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
+	l.Output(caller, fmt.Sprintf(format, v...))
 }

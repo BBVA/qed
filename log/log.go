@@ -16,6 +16,8 @@ const (
 	ERROR  = "error"
 	INFO   = "info"
 	DEBUG  = "debug"
+
+	caller = 3
 )
 
 // Private interface for the std variable
