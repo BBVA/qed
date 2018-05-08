@@ -17,7 +17,7 @@ var (
 )
 
 func init() {
-	path := "/tmp/balloonClientTest"
+	path := "/var/tmp/balloonClientTest"
 	os.RemoveAll(path)
 	os.MkdirAll(path, os.FileMode(0755))
 

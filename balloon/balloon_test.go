@@ -176,7 +176,7 @@ func deleteFilesInDir(path string) {
 }
 
 func BenchmarkAddBolt(b *testing.B) {
-	path := "/mnt/bench_balloon_add"
+	path := "/var/tmp/bench_balloon_add"
 	os.MkdirAll(path, os.FileMode(0755))
 
 	frozen, frozenCloseF := openBoltStorage(fmt.Sprintf("%s/frozen", path))
@@ -203,7 +203,7 @@ func BenchmarkAddBolt(b *testing.B) {
 }
 
 func BenchmarkAddBadger(b *testing.B) {
-	path := "/mnt/bench_balloon_add"
+	path := "/var/tmp/bench_balloon_add"
 	os.MkdirAll(path, os.FileMode(0755))
 
 	frozen, frozenCloseF := openBadgerStorage(fmt.Sprintf("%s/frozen", path))

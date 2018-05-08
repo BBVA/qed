@@ -102,7 +102,7 @@ func randomBytes(n int) []byte {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	store, closeF := openBadgerStorage("/tmp/hyper_tree_test.db") //openBoltStorage()
+	store, closeF := openBadgerStorage("/var/tmp/hyper_tree_test.db") //openBoltStorage()
 	defer closeF()
 
 	cache := cache.NewSimpleCache(storage.SIZE25)
