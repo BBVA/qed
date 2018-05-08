@@ -58,7 +58,7 @@ func myTargeter(endpoint string, hdr http.Header) vegeta.Targeter {
 			return vegeta.ErrNilTarget
 		}
 
-		tgt.Body = []byte(fmt.Sprintf(`{"message": "%s"}`, time.Now().UnixNano()))
+		tgt.Body = []byte(fmt.Sprintf(`{"message": "%d"}`, time.Now().UnixNano()))
 		tgt.Header = hdr
 		tgt.Method = "POST"
 		tgt.URL = endpoint
