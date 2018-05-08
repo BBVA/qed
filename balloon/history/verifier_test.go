@@ -2,11 +2,9 @@ package history
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"verifiabledata/balloon/hashing"
-	"verifiabledata/log"
 )
 
 func TestVerify(t *testing.T) {
@@ -99,11 +97,10 @@ func TestAddAndVerify(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	ht := NewFakeTree(store, hasher, l)
+	ht := NewFakeTree(store, hasher)
 
 	key := []byte("I AM A STRANGE LOOP")
-	value := uint64(0)
+	var value uint64 = 0
 
 	commitment := <-ht.Add(key, uInt64AsBytes(value))
 	membershipProof := <-ht.Prove(key, 0, value)
@@ -122,12 +119,11 @@ func TestAddAndVerify256(t *testing.T) {
 	defer closeF()
 
 	hasher := hashing.Sha256Hasher
-	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	ht := NewTree(store, hasher, l)
+	ht := NewTree(store, hasher)
 
 	for i := uint64(0); i < 256; i++ {
 		key := randomBytes(128)
-		value := uint64(i)
+		value := i
 		commitment := <-ht.Add(key, uInt64AsBytes(value))
 		membershipProof := <-ht.Prove(key, i, value)
 		proof := NewProof(membershipProof.Nodes, value, hasher)

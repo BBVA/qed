@@ -141,7 +141,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestMembership(t *testing.T) {
-	version := uint64(1)
+	var version uint64 = 1
 	key := []byte("this is a sample event")
 	query, _ := json.Marshal(MembershipQuery{
 		key,

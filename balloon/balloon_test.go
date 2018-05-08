@@ -19,7 +19,6 @@ import (
 	"verifiabledata/balloon/storage/bolt"
 	"verifiabledata/balloon/storage/bplus"
 	"verifiabledata/balloon/storage/cache"
-	"verifiabledata/log"
 )
 
 func TestAdd(t *testing.T) {
@@ -32,10 +31,9 @@ func TestAdd(t *testing.T) {
 	cache := cache.NewSimpleCache(0)
 	hasher := hashing.XorHasher
 
-	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewFakeTree(frozen, hasher, l)
-	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
+	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher)
+	historyT := history.NewFakeTree(frozen, hasher)
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	var testCases = []struct {
 		event         string
@@ -84,10 +82,9 @@ func TestGenMembershipProof(t *testing.T) {
 	cache := cache.NewSimpleCache(0)
 	hasher := hashing.XorHasher
 
-	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewFakeTree(frozen, hasher, l)
-	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
+	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
+	historyT := history.NewFakeTree(frozen, hasher)
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	key := []byte{0x5a}
 	var version uint64 = 0
@@ -191,10 +188,9 @@ func BenchmarkAddBolt(b *testing.B) {
 	cache := cache.NewSimpleCache(storage.SIZE25)
 	hasher := hashing.Sha256Hasher
 
-	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewTree(frozen, hasher, l)
-	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
+	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
+	historyT := history.NewTree(frozen, hasher)
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	b.ResetTimer()
 	b.N = 10000
@@ -219,10 +215,9 @@ func BenchmarkAddBadger(b *testing.B) {
 	cache := cache.NewSimpleCache(storage.SIZE25)
 	hasher := hashing.Sha256Hasher
 
-	l := log.NewError(os.Stdout, "Server: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher, l)
-	historyT := history.NewTree(frozen, hasher, l)
-	balloon := NewHyperBalloon(hasher, historyT, hyperT, l)
+	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
+	historyT := history.NewTree(frozen, hasher)
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	b.ResetTimer()
 	b.N = 10000

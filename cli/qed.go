@@ -5,17 +5,17 @@
 package cli
 
 import (
-	"os"
+	"github.com/spf13/cobra"
+
 	"verifiabledata/client"
 	"verifiabledata/log"
-
-	"github.com/spf13/cobra"
 )
 
 func NewQedCommand(ctx *Context) *cobra.Command {
-	var endpoint string
-	var apikey string
-	var verbose int
+	var (
+		endpoint, apiKey, logLevel string
+	)
+
 	cmd := &cobra.Command{
 		Use:       "qed",
 		Short:     "QED is a client for the verifiable log server",
@@ -30,23 +30,17 @@ func NewQedCommand(ctx *Context) *cobra.Command {
 			return err2
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			//ctx.viper.Set("verbose", verbose)
-			//ctx.viper.Set("apikey", apikey)
-			//ctx.viper.Set("endpoint", endpoint)
-			var logger log.Logger
-			if verbose == 1 {
-				logger = log.NewInfo(os.Stdout, "QedClient", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-			} else if verbose > 1 {
-				logger = log.NewDebug(os.Stdout, "QedClient", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-			}
-			ctx.client = client.NewHttpClient(endpoint, apikey, logger)
+
+			log.SetLogger("QedServer", logLevel)
+			ctx.client = client.NewHttpClient(endpoint, apiKey)
+
 		},
 		TraverseChildren: true,
 	}
 
-	cmd.PersistentFlags().CountVarP(&verbose, "verbose", "v", "verbosity (-v or -vv)")
+	cmd.PersistentFlags().StringVarP(&logLevel, "log", "l", "error", "Choose between log levels: silent, error, info and debug")
 	cmd.PersistentFlags().StringVarP(&endpoint, "endpoint", "e", "", "Server endpoint")
-	cmd.PersistentFlags().StringVarP(&apikey, "apikey", "k", "", "Server api key")
+	cmd.PersistentFlags().StringVarP(&apiKey, "apikey", "k", "", "Server api key")
 	cmd.MarkPersistentFlagRequired("endpoint")
 	cmd.MarkPersistentFlagRequired("apikey")
 
@@ -55,5 +49,6 @@ func NewQedCommand(ctx *Context) *cobra.Command {
 
 	cmd.AddCommand(newAddCommand(ctx))
 	cmd.AddCommand(newMembershipCommand(ctx))
+
 	return cmd
 }

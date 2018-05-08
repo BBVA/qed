@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"verifiabledata/log"
 	"verifiabledata/server"
 )
 
@@ -19,16 +20,16 @@ func init() {
 	path := "/tmp/balloonClientTest"
 	os.MkdirAll(path, os.FileMode(0755))
 
-	server, logger := server.NewServer(":8079", path, uint64(50000), "badger", "silent")
+	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger")
 
 	go (func() {
 		err := server.ListenAndServe()
 		if err != nil {
-			logger.Errorf("Can't start HTTP Server: ", err)
+			log.Errorf("Can't start HTTP Server: ", err)
 		}
 	})()
 
-	client = NewHttpClient("http://localhost:8079", "my-awesome-api-key", logger)
+	client = NewHttpClient("http://localhost:8079", "my-awesome-api-key")
 }
 
 func TestAdd(t *testing.T) {

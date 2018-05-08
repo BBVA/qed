@@ -49,7 +49,6 @@ type Tree struct {
 	cacheArea      *area
 	digestLength   int
 	ops            chan interface{} // serialize operations
-	log            log.Logger
 }
 
 // MembershipProof holds the audit information needed the verify
@@ -60,7 +59,7 @@ type MembershipProof struct {
 }
 
 // NewTree returns  a new Hyper Tree given all its dependencies
-func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher, l log.Logger) *Tree {
+func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
 
 	cacheLevels := int(math.Max(0.0, math.Floor(math.Log(float64(cache.Size()))/math.Log(2.0))))
 	digestLength := len(hasher([]byte("a test event"))) * 8
@@ -76,7 +75,6 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 		newArea(digestLength-cacheLevels, digestLength),
 		digestLength,
 		nil,
-		l,
 	}
 
 	// init default hashes cache
@@ -166,17 +164,17 @@ func (t *Tree) operations() chan interface{} {
 				case *add:
 					digest, err := t.add(msg.digest, msg.index)
 					if err != nil {
-						t.log.Error("Operations error: ", err)
+						log.Error("Operations error: ", err)
 					}
 					msg.result <- digest
 				case *proof:
 					proof, err := t.auditPath(msg.key)
 					if err != nil {
-						t.log.Error("Operations error: ", err)
+						log.Error("Operations error: ", err)
 					}
 					msg.result <- proof
 				default:
-					t.log.Error("Hyper tree Run() message not implemented!!")
+					log.Error("Hyper tree Run() message not implemented!!")
 				}
 
 			}
@@ -198,7 +196,7 @@ func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
 func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
 	value, err := t.leaves.Get(key) // TODO check existence
 	if err != nil {
-		t.log.Debug(t.leaves)
+		log.Debug(t.leaves)
 		return nil, err
 	}
 	path := t.calcAuditPathFromCache(key, rootPosition(t.digestLength))

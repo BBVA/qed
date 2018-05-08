@@ -61,21 +61,21 @@ amounts of data for:
      go test -bench="BenchmarkAdd" verifiabledata/balloon/history
      
      go test -bench="." -v verifiabledata/balloon
-     
-     
+
+
 ## Server - client test
 
 - start server
-    go run server.go
+    go run server.go -k my-key
 	
 - add event
-    go run qed.go -k path -e http://localhost:8080 add --key "test event" --value "2"
+    go run qed.go -k my-key -e http://localhost:8080 add --key "test event" --value "2"
 	
 - membership event
-    go run qed.go -k path -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key "test event"
+    go run qed.go -k my-key -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key "test event"
 	
 - verify event
-    go run qed.go -k path -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key "test event" --verify
+    go run qed.go -k my-key -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key "test event" --verify
 
 ### Go profiling
 

@@ -6,10 +6,11 @@ package cli
 
 import (
 	"encoding/hex"
-	"fmt"
 	"verifiabledata/api/apihttp"
 
 	"github.com/spf13/cobra"
+
+	"verifiabledata/log"
 )
 
 func newMembershipCommand(ctx *Context) *cobra.Command {
@@ -26,16 +27,16 @@ func newMembershipCommand(ctx *Context) *cobra.Command {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if verify {
 				if hyperDigest == "" {
-					return fmt.Errorf("Error: trying to verify proof without hyper digest")
+					log.Errorf("Error: trying to verify proof without hyper digest")
 				}
 				if historyDigest == "" {
-					return fmt.Errorf("Error: trying to verify proof without history digest")
+					log.Errorf("Error: trying to verify proof without history digest")
 				}
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("Querying key [ %s ] with version [ %d ]\n", key, version)
+			log.Infof("Querying key [ %s ] with version [ %d ]\n", key, version)
 
 			event := []byte(key)
 			proof, err := ctx.client.Membership(event, version)
@@ -43,7 +44,7 @@ func newMembershipCommand(ctx *Context) *cobra.Command {
 				return err
 			}
 
-			fmt.Printf("Received proof: %+v\n", proof)
+			log.Infof("Received proof: %+v\n", proof)
 
 			if verify {
 				hdBytes, _ := hex.DecodeString(hyperDigest)
@@ -51,12 +52,12 @@ func newMembershipCommand(ctx *Context) *cobra.Command {
 				//commitment := &balloon.Commitment{htdBytes, hdBytes, version}
 				snapshot := &apihttp.Snapshot{hdBytes, htdBytes, version, event}
 
-				fmt.Printf("Verifying with commitment: \n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
+				log.Infof("Verifying with commitment: \n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
 					hyperDigest, historyDigest, version)
 				if ctx.client.Verify(proof, snapshot) { //proof.Verify(commitment, event) {
-					fmt.Println("Verify: OK")
+					log.Info("Verify: OK")
 				} else {
-					fmt.Println("Verify: KO")
+					log.Info("Verify: KO")
 				}
 			}
 
@@ -69,6 +70,7 @@ func newMembershipCommand(ctx *Context) *cobra.Command {
 	cmd.Flags().BoolVar(&verify, "verify", false, "Do verify received proof")
 	cmd.Flags().StringVar(&hyperDigest, "hyperDigest", "", "Digest of the hyper tree")
 	cmd.Flags().StringVar(&historyDigest, "historyDigest", "", "Digest of the history tree")
+
 	cmd.MarkFlagRequired("key")
 	cmd.MarkFlagRequired("version")
 
