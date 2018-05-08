@@ -37,7 +37,7 @@ var std logger = newError(os.Stdout, "Qed: ", log.Ldate|log.Ltime|log.Lmicroseco
 // implementation defined in std
 
 func Error(v ...interface{}) {
-	std.Error(v)
+	std.Error(v...)
 }
 
 var (
@@ -46,7 +46,7 @@ var (
 )
 
 func Errorf(format string, v ...interface{}) {
-	std.Errorf(format, v)
+	std.Errorf(format, v...)
 }
 
 var (
@@ -55,19 +55,19 @@ var (
 )
 
 func Info(v ...interface{}) {
-	std.Info(v)
+	std.Info(v...)
 }
 
 func Infof(format string, v ...interface{}) {
-	std.Infof(format, v)
+	std.Infof(format, v...)
 }
 
 func Debug(v ...interface{}) {
-	std.Debug(v)
+	std.Debug(v...)
 }
 
 func Debugf(format string, v ...interface{}) {
-	std.Debugf(format, v)
+	std.Debugf(format, v...)
 }
 
 func SetLogger(namespace, level string) {
