@@ -59,7 +59,9 @@ func myTargeter(endpoint string, hdr http.Header) vegeta.Targeter {
 			return vegeta.ErrNilTarget
 		}
 
-		tgt.Body = []byte(fmt.Sprintf(`{"event": "%s"}`, []byte(base64.StdEncoding.EncodeToString([]byte(time.Now().String())))))
+		event := base64.StdEncoding.EncodeToString([]byte(time.Now().String()))
+
+		tgt.Body = []byte(fmt.Sprintf(`{"event": "%s"}`, event))
 		tgt.Header = hdr
 		tgt.Method = "POST"
 		tgt.URL = endpoint
