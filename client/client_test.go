@@ -18,6 +18,7 @@ var (
 
 func init() {
 	path := "/tmp/balloonClientTest"
+	os.RemoveAll(path)
 	os.MkdirAll(path, os.FileMode(0755))
 
 	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger")

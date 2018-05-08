@@ -31,7 +31,6 @@ func newAuditorCommand(ctx *Context) *cobra.Command {
 				json.Unmarshal([]byte(raw), snapshot)
 
 				proof, _ := ctx.client.Membership(snapshot.Event, snapshot.Version)
-				correct := ctx.client.Verify(proof, snapshot)
 
 				if ctx.client.Verify(proof, snapshot) {
 					log.Info("Verify: OK")
