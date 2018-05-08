@@ -106,7 +106,7 @@ type close struct {
 
 // Run listens in channel operations to execute in the tree
 func (b *HyperBalloon) operations() chan interface{} {
-	operations := make(chan interface{}, 0)
+	operations := make(chan interface{}, 1000)
 	go func() {
 		for {
 			select {
