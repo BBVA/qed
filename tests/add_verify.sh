@@ -2,8 +2,8 @@
 
 set -e 
 
-QED="go run ../cmd/cli/qed.go -k path -e http://localhost:8080"
-QED="qed -k path -e http://localhost:8080"
+# QED="go run ../cmd/cli/qed.go -k path -e http://localhost:8080"
+QED="qed -l info -k pepe -e http://localhost:8080"
 
 add_event(){
 	local event="$1"; shift
