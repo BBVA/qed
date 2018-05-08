@@ -48,7 +48,7 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
 }
 
 func (p *Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
-	log.Infof("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
+	log.Debugf("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
 	if pos.height == 0 {
 		return p.leafHasher(p.id, value, pos.base)
 	}
