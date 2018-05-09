@@ -15,10 +15,10 @@ accomplish this objective. This is keep as guide for keep the development in
 track, to find a efficient prototype capable of fulfilling the following 
 requirements:
 
- [x] To allow the massive ingestion of heterogeneous logs or data
- [ ] To have the capability to index data by different fields.
- [x] To enable an efficient and painless verification process.
- [x] To allow for a periodic check or snapshot to guarantee immutability
+ - [x] To allow the massive ingestion of heterogeneous logs or data
+ - [ ] To have the capability to index data by different fields.
+ - [x] To enable an efficient and painless verification process.
+ - [x] To allow for a periodic check or snapshot to guarantee immutability
  against third-party agents or audit processes.
 
 The initial study can be found here:
