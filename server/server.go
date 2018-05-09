@@ -28,7 +28,6 @@ func NewServer(
 	apiKey string,
 	cacheSize uint64,
 	storageName string,
-	tamperable bool,
 ) *http.Server {
 
 	var frozen, leaves storage.Store
@@ -55,12 +54,7 @@ func NewServer(
 		log.Info(http.ListenAndServe("localhost:6060", nil))
 	}()
 
-	tamperOpts := apiHttp.TamperOpts{
-		tamperable,
-		leaves
-	}
-
-	router := apihttp.NewApiHttp(balloon, tamperOpts)
+	router := apihttp.NewApiHttp(balloon)
 
 	return &http.Server{
 		Addr:    httpEndpoint,
