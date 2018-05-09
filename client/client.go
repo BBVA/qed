@@ -26,9 +26,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"qed/api/apihttp"
-	"qed/balloon"
-	"qed/balloon/hashing"
+	"github.com/BBVA/qed/api/apihttp"
+	"github.com/BBVA/qed/balloon"
+	"github.com/BBVA/qed/balloon/hashing"
 )
 
 type HttpClient struct {

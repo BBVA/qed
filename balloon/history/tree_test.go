@@ -23,9 +23,9 @@ import (
 	"os"
 	"testing"
 
-	"qed/balloon/hashing"
-	"qed/balloon/storage/badger"
-	"qed/balloon/storage/bplus"
+	"github.com/BBVA/qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/storage/badger"
+	"github.com/BBVA/qed/balloon/storage/bplus"
 )
 
 func TestAdd(t *testing.T) {

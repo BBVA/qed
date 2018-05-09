@@ -20,8 +20,8 @@ import (
 	"os"
 	"testing"
 
-	"qed/log"
-	"qed/server"
+	"github.com/BBVA/qed/log"
+	"github.com/BBVA/qed/server"
 )
 
 var (

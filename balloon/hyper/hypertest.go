@@ -20,12 +20,12 @@ import (
 	"bytes"
 	"os"
 
-	"qed/balloon/hashing"
-	"qed/balloon/storage"
-	"qed/balloon/storage/badger"
-	"qed/balloon/storage/bolt"
-	"qed/balloon/storage/bplus"
-	"qed/log"
+	"github.com/BBVA/qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/storage"
+	"github.com/BBVA/qed/balloon/storage/badger"
+	"github.com/BBVA/qed/balloon/storage/bolt"
+	"github.com/BBVA/qed/balloon/storage/bplus"
+	"github.com/BBVA/qed/log"
 )
 
 func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {

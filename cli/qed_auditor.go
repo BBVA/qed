@@ -23,9 +23,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"qed/api/apihttp"
+	"github.com/BBVA/qed/api/apihttp"
 
-	"qed/log"
+	"github.com/BBVA/qed/log"
 )
 
 func newAuditorCommand(ctx *Context) *cobra.Command {

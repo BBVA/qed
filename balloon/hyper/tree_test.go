@@ -21,9 +21,9 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"qed/balloon/hashing"
-	"qed/balloon/storage"
-	"qed/balloon/storage/cache"
+	"github.com/BBVA/qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/storage"
+	"github.com/BBVA/qed/balloon/storage/cache"
 )
 
 func TestAdd(t *testing.T) {

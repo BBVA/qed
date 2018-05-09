@@ -26,9 +26,9 @@ package hyper
 import (
 	"math"
 
-	"qed/balloon/hashing"
-	"qed/balloon/storage"
-	"qed/log"
+	"github.com/BBVA/qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/storage"
+	"github.com/BBVA/qed/log"
 )
 
 // An Hyper Tree is an optimized Sparse Merkle Tree with

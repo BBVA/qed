@@ -17,7 +17,7 @@
 package cli
 
 import (
-	"qed/client"
+	"github.com/BBVA/qed/client"
 )
 
 // Context is used to create varios objects across the project and is being passed
