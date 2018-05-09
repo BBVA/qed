@@ -22,8 +22,8 @@ import (
 
 	b "github.com/coreos/bbolt"
 
-	"github.com/BBVA/qed/balloon/storage"
-	"github.com/BBVA/qed/log"
+	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/log"
 )
 
 type BoltStorage struct {

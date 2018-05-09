@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/BBVA/qed/balloon/hashing"
-	"github.com/BBVA/qed/log"
+	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/log"
 )
 
 type Proof struct {

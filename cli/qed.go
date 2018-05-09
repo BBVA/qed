@@ -19,8 +19,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/BBVA/qed/client"
-	"github.com/BBVA/qed/log"
+	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/log"
 )
 
 func NewQedCommand(ctx *Context) *cobra.Command {

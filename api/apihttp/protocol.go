@@ -17,10 +17,10 @@
 package apihttp
 
 import (
-	"github.com/BBVA/qed/balloon"
-	"github.com/BBVA/qed/balloon/hashing"
-	"github.com/BBVA/qed/balloon/history"
-	"github.com/BBVA/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/balloon/history"
+	"github.com/bbva/qed/balloon/hyper"
 )
 
 type Event struct {

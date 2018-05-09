@@ -18,11 +18,11 @@ package cli
 
 import (
 	"encoding/hex"
-	"github.com/BBVA/qed/api/apihttp"
+	"github.com/bbva/qed/api/apihttp"
 
 	"github.com/spf13/cobra"
 
-	"github.com/BBVA/qed/log"
+	"github.com/bbva/qed/log"
 )
 
 func newMembershipCommand(ctx *Context) *cobra.Command {

@@ -22,16 +22,16 @@ import (
 	_ "net/http/pprof"
 	"time"
 
-	"github.com/BBVA/qed/api/apihttp"
-	"github.com/BBVA/qed/balloon"
-	"github.com/BBVA/qed/balloon/hashing"
-	"github.com/BBVA/qed/balloon/history"
-	"github.com/BBVA/qed/balloon/hyper"
-	"github.com/BBVA/qed/balloon/storage"
-	"github.com/BBVA/qed/balloon/storage/badger"
-	"github.com/BBVA/qed/balloon/storage/bolt"
-	"github.com/BBVA/qed/balloon/storage/cache"
-	"github.com/BBVA/qed/log"
+	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/balloon/history"
+	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/balloon/storage/badger"
+	"github.com/bbva/qed/balloon/storage/bolt"
+	"github.com/bbva/qed/balloon/storage/cache"
+	"github.com/bbva/qed/log"
 )
 
 func NewServer(

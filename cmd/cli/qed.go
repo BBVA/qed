@@ -19,7 +19,7 @@ package main
 import (
 	"os"
 
-	"github.com/BBVA/qed/cli"
+	"github.com/bbva/qed/cli"
 )
 
 func main() {
