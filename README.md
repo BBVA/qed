@@ -2,20 +2,24 @@
 
 *([quod erat demostrandum](https://en.wikipedia.org/wiki/Q.E.D.))*
 
+## Background 
+
 Forensics investigations can be flawed for many causes, such as that they can
 lack any real evidence of an incident. For that reasons, we have the demand
-for an immutable tamper-evident log of everything that happens in the Ether
-platform. 
+for an immutable tamper-evident log of everything that happens in ay complex
+system.
 
-The purpose of this research is to find a working technology to accomplish
-this objective. Or, if it is not currently available, design a suitable and
-efficient prototype capable of fulfilling the following requirements:
 
- * To allow the massive ingestion of heterogeneous logs or data
- * To have the capability to index data by different fields.
- * To enable an efficient and painless verification process.
- * To allow for a periodic check or snapshot to guarantee immutability against
-   third-party agents or audit processes.
+By the beginning of this research we set an ambitious scope in order to 
+accomplish this objective. This is keep as guide for keep the development in
+track, to find a efficient prototype capable of fulfilling the following 
+requirements:
+
+ [x] To allow the massive ingestion of heterogeneous logs or data
+ [ ] To have the capability to index data by different fields.
+ [x] To enable an efficient and painless verification process.
+ [x] To allow for a periodic check or snapshot to guarantee immutability
+ against third-party agents or audit processes.
 
 The initial study can be found here:
 
