@@ -21,10 +21,6 @@ requirements:
  - [x] To allow for a periodic check or snapshot to guarantee immutability
  against third-party agents or audit processes.
 
-The initial study can be found here:
-
-    https://docs.google.com/document/d/13acAtpW7PG0PVo5_as5g5mdpMsPZ6UNxhp_raMvgjMQ/edit#
-
 # About this project
 
 This project is an implementation of a system that can be used to verify large
