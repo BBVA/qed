@@ -4,9 +4,9 @@
 
 ## Background 
 
-***qed*** is a software to test the scalability of autenticated data structures. Our mission is to design a system which, even when deployed to a non-trusted sever, allows to verify the integrity of a chain of events and detect modifications of single events or parts of the history.
+***qed*** is a software to test the scalability of authenticated data structures. Our mission is to design a system which, even when deployed into a non-trusted server, allows to verify the integrity of a chain of events and detect modifications of single events or parts of the history.
 
-This software is experimental and part of the research being done in BBVA. We will eventually publish our research work, analisys and the experiments for anyone to reproduce. 
+This software is experimental and part of the research being done at BBVA. We will eventually publish our research work, analisys and the experiments for anyone to reproduce. 
 
  ## Environment
  
@@ -72,7 +72,7 @@ This software is experimental and part of the research being done in BBVA. We wi
     go tool pprof hyper.test cpu.out mem.out
   ```
 
-The server spawns an http server in port 6060 with the pprof api as described in https://golang.org/pkg/net/http/pprof/
+The server spawns an http server on port 6060 with the pprof api as described in https://golang.org/pkg/net/http/pprof/
 
 ## Other projects, papers and references
 
