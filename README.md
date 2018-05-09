@@ -1,4 +1,4 @@
-# Verifiable data
+# QED *([quod erat demostrandum](https://en.wikipedia.org/wiki/Q.E.D.))*
 
 Forensics investigations can be flawed for many causes, such as that they can
 lack any real evidence of an incident. For that reasons, we have the demand
