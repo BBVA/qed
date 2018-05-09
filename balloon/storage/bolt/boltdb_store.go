@@ -6,6 +6,7 @@ package bolt
 
 import (
 	"bytes"
+	"errors"
 
 	b "github.com/coreos/bbolt"
 
@@ -60,6 +61,8 @@ func (s *BoltStorage) GetRange(start, end []byte) storage.LeavesSlice {
 
 	return leaves
 }
+
+func (s *BoltStorage) Delete([]byte) error { return errors.New("not implemented") }
 
 func (s *BoltStorage) Close() error {
 	return s.db.Close()
