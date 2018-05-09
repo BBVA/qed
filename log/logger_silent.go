@@ -16,7 +16,7 @@ func newSilent() *silentLogger {
 	return &silentLogger{}
 }
 
-// A impl 'l Nologger' verifiabledata/log.Logger
+// A impl 'l Nologger' qed/log.Logger
 func (l silentLogger) Error(v ...interface{})                 { return }
 func (l silentLogger) Warn(v ...interface{})                  { return }
 func (l silentLogger) Info(v ...interface{})                  { return }

@@ -6,11 +6,11 @@ package cli
 
 import (
 	"encoding/hex"
-	"verifiabledata/api/apihttp"
+	"qed/api/apihttp"
 
 	"github.com/spf13/cobra"
 
-	"verifiabledata/log"
+	"qed/log"
 )
 
 func newMembershipCommand(ctx *Context) *cobra.Command {

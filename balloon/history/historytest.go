@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"runtime"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/storage"
-	"verifiabledata/log"
+	"qed/balloon/hashing"
+	"qed/balloon/storage"
+	"qed/log"
 )
 
 func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {

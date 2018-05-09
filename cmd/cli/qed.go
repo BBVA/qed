@@ -7,7 +7,7 @@ package main
 import (
 	"os"
 
-	"verifiabledata/cli"
+	"qed/cli"
 )
 
 func main() {

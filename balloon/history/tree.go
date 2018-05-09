@@ -13,9 +13,9 @@ import (
 	"encoding/binary"
 	"math"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/storage"
-	"verifiabledata/log"
+	"qed/balloon/hashing"
+	"qed/balloon/storage"
+	"qed/log"
 )
 
 // A History tree is a tree structure with a version metadata.

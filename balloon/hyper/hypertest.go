@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"os"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/storage"
-	"verifiabledata/balloon/storage/badger"
-	"verifiabledata/balloon/storage/bolt"
-	"verifiabledata/balloon/storage/bplus"
-	"verifiabledata/log"
+	"qed/balloon/hashing"
+	"qed/balloon/storage"
+	"qed/balloon/storage/badger"
+	"qed/balloon/storage/bolt"
+	"qed/balloon/storage/bplus"
+	"qed/log"
 )
 
 func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {

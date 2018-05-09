@@ -11,9 +11,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"verifiabledata/api/apihttp"
+	"qed/api/apihttp"
 
-	"verifiabledata/log"
+	"qed/log"
 )
 
 func newAuditorCommand(ctx *Context) *cobra.Command {

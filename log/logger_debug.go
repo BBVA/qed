@@ -24,7 +24,7 @@ func newDebug(out io.Writer, prefix string, flag int) *debugLogger {
 	return &l
 }
 
-// A impl 'l debugLogger' verifiabledata/log.Logger
+// A impl 'l debugLogger' qed/log.Logger
 func (l debugLogger) Error(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
 	os.Exit(1)

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"verifiabledata/balloon/hashing"
+	"qed/balloon/hashing"
 )
 
 // Constant Empty is a constant for empty leaves

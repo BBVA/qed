@@ -7,7 +7,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"verifiabledata/log"
+	"qed/log"
 )
 
 func newAddCommand(ctx *Context) *cobra.Command {

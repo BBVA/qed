@@ -9,7 +9,7 @@ import (
 
 	"github.com/cznic/b"
 
-	"verifiabledata/balloon/storage"
+	"qed/balloon/storage"
 )
 
 type BPlusTreeStorage struct {

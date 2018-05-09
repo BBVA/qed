@@ -11,8 +11,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"verifiabledata/balloon"
-	"verifiabledata/balloon/history"
+	"qed/balloon"
+	"qed/balloon/history"
 )
 
 type fakeBalloon struct {

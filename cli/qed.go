@@ -7,8 +7,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"verifiabledata/client"
-	"verifiabledata/log"
+	"qed/client"
+	"qed/log"
 )
 
 func NewQedCommand(ctx *Context) *cobra.Command {

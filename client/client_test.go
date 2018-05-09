@@ -8,8 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"verifiabledata/log"
-	"verifiabledata/server"
+	"qed/log"
+	"qed/server"
 )
 
 var (

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"verifiabledata/balloon/hashing"
+	"qed/balloon/hashing"
 )
 
 func TestVerify(t *testing.T) {

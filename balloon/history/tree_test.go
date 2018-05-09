@@ -11,9 +11,9 @@ import (
 	"os"
 	"testing"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/storage/badger"
-	"verifiabledata/balloon/storage/bplus"
+	"qed/balloon/hashing"
+	"qed/balloon/storage/badger"
+	"qed/balloon/storage/bplus"
 )
 
 func TestAdd(t *testing.T) {

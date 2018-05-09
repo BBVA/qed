@@ -7,9 +7,9 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"verifiabledata/balloon/storage"
-	"verifiabledata/log"
-	"verifiabledata/server"
+	"qed/balloon/storage"
+	"qed/log"
+	"qed/server"
 )
 
 func NewServerCommand() *cobra.Command {

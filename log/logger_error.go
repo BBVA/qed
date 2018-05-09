@@ -24,7 +24,7 @@ func newError(out io.Writer, prefix string, flag int) *errorLogger {
 	return &l
 }
 
-// A impl 'l errorLogger' verifiabledata/log.Logger
+// A impl 'l errorLogger' qed/log.Logger
 func (l errorLogger) Error(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
 	os.Exit(1)

@@ -11,14 +11,14 @@ import (
 	"os"
 	"testing"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/history"
-	"verifiabledata/balloon/hyper"
-	"verifiabledata/balloon/storage"
-	"verifiabledata/balloon/storage/badger"
-	"verifiabledata/balloon/storage/bolt"
-	"verifiabledata/balloon/storage/bplus"
-	"verifiabledata/balloon/storage/cache"
+	"qed/balloon/hashing"
+	"qed/balloon/history"
+	"qed/balloon/hyper"
+	"qed/balloon/storage"
+	"qed/balloon/storage/badger"
+	"qed/balloon/storage/bolt"
+	"qed/balloon/storage/bplus"
+	"qed/balloon/storage/cache"
 )
 
 func TestAdd(t *testing.T) {
