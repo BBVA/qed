@@ -18,10 +18,10 @@ package badger
 
 import (
 	"bytes"
-	"qed/balloon/storage"
+	"github.com/BBVA/qed/balloon/storage"
 
 	b "github.com/dgraph-io/badger"
-	"qed/log"
+	"github.com/BBVA/qed/log"
 )
 
 type BadgerStorage struct {

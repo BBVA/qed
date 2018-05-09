@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"runtime"
 
-	"qed/balloon/hashing"
-	"qed/balloon/storage"
-	"qed/log"
+	"github.com/BBVA/qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/storage"
+	"github.com/BBVA/qed/log"
 )
 
 func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {

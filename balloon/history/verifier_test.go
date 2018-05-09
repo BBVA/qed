@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/hashing"
 )
 
 func TestVerify(t *testing.T) {

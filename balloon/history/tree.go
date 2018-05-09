@@ -25,9 +25,9 @@ import (
 	"encoding/binary"
 	"math"
 
-	"qed/balloon/hashing"
-	"qed/balloon/storage"
-	"qed/log"
+	"github.com/BBVA/qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/storage"
+	"github.com/BBVA/qed/log"
 )
 
 // A History tree is a tree structure with a version metadata.

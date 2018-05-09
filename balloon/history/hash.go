@@ -17,7 +17,7 @@
 package history
 
 import (
-	"qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/hashing"
 )
 
 // Constant Zero is the 0x0 byte, and it is used as a prefix to know

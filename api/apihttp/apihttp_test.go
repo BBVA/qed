@@ -23,8 +23,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"qed/balloon"
-	"qed/balloon/history"
+	"github.com/BBVA/qed/balloon"
+	"github.com/BBVA/qed/balloon/history"
 )
 
 type fakeBalloon struct {

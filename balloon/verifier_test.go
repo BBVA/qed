@@ -19,10 +19,10 @@ package balloon
 import (
 	"testing"
 
-	"qed/balloon/hashing"
-	"qed/balloon/history"
-	"qed/balloon/hyper"
-	"qed/balloon/storage/cache"
+	"github.com/BBVA/qed/balloon/hashing"
+	"github.com/BBVA/qed/balloon/history"
+	"github.com/BBVA/qed/balloon/hyper"
+	"github.com/BBVA/qed/balloon/storage/cache"
 )
 
 type FakeVerifiable struct {

@@ -19,7 +19,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"qed/log"
+	"github.com/BBVA/qed/log"
 )
 
 func newAddCommand(ctx *Context) *cobra.Command {
