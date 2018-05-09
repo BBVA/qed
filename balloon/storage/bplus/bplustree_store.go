@@ -7,61 +7,53 @@ package bplus
 import (
 	"bytes"
 
-	"github.com/cznic/b"
+	"github.com/google/btree"
 
 	"qed/balloon/storage"
 )
 
 type BPlusTreeStorage struct {
-	store *b.Tree
+	store *btree.BTree
+}
+
+type KVPair struct {
+	Key, Value []byte
+}
+
+func (p KVPair) Less(b btree.Item) bool {
+	return bytes.Compare(p.Key, b.(KVPair).Key) < 0
 }
 
 func NewBPlusTreeStorage() *BPlusTreeStorage {
-	return &BPlusTreeStorage{b.TreeNew(cmp)}
-}
-
-func cmp(a, b interface{}) int {
-	return bytes.Compare(a.([]byte), b.([]byte))
+	return &BPlusTreeStorage{btree.New(2)}
 }
 
 func (s *BPlusTreeStorage) Add(key []byte, value []byte) error {
-	s.store.Set(key, value)
+	s.store.ReplaceOrInsert(KVPair{key, value})
 	return nil
 }
 
 func (s *BPlusTreeStorage) Get(key []byte) ([]byte, error) {
-	value, ok := s.store.Get(key)
-	if ok == false {
+	item := s.store.Get(KVPair{key, nil})
+	if item == nil {
 		return make([]byte, 0), nil
 	}
-	return value.([]byte), nil
+	return item.(KVPair).Value, nil
 }
 
 func (s *BPlusTreeStorage) GetRange(start, end []byte) storage.LeavesSlice {
 	var leaves storage.LeavesSlice
-	var err error
-	var k interface{}
-
-	iter, _ := s.store.Seek(start)
-	defer iter.Close()
-
-	n := 0
-	for {
-		k, _, err = iter.Next()
-		if err != nil {
-			return leaves
+	s.store.AscendGreaterOrEqual(KVPair{start, nil}, func(i btree.Item) bool {
+		if bytes.Compare(i.(KVPair).Key, end) > 0 {
+			return false
 		}
-		if bytes.Compare(k.([]byte), end) <= 0 {
-			leaves = append(leaves, k.([]byte))
-		} else {
-			return leaves
-		}
-		n++
-	}
-
+		leaves = append(leaves, i.(KVPair).Key)
+		return true
+	})
+	return leaves
 }
 
 func (s *BPlusTreeStorage) Close() error {
-	s.store.Close()
+	s.store.Clear(false)
 	return nil
 }
