@@ -19,9 +19,9 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/BBVA/qed/balloon/storage"
-	"github.com/BBVA/qed/log"
-	"github.com/BBVA/qed/server"
+	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/server"
 )
 
 func NewServerCommand() *cobra.Command {

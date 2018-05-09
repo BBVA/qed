@@ -20,10 +20,10 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/BBVA/qed/balloon/hashing"
-	"github.com/BBVA/qed/balloon/history"
-	"github.com/BBVA/qed/balloon/hyper"
-	"github.com/BBVA/qed/log"
+	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/balloon/history"
+	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/log"
 )
 
 type Balloon interface {

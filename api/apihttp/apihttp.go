@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/BBVA/qed/balloon"
+	"github.com/bbva/qed/balloon"
 )
 
 // Create a JSON struct for our HealthCheck

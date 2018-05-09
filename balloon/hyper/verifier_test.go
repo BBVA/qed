@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/BBVA/qed/balloon/hashing"
-	"github.com/BBVA/qed/balloon/storage"
-	"github.com/BBVA/qed/balloon/storage/cache"
+	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/balloon/storage/cache"
 )
 
 func TestVerify(t *testing.T) {
