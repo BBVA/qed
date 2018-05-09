@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"verifiabledata/log"
+	"qed/log"
 )
 
 func newClientCommand(ctx *Context) *cobra.Command {

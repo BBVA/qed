@@ -9,8 +9,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/log"
+	"qed/balloon/hashing"
+	"qed/log"
 )
 
 type Proof struct {

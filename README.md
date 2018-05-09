@@ -50,19 +50,19 @@ amounts of data for:
  
  ## Guide
  
-     $ godoc -http=:6060 # http://localhost:6060/pkg/verifiabledata/
+     $ godoc -http=:6060 # http://localhost:6060/pkg/qed/
      
-     go test verifiabledata/store
+     go test qed/store
      
-     go test -v verifiabledata/balloon/history
-     go test -v verifiabledata/balloon/hyper
+     go test -v qed/balloon/history
+     go test -v qed/balloon/hyper
      
-     go test -v verifiabledata/balloon
+     go test -v qed/balloon
  
-     go test -bench="BenchmarkAdd" verifiabledata/balloon/hyper
-     go test -bench="BenchmarkAdd" verifiabledata/balloon/history
+     go test -bench="BenchmarkAdd" qed/balloon/hyper
+     go test -bench="BenchmarkAdd" qed/balloon/history
      
-     go test -bench="." -v verifiabledata/balloon
+     go test -bench="." -v qed/balloon
 
 
 ## Server - client test
@@ -82,7 +82,7 @@ amounts of data for:
 ### Go profiling
 
     go run  -cpuprofile cpu.out -memprofile mem.out program.go
-    go test -v -bench="BenchmarkAdd" -cpuprofile cpu.out -memprofile mem.out verifiabledata/balloon/hyper -run ^$
+    go test -v -bench="BenchmarkAdd" -cpuprofile cpu.out -memprofile mem.out qed/balloon/hyper -run ^$
      
     go tool pprof hyper.test cpu.out 
     go tool pprof hyper.test cpu.out mem.out

@@ -14,9 +14,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"verifiabledata/api/apihttp"
-	"verifiabledata/balloon"
-	"verifiabledata/balloon/hashing"
+	"qed/api/apihttp"
+	"qed/balloon"
+	"qed/balloon/hashing"
 )
 
 type HttpClient struct {

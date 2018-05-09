@@ -14,9 +14,9 @@ package hyper
 import (
 	"math"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/storage"
-	"verifiabledata/log"
+	"qed/balloon/hashing"
+	"qed/balloon/storage"
+	"qed/log"
 )
 
 // An Hyper Tree is an optimized Sparse Merkle Tree with

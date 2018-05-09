@@ -9,9 +9,9 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/storage"
-	"verifiabledata/balloon/storage/cache"
+	"qed/balloon/hashing"
+	"qed/balloon/storage"
+	"qed/balloon/storage/cache"
 )
 
 func TestAdd(t *testing.T) {

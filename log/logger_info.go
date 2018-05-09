@@ -24,7 +24,7 @@ func newInfo(out io.Writer, prefix string, flag int) *infoLogger {
 	return &l
 }
 
-// A impl 'l infoLogger' verifiabledata/log.Logger
+// A impl 'l infoLogger' qed/log.Logger
 func (l infoLogger) Error(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
 	os.Exit(1)

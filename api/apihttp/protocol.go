@@ -1,10 +1,10 @@
 package apihttp
 
 import (
-	"verifiabledata/balloon"
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/history"
-	"verifiabledata/balloon/hyper"
+	"qed/balloon"
+	"qed/balloon/hashing"
+	"qed/balloon/history"
+	"qed/balloon/hyper"
 )
 
 type Event struct {

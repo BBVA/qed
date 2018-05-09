@@ -9,8 +9,8 @@ import (
 
 	b "github.com/coreos/bbolt"
 
-	"verifiabledata/balloon/storage"
-	"verifiabledata/log"
+	"qed/balloon/storage"
+	"qed/log"
 )
 
 type BoltStorage struct {

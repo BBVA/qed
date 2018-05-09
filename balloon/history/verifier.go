@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/log"
+	"qed/balloon/hashing"
+	"qed/log"
 )
 
 type Proof struct {

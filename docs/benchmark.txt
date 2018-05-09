@@ -1,75 +1,75 @@
 drive: Samsung 950 Pro 512 GB
 os: ubuntu 18.04 not yet released (later today) (yes, I'm not kidding)
 
-➤ go test -v -bench="BenchmarkAdd" -cpuprofile cpu.out -memprofile mem.out verifiabledata/balloon/hyper -run '^$'
+➤ go test -v -bench="BenchmarkAdd" -cpuprofile cpu.out -memprofile mem.out qed/balloon/hyper -run '^$'
 
 jfs
 
 goos: linux
 goarch: amd64
-pkg: verifiabledata/balloon/hyper
+pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	    254535 ns/op
 --- BENCH: BenchmarkAdd-8
 	tree_test.go:116: stats = &{hits:121785 disk:10000 dh:1330090 update:300000 leaf:5075 lh:5075 ih:1446950 lend:0}
 PASS
-ok  	verifiabledata/balloon/hyper	2.774s
+ok  	qed/balloon/hyper	2.774s
 
 
 ext2 (baseline)
 
 goos: linux
 goarch: amd64
-pkg: verifiabledata/balloon/hyper
+pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	   4278588 ns/op
 --- BENCH: BenchmarkAdd-8
 	tree_test.go:116: stats = &{hits:121841 disk:10000 dh:1356809 update:300000 leaf:5194 lh:5194 ih:1473844 lend:0}
 PASS
-ok  	verifiabledata/balloon/hyper	43.034s
+ok  	qed/balloon/hyper	43.034s
 
 
 xfs
 
 goos: linux
 goarch: amd64
-pkg: verifiabledata/balloon/hyper
+pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	   9738710 ns/op
 --- BENCH: BenchmarkAdd-8
 	tree_test.go:116: stats = &{hits:121675 disk:10000 dh:1320750 update:300000 leaf:5033 lh:5033 ih:1437458 lend:0}
 PASS
-ok  	verifiabledata/balloon/hyper	97.616s
+ok  	qed/balloon/hyper	97.616s
 
 
 ext4
 
 goos: linux
 goarch: amd64
-pkg: verifiabledata/balloon/hyper
+pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	  10021413 ns/op
 --- BENCH: BenchmarkAdd-8
 	tree_test.go:116: stats = &{hits:121864 disk:10000 dh:1319886 update:300000 leaf:5030 lh:5030 ih:1436780 lend:0}
 PASS
-ok  	verifiabledata/balloon/hyper	100.414s
+ok  	qed/balloon/hyper	100.414s
 
 
 btrfs,nodatacow
 
 goos: linux
 goarch: amd64
-pkg: verifiabledata/balloon/hyper
+pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	  10478626 ns/op
 --- BENCH: BenchmarkAdd-8
 	tree_test.go:116: stats = &{hits:121738 disk:10000 dh:1313712 update:300000 leaf:5002 lh:5002 ih:1430452 lend:0}
 PASS
-ok  	verifiabledata/balloon/hyper	104.980s
+ok  	qed/balloon/hyper	104.980s
 
 
 btrfs
 
 goos: linux
 goarch: amd64
-pkg: verifiabledata/balloon/hyper
+pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	  10982723 ns/op
 --- BENCH: BenchmarkAdd-8
 	tree_test.go:116: stats = &{hits:121656 disk:10000 dh:1324369 update:300000 leaf:5049 lh:5049 ih:1441074 lend:0}
 PASS
-ok  	verifiabledata/balloon/hyper	110.075s
+ok  	qed/balloon/hyper	110.075s

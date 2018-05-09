@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"verifiabledata/balloon"
+	"qed/balloon"
 )
 
 // Create a JSON struct for our HealthCheck

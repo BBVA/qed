@@ -8,10 +8,10 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/history"
-	"verifiabledata/balloon/hyper"
-	"verifiabledata/log"
+	"qed/balloon/hashing"
+	"qed/balloon/history"
+	"qed/balloon/hyper"
+	"qed/log"
 )
 
 type Balloon interface {

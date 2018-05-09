@@ -7,7 +7,7 @@ package balloon
 import (
 	"fmt"
 
-	"verifiabledata/balloon/hashing"
+	"qed/balloon/hashing"
 )
 
 type Verifiable interface {

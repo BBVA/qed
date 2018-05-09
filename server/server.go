@@ -10,16 +10,16 @@ import (
 	_ "net/http/pprof"
 	"time"
 
-	"verifiabledata/api/apihttp"
-	"verifiabledata/balloon"
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/history"
-	"verifiabledata/balloon/hyper"
-	"verifiabledata/balloon/storage"
-	"verifiabledata/balloon/storage/badger"
-	"verifiabledata/balloon/storage/bolt"
-	"verifiabledata/balloon/storage/cache"
-	"verifiabledata/log"
+	"qed/api/apihttp"
+	"qed/balloon"
+	"qed/balloon/hashing"
+	"qed/balloon/history"
+	"qed/balloon/hyper"
+	"qed/balloon/storage"
+	"qed/balloon/storage/badger"
+	"qed/balloon/storage/bolt"
+	"qed/balloon/storage/cache"
+	"qed/log"
 )
 
 func NewServer(httpEndpoint string, dbPath string, apiKey string, cacheSize uint64, storageName string) *http.Server {

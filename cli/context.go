@@ -5,7 +5,7 @@
 package cli
 
 import (
-	"verifiabledata/client"
+	"qed/client"
 )
 
 // Context is used to create varios objects across the project and is being passed

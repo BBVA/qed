@@ -7,10 +7,10 @@ package balloon
 import (
 	"testing"
 
-	"verifiabledata/balloon/hashing"
-	"verifiabledata/balloon/history"
-	"verifiabledata/balloon/hyper"
-	"verifiabledata/balloon/storage/cache"
+	"qed/balloon/hashing"
+	"qed/balloon/history"
+	"qed/balloon/hyper"
+	"qed/balloon/storage/cache"
 )
 
 type FakeVerifiable struct {
