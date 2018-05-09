@@ -6,6 +6,7 @@ package bplus
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/google/btree"
 
@@ -52,6 +53,8 @@ func (s *BPlusTreeStorage) GetRange(start, end []byte) storage.LeavesSlice {
 	})
 	return leaves
 }
+
+func (s *BPlusTreeStorage) Delete([]byte) error { return errors.New("not implemented") }
 
 func (s *BPlusTreeStorage) Close() error {
 	s.store.Clear(false)

@@ -13,7 +13,14 @@ type Store interface {
 	Add(key []byte, value []byte) error
 	GetRange(start, end []byte) LeavesSlice
 	Get(key []byte) ([]byte, error)
+
 	Close() error
+}
+
+type DeletableStore interface {
+	Delete(key []byte) error
+
+	Store
 }
 
 // LeavesSlice is intermediate data structure from database to memory

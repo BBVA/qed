@@ -18,8 +18,7 @@ type BadgerStorage struct {
 
 func (s *BadgerStorage) Add(key []byte, value []byte) error {
 	return s.db.Update(func(txn *b.Txn) error {
-		err := txn.Set(key, value)
-		return err
+		return txn.Set(key, value)
 	})
 }
 
@@ -67,6 +66,12 @@ func (s *BadgerStorage) GetRange(start, end []byte) storage.LeavesSlice {
 	})
 
 	return leaves
+}
+
+func (s *BadgerStorage) Delete(key []byte) error {
+	return s.db.Update(func(txn *b.Txn) error {
+		return txn.Delete(key)
+	})
 }
 
 func (s *BadgerStorage) Close() error {

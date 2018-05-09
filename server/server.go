@@ -22,7 +22,14 @@ import (
 	"qed/log"
 )
 
-func NewServer(httpEndpoint string, dbPath string, apiKey string, cacheSize uint64, storageName string) *http.Server {
+func NewServer(
+	httpEndpoint string,
+	dbPath string,
+	apiKey string,
+	cacheSize uint64,
+	storageName string,
+	tamperable bool,
+) *http.Server {
 
 	var frozen, leaves storage.Store
 
@@ -48,7 +55,12 @@ func NewServer(httpEndpoint string, dbPath string, apiKey string, cacheSize uint
 		log.Info(http.ListenAndServe("localhost:6060", nil))
 	}()
 
-	router := apihttp.NewApiHttp(balloon)
+	tamperOpts := apiHttp.TamperOpts{
+		tamperable,
+		leaves
+	}
+
+	router := apihttp.NewApiHttp(balloon, tamperOpts)
 
 	return &http.Server{
 		Addr:    httpEndpoint,

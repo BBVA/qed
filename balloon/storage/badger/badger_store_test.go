@@ -92,6 +92,19 @@ func TestGetRange(t *testing.T) {
 
 }
 
+func TestDelete(t *testing.T) {
+	store, closeF := openBadgerStorage()
+	defer closeF()
+
+	store.Add([]byte{0x0}, []byte{0x1})
+	store.Delete([]byte{0x0})
+
+	value, _ := store.Get([]byte{0x0})
+	if value != nil {
+		t.Errorf("Value should be nil, got '%v' instead", value)
+	}
+}
+
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage()
 	defer closeF()

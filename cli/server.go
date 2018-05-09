@@ -16,6 +16,7 @@ func NewServerCommand() *cobra.Command {
 	var (
 		logLevel, endpoint, dbPath, apiKey, storageName string
 		cacheSize                                       uint64
+		tamperable                                      bool
 	)
 
 	cmd := &cobra.Command{
@@ -34,6 +35,7 @@ func NewServerCommand() *cobra.Command {
 				apiKey,
 				cacheSize,
 				storageName,
+				tamperable,
 			)
 
 			err := s.ListenAndServe()
@@ -50,6 +52,10 @@ func NewServerCommand() *cobra.Command {
 	cmd.Flags().Uint64VarP(&cacheSize, "cache", "c", storage.SIZE25, "Initialize and reserve custom cache size.")
 	cmd.Flags().StringVarP(&storageName, "storage", "s", "badger", "Choose between different storage backends. Eg badge|bolt")
 	cmd.Flags().StringVarP(&logLevel, "log", "l", "error", "Choose between log levels: silent, error, info and debug")
+
+	// INFO: testing purposes
+	cmd.Flags().BoolVarP(&tamperable, "tamperable", "t", false, "Allow a tamperable api for testing purposes")
+	cmd.Flags().MarkHidden("tamperable")
 
 	cmd.MarkFlagRequired("apikey")
 
