@@ -35,7 +35,6 @@ func NewServerCommand() *cobra.Command {
 				apiKey,
 				cacheSize,
 				storageName,
-				tamperable,
 			)
 
 			err := s.ListenAndServe()
