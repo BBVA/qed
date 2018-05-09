@@ -1,7 +1,3 @@
-// copyright © 2018 banco bilbao vizcaya argentaria s.a.  all rights reserved.
-// use of this source code is governed by an apache 2 license
-// that can be found in the license file
-
 package log
 
 import (
