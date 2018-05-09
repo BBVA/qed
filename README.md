@@ -17,7 +17,7 @@ This software is experimental and part of the hyperscale research being done in 
  
  - Download software
  ```
-    go get github.com/bbvas/qed
+    go get github.com/bbva/qed
     go get github.com/dgraph-io/badger
     go get github.com/coreos/bbolt
     go get github.com/google/btree
