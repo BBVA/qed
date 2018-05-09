@@ -62,10 +62,7 @@ This software is experimental and part of the hyperscale research being done in 
   ```
      go test -v github.com/bbva/qed/...
   ```   
-
-
-
-### Go profiling
+- Go profiling
 
   ```  
     go run  -cpuprofile cpu.out -memprofile mem.out program.go
@@ -77,4 +74,19 @@ This software is experimental and part of the hyperscale research being done in 
 
 The server spawns an http server in port 6060 with the pprof api as described in https://golang.org/pkg/net/http/pprof/
 
+## Other projects, papers and references
+
+- github related projects
+   - [Balloon](https://github.com/pylls/balloon)
+   - [GoSMT](https://github.com/pylls/gosmt)
+   - [Trillian](https://github.com/google/trillian)
+   - [Continusec](https://github.com/continusec/verifiabledatastructures)
+ 
+ - related papers
+   - http://tamperevident.cs.rice.edu/papers/paper-treehist.pdf
+   - http://kau.diva-portal.org/smash/get/diva2:936353/FULLTEXT01.pdf
+   - http://www.links.org/files/sunlight.html
+   - http://www.links.org/files/RevocationTransparency.pdf
+   - https://eprint.iacr.org/2015/007.pdf
+   - https://eprint.iacr.org/2016/683.pdf
 
