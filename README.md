@@ -21,6 +21,8 @@ This software is experimental and part of the research being done at BBVA. We wi
     go get github.com/dgraph-io/badger
     go get github.com/coreos/bbolt
     go get github.com/google/btree
+    go get github.com/spf13/cobra
+    go get github.com/tsenart/vegeta
  ```  
  - Start the server
  
