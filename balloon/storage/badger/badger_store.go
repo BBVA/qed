@@ -18,10 +18,12 @@ package badger
 
 import (
 	"bytes"
+
 	"github.com/bbva/qed/balloon/storage"
 
-	b "github.com/dgraph-io/badger"
 	"github.com/bbva/qed/log"
+	b "github.com/dgraph-io/badger"
+	bo "github.com/dgraph-io/badger/options"
 )
 
 type BadgerStorage struct {
@@ -90,8 +92,12 @@ func (s *BadgerStorage) Close() error {
 	return s.db.Close()
 }
 
+// Due to this bug:
+// https://github.com/dgraph-io/badger/issues/163
+// we need to use the
 func NewBadgerStorage(path string) *BadgerStorage {
 	opts := b.DefaultOptions
+	opts.TableLoadingMode = bo.MemoryMap
 	opts.Dir = path
 	opts.ValueDir = path
 	opts.SyncWrites = false
