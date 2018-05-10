@@ -58,19 +58,42 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
      - add event
 
      ```
-        go run qed.go -k my-key -e http://localhost:8080 add --key 'test event' --value 2
+	go run				\
+		qed.go			\
+		-k my-key			\
+		-e http://localhost:8080	\
+		add				\
+		--key 'test event'		\
+		--value 2
      ```
 
      - membership event
 
     ```
-        go run qed.go-k my-key -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key "test event"
+	go run												\
+		qed.go											\
+		-k my-key										\
+		-e http://localhost:8080								\
+		membership										\
+		--historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa	\
+		--hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b		\
+		--version 0										\
+		--key 'test event'
     ```
 
      - verify event
 
     ```
-        go run qed.go -k my-key -e http://localhost:8080 membership --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b --version 0 --key 'test event' --verify
+	go run												\
+		qed.go											\
+		-k my-key										\
+		-e http://localhost:8080								\
+		membership										\
+		--historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa	\
+		--hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b		\
+		--version 0										\
+		--key 'test event'									\
+		--verify
     ```
 
 ## Useful commands
@@ -89,8 +112,18 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 - Go profiling
 
   ```
-    go run  -cpuprofile cpu.out -memprofile mem.out program.go
-    go test -v -bench=BenchmarkAdd -cpuprofile cpu.out -memprofile mem.out qed/balloon/hyper -run ^$
+	go run
+		-cpuprofile cpu.out						\
+		-memprofile mem.out						\
+		program.go
+
+	go test								\
+		-v								\
+		-bench=BenchmarkAdd						\
+		-cpuprofile cpu.out						\
+		-memprofile mem.out						\
+		qed/balloon/hyper						\
+		-run ^$
 
     go tool pprof hyper.test cpu.out
     go tool pprof hyper.test cpu.out mem.out
