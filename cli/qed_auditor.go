@@ -19,13 +19,12 @@ package cli
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/bbva/qed/api/apihttp"
-
-	"github.com/bbva/qed/log"
 )
 
 func newAuditorCommand(ctx *Context) *cobra.Command {
@@ -45,9 +44,9 @@ func newAuditorCommand(ctx *Context) *cobra.Command {
 				proof, _ := ctx.client.Membership(snapshot.Event, snapshot.Version)
 
 				if ctx.client.Verify(proof, snapshot) {
-					log.Info("Verify: OK")
+					fmt.Println("Verify: OK")
 				} else {
-					log.Errorf("Verify: KO, raw: %s", raw)
+					fmt.Printf("Verify: KO, raw: %s", raw)
 				}
 			}
 

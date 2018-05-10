@@ -19,11 +19,10 @@ package cli
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
-
-	"github.com/bbva/qed/log"
 )
 
 func newClientCommand(ctx *Context) *cobra.Command {
@@ -42,7 +41,7 @@ func newClientCommand(ctx *Context) *cobra.Command {
 				if err != nil {
 					panic(err)
 				}
-				log.Infof("%s\n", resp)
+				fmt.Printf("%s\n", resp)
 
 			}
 
