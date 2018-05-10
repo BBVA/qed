@@ -15,6 +15,12 @@
 # limitations under the License.
 
 set -e 
+ 
+usage() {
+	echo -e "Usage:\n  You must provide event and value \n"
+	echo -e "       $0 \"test event\" 2"
+	exit 1
+	} 
 
 QED="go run ../cmd/cli/qed.go -l info -k path -e http://localhost:8080"
 # QED="qed -l info -k pepe -e http://localhost:8080"
@@ -46,6 +52,11 @@ verify_event() {
 	$QED membership --historyDigest ${history}   --hyperDigest ${hyper}  --version ${version} --key ${event} --verify
 }
 
+
+if [ $# -eq 0 ]
+  then
+    usage
+fi
 
 for i in $(seq 1 1000); do
 	event=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
