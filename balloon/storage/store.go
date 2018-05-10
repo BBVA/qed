@@ -25,7 +25,6 @@ type Store interface {
 	Add(key []byte, value []byte) error
 	GetRange(start, end []byte) LeavesSlice
 	Get(key []byte) ([]byte, error)
-
 	Close() error
 }
 
