@@ -90,3 +90,11 @@ The server spawns an http server on port 6060 with the pprof api as described in
    - https://eprint.iacr.org/2015/007.pdf
    - https://eprint.iacr.org/2016/683.pdf
 
+## Contributions
+
+Contributions are very welcome, see [CONTRIBUTING.md](https://github.com/BBVA/qed/blob/master/CONTRIBUTING.md) 
+or skim [existing tickets](https://github.com/BBVA/qed/issues) to see where you could help out.
+
+## License
+
+***qed*** is Open Source and available under the Apache 2 License.
