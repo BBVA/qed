@@ -38,7 +38,7 @@ func init() {
 	path = "/var/tmp/balloonClientTest"
 	resetPath()
 
-	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger")
+	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger", false, false)
 
 	go (func() {
 		err := server.ListenAndServe()

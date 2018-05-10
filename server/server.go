@@ -17,6 +17,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
@@ -40,6 +41,8 @@ func NewServer(
 	apiKey string,
 	cacheSize uint64,
 	storageName string,
+	profiling bool,
+	tampering bool,
 ) *http.Server {
 
 	var frozen, leaves storage.Store
@@ -61,10 +64,17 @@ func NewServer(
 	hyper := hyper.NewTree(apiKey, cache, leaves, hasher)
 	balloon := balloon.NewHyperBalloon(hasher, history, hyper)
 
-	// start profiler
-	go func() {
-		log.Info(http.ListenAndServe("localhost:6060", nil))
-	}()
+	if profiling {
+		// start profiler
+		go func() {
+			log.Info(http.ListenAndServe("localhost:6060", nil))
+		}()
+	}
+
+	if tampering {
+		log.Debug("tampering")
+		go tamperServer(leaves.(storage.DeletableStore))
+	}
 
 	router := apihttp.NewApiHttp(balloon)
 
@@ -72,7 +82,6 @@ func NewServer(
 		Addr:    httpEndpoint,
 		Handler: logHandler(router),
 	}
-
 }
 
 type statusWriter struct {
@@ -108,4 +117,61 @@ func logHandler(handle http.Handler) http.HandlerFunc {
 			log.Infof("Bad Request: %d %+v", latency, request)
 		}
 	}
+}
+
+func tamperServer(store storage.DeletableStore) {
+
+	type tamperEvent struct {
+		Key   []byte
+		Value []byte
+	}
+
+	tamper := func(w http.ResponseWriter, r *http.Request) {
+
+		// Make sure we can only be called with an HTTP POST request.
+		if !(r.Method == "PATCH" || r.Method == "DELETE") {
+			w.Header().Set("Allow", "PATCH, DELETE")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		if r.Body == nil {
+			http.Error(w, "Please send a request body", http.StatusBadRequest)
+			return
+		}
+
+		var tp tamperEvent
+		err := json.NewDecoder(r.Body).Decode(&tp)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		switch r.Method {
+		case "PATCH":
+			get, _ := store.Get(tp.Key)
+			log.Debugf("Get: %v", get)
+			log.Debugf("Tamper: %v", store.Add(tp.Key, tp.Value))
+
+		case "DELETE":
+			get, _ := store.Get(tp.Key)
+			log.Debugf("Get: %v", get)
+			log.Debugf("Delete: %v", store.Delete(tp.Key))
+
+		}
+
+		return
+
+	}
+
+	tamperApi := http.NewServeMux()
+	tamperApi.HandleFunc("/tamper", apihttp.AuthHandlerMiddleware(http.HandlerFunc(tamper)))
+
+	st := &http.Server{
+		Addr:    "localhost:8081",
+		Handler: logHandler(tamperApi),
+	}
+
+	log.Error(st.ListenAndServe())
+
 }
