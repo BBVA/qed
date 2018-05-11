@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+/* +build !release */
+
 package hyper
 
 import (
