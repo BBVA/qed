@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// Package bolt implements the storage engine interface for
+// github.com/coreos/bbolt
 package bolt
 
 import (

@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// Package server implements the server initialization for the api.apihttp and
+// ballon tree structure against a storage engine.
 package server
 
 import (

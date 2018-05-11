@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// This binary allows client and auditor streaming commands and also manual
+// event insertion and validation against a qed server.
 package main
 
 import (

@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// Package log implements the qed/log wrapper that formats the logs in our
+// custom format as well as logging levels.
 package log
 
 import (

@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// Package bplus implements the storage engine interface for
+// github.com/google/btree
 package bplus
 
 import (

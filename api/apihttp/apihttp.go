@@ -14,6 +14,7 @@
     limitations under the License.
 */
 
+// Package apihttp implements the HTTP API public interface.
 package apihttp
 
 import (

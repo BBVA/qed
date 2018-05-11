@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// Package balloon implements the tree interface to interact with both hyper
+// and history trees.
 package balloon
 
 import (
