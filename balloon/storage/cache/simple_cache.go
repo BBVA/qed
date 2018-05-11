@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// Package cache implements the cache used by the hyper tree to allow
+// in-memory storage for the top N levels.
 package cache
 
 // keySize == len( H(x) ) + pos.heightBytes

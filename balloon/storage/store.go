@@ -14,6 +14,7 @@
     limitations under the License.
 */
 
+// Package storage implements the Store public interface.
 package storage
 
 import (

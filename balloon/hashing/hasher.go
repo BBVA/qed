@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// Package hashing implements the Hasher public interface and the concrete
+// implementations.
 package hashing
 
 import "crypto/sha256"

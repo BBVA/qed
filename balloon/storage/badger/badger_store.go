@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// Package bagder implements the store engine interface for
+// github.com/dgraph-io/badger/options
 package badger
 
 import (

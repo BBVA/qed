@@ -15,6 +15,6 @@
 */
 
 /*
-	Package API implements the interface to use the Verification Data Service.
+	Package api implements the public interface for qed service.
 */
 package api

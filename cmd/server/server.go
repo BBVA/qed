@@ -14,6 +14,8 @@
     limitations under the License.
 */
 
+// This binary implements a net/http test server that hosts the api.apihttp
+// and balloon tree.
 package main
 
 import (
