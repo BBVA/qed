@@ -1,0 +1,32 @@
+language: go
+
+# Only the last two Go releases are supported by the Go team with security
+# updates. Any versions older than that should be considered deprecated.
+# Don't bother testing with them. tip builds your code with the latest
+# development version of Go. This can warn you that your code will break
+# in the next version of Go. Don't worry! Later we declare that test runs
+# are allowed to fail on Go tip.
+go:
+  - "1.10"
+  - master
+
+install: true
+
+matrix:
+  allow_failures:
+    - go: master
+  fast_finish: true
+
+# Don't email me the results of the test runs.
+notifications:
+  email: false
+
+before_script:
+  - go get github.com/dgraph-io/badger
+  - go get github.com/coreos/bbolt
+  - go get github.com/google/btree
+  - go get github.com/spf13/cobra
+  - go get github.com/tsenart/vegeta
+
+script:
+  - go test -v ./...
