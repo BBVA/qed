@@ -6,9 +6,14 @@ language: go
 # development version of Go. This can warn you that your code will break
 # in the next version of Go. Don't worry! Later we declare that test runs
 # are allowed to fail on Go tip.
+
+# https://github.com/travis-ci/travis-ci/issues/9247
 go:
   - "1.10"
   - master
+
+# https://docs.travis-ci.com/user/languages/go/#Go-Import-Path
+go_import_path: github.com/bbva/qed
 
 install: true
 
@@ -29,4 +34,5 @@ before_script:
   - go get github.com/tsenart/vegeta
 
 script:
-  - go test -v ./...
+  # Skip tests dir: https://stackoverflow.com/questions/29064197/go-test-skip-directory
+  - go test -v $(go list ./... | grep -v /tests)
