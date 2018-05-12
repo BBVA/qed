@@ -38,14 +38,9 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
  ## Starting guide
 
- - Download software
+ - Download the software and its dependencies
  ```
-    go get github.com/bbva/qed
-    go get github.com/dgraph-io/badger
-    go get github.com/coreos/bbolt
-    go get github.com/google/btree
-    go get github.com/spf13/cobra
-    go get github.com/tsenart/vegeta
+    go get -v -u -d github.com/bbva/qed/...
  ```
  - Start the server
 
