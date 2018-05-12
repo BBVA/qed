@@ -14,11 +14,9 @@
     limitations under the License.
 */
 
-/*
-	Package history implements a history tree structure as described in the paper
-	    Balloon: A Forward-Secure Append-Only Persistent Authenticated Data Structure
-	    https://eprint.iacr.org/2015/007
-*/
+// Package history implements a history tree structure as described in the paper
+//     Balloon: A Forward-Secure Append-Only Persistent Authenticated Data Structure
+//     https://eprint.iacr.org/2015/007
 package history
 
 import (

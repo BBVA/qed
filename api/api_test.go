@@ -14,7 +14,5 @@
     limitations under the License.
 */
 
-/*
-	Package API implements the interface to use the Verification Data Service
-*/
+// Package api implements the interface to use the Verification Data Service
 package api

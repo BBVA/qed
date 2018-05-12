@@ -14,7 +14,5 @@
     limitations under the License.
 */
 
-/*
-	Package api implements the public interface for qed service.
-*/
+// Package api implements the public interface for the qed service.
 package api

@@ -14,10 +14,8 @@
     limitations under the License.
 */
 
-/*
-	Package agent implements the command line interface to interact with the
-	API rest
-*/
+// Package agent implements the command line interface to interact with
+// the REST API
 package client
 
 import (
