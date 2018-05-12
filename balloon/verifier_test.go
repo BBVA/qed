@@ -17,12 +17,19 @@
 package balloon
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon/storage"
 	"github.com/bbva/qed/balloon/storage/cache"
+	"github.com/bbva/qed/log"
 )
 
 type FakeVerifiable struct {
@@ -88,26 +95,33 @@ func TestVerify(t *testing.T) {
 	}
 }
 
-func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, func()) {
-	frozen, frozenCloseF := openBPlusStorage()
-	leaves, leavesCloseF := openBPlusStorage()
-	cache := cache.NewSimpleCache(0)
+func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, storage.DeletableStore, func()) {
+	dir, err := ioutil.TempDir("/var/tmp/", "balloon.test")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher)
-	historyT := history.NewFakeTree(frozen, hasher)
+	frozen, frozenCloseF := openBadgerStorage(fmt.Sprintf("%s/frozen", dir))
+	leaves, leavesCloseF := openBadgerStorage(fmt.Sprintf("%s/leaves", dir))
+	cache := cache.NewSimpleCache(storage.SIZE20)
+
+	hyperT := hyper.NewTree(id, cache, leaves, hasher)
+	historyT := history.NewTree(frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
-	return balloon, func() {
+	return balloon, leaves, func() {
 		frozenCloseF()
 		leavesCloseF()
+		os.RemoveAll(dir)
 	}
 }
 
 func TestAddAndVerify(t *testing.T) {
+
 	id := string(0x0)
 	hasher := hashing.Sha256Hasher
 
-	balloon, closeF := createBalloon(id, hasher)
+	balloon, _, closeF := createBalloon(id, hasher)
 	defer closeF()
 
 	key := []byte("Never knows best")
@@ -116,8 +130,8 @@ func TestAddAndVerify(t *testing.T) {
 	commitment := <-balloon.Add(key)
 	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
 
-	historyProof := history.NewFakeProof(membershipProof.HistoryProof, commitment.Version, hasher)
-	hyperProof := hyper.NewFakeProof(id, membershipProof.HyperProof, hasher)
+	historyProof := history.NewProof(membershipProof.HistoryProof, commitment.Version, hasher)
+	hyperProof := hyper.NewProof(id, membershipProof.HyperProof, hasher)
 
 	proof := NewProof(
 		membershipProof.Exists,
@@ -132,6 +146,119 @@ func TestAddAndVerify(t *testing.T) {
 
 	if !correct {
 		t.Errorf("Proof is incorrect")
+	}
+
+}
+
+func TestTamperAndVerify(t *testing.T) {
+
+	t.Skip("WIP")
+	log.SetLogger("test", "info")
+
+	id := string(0x0)
+	hasher := hashing.Sha256Hasher
+
+	balloon, store, closeF := createBalloon(id, hasher)
+	defer closeF()
+
+	key := []byte("Never knows best")
+
+	commitment := <-balloon.Add(key)
+	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+	// log.Info(commitment.Version)
+
+	historyProof := history.NewProof(membershipProof.HistoryProof, commitment.Version, hasher)
+	hyperProof := hyper.NewProof(id, membershipProof.HyperProof, hasher)
+
+	proof := NewProof(
+		membershipProof.Exists,
+		hyperProof,
+		historyProof,
+		membershipProof.QueryVersion,
+		membershipProof.ActualVersion,
+		hasher,
+	)
+
+	correct := proof.Verify(commitment, key)
+	if !correct {
+		t.Errorf("Proof is incorrect")
+	}
+
+	original, _ := store.Get(key)
+	log.Info(original)
+
+	tamperVal := ^uint64(0) // max uint ftw!
+	tpBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(tpBytes, tamperVal)
+
+	err := store.Add(key, tpBytes)
+	if err != nil {
+		t.Fatal("store add returned not nil value")
+	}
+	tampered, _ := store.Get(key)
+	log.Info(tampered)
+	if bytes.Compare(tpBytes, tampered) != 0 {
+		t.Fatal("Tamper unsuccesfull")
+	}
+
+	if proof.Verify(commitment, key) {
+		t.Errorf("TamperProof unsucessful")
+	}
+
+}
+
+func TestDeleteAndVerify(t *testing.T) {
+
+	t.Skip("WIP")
+	log.SetLogger("test", "info")
+
+	id := string(0x0)
+	hasher := hashing.Sha256Hasher
+
+	balloon, store, closeF := createBalloon(id, hasher)
+	defer closeF()
+
+	key := []byte("Never knows best")
+	// keyDigest := hasher(key)
+
+	<-balloon.Add([]byte("Starting balloon"))
+	<-balloon.Add([]byte("Starting balloon"))
+	<-balloon.Add([]byte("Starting balloon"))
+	<-balloon.Add([]byte("Starting balloon"))
+	<-balloon.Add([]byte("Starting balloon"))
+	<-balloon.Add([]byte("Starting balloon"))
+	commitment := <-balloon.Add(key)
+	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	historyProof := history.NewProof(membershipProof.HistoryProof, commitment.Version, hasher)
+	hyperProof := hyper.NewProof(id, membershipProof.HyperProof, hasher)
+
+	proof := NewProof(
+		membershipProof.Exists,
+		hyperProof,
+		historyProof,
+		membershipProof.QueryVersion,
+		membershipProof.ActualVersion,
+		hasher,
+	)
+
+	if !proof.Verify(commitment, key) {
+		t.Errorf("Proof is incorrect")
+	}
+
+	err := store.Delete(key)
+	if err != nil {
+		t.Fatal("store.Delete returned not nil value")
+	}
+
+	tampered, _ := store.Get(key)
+	log.Info(tampered)
+	if tampered != nil {
+		t.Fatal("Tamper unsuccesfull")
+	}
+
+	if proof.Verify(commitment, key) {
+		t.Errorf("TamperProof unsuccessfull")
 	}
 
 }
