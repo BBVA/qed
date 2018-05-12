@@ -14,13 +14,11 @@
     limitations under the License.
 */
 
-/*
-	Package hyper implements an hyper tree (HT), which is an sparse merkle tree (SMT) with
-	optimizations for horizontal scalability.
-	The work here is based in the paper
-		Efficient Sparse Merkle Trees: Caching Strategies and Secure (Non-)Membership Proofs
-		https://eprint.iacr.org/2016/683
-*/
+// Package hyper implements an hyper tree (HT), which is an sparse merkle tree (SMT) with
+// optimizations for horizontal scalability.
+// The work here is based on the paper
+//     Efficient Sparse Merkle Trees: Caching Strategies and Secure (Non-)Membership Proofs
+//     https://eprint.iacr.org/2016/683
 package hyper
 
 import (
