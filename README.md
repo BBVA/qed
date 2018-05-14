@@ -36,7 +36,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
  We use the [Go](https://golang.org) programming language and set up the environment as
  described in its [documentation](https://golang.org/doc/code.html)
 
- ## Starting guide
+ ## Getting started
 
  - Download the software and its dependencies
  ```
@@ -45,8 +45,9 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
  - Start the server
 
  ```
-    cd "$GOPATH/src/github.com/bbva/qed/cmd/server"
-    go run server.go -k key -p /var/tmp/db_path -l info
+    cd "$GOPATH"/src/github.com/bbva/qed
+    mkdir /var/tmp/db_path
+    go run cmd/server/server.go -k key -p /var/tmp/db_path -l info
  ```
 
  - Using the client
@@ -55,7 +56,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
      ```
 	go run				\
-		qed.go			\
+		cmd/cli/qed.go		\
 		-k my-key			\
 		-e http://localhost:8080	\
 		add				\
@@ -67,7 +68,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
     ```
 	go run												\
-		qed.go											\
+		cmd/cli/qed.go										\
 		-k my-key										\
 		-e http://localhost:8080								\
 		membership										\
@@ -81,7 +82,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
     ```
 	go run												\
-		qed.go											\
+		cmd/cli/qed.go										\
 		-k my-key										\
 		-e http://localhost:8080								\
 		membership										\
@@ -103,7 +104,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 - Test everything
 
   ```
-     go test -v github.com/bbva/qed/...
+     go test -v "$GOPATH"/src/github.com/bbva/qed/...
   ```
 - Go profiling
 
