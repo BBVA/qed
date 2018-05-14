@@ -25,7 +25,7 @@ import (
 	"github.com/bbva/qed/balloon"
 )
 
-// Create a JSON struct for our HealthCheck
+// Struct HealthCheckResponse contains the response from HealthCheckHandler.
 type HealthCheckResponse struct {
 	Version int    `json:"version"`
 	Status  string `json:"status"`
@@ -64,16 +64,16 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 // This handler posts an event into the system:
 // The http post url is:
-//  POST /events
+//   POST /events
 //
-// The follwing statuses are expected:
-// If everything is allright, the HTTP status is 201 and the body contains:
-//	{
-//	"hash": "B8E1F80BD70AE0784C7855A451731B745FDDB67749D23F637BE9082B75E9575B",
-//	"commitment": "6A19F0FB4BE54511524BCD5B0C98B38DA1EE049A39735C39311E10336024436F",
-//	"index": 1
-//	}
-
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 201 and the body contains:
+//   {
+//     "HyperDigest": "mHzXvSE/j7eFmNObvC7PdtQTmd4W0q/FPHmiYEjL0eM=",
+//     "HistoryDigest": "Kpbn+7P4XrZi2hKpdhA7freUicZdUsU6GqmUk0vDJ8A=",
+//     "Version": 1,
+//     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
+//   }
 func Add(balloon balloon.Balloon) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -108,9 +108,24 @@ func Add(balloon balloon.Balloon) http.HandlerFunc {
 		w.WriteHeader(http.StatusCreated)
 		w.Write(out)
 		return
+
 	}
 }
 
+// This handler returns a membershipProof from the system
+// The http post url is:
+//   POST /proofs/membership
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 201 and the body contains:
+//   {
+//     "key": "TG9yZW0gaXBzdW0gZGF0dW0gbm9uIGNvcnJ1cHR1bSBlc3QK",
+//     "keyDigest": "NDRkMmY3MjEzYjlhMTI4ZWRhZjQzNWFhNjcyMzUxMGE0YTRhOGY5OWEzOWNiYTVhN2FhMWI5OWEwYTlkYzE2NCAgLQo=",
+//     "isMember": "true",
+//     "proofs": ["<truncated for clarity in docs>"],
+//     "queryVersion": "1",
+//     "actualVersion": "2",
+//   }
 func Membership(balloon balloon.Balloon) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
