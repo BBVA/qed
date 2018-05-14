@@ -46,9 +46,6 @@ func (p Proof) String() string {
 }
 
 func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint64) bool {
-	if p.auditPath == nil {
-		return false
-	}
 	// log.Debugf("\nVerifying commitment %v with auditpath %v, key %x and version %v\n", expectedDigest, p.auditPath, key, version)
 	depth := p.getDepth(version)
 	pathMap := make(map[string][]byte)
