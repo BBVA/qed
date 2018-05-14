@@ -92,6 +92,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 		--key 'test event'									\
 		--verify
     ```
+    See [usage](docs/usage.md) for the gory details.
 
 ## Useful commands
 
