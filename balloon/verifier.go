@@ -59,6 +59,11 @@ func (p *Proof) String() string {
 }
 
 func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
+
+	if p.HyperProof == nil || p.HistoryProof == nil {
+		return false
+	}
+
 	digest := p.hasher(event)
 	hyperCorrect := p.HyperProof.Verify(
 		commitment.HyperDigest,

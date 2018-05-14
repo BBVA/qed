@@ -152,9 +152,6 @@ func TestAddAndVerify(t *testing.T) {
 
 func TestTamperAndVerify(t *testing.T) {
 
-	t.Skip("WIP")
-	log.SetLogger("test", "info")
-
 	id := string(0x0)
 	hasher := hashing.Sha256Hasher
 
@@ -162,6 +159,7 @@ func TestTamperAndVerify(t *testing.T) {
 	defer closeF()
 
 	key := []byte("Never knows best")
+	keyDigest := balloon.hasher(key)
 
 	commitment := <-balloon.Add(key)
 	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
@@ -184,33 +182,45 @@ func TestTamperAndVerify(t *testing.T) {
 		t.Errorf("Proof is incorrect")
 	}
 
-	original, _ := store.Get(key)
-	log.Info(original)
+	original, _ := store.Get(keyDigest)
+	log.Infof("Value in leaf: %v, Commitment.Version %v", original, commitment.Version)
 
 	tamperVal := ^uint64(0) // max uint ftw!
 	tpBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(tpBytes, tamperVal)
 
-	err := store.Add(key, tpBytes)
+	err := store.Add(keyDigest, tpBytes)
 	if err != nil {
 		t.Fatal("store add returned not nil value")
 	}
-	tampered, _ := store.Get(key)
+
+	tampered, _ := store.Get(keyDigest)
 	log.Info(tampered)
 	if bytes.Compare(tpBytes, tampered) != 0 {
 		t.Fatal("Tamper unsuccesfull")
 	}
 
-	if proof.Verify(commitment, key) {
-		t.Errorf("TamperProof unsucessful")
+	tpMembershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	tpHistoryProof := history.NewProof(tpMembershipProof.HistoryProof, commitment.Version, hasher)
+	tpHyperProof := hyper.NewProof(id, tpMembershipProof.HyperProof, hasher)
+
+	tpProof := NewProof(
+		tpMembershipProof.Exists,
+		tpHyperProof,
+		tpHistoryProof,
+		tpMembershipProof.QueryVersion,
+		tpMembershipProof.ActualVersion,
+		hasher,
+	)
+
+	if tpProof.Verify(commitment, key) {
+		t.Errorf("TamperProof unsuccessfull")
 	}
 
 }
 
 func TestDeleteAndVerify(t *testing.T) {
-
-	t.Skip("WIP")
-	log.SetLogger("test", "info")
 
 	id := string(0x0)
 	hasher := hashing.Sha256Hasher
@@ -219,14 +229,8 @@ func TestDeleteAndVerify(t *testing.T) {
 	defer closeF()
 
 	key := []byte("Never knows best")
-	// keyDigest := hasher(key)
+	keyDigest := balloon.hasher(key)
 
-	<-balloon.Add([]byte("Starting balloon"))
-	<-balloon.Add([]byte("Starting balloon"))
-	<-balloon.Add([]byte("Starting balloon"))
-	<-balloon.Add([]byte("Starting balloon"))
-	<-balloon.Add([]byte("Starting balloon"))
-	<-balloon.Add([]byte("Starting balloon"))
 	commitment := <-balloon.Add(key)
 	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
 
@@ -246,18 +250,36 @@ func TestDeleteAndVerify(t *testing.T) {
 		t.Errorf("Proof is incorrect")
 	}
 
-	err := store.Delete(key)
+	original, _ := store.Get(keyDigest)
+	log.Infof("Value in leaf: %v, Commitment.Version %v", original, commitment.Version)
+
+	err := store.Delete(keyDigest)
 	if err != nil {
 		t.Fatal("store.Delete returned not nil value")
 	}
 
-	tampered, _ := store.Get(key)
-	log.Info(tampered)
+	tampered, _ := store.Get(keyDigest)
+	log.Infof("Value in leaf: %v, Commitment.Version %v", tampered, commitment.Version)
+
 	if tampered != nil {
 		t.Fatal("Tamper unsuccesfull")
 	}
 
-	if proof.Verify(commitment, key) {
+	tpMembershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	tpHistoryProof := history.NewProof(tpMembershipProof.HistoryProof, commitment.Version, hasher)
+	tpHyperProof := hyper.NewProof(id, tpMembershipProof.HyperProof, hasher)
+
+	tpProof := NewProof(
+		tpMembershipProof.Exists,
+		tpHyperProof,
+		tpHistoryProof,
+		tpMembershipProof.QueryVersion,
+		tpMembershipProof.ActualVersion,
+		hasher,
+	)
+
+	if tpProof.Verify(commitment, key) {
 		t.Errorf("TamperProof unsuccessfull")
 	}
 

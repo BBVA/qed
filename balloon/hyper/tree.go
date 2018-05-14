@@ -180,7 +180,8 @@ func (t *Tree) operations() chan interface{} {
 				case *proof:
 					proof, err := t.auditPath(msg.key)
 					if err != nil {
-						log.Error("Operations error: ", err)
+						log.Debug("Operations error: ", err)
+						msg.result <- &MembershipProof{}
 					}
 					msg.result <- proof
 				default:
