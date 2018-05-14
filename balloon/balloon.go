@@ -138,7 +138,7 @@ func (b *HyperBalloon) operations() chan interface{} {
 				case *membership:
 					proof, err := b.genMembershipProof(msg.event, msg.version)
 					if err != nil {
-						log.Error("Operations error: %v", err)
+						log.Debug("Operations error: %v", err)
 					}
 					msg.result <- proof
 				default:

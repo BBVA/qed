@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/bbva/qed/balloon/hashing"
-	"github.com/bbva/qed/log"
 )
 
 type Proof struct {
@@ -50,7 +49,10 @@ func (p Proof) String() string {
 }
 
 func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
-	log.Debugf("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
+	if p.auditPath == nil {
+		return false
+	}
+	// log.Debugf("\nVerifying commitment %v with auditpath %v, key %v and value %v\n", expectedDigest, p.auditPath, key, value)
 	valueBytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(valueBytes, uint64(value))
 
@@ -60,7 +62,7 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
 }
 
 func (p *Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
-	log.Debugf("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
+	// log.Debugf("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
 	if pos.height == 0 {
 		return p.leafHasher(p.id, value, pos.base)
 	}

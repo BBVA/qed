@@ -75,7 +75,7 @@ func NewServer(
 
 	if tampering {
 		log.Debug("tampering")
-		go tamperServer(leaves.(storage.DeletableStore))
+		go tamperServer(leaves.(storage.DeletableStore), hasher)
 	}
 
 	router := apihttp.NewApiHttp(balloon)
@@ -121,11 +121,12 @@ func logHandler(handle http.Handler) http.HandlerFunc {
 	}
 }
 
-func tamperServer(store storage.DeletableStore) {
+func tamperServer(store storage.DeletableStore, hasher hashing.Hasher) {
 
 	type tamperEvent struct {
-		Key   []byte
-		Value []byte
+		Key       []byte
+		KeyDigest []byte
+		Value     []byte
 	}
 
 	tamper := func(w http.ResponseWriter, r *http.Request) {
@@ -149,16 +150,18 @@ func tamperServer(store storage.DeletableStore) {
 			return
 		}
 
+		tp.KeyDigest = hasher(tp.Key)
+
 		switch r.Method {
 		case "PATCH":
-			get, _ := store.Get(tp.Key)
+			get, _ := store.Get(tp.KeyDigest)
 			log.Debugf("Get: %v", get)
-			log.Debugf("Tamper: %v", store.Add(tp.Key, tp.Value))
+			log.Debugf("Tamper: %v", store.Add(tp.KeyDigest, tp.Value))
 
 		case "DELETE":
-			get, _ := store.Get(tp.Key)
+			get, _ := store.Get(tp.KeyDigest)
 			log.Debugf("Get: %v", get)
-			log.Debugf("Delete: %v", store.Delete(tp.Key))
+			log.Debugf("Delete: %v", store.Delete(tp.KeyDigest))
 
 		}
 
