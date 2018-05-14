@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/BBVA/qed.svg?branch=master)](https://travis-ci.org/BBVA/qed)
-## QED
+
+<p align="center"><img src="./qed_logo.png" alt="QED"/></p>
 
 *([quod erat demostrandum](https://en.wikipedia.org/wiki/Q.E.D.))*
 
