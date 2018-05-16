@@ -46,7 +46,7 @@ func newAuditorCommand(ctx *Context) *cobra.Command {
 				if ctx.client.Verify(proof, snapshot) {
 					fmt.Println("Verify: OK")
 				} else {
-					fmt.Printf("Verify: KO, raw: %s", raw)
+					fmt.Printf("Verify: KO, raw: %s\n", raw)
 				}
 			}
 
