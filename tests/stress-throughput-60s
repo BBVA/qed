@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+
+echo Starting server...
+go run ../cmd/server/server.go -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -l info &
+echo done.
+
+sleep 1
+
+echo Stress time!
+wrk -t100 -c100 -d60s --latency -s attack_add/attack_add.lua http://localhost:8080
+echo done.
+
+echo Cleanup...
+fuser -k -n tcp 8080
+rm -rf /var/tmp/demo.*
+echo done.
