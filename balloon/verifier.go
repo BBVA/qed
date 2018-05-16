@@ -60,7 +60,7 @@ func (p *Proof) String() string {
 
 func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
 
-	if p.HyperProof == nil || p.HistoryProof == nil {
+	if p == nil || p.HyperProof == nil || p.HistoryProof == nil {
 		return false
 	}
 
