@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+
+echo Starting server...
+go run ../cmd/server/server.go -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -l info &
+echo done.
+
+sleep 5
+
+echo Stress time!
+go run attack_add/attack_add.go -w 100 -r 1000 -d 60s -k pepe -e http://localhost:8080/events > report.bin
+cat report.bin | vegeta report
+cat report.bin | vegeta report -reporter plot > plot.html
+echo done.
+
+echo Cleanup...
+fuser -k -n tcp 8080
+rm -rf /var/tmp/demo.*
+echo done.
