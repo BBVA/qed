@@ -4,7 +4,7 @@ echo Starting server...
 go run ../cmd/server/server.go -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -l info &
 echo done.
 
-sleep 1
+sleep 5
 
 echo Stress time!
 wrk -t100 -c100 -d60s --latency -s attack_add/attack_add.lua http://localhost:8080
