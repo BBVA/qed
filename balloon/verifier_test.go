@@ -1,17 +1,17 @@
 /*
-    Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+       http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 */
 
 package balloon
@@ -50,26 +50,27 @@ func TestVerify(t *testing.T) {
 		exists         bool
 		hyperOK        bool
 		historyOK      bool
+		currentVersion uint64
 		queryVersion   uint64
 		actualVersion  uint64
 		expectedResult bool
 	}{
 		// Event exists, queryVersion <= actualVersion, and both trees verify it
-		{true, true, true, uint64(0), uint64(0), true},
+		{true, true, true, uint64(0), uint64(0), uint64(0), true},
 		// Event exists, queryVersion <= actualVersion, but HyperTree does not verify it
-		{true, false, true, uint64(0), uint64(0), false},
+		{true, false, true, uint64(0), uint64(0), uint64(0), false},
 		// Event exists, queryVersion <= actualVersion, but HistoryTree does not verify it
-		{true, true, false, uint64(0), uint64(0), false},
+		{true, true, false, uint64(0), uint64(0), uint64(0), false},
 
 		// Event exists, queryVersion > actualVersion, and both trees verify it
-		{true, true, true, uint64(1), uint64(0), true},
+		{true, true, true, uint64(1), uint64(1), uint64(0), true},
 		// Event exists, queryVersion > actualVersion, but HyperTree does not verify it
-		{true, false, true, uint64(1), uint64(0), false},
+		{true, false, true, uint64(1), uint64(1), uint64(0), false},
 
 		// Event does not exist, HyperTree verifies it
-		{false, true, false, uint64(0), uint64(0), true},
+		{false, true, false, uint64(0), uint64(0), uint64(0), true},
 		// Event does not exist, HyperTree does not verify it
-		{false, false, false, uint64(0), uint64(0), false},
+		{false, false, false, uint64(0), uint64(0), uint64(0), false},
 	}
 
 	for i, c := range testCases {
@@ -83,6 +84,7 @@ func TestVerify(t *testing.T) {
 			c.exists,
 			NewFakeVerifiable(c.hyperOK),
 			NewFakeVerifiable(c.historyOK),
+			c.currentVersion,
 			c.queryVersion,
 			c.actualVersion,
 			hashing.XorHasher,
@@ -137,6 +139,7 @@ func TestAddAndVerify(t *testing.T) {
 		membershipProof.Exists,
 		hyperProof,
 		historyProof,
+		membershipProof.CurrentVersion,
 		membershipProof.QueryVersion,
 		membershipProof.ActualVersion,
 		hasher,
@@ -172,6 +175,7 @@ func TestTamperAndVerify(t *testing.T) {
 		membershipProof.Exists,
 		hyperProof,
 		historyProof,
+		membershipProof.CurrentVersion,
 		membershipProof.QueryVersion,
 		membershipProof.ActualVersion,
 		hasher,
@@ -209,6 +213,7 @@ func TestTamperAndVerify(t *testing.T) {
 		tpMembershipProof.Exists,
 		tpHyperProof,
 		tpHistoryProof,
+		tpMembershipProof.CurrentVersion,
 		tpMembershipProof.QueryVersion,
 		tpMembershipProof.ActualVersion,
 		hasher,
@@ -241,6 +246,7 @@ func TestDeleteAndVerify(t *testing.T) {
 		membershipProof.Exists,
 		hyperProof,
 		historyProof,
+		membershipProof.CurrentVersion,
 		membershipProof.QueryVersion,
 		membershipProof.ActualVersion,
 		hasher,
@@ -274,6 +280,7 @@ func TestDeleteAndVerify(t *testing.T) {
 		tpMembershipProof.Exists,
 		tpHyperProof,
 		tpHistoryProof,
+		tpMembershipProof.CurrentVersion,
 		tpMembershipProof.QueryVersion,
 		tpMembershipProof.ActualVersion,
 		hasher,

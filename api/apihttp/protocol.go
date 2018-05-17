@@ -1,17 +1,17 @@
 /*
-    Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+       http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 */
 
 package apihttp
@@ -52,11 +52,11 @@ type Proofs struct {
 }
 
 type MembershipProof struct {
-	Key                         []byte
-	KeyDigest                   []byte
-	IsMember                    bool
-	Proofs                      *Proofs
-	QueryVersion, ActualVersion uint64
+	Key                                         []byte
+	KeyDigest                                   []byte
+	IsMember                                    bool
+	Proofs                                      *Proofs
+	CurrentVersion, QueryVersion, ActualVersion uint64
 }
 
 func ToSnapshot(commitment *balloon.Commitment, event []byte) *Snapshot {
@@ -85,6 +85,7 @@ func ToMembershipProof(event []byte, proof *balloon.MembershipProof) *Membership
 			proof.HyperProof,
 			ToHistoryAuditPath(proof.HistoryProof),
 		},
+		proof.CurrentVersion,
 		proof.QueryVersion,
 		proof.ActualVersion,
 	}
@@ -103,6 +104,6 @@ func ToBalloonProof(id string, p *MembershipProof, hasher hashing.Hasher) *ballo
 	historyProof := history.NewProof(ToHistoryNode(p.Proofs.HistoryAuditPath), p.QueryVersion, hasher)
 	hyperProof := hyper.NewProof(id, p.Proofs.HyperAuditPath, hasher)
 
-	return balloon.NewProof(p.IsMember, hyperProof, historyProof, p.QueryVersion, p.ActualVersion, hasher)
+	return balloon.NewProof(p.IsMember, hyperProof, historyProof, p.CurrentVersion, p.QueryVersion, p.ActualVersion, hasher)
 
 }
