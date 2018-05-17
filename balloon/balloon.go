@@ -156,7 +156,7 @@ func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
 	digest := b.hasher(event)
 	version := b.version
 	index := make([]byte, 8)
-	binary.LittleEndian.PutUint64(index, uint64(version))
+	binary.LittleEndian.PutUint64(index, version)
 	b.version++
 	return &Commitment{
 		<-b.history.Add(digest, index),
@@ -178,7 +178,7 @@ func (b *HyperBalloon) genMembershipProof(event []byte, version uint64) (*Member
 
 	if len(hyperProof.ActualValue) > 0 {
 		exists = true
-		actualVersion = uint64(binary.LittleEndian.Uint64(hyperProof.ActualValue))
+		actualVersion = binary.LittleEndian.Uint64(hyperProof.ActualValue)
 	}
 
 	if exists && actualVersion <= version {

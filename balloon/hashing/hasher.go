@@ -44,8 +44,7 @@ var XorHasher Hasher = func(data ...[]byte) []byte {
 	return []byte{result}
 }
 
-
-var Pearson Hasher = func (data ...[]byte) []byte {
+var Pearson Hasher = func(data ...[]byte) []byte {
 	lookupTable := [...]uint8{
 		// 0-255 shuffled in any (random) order suffices
 		98, 6, 85, 150, 36, 23, 112, 164, 135, 207, 169, 5, 26, 64, 165, 219, //  1
@@ -66,19 +65,18 @@ var Pearson Hasher = func (data ...[]byte) []byte {
 		43, 119, 224, 71, 122, 142, 42, 160, 104, 48, 247, 103, 15, 11, 138, 239, // 16
 	}
 
-	
-	ih := make([]byte,0)
+	ih := make([]byte, 0)
 	for _, k := range data {
 		h := uint8(0)
 		for _, v := range k {
-			h = lookupTable[h^uint8(v)]
+			h = lookupTable[h^v]
 		}
-		ih = append(ih,h)
+		ih = append(ih, h)
 	}
-	
+
 	r := uint8(0)
 	for _, v := range ih {
-		r = lookupTable[r^uint8(v)]
+		r = lookupTable[r^v]
 	}
 	return []byte{r}
 

@@ -89,7 +89,7 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 
 	// init default hashes cache
 	tree.defaultHashes[0] = hasher(tree.id, Empty)
-	for i := 1; i < int(digestLength); i++ {
+	for i := 1; i < digestLength; i++ {
 		tree.defaultHashes[i] = hasher(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
 	tree.ops = tree.operations()
