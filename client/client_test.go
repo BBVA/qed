@@ -1,25 +1,28 @@
 /*
-    Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+       http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 */
 
 package client
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
+	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 )
@@ -35,26 +38,34 @@ func resetPath() {
 }
 
 func init() {
+	log.SetLogger("client-test", "info")
+}
+
+func setupTest() (*http.Server, *HttpClient) {
 	path = "/var/tmp/balloonClientTest"
 	resetPath()
-
 	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger", false, false)
-
 	go (func() {
 		err := server.ListenAndServe()
 		if err != nil {
-			log.Errorf("Can't start HTTP Server: ", err)
+			log.Info(err)
 		}
 	})()
 
 	client = NewHttpClient("http://localhost:8079", "my-awesome-api-key")
+	return server, client
 }
 
 func TestAdd(t *testing.T) {
+	server, client := setupTest()
 	client.Add("Hola mundo!")
+	server.Close()
 }
 
 func TestMembership(t *testing.T) {
+	server, client := setupTest()
+	defer server.Close()
+
 	snapshot, err := client.Add("Hola mundo!")
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +83,10 @@ func TestMembership(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
-	snapshot, err := client.Add("Hola mundo!")
+	server, client := setupTest()
+	defer server.Close()
+
+	snapshot, err := client.Add("Hello world!")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,10 +101,37 @@ func TestVerify(t *testing.T) {
 	if !correct {
 		t.Fatal("correct should be true")
 	}
+
+}
+
+func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
+	server, client := setupTest()
+	defer server.Close()
+
+	snapshot1, _ := client.Add("Test event 1")
+	snapshot2, _ := client.Add("Test event 2")
+
+	proof, err := client.Membership(snapshot1.Event, snapshot1.Version)
+	fmt.Println(proof)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	verifyingSnapshot := &apihttp.Snapshot{
+		snapshot2.HyperDigest, // note that the hyper digest corresponds with the last one
+		snapshot1.HistoryDigest,
+		snapshot1.Version,
+		snapshot1.Event}
+	correct := client.Verify(proof, verifyingSnapshot)
+
+	if !correct {
+		t.Fatal("correct should be true")
+	}
 }
 
 func benchmarkAdd(i int, b *testing.B) {
-	resetPath()
+	server, client := setupTest()
+	defer server.Close()
 	b.ResetTimer()
 	for n := 0; n < i; n++ {
 		client.Add(string(n))
@@ -105,6 +146,8 @@ func BenchmarkAdd100000(b *testing.B)   { benchmarkAdd(100000, b) }
 func BenchmarkAdd10000000(b *testing.B) { benchmarkAdd(10000000, b) }
 
 func BenchmarkVerify(b *testing.B) {
+	server, client := setupTest()
+	defer server.Close()
 	b.ResetTimer()
 	b.N = 100000
 	for n := 0; n < b.N; n++ {
