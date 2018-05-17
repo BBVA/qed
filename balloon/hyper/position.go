@@ -57,7 +57,7 @@ func (p Position) left() *Position {
 	np.split = make([]byte, p.len())
 	copy(np.split, np.base)
 
-	splitBit := int(np.n - np.height)
+	splitBit := np.n - np.height
 	if splitBit < np.n {
 		bitSet(np.split, splitBit)
 	}
@@ -75,7 +75,7 @@ func (p Position) right() *Position {
 	np.split = make([]byte, p.len())
 	copy(np.split, np.base)
 
-	splitBit := int(np.n - np.height)
+	splitBit := np.n - np.height
 	if splitBit < np.n {
 		bitSet(np.split, splitBit)
 	}
