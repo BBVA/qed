@@ -193,50 +193,50 @@ func TestMembership(t *testing.T) {
 	}
 
 	// Check the body response
-	membershipProof := &MembershipProof{}
-	json.Unmarshal([]byte(rr.Body.String()), membershipProof)
+	membershipResult := &MembershipResult{}
+	json.Unmarshal([]byte(rr.Body.String()), membershipResult)
 
-	if !bytes.Equal(membershipProof.Key, key) {
+	if !bytes.Equal(membershipResult.Key, key) {
 		t.Errorf("Key is not consistent ")
 	}
 
-	if !bytes.Equal(membershipProof.KeyDigest, []byte{0x0}) {
+	if !bytes.Equal(membershipResult.KeyDigest, []byte{0x0}) {
 		t.Errorf("KeyDigest is not consistent ")
 	}
 
-	if membershipProof.IsMember != true {
+	if membershipResult.IsMember != true {
 		t.Errorf("IsMember is not consistent ")
 	}
 
-	if len(membershipProof.Proofs.HyperAuditPath) != 1 {
+	if len(membershipResult.Proofs.HyperAuditPath) != 1 {
 		t.Errorf("Proofs.HyperAuditPath is not consistent ")
 	}
 
-	if !bytes.Equal(membershipProof.Proofs.HyperAuditPath[0], []byte{0x0}) {
-		t.Errorf("Proofs.HyperAuditPath is not consistent %v", membershipProof.Proofs.HyperAuditPath[0])
+	if !bytes.Equal(membershipResult.Proofs.HyperAuditPath[0], []byte{0x0}) {
+		t.Errorf("Proofs.HyperAuditPath is not consistent %v", membershipResult.Proofs.HyperAuditPath[0])
 	}
 
-	if len(membershipProof.Proofs.HistoryAuditPath) != 1 {
+	if len(membershipResult.Proofs.HistoryAuditPath) != 1 {
 		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
 	}
 
-	if !bytes.Equal(membershipProof.Proofs.HistoryAuditPath[0].Digest, []byte{0x0}) {
+	if !bytes.Equal(membershipResult.Proofs.HistoryAuditPath[0].Digest, []byte{0x0}) {
 		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
 	}
 
-	if membershipProof.Proofs.HistoryAuditPath[0].Index != 0 {
+	if membershipResult.Proofs.HistoryAuditPath[0].Index != 0 {
 		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
 	}
 
-	if membershipProof.Proofs.HistoryAuditPath[0].Layer != 1 {
+	if membershipResult.Proofs.HistoryAuditPath[0].Layer != 1 {
 		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
 	}
 
-	if membershipProof.QueryVersion != version {
+	if membershipResult.QueryVersion != version {
 		t.Errorf("QueryVersion is not consistent ")
 	}
 
-	if membershipProof.ActualVersion != version+1 {
+	if membershipResult.ActualVersion != version+1 {
 		t.Errorf("ActualVersion is not consistent ")
 	}
 

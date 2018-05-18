@@ -86,7 +86,7 @@ func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
 }
 
-func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipProof, error) {
+func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipResult, error) {
 
 	query, _ := json.Marshal(&apihttp.MembershipQuery{
 		key,
@@ -98,7 +98,7 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipP
 		return nil, err
 	}
 
-	var proof *apihttp.MembershipProof
+	var proof *apihttp.MembershipResult
 
 	json.Unmarshal(body, &proof)
 
@@ -106,7 +106,7 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipP
 
 }
 
-func (c HttpClient) Verify(proof *apihttp.MembershipProof, snap *apihttp.Snapshot) bool {
+func (c HttpClient) Verify(proof *apihttp.MembershipResult, snap *apihttp.Snapshot) bool {
 
 	balloonProof := apihttp.ToBalloonProof(c.apiKey, proof, hashing.Sha256Hasher)
 
