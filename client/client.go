@@ -1,17 +1,17 @@
 /*
-    Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
 
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
 
-        http://www.apache.org/licenses/LICENSE-2.0
+       http://www.apache.org/licenses/LICENSE-2.0
 
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 */
 
 // Package agent implements the command line interface to interact with
@@ -86,7 +86,7 @@ func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
 }
 
-func (c HttpClient) Membership(key []byte, version uint64) (*balloon.Proof, error) {
+func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipProof, error) {
 
 	query, _ := json.Marshal(&apihttp.MembershipQuery{
 		key,
@@ -98,17 +98,19 @@ func (c HttpClient) Membership(key []byte, version uint64) (*balloon.Proof, erro
 		return nil, err
 	}
 
-	var proof apihttp.MembershipProof
+	var proof *apihttp.MembershipProof
 
 	json.Unmarshal(body, &proof)
 
-	return apihttp.ToBalloonProof(c.apiKey, &proof, hashing.Sha256Hasher), nil
+	return proof, nil
 
 }
 
-func (c HttpClient) Verify(proof *balloon.Proof, snap *apihttp.Snapshot) bool {
+func (c HttpClient) Verify(proof *apihttp.MembershipProof, snap *apihttp.Snapshot) bool {
 
-	return proof.Verify(&balloon.Commitment{
+	balloonProof := apihttp.ToBalloonProof(c.apiKey, proof, hashing.Sha256Hasher)
+
+	return balloonProof.Verify(&balloon.Commitment{
 		snap.HistoryDigest,
 		snap.HyperDigest,
 		snap.Version,

@@ -17,7 +17,6 @@
 package client
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -76,8 +75,8 @@ func TestMembership(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !proof.Exists {
-		t.Fatal("It should exist")
+	if !proof.IsMember {
+		t.Fatal("It should be a member")
 	}
 
 }
@@ -112,7 +111,6 @@ func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
 	snapshot2, _ := client.Add("Test event 2")
 
 	proof, err := client.Membership(snapshot1.Event, snapshot1.Version)
-	fmt.Println(proof)
 	if err != nil {
 		t.Fatal(err)
 	}
