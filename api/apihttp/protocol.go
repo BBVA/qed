@@ -51,7 +51,7 @@ type Proofs struct {
 	HistoryAuditPath []HistoryNode
 }
 
-type MembershipProof struct {
+type MembershipResult struct {
 	Key                                         []byte
 	KeyDigest                                   []byte
 	IsMember                                    bool
@@ -76,8 +76,8 @@ func ToHistoryAuditPath(path []history.Node) []HistoryNode {
 	return result
 }
 
-func ToMembershipProof(event []byte, proof *balloon.MembershipProof) *MembershipProof {
-	return &MembershipProof{
+func ToMembershipProof(event []byte, proof *balloon.MembershipProof) *MembershipResult {
+	return &MembershipResult{
 		event,
 		proof.KeyDigest,
 		proof.Exists,
@@ -99,7 +99,7 @@ func ToHistoryNode(path []HistoryNode) []history.Node {
 	return result
 }
 
-func ToBalloonProof(id string, p *MembershipProof, hasher hashing.Hasher) *balloon.Proof {
+func ToBalloonProof(id string, p *MembershipResult, hasher hashing.Hasher) *balloon.Proof {
 
 	historyProof := history.NewProof(ToHistoryNode(p.Proofs.HistoryAuditPath), p.QueryVersion, hasher)
 	hyperProof := hyper.NewProof(id, p.Proofs.HyperAuditPath, hasher)
