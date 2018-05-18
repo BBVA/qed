@@ -35,7 +35,7 @@ request = function()
 	wrk.headers["Api-Key"] = "pepe"
 
 	wrk.method = "POST"
-	wrk.body   = '{ "event": "' .. enc("terst event number " .. counter ) .. '"}'
+	wrk.body   = '{ "event": "' .. enc("test event number " .. counter ) .. '"}'
 	wrk.headers["Content-Type"] = "application/json"
 	
 	counter = counter + 1
