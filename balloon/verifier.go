@@ -56,12 +56,12 @@ func NewProof(
 	}
 }
 
-func (p *Proof) String() string {
+func (p Proof) String() string {
 	return fmt.Sprintf(`{"Exists":%v, "HyperProof": "%v", "HistoryProof": "%v", "CurrentVersion": "%d", "QueryVersion": "%d", "ActualVersion": "%d"}`,
 		p.Exists, p.HyperProof, p.HistoryProof, p.CurrentVersion, p.QueryVersion, p.ActualVersion)
 }
 
-func (p *Proof) Verify(commitment *Commitment, event []byte) bool {
+func (p Proof) Verify(commitment *Commitment, event []byte) bool {
 
 	if p.HyperProof == nil || p.HistoryProof == nil {
 		return false

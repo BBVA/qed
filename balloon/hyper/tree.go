@@ -204,7 +204,7 @@ func (t *Tree) add(key []byte, value []byte) ([]byte, error) {
 	return t.toCache(key, value, rootPosition(t.digestLength)), nil
 }
 
-func (t *Tree) auditPath(key []byte) (*MembershipProof, error) {
+func (t Tree) auditPath(key []byte) (*MembershipProof, error) {
 	value, err := t.leaves.Get(key) // TODO check existence
 	if err != nil {
 		log.Debug(t.leaves)
