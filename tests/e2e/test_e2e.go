@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"testing"
 
+	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 )
@@ -54,4 +55,8 @@ func setupServer() func() {
 func clearPath(path string) {
 	os.RemoveAll(path)
 	os.MkdirAll(path, os.FileMode(0755))
+}
+
+func getClient() *client.HttpClient {
+	return client.NewHttpClient("http://localhost:8079", "my-awesome-api-key")
 }

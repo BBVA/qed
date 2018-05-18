@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/api/apihttp"
-	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/testutils/assert"
 	"github.com/bbva/qed/testutils/rand"
 )
@@ -128,8 +127,4 @@ func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
 		assert.True(t, client.Verify(result1, verifyingSnapshot), "The proofs should be valid")
 	})
 
-}
-
-func getClient() *client.HttpClient {
-	return client.NewHttpClient("http://localhost:8079", "my-awesome-api-key")
 }
