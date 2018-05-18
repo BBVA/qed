@@ -34,21 +34,21 @@ func (c *SimpleCache) Put(key []byte, value []byte) error {
 	return nil
 }
 
-func (c *SimpleCache) Get(key []byte) ([]byte, bool) {
+func (c SimpleCache) Get(key []byte) ([]byte, bool) {
 	var aux [keySize]byte
 	copy(aux[:], key)
 	result, ok := c.nodes[aux]
 	return result, ok
 }
 
-func (c *SimpleCache) Exists(key []byte) bool {
+func (c SimpleCache) Exists(key []byte) bool {
 	var aux [keySize]byte
 	copy(aux[:], key)
 	_, ok := c.nodes[aux]
 	return ok
 }
 
-func (c *SimpleCache) Size() uint64 {
+func (c SimpleCache) Size() uint64 {
 	return c.size
 }
 

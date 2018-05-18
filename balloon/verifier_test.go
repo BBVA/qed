@@ -40,7 +40,7 @@ func NewFakeVerifiable(result bool) *FakeVerifiable {
 	return &FakeVerifiable{result}
 }
 
-func (f *FakeVerifiable) Verify(commitment, event []byte, version uint64) bool {
+func (f FakeVerifiable) Verify(commitment, event []byte, version uint64) bool {
 	return f.result
 }
 

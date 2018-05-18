@@ -43,12 +43,12 @@ func NewBPlusTreeStorage() *BPlusTreeStorage {
 	return &BPlusTreeStorage{btree.New(2)}
 }
 
-func (s *BPlusTreeStorage) Add(key []byte, value []byte) error {
+func (s BPlusTreeStorage) Add(key []byte, value []byte) error {
 	s.store.ReplaceOrInsert(KVPair{key, value})
 	return nil
 }
 
-func (s *BPlusTreeStorage) Get(key []byte) ([]byte, error) {
+func (s BPlusTreeStorage) Get(key []byte) ([]byte, error) {
 	item := s.store.Get(KVPair{key, nil})
 	if item == nil {
 		return make([]byte, 0), nil
@@ -56,7 +56,7 @@ func (s *BPlusTreeStorage) Get(key []byte) ([]byte, error) {
 	return item.(KVPair).Value, nil
 }
 
-func (s *BPlusTreeStorage) GetRange(start, end []byte) storage.LeavesSlice {
+func (s BPlusTreeStorage) GetRange(start, end []byte) storage.LeavesSlice {
 	var leaves storage.LeavesSlice
 	s.store.AscendGreaterOrEqual(KVPair{start, nil}, func(i btree.Item) bool {
 		if bytes.Compare(i.(KVPair).Key, end) > 0 {
@@ -68,9 +68,9 @@ func (s *BPlusTreeStorage) GetRange(start, end []byte) storage.LeavesSlice {
 	return leaves
 }
 
-func (s *BPlusTreeStorage) Delete([]byte) error { return errors.New("not implemented") }
+func (s BPlusTreeStorage) Delete([]byte) error { return errors.New("not implemented") }
 
-func (s *BPlusTreeStorage) Close() error {
+func (s BPlusTreeStorage) Close() error {
 	s.store.Clear(false)
 	return nil
 }
