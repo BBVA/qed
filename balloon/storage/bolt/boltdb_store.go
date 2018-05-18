@@ -33,7 +33,7 @@ type BoltStorage struct {
 	bucket []byte
 }
 
-func (s *BoltStorage) Add(key []byte, value []byte) error {
+func (s BoltStorage) Add(key []byte, value []byte) error {
 	return s.db.Update(func(tx *b.Tx) error {
 		b := tx.Bucket(s.bucket)
 		err := b.Put(key, value)
@@ -41,7 +41,7 @@ func (s *BoltStorage) Add(key []byte, value []byte) error {
 	})
 }
 
-func (s *BoltStorage) Get(key []byte) ([]byte, error) {
+func (s BoltStorage) Get(key []byte) ([]byte, error) {
 	var value []byte
 	err := s.db.View(func(tx *b.Tx) error {
 		b := tx.Bucket(s.bucket)
@@ -60,7 +60,7 @@ func (s *BoltStorage) Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func (s *BoltStorage) GetRange(start, end []byte) storage.LeavesSlice {
+func (s BoltStorage) GetRange(start, end []byte) storage.LeavesSlice {
 	var leaves storage.LeavesSlice
 
 	s.db.View(func(tx *b.Tx) error {
@@ -76,9 +76,9 @@ func (s *BoltStorage) GetRange(start, end []byte) storage.LeavesSlice {
 	return leaves
 }
 
-func (s *BoltStorage) Delete([]byte) error { return errors.New("not implemented") }
+func (s BoltStorage) Delete([]byte) error { return errors.New("not implemented") }
 
-func (s *BoltStorage) Close() error {
+func (s BoltStorage) Close() error {
 	return s.db.Close()
 }
 

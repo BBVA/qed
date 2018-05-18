@@ -48,7 +48,7 @@ func (p Proof) String() string {
 	return fmt.Sprintf(`{"id": "%s", "auditPathLen": "%d"}`, p.id, len(p.auditPath))
 }
 
-func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
+func (p Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
 	if p.auditPath == nil {
 		return false
 	}
@@ -61,7 +61,7 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
 	return bytes.Equal(expectedDigest, recomputed)
 }
 
-func (p *Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
+func (p Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
 	// log.Debugf("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
 	if pos.height == 0 {
 		return p.leafHasher(p.id, value, pos.base)

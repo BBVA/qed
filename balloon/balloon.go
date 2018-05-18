@@ -165,7 +165,7 @@ func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
 	}, nil
 }
 
-func (b *HyperBalloon) genMembershipProof(event []byte, version uint64) (*MembershipProof, error) {
+func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*MembershipProof, error) {
 	digest := b.hasher(event)
 
 	var hyperProof *hyper.MembershipProof

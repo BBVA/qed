@@ -45,7 +45,7 @@ func (p Proof) String() string {
 	return fmt.Sprintf(`{"auditPathLen": "%d"}`, len(p.auditPath))
 }
 
-func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint64) bool {
+func (p Proof) Verify(expectedDigest []byte, key []byte, version uint64) bool {
 	// log.Debugf("\nVerifying commitment %v with auditpath %v, key %x and version %v\n", expectedDigest, p.auditPath, key, version)
 	depth := p.getDepth(version)
 	pathMap := make(map[string][]byte)
@@ -57,7 +57,7 @@ func (p *Proof) Verify(expectedDigest []byte, key []byte, version uint64) bool {
 	return bytes.Equal(expectedDigest, recomputed)
 }
 
-func (p *Proof) getDepth(index uint64) uint64 {
+func (p Proof) getDepth(index uint64) uint64 {
 	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
 
@@ -65,7 +65,7 @@ func pathKey(index, layer uint64) string {
 	return fmt.Sprintf("%d|%d", index, layer)
 }
 
-func (p *Proof) rootHash(auditPath map[string][]byte, key []byte, index, layer, version uint64) []byte {
+func (p Proof) rootHash(auditPath map[string][]byte, key []byte, index, layer, version uint64) []byte {
 	var digest []byte
 	// log.Debugf("Calling rootHash with auditpath %v, key %x, index %v, layer %v and version %v\n", auditPath, key, index, layer, version)
 
