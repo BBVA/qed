@@ -106,9 +106,9 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipR
 
 }
 
-func (c HttpClient) Verify(proof *apihttp.MembershipResult, snap *apihttp.Snapshot) bool {
+func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot) bool {
 
-	balloonProof := apihttp.ToBalloonProof(c.apiKey, proof, hashing.Sha256Hasher)
+	balloonProof := apihttp.ToBalloonProof(c.apiKey, result, hashing.Sha256Hasher)
 
 	return balloonProof.Verify(&balloon.Commitment{
 		snap.HistoryDigest,
