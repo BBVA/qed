@@ -109,3 +109,13 @@ func NewBadgerStorage(path string) *BadgerStorage {
 	}
 	return &BadgerStorage{db}
 }
+
+func NewBadgerStorageOpts(opts b.Options) (*BadgerStorage, *b.DB) {
+
+	db, err := b.Open(opts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return &BadgerStorage{db}, db
+
+}
