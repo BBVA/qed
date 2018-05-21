@@ -23,15 +23,20 @@ import (
 	"github.com/bbva/qed/balloon/hyper"
 )
 
+// Struct Event is the public interface that Add handler function uses to
+// parse the post params.
 type Event struct {
 	Event []byte
 }
 
+// Struct Membershipquery is the public interface that apihttp.Membership
+// Handler uses to parse the post params.
 type MembershipQuery struct {
 	Key     []byte
 	Version uint64
 }
 
+// Struct Snapshot is the public interface that apihttp.Add Handler call returns.
 type Snapshot struct {
 	HyperDigest   []byte
 	HistoryDigest []byte
@@ -41,16 +46,22 @@ type Snapshot struct {
 	// EventDigest   string
 }
 
+// Struct HistoryNode is part of the apihttp.MembershipResult used to parse the
+// result of apihttp.Membership handler.
 type HistoryNode struct {
 	Digest       []byte
 	Index, Layer uint64
 }
 
+// Struct Proofs is part of the apihttp.MembershipResult used to parse the
+// result if Membership Handler.
 type Proofs struct {
 	HyperAuditPath   [][]byte
 	HistoryAuditPath []HistoryNode
 }
 
+// Struct MembershipResult is the public structure that returns the Membership
+// handler
 type MembershipResult struct {
 	Key                                         []byte
 	KeyDigest                                   []byte
@@ -59,6 +70,9 @@ type MembershipResult struct {
 	CurrentVersion, QueryVersion, ActualVersion uint64
 }
 
+// ToSnapshot translates the internal struct used in balloon
+// (balloon.Commitment and original event) to the public protocol struct
+// apihttp.Snapshot.
 func ToSnapshot(commitment *balloon.Commitment, event []byte) *Snapshot {
 	return &Snapshot{
 		commitment.HyperDigest,
@@ -68,6 +82,8 @@ func ToSnapshot(commitment *balloon.Commitment, event []byte) *Snapshot {
 	}
 }
 
+// ToHistoryAuditPath translates the internal api balloon.history.Node to
+// public struct apihttp.HistoryNode array.
 func ToHistoryAuditPath(path []history.Node) []HistoryNode {
 	result := make([]HistoryNode, 0)
 	for _, elem := range path {
@@ -76,6 +92,8 @@ func ToHistoryAuditPath(path []history.Node) []HistoryNode {
 	return result
 }
 
+// ToMembershipProof translates internal api balloon.MembershipProof to the
+// public struct apihttp.MembershipResult.
 func ToMembershipProof(event []byte, proof *balloon.MembershipProof) *MembershipResult {
 	return &MembershipResult{
 		event,
@@ -91,6 +109,8 @@ func ToMembershipProof(event []byte, proof *balloon.MembershipProof) *Membership
 	}
 }
 
+// ToHistoryNode translates public apihttp.HistoryNode to internal
+// balloon.history.Node struct array.
 func ToHistoryNode(path []HistoryNode) []history.Node {
 	result := make([]history.Node, 0)
 	for _, elem := range path {
@@ -99,6 +119,8 @@ func ToHistoryNode(path []HistoryNode) []history.Node {
 	return result
 }
 
+// ToBaloonProof translate public apihttp.MembershipResult:w to internal
+// balloon.Proof.
 func ToBalloonProof(id string, p *MembershipResult, hasher hashing.Hasher) *balloon.Proof {
 
 	historyProof := history.NewProof(ToHistoryNode(p.Proofs.HistoryAuditPath), p.QueryVersion, hasher)
