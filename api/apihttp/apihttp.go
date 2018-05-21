@@ -159,7 +159,10 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 	}
 }
 
-// AuthHandlerMiddleware function is an HTTP handler wrapper that validates our requests
+// AuthHandlerMiddleware function is an HTTP handler wrapper that performs
+// simple authorization tasks. Currently only checks that Api-Key it's present.
+//
+// If not present will raise a `http.StatusUnauthorized` errror.
 func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -173,8 +176,10 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-// NewServer returns a new *http.ServeMux containing all the API handlers
-// already configured
+// NewServer returns a new *http.ServeMux containing the current API handlers.
+//	/health-check -> HealthCheckHandler
+//	/events -> Add
+//	/proofs/membership -> Membership
 func NewApiHttp(balloon balloon.Balloon) *http.ServeMux {
 
 	api := http.NewServeMux()
