@@ -37,6 +37,9 @@ import (
 	"github.com/bbva/qed/log"
 )
 
+// NewServer synthesizes a new *http.Server based on the parameters it receives.
+//
+// Note that storageName must be one of 'badger', 'bolt'.
 func NewServer(
 	httpEndpoint string,
 	dbPath string,
