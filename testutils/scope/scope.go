@@ -16,30 +16,38 @@
 
 package scope
 
-import "fmt"
+import (
+	"fmt"
+	"testing"
+)
 
 type step struct {
 	title string
-	run   func()
+	run   func(t *testing.T)
 }
 
-type Let func(string, func())
+type Let func(string, func(t *testing.T))
 type Scenario func(string, func())
 
-func Scope() (Scenario, Let) {
+func Scope(t *testing.T) (Scenario, Let) {
 	var steps []step
+	var nScenarios int
 
-	let := func(title string, run func()) {
+	let := func(title string, run func(t *testing.T)) {
 		steps = append(steps, step{title, run})
 	}
 
 	scenario := func(title string, prepare func()) {
-		fmt.Println(title)
+		fmt.Printf("#%d %s\n", nScenarios, title)
+		steps = make([]step, 0, 0)
 		prepare()
-		for _, s := range steps {
-			fmt.Println(s.title)
-			s.run()
+		ok := true
+		for i := 0; i < len(steps) && ok; i++ {
+			fmt.Println(steps[i].title)
+			subTitle := fmt.Sprintf("#%d_%s\n", nScenarios, steps[i].title)
+			ok = t.Run(subTitle, steps[i].run)
 		}
+		nScenarios += 1
 	}
 	return scenario, let
 }
