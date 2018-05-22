@@ -28,15 +28,22 @@ var Zero = []byte{0x0}
 // if a node has a non-zero digest.
 var One = []byte{0x1}
 
+// leafHasher is the internal interface to be used in the history tree.
 type leafHasher func([]byte, []byte) []byte
+
+// interiorHasher is the internal interface to be used in the history tree.
 type interiorHasher func([]byte, []byte, []byte) []byte
 
+// leafHasherF is a closure to create a leafHasher function with a
+// switchable hasher.
 func leafHasherF(hasher hashing.Hasher) leafHasher {
 	return func(a, key []byte) []byte {
 		return hasher(a, key)
 	}
 }
 
+// interiorHasherF is a closure to create a interiorHasher function with a
+// switchable hasher.
 func interiorHasherF(hasher hashing.Hasher) interiorHasher {
 	return func(a, left, right []byte) []byte {
 		return hasher(a, left, right)

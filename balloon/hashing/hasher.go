@@ -20,8 +20,12 @@ package hashing
 
 import "crypto/sha256"
 
-type Hasher func(...[]byte) []byte // computes the hash function
+// Hasher is the public interface to be used as placeholder for the concrete
+// implementations.
+type Hasher func(...[]byte) []byte
 
+// Sha256Hasher implements the Hasher interface and computes the crypto/sha256
+// internal function.
 var Sha256Hasher Hasher = func(data ...[]byte) []byte {
 	hasher := sha256.New()
 
@@ -32,6 +36,8 @@ var Sha256Hasher Hasher = func(data ...[]byte) []byte {
 	return hasher.Sum(nil)[:]
 }
 
+// XorHasher implements the Hasher interface and computes a xor function.
+// Handy for testing hash tree implementations.
 var XorHasher Hasher = func(data ...[]byte) []byte {
 	var result byte
 	for _, elem := range data {
@@ -44,6 +50,8 @@ var XorHasher Hasher = func(data ...[]byte) []byte {
 	return []byte{result}
 }
 
+// PearsonHasher implements the Hasher interface and computes a 8 bit hash
+// function. Handy for testing hash tree implementations.
 var Pearson Hasher = func(data ...[]byte) []byte {
 	lookupTable := [...]uint8{
 		// 0-255 shuffled in any (random) order suffices
