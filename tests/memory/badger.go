@@ -95,7 +95,7 @@ func cleanup(db *b.DB) {
 
 func main() {
 	var counter uint64
-	path := flag.String("p", "/var//tmp/memtest", "path to store database files")
+	path := flag.String("p", "/var/tmp/memtest", "path to store database files")
 	dur := flag.Duration("d", 10*time.Minute, "period of time to execute random insertions")
 	flag.Parse()
 
