@@ -24,10 +24,10 @@ import (
 
 	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/storage"
-	"github.com/bbva/qed/balloon/storage/badger"
-	"github.com/bbva/qed/balloon/storage/bolt"
-	"github.com/bbva/qed/balloon/storage/bplus"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage/badger"
+	"github.com/bbva/qed/storage/bolt"
+	"github.com/bbva/qed/storage/bplus"
 )
 
 func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {

@@ -27,10 +27,10 @@ import (
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/balloon/storage"
-	"github.com/bbva/qed/balloon/storage/badger"
-	"github.com/bbva/qed/balloon/storage/bolt"
-	"github.com/bbva/qed/balloon/storage/bplus"
-	"github.com/bbva/qed/balloon/storage/cache"
+	"github.com/bbva/qed/storage/badger"
+	"github.com/bbva/qed/storage/bolt"
+	"github.com/bbva/qed/storage/bplus"
+	"github.com/bbva/qed/storage/cache"
 )
 
 func TestAdd(t *testing.T) {

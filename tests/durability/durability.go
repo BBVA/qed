@@ -43,8 +43,8 @@ import (
 	"fmt"
 	"os"
 
-	b "github.com/bbva/qed/balloon/storage/badger"
 	"github.com/bbva/qed/log"
+	b "github.com/bbva/qed/storage/badger"
 )
 
 func main() {
