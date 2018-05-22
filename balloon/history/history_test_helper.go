@@ -27,6 +27,8 @@ import (
 	"github.com/bbva/qed/log"
 )
 
+// fakeLeafHasherF is a test helper function that prints in debug level the
+// hashing event.
 func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
 	return func(a, key []byte) []byte {
 		digest := hasher(a, key)
@@ -35,6 +37,8 @@ func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
 	}
 }
 
+// fakeInteriorHasherF is a test helper function that prints in debug level
+// the hashing event.
 func fakeInteriorHasherF(hasher hashing.Hasher) interiorHasher {
 	return func(a, left, right []byte) []byte {
 		digest := hasher(a, left, right)
@@ -43,18 +47,24 @@ func fakeInteriorHasherF(hasher hashing.Hasher) interiorHasher {
 	}
 }
 
+// fakeLeafHasherCleanF is a test helper function that only use the key
+// param for the salt.
 func fakeLeafHasherCleanF(hasher hashing.Hasher) leafHasher {
 	return func(a, key []byte) []byte {
 		return hasher(key)
 	}
 }
 
+// fakeInteriorHasherCleanF is a test helper function that only hasher with
+// the left and right paramenters.
 func fakeInteriorHasherCleanF(hasher hashing.Hasher) interiorHasher {
 	return func(a, left, right []byte) []byte {
 		return hasher(left, right)
 	}
 }
 
+// NewFakeTree is a test helper public function that returns a history.Tree
+// pointer
 func NewFakeTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 
 	tree := NewTree(frozen, hasher)
@@ -64,6 +74,7 @@ func NewFakeTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 	return tree
 }
 
+// NewFakeCleanTree is a test helper public function.
 func NewFakeCleanTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 
 	tree := NewTree(frozen, hasher)
@@ -73,6 +84,7 @@ func NewFakeCleanTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 	return tree
 }
 
+// NewFakeProof is a test helper public function.
 func NewFakeProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof {
 
 	proof := NewProof(auditPath, index, hasher)
@@ -80,13 +92,4 @@ func NewFakeProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof 
 	proof.interiorHasher = fakeInteriorHasherF(hasher)
 
 	return proof
-}
-
-func where(calldepth int) string {
-	_, file, line, ok := runtime.Caller(calldepth)
-	if !ok {
-		file = "???"
-		line = 0
-	}
-	return fmt.Sprintf("%s:%d", file, line)
 }

@@ -15,7 +15,8 @@
 */
 
 // Package history implements a history tree structure as described in the paper
-//     Balloon: A Forward-Secure Append-Only Persistent Authenticated Data Structure
+//     Balloon: A Forward-Secure Append-Only Persistent Authenticated Data
+//     Structure
 //     https://eprint.iacr.org/2015/007
 package history
 
@@ -35,11 +36,11 @@ import (
 // For example, a tree with 5 leaf hashes x0, x1, x2, x3, x4
 //    version 4
 //
-//    layer 3                 ____________ h(0,3)_____________
-//                           |                               |
-//    layer 2       _______h(0,2)_______                 __h(4,2)__
-//                  |                  |                 |        |
-//    layer 1   __h(0,1)__         __h(2,1)__         __h(4,1)__  ▢
+//    layer 3                 ____________ h(0,3)______________
+//                           |                                |
+//    layer 2       _______h(0,2)_______                 ___h(4,2)___
+//                  |                  |                 |          |
+//    layer 1   __h(0,1)__         __h(2,1)__         __h(4,1)__    ▢
 //              |        |         |      º  |        |        |
 //    layer 0  x0(0,0) x1(1,0) x2(2,0)   x3(3,0)    x4(4,0)    ▢
 //
@@ -50,23 +51,21 @@ import (
 // following formula:
 //
 // How to calculate the commitment:
-//	C_n = A_n(0,d) where n is the version of the tree (the last index) and
-//				   d is the depth of the tree
-//  For example, using the previous tree the commitment to calculate will be
+// C_n = A_n(0,d) where n is the version of the tree (the last index) and
+// d is the depth of the tree
 //
-//	C_4 = h(0,3) = A_4(0,3)
+// For example, using the previous tree the commitment to calculate will be
+//  C_4 = h(0,3) = A_4(0,3)
 //
-//	Where A_v(i,r) is calculated as follows:
+// Where A_v(i,r) is calculated as follows:
 //  A_v(i,0) = H(0||X_i)   if v >= i
-//	A_v(i,r) = H(1||A_v(i,r-1)||▢)                      if v < i + pow(2,r-1)
-//	           H(1||A_v(i,r-1)||A_v(i+pow(2,r-1),r-1))  if v >= i + pow(2,r-1)
-//	A_v(i,r) = FH(i,r)  whenever v >= i + pow(2,r) - 1
+//  A_v(i,r) = H(1||A_v(i,r-1)||▢)                      if v <  i + pow(2,r-1)
+//             H(1||A_v(i,r-1)||A_v(i+pow(2,r-1),r-1))  if v >= i + pow(2,r-1)
+//  A_v(i,r) = FH(i,r)                                 w/e v >= i + pow(2,r)-1
 //
 // The depth of the tree is the maxium layer level, and can be calculated
 // with the following formula:
-//
-//	layer = ceil(log(index))
-//
+//  layer = ceil(log(index))
 //
 type Tree struct {
 	frozen         storage.Store // already computed nodes, that will not change
@@ -76,7 +75,7 @@ type Tree struct {
 	ops            chan interface{} // serialize operations
 }
 
-// NewTree returns a new history tree
+// NewTree returns a new history tree.
 func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 
 	t := &Tree{
@@ -86,6 +85,7 @@ func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 		new(stats),
 		nil,
 	}
+
 	// start tree goroutine to handle
 	// tree operations
 	t.ops = t.operations()
@@ -93,8 +93,8 @@ func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 	return t
 }
 
-// Queues an Add operation to the tree and returns a channel
-// when the result []byte will be sent when ready
+// Queues an Add operation to the tree and returns a channel. The result
+// []byte will be sent when ready.
 func (t Tree) Add(digest, index []byte) chan []byte {
 	result := make(chan []byte, 0)
 	t.ops <- &add{
@@ -105,6 +105,8 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 	return result
 }
 
+// Queues and Prove operation to the tree and returns a channel. The
+// MembershipProof struct will be sent when ready.
 func (t Tree) Prove(key []byte, index, version uint64) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
 	t.ops <- &proof{
@@ -132,24 +134,27 @@ func (t Tree) Close() chan bool {
 // These methods returns a channel with an appropriate type
 // for each operation to be consumed from when the data arrives.
 
+// Internal Struct add for use in operations serializer
 type add struct {
 	digest []byte
 	index  []byte
 	result chan []byte
 }
 
+// Internal Struct proof for use in operations serializer
 type proof struct {
 	key            []byte
 	index, version uint64
 	result         chan *MembershipProof
 }
 
+// Internal Struct close for use in operations serializer
 type close struct {
 	stop   bool
 	result chan bool
 }
 
-// Run listens in channel operations to execute in the tree
+// Internal operations serializer runs internal commands by type assertion.
 func (t *Tree) operations() chan interface{} {
 	operations := make(chan interface{}, 0)
 	go func() {
@@ -157,34 +162,38 @@ func (t *Tree) operations() chan interface{} {
 			select {
 			case op := <-operations:
 				switch msg := op.(type) {
+
 				case *add:
 					digest, err := t.add(msg.digest, msg.index)
 					if err != nil {
 						log.Errorf("Operations error: %v", err)
 					}
 					msg.result <- digest
+
 				case *proof:
 					proof, err := t.prove(msg.key, msg.index, msg.version)
 					if err != nil {
 						log.Errorf("Operations error: %v", err)
 					}
 					msg.result <- proof
+
 				case *close:
 					t.frozen.Close()
 					msg.result <- true
 					return
+
 				default:
 					log.Error("Hyper tree Run() message not implemented!!")
-				}
 
+				}
 			}
 		}
 	}()
 	return operations
 }
 
-// Given an event the system appends it to the history tree as
-// the i:th entry and then outputs a root hash as a commitment
+// Internal add function adds an event the system appends it to the history tree as
+// the i:th entry and then outputs a root hash as a commitment.
 // t.ps://eprint.iacr.org/2015/007.pdf
 func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	version := binary.LittleEndian.Uint64(index)
@@ -198,6 +207,8 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	return rootDigest, nil
 }
 
+// Internal prove generates an auditPath and returns it as
+// history.MembershipProof.
 func (t Tree) prove(key []byte, index, version uint64) (*MembershipProof, error) {
 	var proof MembershipProof
 	err := t.auditPath(key, index, 0, t.getDepth(version), version, &proof)
@@ -207,16 +218,20 @@ func (t Tree) prove(key []byte, index, version uint64) (*MembershipProof, error)
 	return &proof, nil
 }
 
+// Struct Node is the content required to compute the auditPath in the auditor
 type Node struct {
 	Digest       []byte
 	Index, Layer uint64
 }
 
-// MembershipProof is a proof of membership of an event.
+// MembershipProof is a proof of membership of an event. It consist of an
+// array of Nodes.
 type MembershipProof struct {
 	Nodes []Node
 }
 
+// Internal AuditPath function recursivelly iterate throught the history tree
+// and store in proof input parameter the final path.
 func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof *MembershipProof) (err error) {
 	if layer == 0 || index > version {
 		return
@@ -254,11 +269,12 @@ func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof 
 	return t.auditPath(key, target, n, layer-1, version, proof)
 }
 
-// Returns the current layer or depth of the tree
+// getDepth Returns the current layer or depth of the tree
 func (t Tree) getDepth(index uint64) uint64 {
 	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
 
+// uInt64AsBytes returns the []byte representation of a unit64
 func uInt64AsBytes(i uint64) []byte {
 	valuebytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(valuebytes, i)

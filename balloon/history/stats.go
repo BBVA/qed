@@ -16,8 +16,8 @@
 
 package history
 
-// stats to measure the performance of the tree and
-// the associated caches and strategies
+// stats to measure the performance of the tree and the associated caches and
+// strategies
 type stats struct {
 	unfreezing     int
 	unfreezingHits int
