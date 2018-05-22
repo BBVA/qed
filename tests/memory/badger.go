@@ -17,11 +17,14 @@
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/binary"
 	"flag"
+	"fmt"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
 	"time"
 
 	"github.com/bbva/qed/balloon/storage/badger"
@@ -36,11 +39,16 @@ func NewBadgerTest(path string) (*badger.BadgerStorage, *b.DB) {
 	opts.ValueDir = path
 	opts.SyncWrites = false
 	opts.ValueLogLoadingMode = bo.MemoryMap
-	opts.TableLoadingMode = bo.MemoryMap
-	// opts.NumCompactors = 20
-	// opts.MaxTableSize = .25 * 1073741824 // .25GB
-	opts.NumMemtables = 2
-	opts.ValueLogFileSize = 2 * 1073741824 // 2GB
+	opts.TableLoadingMode = bo.FileIO
+
+	opts.NumLevelZeroTables = 3
+	opts.NumLevelZeroTablesStall = 6
+
+	opts.NumCompactors = 1
+	opts.MaxTableSize = .25 * 1073741824
+	opts.NumMemtables = 3
+	opts.ValueLogFileSize = 2 * 1073741824
+
 	opts.SyncWrites = false
 
 	return badger.NewBadgerStorageOpts(opts)
@@ -86,11 +94,12 @@ func cleanup(db *b.DB) {
 }
 
 func main() {
+	var counter uint64
 	path := flag.String("p", "/var//tmp/memtest", "path to store database files")
 	dur := flag.Duration("d", 10*time.Minute, "period of time to execute random insertions")
 	flag.Parse()
 
-	b, db := NewBadgerTest(*path)
+	b, _ := NewBadgerTest(*path)
 
 	// start profiler
 	go func() {
@@ -98,15 +107,30 @@ func main() {
 	}()
 
 	start := time.Now()
-	go func() {
-		cleanup(db)
-	}()
+	reader := bufio.NewReader(os.Stdin)
+	counter = 0
 
 	for time.Now().Sub(start) < *dur {
 		value := make([]byte, 8)
 		binary.LittleEndian.PutUint64(value, 42)
 		key := randomBytes(128)
 		b.Add(key, value)
+		counter++
 	}
+
+	fmt.Println("Insertions:", counter)
+
+	reader.ReadString('\n')
+
+	for time.Now().Sub(start) < *dur {
+		value := make([]byte, 8)
+		binary.LittleEndian.PutUint64(value, 42)
+		key := randomBytes(128)
+		b.Add(key, value)
+		counter++
+	}
+
+	fmt.Println("Insertions:", counter)
+	reader.ReadString('\n')
 
 }
