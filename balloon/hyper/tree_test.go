@@ -23,7 +23,7 @@ import (
 
 	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/storage"
-	"github.com/bbva/qed/balloon/storage/cache"
+	"github.com/bbva/qed/storage/cache"
 )
 
 func TestAdd(t *testing.T) {

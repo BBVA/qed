@@ -27,8 +27,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/bbva/qed/balloon/storage/badger"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage/badger"
 	b "github.com/dgraph-io/badger"
 	bo "github.com/dgraph-io/badger/options"
 )
