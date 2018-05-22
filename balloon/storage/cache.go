@@ -14,16 +14,19 @@
    limitations under the License.
 */
 
+// Package storage implements the Cache public interface.
+//
+// It also defines some constants with predefined cache sizes.
 package storage
 
-// INFO: 2^30 == 1073741824 nodes, 30 levels of cache
-const SIZE30 = 1073741824
+// SIZE20 is the amount of nodes needed for a 20-level cache
+const SIZE20 = 2 << 20
 
-// INFO: 2^20 == 1048575 nodes, 20 levels of cache
-const SIZE20 = 1048575
+// SIZE25 is the amount of nodes needed for a 25-level cache
+const SIZE25 = 2 << 25
 
-// INFO: 2^25 == 33554432 nodes, 25 levels of cache
-const SIZE25 = 33554432
+// SIZE30 is the amount of nodes needed for a 30-level cache
+const SIZE30 = 2 << 30
 
 // Cache interface defines the operations a cache mechanism must implement to
 // be usable within the tree
