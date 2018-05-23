@@ -20,3 +20,4 @@ tests/report.bin
 
 # Custom editor or IDE project settings
 .vscode
+coverage.txt
