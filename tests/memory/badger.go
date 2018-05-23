@@ -97,6 +97,7 @@ func main() {
 	var counter uint64
 	path := flag.String("p", "/var/tmp/memtest", "path to store database files")
 	dur := flag.Duration("d", 10*time.Minute, "period of time to execute random insertions")
+	pauseBeforeQuit := flag.Bool("P", false, "pause before end for debugging purposes")
 	flag.Parse()
 
 	b, _ := NewBadgerTest(*path)
@@ -120,17 +121,8 @@ func main() {
 
 	fmt.Println("Insertions:", counter)
 
-	reader.ReadString('\n')
-
-	for time.Now().Sub(start) < *dur {
-		value := make([]byte, 8)
-		binary.LittleEndian.PutUint64(value, 42)
-		key := randomBytes(128)
-		b.Add(key, value)
-		counter++
+	if *pauseBeforeQuit == true {
+		fmt.Printf("Press some key to end..")
+		reader.ReadString('\n')
 	}
-
-	fmt.Println("Insertions:", counter)
-	reader.ReadString('\n')
-
 }
