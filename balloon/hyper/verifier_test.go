@@ -121,7 +121,7 @@ func TestAddAndVerifyPearson(t *testing.T) {
 	store, closeF := openBadgerStorage("/var/tmp/balloon.db") // openBPlusStorage()
 	defer closeF()
 
-	hasher := hashing.Pearson
+	hasher := hashing.PearsonHasher
 	ht := NewTree("/var/tmp/balloon.db", cache.NewSimpleCache(0), store, hasher)
 
 	key := hasher([]byte("a test event"))
