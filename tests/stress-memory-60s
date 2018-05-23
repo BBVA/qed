@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+
+export GOMAXPROCS=128 
+export GODEBUG=gctrace=1 
+DBPATH=/mnt/memtest
+
+if [ ! -d "$DBPATH" ]
+then
+  echo "$DBPATH must exist and have read/write permission."
+fi
+
+echo "Cleanup..."
+rm -f "$DBPATH/*"
+echo done
+
+echo "Stress time!"
+go run memory/badger.go -p $DBPATH -d 60s 2>&1 | gcvis
+echo done
+
