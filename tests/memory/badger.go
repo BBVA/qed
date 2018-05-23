@@ -18,7 +18,6 @@ package main
 
 import (
 	"bufio"
-	"crypto/rand"
 	"encoding/binary"
 	"flag"
 	"fmt"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/badger"
+	"github.com/bbva/qed/testutils/rand"
 	b "github.com/dgraph-io/badger"
 	bo "github.com/dgraph-io/badger/options"
 )
@@ -53,16 +53,6 @@ func NewBadgerTest(path string) (*badger.BadgerStorage, *b.DB) {
 
 	return badger.NewBadgerStorageOpts(opts)
 
-}
-
-func randomBytes(n int) []byte {
-	bytes := make([]byte, n)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		panic(err)
-	}
-
-	return bytes
 }
 
 func cleanup(db *b.DB) {
@@ -114,7 +104,7 @@ func main() {
 	for time.Now().Sub(start) < *dur {
 		value := make([]byte, 8)
 		binary.LittleEndian.PutUint64(value, 42)
-		key := randomBytes(128)
+		key := rand.Bytes(128)
 		b.Add(key, value)
 		counter++
 	}

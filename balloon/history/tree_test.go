@@ -18,7 +18,6 @@ package history
 
 import (
 	"bytes"
-	"crypto/rand"
 	"fmt"
 	"os"
 	"testing"
@@ -26,6 +25,7 @@ import (
 	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/storage/bplus"
+	"github.com/bbva/qed/testutils/rand"
 )
 
 func TestAdd(t *testing.T) {
@@ -109,23 +109,13 @@ func comparePaths(expected [][]byte, actual []Node) bool {
 	return true
 }
 
-func randomBytes(n int) []byte {
-	bytes := make([]byte, n)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		panic(err)
-	}
-
-	return bytes
-}
-
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage()
 	defer closeF()
 	ht := NewTree(store, hashing.Sha256Hasher)
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
-		key := randomBytes(64)
+		key := rand.Bytes(64)
 		<-ht.Add(key, uInt64AsBytes(uint64(i)))
 	}
 	b.Logf("stats = %+v\n", ht.stats)
