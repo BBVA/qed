@@ -19,9 +19,6 @@
 package history
 
 import (
-	"fmt"
-	"runtime"
-
 	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/storage"
 	"github.com/bbva/qed/log"

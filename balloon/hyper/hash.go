@@ -18,8 +18,6 @@ package hyper
 
 import (
 	"bytes"
-	"fmt"
-	"runtime"
 
 	"github.com/bbva/qed/balloon/hashing"
 )
