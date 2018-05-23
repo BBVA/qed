@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/testutils/rand"
 )
 
 func TestVerify(t *testing.T) {
@@ -138,7 +139,7 @@ func TestAddAndVerify256(t *testing.T) {
 	ht := NewTree(store, hasher)
 
 	for i := uint64(0); i < 256; i++ {
-		key := randomBytes(128)
+		key := rand.Bytes(128)
 		value := i
 		commitment := <-ht.Add(key, uInt64AsBytes(value))
 		membershipProof := <-ht.Prove(key, i, value)
