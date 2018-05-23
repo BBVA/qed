@@ -31,4 +31,7 @@ before_script:
 
 script:
   # Skip tests dir: https://stackoverflow.com/questions/29064197/go-test-skip-directory
-  - go test -v $(go list ./... | grep -v /tests)
+  - go test -v $(go list ./... | grep -v /tests) -coverprofile=coverage.txt -covermode=atomic
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/BBVA/qed.svg?branch=master)](https://travis-ci.org/BBVA/qed)
+[![Coverage](https://codecov.io/gh/BBVA/qed/branch/master/graph/badge.svg)](https://codecov.io/gh/BBVA/qed)
 
 <p align="center"><a href="https://en.wikipedia.org/wiki/Q.E.D."><img src="./qed_logo.png" alt="Quod Erat Demostrandum"/><br/>(quod erat demostrandum)</a></p>
 
