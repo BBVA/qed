@@ -52,7 +52,7 @@ var XorHasher Hasher = func(data ...[]byte) []byte {
 
 // PearsonHasher implements the Hasher interface and computes a 8 bit hash
 // function. Handy for testing hash tree implementations.
-var Pearson Hasher = func(data ...[]byte) []byte {
+var PearsonHasher Hasher = func(data ...[]byte) []byte {
 	lookupTable := [...]uint8{
 		// 0-255 shuffled in any (random) order suffices
 		98, 6, 85, 150, 36, 23, 112, 164, 135, 207, 169, 5, 26, 64, 165, 219, //  1
