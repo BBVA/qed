@@ -18,7 +18,6 @@ package balloon
 
 import (
 	"bytes"
-	"crypto/rand"
 	"fmt"
 	"os"
 	"testing"
@@ -31,6 +30,7 @@ import (
 	"github.com/bbva/qed/storage/bolt"
 	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/storage/cache"
+	"github.com/bbva/qed/testutils/rand"
 )
 
 func TestAdd(t *testing.T) {
@@ -172,16 +172,6 @@ func compareHistoryProofs(expected [][]byte, actual []history.Node) bool {
 // test event 8 : 42 [1000010] - 08 [1000]
 // test event 9 : 43 [1000011] - 09 [1001]
 
-func randomBytes(n int) []byte {
-	bytes := make([]byte, n)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		panic(err)
-	}
-
-	return bytes
-}
-
 func deleteFilesInDir(path string) {
 	os.RemoveAll(fmt.Sprintf("%s/leaves.db", path))
 	os.RemoveAll(fmt.Sprintf("%s/frozen.db", path))
@@ -207,7 +197,7 @@ func BenchmarkAddBolt(b *testing.B) {
 	b.ResetTimer()
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
-		event := randomBytes(128)
+		event := rand.Bytes(128)
 		r := balloon.Add(event)
 		<-r
 	}
@@ -234,7 +224,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	b.ResetTimer()
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
-		event := randomBytes(128)
+		event := rand.Bytes(128)
 		r := balloon.Add(event)
 		<-r
 	}

@@ -18,12 +18,12 @@ package hyper
 
 import (
 	"bytes"
-	"crypto/rand"
 	"testing"
 
 	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/storage"
 	"github.com/bbva/qed/storage/cache"
+	"github.com/bbva/qed/testutils/rand"
 )
 
 func TestAdd(t *testing.T) {
@@ -103,16 +103,6 @@ func comparePaths(expected, actual [][]byte) bool {
 	return true
 }
 
-func randomBytes(n int) []byte {
-	bytes := make([]byte, n)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		panic(err)
-	}
-
-	return bytes
-}
-
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage("/var/tmp/hyper_tree_test.db") //openBoltStorage()
 	defer closeF()
@@ -123,8 +113,8 @@ func BenchmarkAdd(b *testing.B) {
 
 	b.N = 1000000
 	for i := 0; i < b.N; i++ {
-		key := hashing.Sha256Hasher(randomBytes(32))
-		value := randomBytes(1)
+		key := hashing.Sha256Hasher(rand.Bytes(32))
+		value := rand.Bytes(1)
 		store.Add(key, value)
 		<-ht.Add(key, value)
 	}
