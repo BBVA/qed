@@ -18,10 +18,11 @@ package badger
 
 import (
 	"bytes"
-	"crypto/rand"
 	"fmt"
 	"os"
 	"testing"
+
+	"github.com/bbva/qed/testutils/rand"
 )
 
 func TestAdd(t *testing.T) {
@@ -123,7 +124,7 @@ func BenchmarkAdd(b *testing.B) {
 	b.N = 10000
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store.Add(randomBytes(128), []byte("Value"))
+		store.Add(rand.Bytes(128), []byte("Value"))
 	}
 }
 
@@ -137,10 +138,10 @@ func BenchmarkGet(b *testing.B) {
 	// populate storage
 	for i := 0; i < N; i++ {
 		if i == 10 {
-			key = randomBytes(128)
+			key = rand.Bytes(128)
 			store.Add(key, []byte("Value"))
 		} else {
-			store.Add(randomBytes(128), []byte("Value"))
+			store.Add(rand.Bytes(128), []byte("Value"))
 		}
 	}
 
@@ -202,13 +203,4 @@ func deleteFile(path string) {
 	if err != nil {
 		fmt.Printf("Unable to remove db file %s", err)
 	}
-}
-
-func randomBytes(n int) []byte {
-	bytes := make([]byte, n)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		panic(err)
-	}
-	return bytes
 }
