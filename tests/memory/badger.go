@@ -121,7 +121,7 @@ func main() {
 
 	fmt.Println("Insertions:", counter)
 
-	if *pauseBeforeQuit == true {
+	if *pauseBeforeQuit {
 		fmt.Printf("Press some key to end..")
 		reader.ReadString('\n')
 	}
