@@ -10,7 +10,7 @@ language: go
 # https://github.com/travis-ci/travis-ci/issues/9247
 go:
   - "1.10"
-  - master
+  # - master
 
 # https://docs.travis-ci.com/user/languages/go/#Go-Import-Path
 go_import_path: github.com/bbva/qed
