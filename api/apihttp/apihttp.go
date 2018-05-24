@@ -21,8 +21,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/log"
 )
 
 // Struct HealthCheckResponse contains the response from HealthCheckHandler.
@@ -188,4 +190,39 @@ func NewApiHttp(balloon balloon.Balloon) *http.ServeMux {
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 
 	return api
+}
+
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+	length int
+}
+
+func (w *statusWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *statusWriter) Write(b []byte) (int, error) {
+	if w.status == 0 {
+		w.status = 200
+	}
+	w.length = len(b)
+	return w.ResponseWriter.Write(b)
+}
+
+// WriteLog Logs the Http Status for a request into fileHandler and returns a
+// httphandler function which is a wrapper to log the requests.
+func LogHandler(handle http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, request *http.Request) {
+		start := time.Now()
+		writer := statusWriter{w, 0, 0}
+		handle.ServeHTTP(&writer, request)
+		latency := time.Now().Sub(start)
+
+		log.Debugf("Request: lat %d %+v", latency, request)
+		if writer.status >= 400 {
+			log.Infof("Bad Request: %d %+v", latency, request)
+		}
+	}
 }

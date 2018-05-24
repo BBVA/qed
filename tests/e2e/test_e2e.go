@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
@@ -57,14 +58,19 @@ func setupServer() func() {
 	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger", false, true)
 
 	go (func() {
-		err := server.ListenAndServe()
+		err := server.Run()
 		if err != nil {
 			log.Info(err)
 		}
 	})()
 
+	// Give things a few seconds to tidy up
+	time.Sleep(time.Second * 2)
+
 	return func() {
-		server.Close()
+		server.Stop()
+		// Give things a few seconds to tidy up
+		time.Sleep(time.Second * 2)
 	}
 }
 

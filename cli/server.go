@@ -41,7 +41,7 @@ func NewServerCommand() *cobra.Command {
 
 			log.SetLogger("QedServer", logLevel)
 
-			s := server.NewServer(
+			srv := server.NewServer(
 				endpoint,
 				dbPath,
 				apiKey,
@@ -51,9 +51,9 @@ func NewServerCommand() *cobra.Command {
 				tampering,
 			)
 
-			err := s.ListenAndServe()
+			err := srv.Run()
 			if err != nil {
-				log.Errorf("Can't start HTTP Server: ", err)
+				log.Errorf("Can't start QED server: ", err)
 			}
 
 		},
@@ -61,7 +61,7 @@ func NewServerCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&apiKey, "apikey", "k", "", "Server api key")
 	cmd.Flags().StringVarP(&endpoint, "endpoint", "e", "0.0.0.0:8080", "Endpoint for REST requests on (host:port)")
-	cmd.Flags().StringVarP(&dbPath, "path", "p", "/var/tmp/balloon.db", "Set default storage path.")
+	cmd.Flags().StringVarP(&dbPath, "path", "p", "/var/tmp/qed.db", "Set default storage path.")
 	cmd.Flags().Uint64VarP(&cacheSize, "cache", "c", storage.SIZE25, "Initialize and reserve custom cache size.")
 	cmd.Flags().StringVarP(&storageName, "storage", "s", "badger", "Choose between different storage backends. Eg badge|bolt")
 	cmd.Flags().StringVarP(&logLevel, "log", "l", "error", "Choose between log levels: silent, error, info and debug")
