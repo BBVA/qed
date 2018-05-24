@@ -19,7 +19,6 @@ package client
 import (
 	"os"
 	"testing"
-	"time"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/log"
@@ -51,28 +50,23 @@ func setupTest() (*server.Server, *HttpClient) {
 		}
 	})()
 
-	// Give things a few seconds to tidy up
-	time.Sleep(time.Second * 2)
-
 	client = NewHttpClient("http://localhost:8079", "my-awesome-api-key")
 	return server, client
 }
 
-func tearDownTest() {
-	server.Stop()
-	// Give things a few seconds to tidy up
-	time.Sleep(time.Second * 2)
+func tearDownTest(s *server.Server) {
+	s.Stop()
 }
 
 func TestAdd(t *testing.T) {
 	server, client := setupTest()
 	client.Add("Hola mundo!")
-	tearDownTest()
+	tearDownTest(server)
 }
 
 func TestMembership(t *testing.T) {
 	server, client := setupTest()
-	defer tearDownTest()
+	defer tearDownTest(server)
 
 	snapshot, err := client.Add("Hola mundo!")
 	if err != nil {
@@ -92,7 +86,7 @@ func TestMembership(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	server, client := setupTest()
-	defer tearDownTest()
+	defer tearDownTest(server)
 
 	snapshot, err := client.Add("Hello world!")
 	if err != nil {
@@ -114,7 +108,7 @@ func TestVerify(t *testing.T) {
 
 func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
 	server, client := setupTest()
-	defer tearDownTest()
+	defer tearDownTest(server)
 
 	snapshot1, _ := client.Add("Test event 1")
 	snapshot2, _ := client.Add("Test event 2")
@@ -138,7 +132,7 @@ func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
 
 func benchmarkAdd(i int, b *testing.B) {
 	server, client := setupTest()
-	defer tearDownTest()
+	defer tearDownTest(server)
 	b.ResetTimer()
 	for n := 0; n < i; n++ {
 		client.Add(string(n))
@@ -154,7 +148,7 @@ func BenchmarkAdd10000000(b *testing.B) { benchmarkAdd(10000000, b) }
 
 func BenchmarkVerify(b *testing.B) {
 	server, client := setupTest()
-	defer tearDownTest()
+	defer tearDownTest(server)
 	b.ResetTimer()
 	b.N = 100000
 	for n := 0; n < b.N; n++ {
