@@ -28,6 +28,7 @@ notifications:
 
 before_script:
   - go get -d ./...
+  - go get github.com/stretchr/testify
 
 script:
   - go test -v -coverprofile=coverage.txt -covermode=atomic ./...
