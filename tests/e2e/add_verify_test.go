@@ -16,7 +16,6 @@
 package e2e
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/bbva/qed/api/apihttp"
@@ -63,27 +62,18 @@ func TestAddVerify(t *testing.T) {
 	})
 
 	scenario("Add two events, verify the first one", func() {
-		var snapshots []*apihttp.Snapshot
 		var result *apihttp.MembershipResult
 		var err error
-		for i := 0; i < 2; i++ {
-			let(fmt.Sprintf("Add event %d", i), func(t *testing.T) {
-				s, err := client.Add(event)
-				assert.NoError(t, err)
-				snapshots = append(snapshots, s)
-			})
-		}
+
+		first, _ := client.Add("Test event 1")
+		last, _ := client.Add("Test event 2")
 
 		let("Get membership proof for first inserted event", func(t *testing.T) {
-			first := snapshots[1]
-			result, err = client.Membership([]byte(event), first.Version)
+			result, err = client.Membership(first.Event, first.Version)
 			assert.NoError(t, err)
 		})
 
 		let("Verify first event", func(t *testing.T) {
-			last := snapshots[len(snapshots)-1]
-			first := snapshots[0]
-
 			verifyingSnapshot := &apihttp.Snapshot{
 				last.HyperDigest, // note that the hyper digest corresponds with the last one
 				first.HistoryDigest,
