@@ -21,33 +21,67 @@ import (
 	"testing"
 )
 
-type step struct {
+type stats struct {
+	tasks, ok, skipped int
+}
+
+type task struct {
 	title string
 	run   func(t *testing.T)
 }
 
 type Let func(string, func(t *testing.T))
 type Scenario func(string, func())
+type TestF func(t *testing.T)
 
-func Scope(t *testing.T) (Scenario, Let) {
-	var steps []step
-	var nScenarios int
+func report(format string, v ...interface{}) {
+	if testing.Verbose() {
+		fmt.Printf(format, v...)
+	}
+}
+
+func Scope(t *testing.T, before, after TestF) (Scenario, Let) {
+	var tasks []task
+	var tx task
+	var s stats
+	var scenarios int
 
 	let := func(title string, run func(t *testing.T)) {
-		steps = append(steps, step{title, run})
+		tasks = append(tasks, task{title, run})
 	}
 
 	scenario := func(title string, prepare func()) {
-		fmt.Printf("#%d %s\n", nScenarios, title)
-		steps = make([]step, 0, 0)
-		prepare()
-		ok := true
-		for i := 0; i < len(steps) && ok; i++ {
-			fmt.Println(steps[i].title)
-			subTitle := fmt.Sprintf("#%d_%s\n", nScenarios, steps[i].title)
-			ok = t.Run(subTitle, steps[i].run)
+		before(t)
+		ok := t.Run(title, func(t *testing.T) {
+			report("\n#%d %s\n", scenarios, title)
+			tasks = make([]task, 0, 0)
+			s = stats{}
+			prepare()
+			s.tasks = len(tasks)
+			for len(tasks) > 0 {
+				tx, tasks = tasks[0], tasks[1:]
+				report("\t#%d.%d %s → ", scenarios, s.tasks-len(tasks), tx.title)
+				tx.run(t)
+				report("ok\n")
+				s.ok += 1
+			}
+			scenarios += 1
+		})
+
+		after(t)
+
+		if !ok {
+			report("failed\n")
+
+			for _, tx := range tasks {
+				s.skipped += 1
+				report("\t#%d.%d %s → skipped\n", scenarios, s.tasks+s.skipped-len(tasks), tx.title)
+			}
+
+			report("FAILED → %+v\n\n", s)
+		} else {
+			report("SUCCESS → %+v\n\n", s)
 		}
-		nScenarios += 1
 	}
 	return scenario, let
 }
