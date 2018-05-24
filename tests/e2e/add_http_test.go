@@ -16,11 +16,13 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/bbva/qed/api/apihttp"
-	"github.com/bbva/qed/testutils/assert"
 	"github.com/bbva/qed/testutils/rand"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddOneEvent(t *testing.T) {
@@ -33,11 +35,11 @@ func TestAddOneEvent(t *testing.T) {
 	event := rand.RandomString(10)
 	snapshot, err := client.Add(event)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, snapshot.Event, []byte(event), "The snapshot's event doesn't match: expected %s, actual %s", event, snapshot.Event)
 	assert.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
 	assert.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
-	assert.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empty")
+	assert.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's historyDigest cannot be empty")
 
 }
 
@@ -51,26 +53,23 @@ func TestAddAndQueryOneEvent(t *testing.T) {
 	event := rand.RandomString(10)
 	var snapshot *apihttp.Snapshot
 
-	t.Run("add event", func(t *testing.T) {
-		var err error
-		snapshot, err = client.Add(event)
-		assert.NoError(t, err)
-	})
+	fmt.Println("add event...")
+	snapshot, err := client.Add(event)
+	assert.NoError(t, err)
 
-	t.Run("query for membership", func(t *testing.T) {
-		result, err := client.Membership([]byte(event), snapshot.Version)
+	fmt.Println("query for membership")
+	result, err := client.Membership([]byte(event), snapshot.Version)
 
-		assert.NoError(t, err)
-		assert.True(t, result.IsMember, "The queried key should be a member")
-		assert.Equal(t, result.QueryVersion, snapshot.Version, "The query version doest't match the queried one: expected %d, actual %d", snapshot.Version, result.QueryVersion)
-		assert.Equal(t, result.ActualVersion, snapshot.Version, "The actual version should match the queried one: expected %d, actual %d", snapshot.Version, result.ActualVersion)
-		assert.Equal(t, result.CurrentVersion, snapshot.Version, "The current version should match the queried one: expected %d, actual %d", snapshot.Version, result.CurrentVersion)
-		assert.Equal(t, []byte(event), result.Key, "The returned event doesn't math the original one: expected %s, actual %s", event, result.Key)
-		assert.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
-		assert.False(t, len(result.Proofs.HyperAuditPath) == 0, "The hyper proof cannot be empty")
-		assert.False(t, result.ActualVersion > 0 && len(result.Proofs.HistoryAuditPath) == 0, "The history proof cannot be empty when version is greater than 0")
+	require.NoError(t, err)
+	assert.True(t, result.IsMember, "The queried key should be a member")
+	assert.Equal(t, result.QueryVersion, snapshot.Version, "The query version doest't match the queried one: expected %d, actual %d", snapshot.Version, result.QueryVersion)
+	assert.Equal(t, result.ActualVersion, snapshot.Version, "The actual version should match the queried one: expected %d, actual %d", snapshot.Version, result.ActualVersion)
+	assert.Equal(t, result.CurrentVersion, snapshot.Version, "The current version should match the queried one: expected %d, actual %d", snapshot.Version, result.CurrentVersion)
+	assert.Equal(t, []byte(event), result.Key, "The returned event doesn't math the original one: expected %s, actual %s", event, result.Key)
+	assert.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
+	assert.False(t, len(result.Proofs.HyperAuditPath) == 0, "The hyper proof cannot be empty")
+	assert.False(t, result.ActualVersion > 0 && len(result.Proofs.HistoryAuditPath) == 0, "The history proof cannot be empty when version is greater than 0")
 
-	})
 }
 
 func TestAddAndVerifyOneEvent(t *testing.T) {

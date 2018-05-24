@@ -17,9 +17,9 @@
 package client
 
 import (
-	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/log"
@@ -40,30 +40,39 @@ func init() {
 	log.SetLogger("client-test", "info")
 }
 
-func setupTest() (*http.Server, *HttpClient) {
+func setupTest() (*server.Server, *HttpClient) {
 	path = "/var/tmp/balloonClientTest"
 	resetPath()
 	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger", false, false)
 	go (func() {
-		err := server.ListenAndServe()
+		err := server.Run()
 		if err != nil {
 			log.Info(err)
 		}
 	})()
 
+	// Give things a few seconds to tidy up
+	time.Sleep(time.Second * 2)
+
 	client = NewHttpClient("http://localhost:8079", "my-awesome-api-key")
 	return server, client
+}
+
+func tearDownTest() {
+	server.Stop()
+	// Give things a few seconds to tidy up
+	time.Sleep(time.Second * 2)
 }
 
 func TestAdd(t *testing.T) {
 	server, client := setupTest()
 	client.Add("Hola mundo!")
-	server.Close()
+	tearDownTest()
 }
 
 func TestMembership(t *testing.T) {
 	server, client := setupTest()
-	defer server.Close()
+	defer tearDownTest()
 
 	snapshot, err := client.Add("Hola mundo!")
 	if err != nil {
@@ -83,7 +92,7 @@ func TestMembership(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	server, client := setupTest()
-	defer server.Close()
+	defer tearDownTest()
 
 	snapshot, err := client.Add("Hello world!")
 	if err != nil {
@@ -105,7 +114,7 @@ func TestVerify(t *testing.T) {
 
 func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
 	server, client := setupTest()
-	defer server.Close()
+	defer tearDownTest()
 
 	snapshot1, _ := client.Add("Test event 1")
 	snapshot2, _ := client.Add("Test event 2")
@@ -129,7 +138,7 @@ func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
 
 func benchmarkAdd(i int, b *testing.B) {
 	server, client := setupTest()
-	defer server.Close()
+	defer tearDownTest()
 	b.ResetTimer()
 	for n := 0; n < i; n++ {
 		client.Add(string(n))
@@ -145,7 +154,7 @@ func BenchmarkAdd10000000(b *testing.B) { benchmarkAdd(10000000, b) }
 
 func BenchmarkVerify(b *testing.B) {
 	server, client := setupTest()
-	defer server.Close()
+	defer tearDownTest()
 	b.ResetTimer()
 	b.N = 100000
 	for n := 0; n < b.N; n++ {

@@ -23,6 +23,9 @@ import (
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/bbva/qed/api/apihttp"
@@ -37,7 +40,22 @@ import (
 	"github.com/bbva/qed/storage/cache"
 )
 
-// NewServer synthesizes a new *http.Server based on the parameters it receives.
+// Server encapsulates the data and login to start/stop a QED server
+type Server struct {
+	httpEndpoint string
+	dbPath       string
+	apiKey       string
+	cacheSize    uint64
+	storageName  string
+	profiling    bool
+	tampering    bool
+
+	httpServer      *http.Server
+	tamperingServer *http.Server
+	profilingServer *http.Server
+}
+
+// NewServer synthesizes a new Server based on the parameters it receives.
 //
 // Note that storageName must be one of 'badger', 'bolt'.
 func NewServer(
@@ -48,10 +66,77 @@ func NewServer(
 	storageName string,
 	profiling bool,
 	tampering bool,
-) *http.Server {
+) *Server {
+	server := new(Server)
+	server.httpEndpoint = httpEndpoint
+	server.dbPath = dbPath
+	server.apiKey = apiKey
+	server.cacheSize = cacheSize
+	server.storageName = storageName
+	server.profiling = profiling
+	server.tampering = tampering
+	return server
+}
 
+func (s *Server) Run() error {
+
+	log.Info("Starting QED server...")
+
+	frozen, leaves, err := buildStorageEngine(s.storageName, s.dbPath)
+	balloon, err := buildBalloon(frozen, leaves, s.apiKey, s.cacheSize)
+	if err != nil {
+		return err
+	}
+
+	if s.profiling {
+		s.profilingServer = startProfilingServer("localhost:6060")
+	}
+
+	if s.tampering {
+		s.tamperingServer = startTamperingServer("localhost:8081", leaves.(storage.DeletableStore), hashing.Sha256Hasher)
+	}
+
+	s.httpServer = startHTTPServer(s.httpEndpoint, balloon)
+
+	awaitTermSignal(s.Stop)
+
+	log.Info("Stopping server, about to exit...")
+
+	// Give things a few seconds to tidy up
+	time.Sleep(time.Second * 2)
+
+	return nil
+}
+
+func (s *Server) Stop() {
+
+	if s.tampering {
+		log.Info("Tampering enabled: stopping server...")
+		if err := s.tamperingServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
+			panic(err)
+		}
+		log.Info("Done.")
+	}
+
+	if s.profiling {
+		log.Info("Profiling enabled: stopping server...")
+		if err := s.profilingServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
+			panic(err)
+		}
+		log.Info("Done.")
+	}
+
+	log.Info("Stopping HTTP server...")
+	if err := s.httpServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
+		panic(err)
+	}
+
+	log.Info("Done. Exiting...")
+}
+
+func buildStorageEngine(storageName, dbPath string) (storage.Store, storage.Store, error) {
 	var frozen, leaves storage.Store
-
+	log.Info("Building storage engine...")
 	switch storageName {
 	case "badger":
 		frozen = badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
@@ -61,70 +146,85 @@ func NewServer(
 		leaves = bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", dbPath), "leaves")
 	default:
 		log.Error("Please select a valid storage backend")
+		return nil, nil, fmt.Errorf("Invalid storage name")
 	}
+	log.Info("Done.")
+	return frozen, leaves, nil
+}
 
+func buildBalloon(frozen, leaves storage.Store, apiKey string, cacheSize uint64) (*balloon.HyperBalloon, error) {
 	cache := cache.NewSimpleCache(cacheSize)
 	hasher := hashing.Sha256Hasher
 	history := history.NewTree(frozen, hasher)
 	hyper := hyper.NewTree(apiKey, cache, leaves, hasher)
-	balloon := balloon.NewHyperBalloon(hasher, history, hyper)
+	return balloon.NewHyperBalloon(hasher, history, hyper), nil
+}
 
-	if profiling {
-		// start profiler
-		go func() {
-			log.Info(http.ListenAndServe("localhost:6060", nil))
-		}()
-	}
+func startHTTPServer(endpoint string, balloon *balloon.HyperBalloon) *http.Server {
 
-	if tampering {
-		log.Debug("tampering")
-		go tamperServer(leaves.(storage.DeletableStore), hasher)
-	}
-
+	log.Info("Starting HTTP server...")
 	router := apihttp.NewApiHttp(balloon)
-
-	return &http.Server{
-		Addr:    httpEndpoint,
-		Handler: logHandler(router),
+	server := &http.Server{
+		Addr:    endpoint,
+		Handler: apihttp.LogHandler(router),
 	}
-}
 
-type statusWriter struct {
-	http.ResponseWriter
-	status int
-	length int
-}
-
-func (w *statusWriter) WriteHeader(status int) {
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *statusWriter) Write(b []byte) (int, error) {
-	if w.status == 0 {
-		w.status = 200
-	}
-	w.length = len(b)
-	return w.ResponseWriter.Write(b)
-}
-
-// WriteLog Logs the Http Status for a request into fileHandler and returns a
-// httphandler function which is a wrapper to log the requests.
-func logHandler(handle http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, request *http.Request) {
-		start := time.Now()
-		writer := statusWriter{w, 0, 0}
-		handle.ServeHTTP(&writer, request)
-		latency := time.Now().Sub(start)
-
-		log.Debugf("Request: lat %d %+v", latency, request)
-		if writer.status >= 400 {
-			log.Infof("Bad Request: %d %+v", latency, request)
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start HTTP Server: %s", err)
 		}
-	}
+	}()
+	log.Infof("HTTP server ready and listening on %s", endpoint)
+
+	return server
 }
 
-func tamperServer(store storage.DeletableStore, hasher hashing.Hasher) {
+func startProfilingServer(endpoint string) *http.Server {
+	log.Info("Starting profiling server...")
+	server := &http.Server{
+		Addr:    endpoint,
+		Handler: nil,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start HTTP Server: %s", err)
+		}
+	}()
+
+	log.Infof("Profiling server ready and listening on %s", endpoint)
+
+	return server
+}
+
+func startTamperingServer(endpoint string, leaves storage.DeletableStore, hasher hashing.Hasher) *http.Server {
+	log.Info("Starting tampering server...")
+	server := tamperServer(endpoint, leaves.(storage.DeletableStore), hasher)
+
+	go func() {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start HTTP Server: %s", err)
+		}
+	}()
+
+	log.Infof("Tampering server ready and listening on %s", endpoint)
+
+	return server
+}
+
+func awaitTermSignal(closeFn func()) {
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+
+	// block main and wait for a signal
+	sig := <-signals
+	log.Infof("Signal received: %v", sig)
+
+	closeFn()
+}
+
+func tamperServer(endpoint string, store storage.DeletableStore, hasher hashing.Hasher) *http.Server {
 
 	type tamperEvent struct {
 		Key       []byte
@@ -176,10 +276,9 @@ func tamperServer(store storage.DeletableStore, hasher hashing.Hasher) {
 	tamperApi.HandleFunc("/tamper", apihttp.AuthHandlerMiddleware(http.HandlerFunc(tamper)))
 
 	st := &http.Server{
-		Addr:    "localhost:8081",
-		Handler: logHandler(tamperApi),
+		Addr:    endpoint,
+		Handler: apihttp.LogHandler(tamperApi),
 	}
 
-	log.Error(st.ListenAndServe())
-
+	return st
 }
