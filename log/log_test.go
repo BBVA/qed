@@ -17,58 +17,120 @@
 package log
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
+	"strings"
 	"testing"
 )
 
-func TestLog(t *testing.T) {
-	SetLogger("TestDebug", DEBUG)
-
-	Debug("print driven development")
-	Info("hello")
-
+func tError(s, level string) {
+	SetLogger("test", level)
+	Error(fmt.Sprintf("%s", s))
+}
+func tErrorf(s, level string) {
+	SetLogger("test", level)
+	Errorf(fmt.Sprintf("%s %s", s, "%s"), "composed")
 }
 
-func Crasher() {
-	Error("killed")
+func tInfo(s, level string) {
+	SetLogger("test", level)
+	Info(fmt.Sprintf("%s", s))
 }
 
-func Crasherf() {
-	Errorf("killed in the name %s", "off")
+func tInfof(s, level string) {
+	SetLogger("test", level)
+	Infof(fmt.Sprintf("%s %s", s, "%s"), "composed")
 }
 
-func TestErrorDoingOsExit(t *testing.T) {
+func tDebug(s, level string) {
+	SetLogger("test", level)
+	Debug(fmt.Sprintf("%s", s))
+}
 
-	if os.Getenv("BE_CRASHER") == "1" {
-		Crasher()
-		return
-	}
+func tDebugf(s, level string) {
+	SetLogger("test", level)
+	Debugf(fmt.Sprintf("%s %s", s, "%s"), "composed")
+}
 
-	if os.Getenv("BE_CRASHER") == "2" {
-		Crasherf()
-		return
-	}
+var testFuncMap = map[string]func(string, string){
+	"tError":  tError,
+	"tErrorf": tErrorf,
+	"tInfo":   tInfo,
+	"tInfof":  tInfof,
+	"tDebug":  tDebug,
+	"tDebugf": tDebugf,
+}
 
-	// Testing log.Error that runs os.Exit(1) succesfully
-	cmd := exec.Command(os.Args[0], "-test.run=TestErrorDoingOsExit")
-	cmd.Env = append(os.Environ(), "BE_CRASHER=1")
+func assertSubprocess(t *testing.T, level, testFunc, message string, silent, exit bool) {
+
+	cmd := exec.Command(os.Args[0], "-test.run=TestLogSuite")
+	var outb bytes.Buffer
+	cmd.Stdout = &outb
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("SUBPROCESSED_TEST=%s", testFunc),
+		fmt.Sprintf("LOG_LEVEL=%s", level),
+	)
+
 	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-		// pass
-	} else {
-		t.Fatalf("log.Error ran with err %v, want exit status 1", err)
+	if e, ok := err.(*exec.ExitError); exit && (!ok || e.Success()) {
+		t.Errorf("log.Error ran with err %v, want exit status 1", err)
 	}
 
-	// Testing log.ErrorF that runs os.Exit(1) succesfully
-	cmd2 := exec.Command(os.Args[0], "-test.run=TestErrorDoingOsExit")
-	cmd2.Env = append(os.Environ(), "BE_CRASHER=2")
+	outString := outb.String()
 
-	err2 := cmd2.Run()
-	if e, ok := err2.(*exec.ExitError); ok && !e.Success() {
-		// pass
-	} else {
-		t.Fatalf("log.Errorf ran with err %v, want exit status 1", err)
+	if !silent {
+		if !strings.Contains(outString, message) {
+			t.Errorf("No message emmited %s %s", testFunc, level)
+		}
+		if regexp.MustCompile("f$").MatchString(testFunc) && !strings.Contains(outString, "composed") {
+			t.Errorf("No composed message emmited %s %s", testFunc, level)
+		}
 	}
+
+	if silent && strings.Contains(outString, message) {
+		t.Errorf("Stdout emmited %s: '%s'", testFunc, level)
+	}
+
+}
+
+func TestLogSuite(t *testing.T) {
+
+	testString := "called"
+
+	if cast := os.Getenv("SUBPROCESSED_TEST"); len(cast) > 0 {
+		testFuncMap[cast](testString, os.Getenv("LOG_LEVEL"))
+		return
+	}
+
+	assertSubprocess(t, DEBUG, "tError", testString, false, true)
+	assertSubprocess(t, DEBUG, "tErrorf", testString, false, true)
+	assertSubprocess(t, DEBUG, "tInfo", testString, false, false)
+	assertSubprocess(t, DEBUG, "tInfof", testString, false, false)
+	assertSubprocess(t, DEBUG, "tDebug", testString, false, false)
+	assertSubprocess(t, DEBUG, "tDebugf", testString, false, false)
+
+	assertSubprocess(t, INFO, "tError", testString, false, true)
+	assertSubprocess(t, INFO, "tErrorf", testString, false, true)
+	assertSubprocess(t, INFO, "tInfo", testString, false, false)
+	assertSubprocess(t, INFO, "tInfof", testString, false, false)
+	assertSubprocess(t, INFO, "tDebug", testString, true, false)
+	assertSubprocess(t, INFO, "tDebugf", testString, true, false)
+
+	assertSubprocess(t, ERROR, "tError", testString, false, true)
+	assertSubprocess(t, ERROR, "tErrorf", testString, false, true)
+	assertSubprocess(t, ERROR, "tInfo", testString, true, false)
+	assertSubprocess(t, ERROR, "tInfof", testString, true, false)
+	assertSubprocess(t, ERROR, "tDebug", testString, true, false)
+	assertSubprocess(t, ERROR, "tDebugf", testString, true, false)
+
+	assertSubprocess(t, SILENT, "tError", testString, true, false)
+	assertSubprocess(t, SILENT, "tErrorf", testString, true, false)
+	assertSubprocess(t, SILENT, "tInfo", testString, true, false)
+	assertSubprocess(t, SILENT, "tInfof", testString, true, false)
+	assertSubprocess(t, SILENT, "tDebug", testString, true, false)
+	assertSubprocess(t, SILENT, "tDebugf", testString, true, false)
 
 }
