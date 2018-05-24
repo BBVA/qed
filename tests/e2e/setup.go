@@ -16,12 +16,11 @@
 package e2e
 
 import (
-	"net/http"
 	"os"
 	"testing"
 
 	"github.com/bbva/qed/client"
-	s "github.com/bbva/qed/server"
+	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
 )
 
@@ -37,17 +36,17 @@ func init() {
 }
 
 func setup() (scope.TestF, scope.TestF) {
-	var server *http.Server
+	var srv *server.Server
 	path := "/var/tmp/balloonE2E"
 
 	before := func(t *testing.T) {
 		os.RemoveAll(path)
 		os.MkdirAll(path, os.FileMode(0755))
 
-		server = s.NewServer(listenAddr, path, apiKey, cacheLevels, storageType, false, true)
+		srv = server.NewServer(listenAddr, path, apiKey, cacheLevels, storageType, false, true)
 
 		go (func() {
-			err := server.ListenAndServe()
+			err := srv.Run()
 			if err != nil {
 				t.Log(err)
 			}
@@ -56,8 +55,8 @@ func setup() (scope.TestF, scope.TestF) {
 	}
 
 	after := func(t *testing.T) {
-		if server != nil {
-			server.Close()
+		if srv != nil {
+			srv.Stop()
 		}
 	}
 
