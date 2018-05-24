@@ -42,7 +42,7 @@ func init() {
 func setupTest() (*server.Server, *HttpClient) {
 	path = "/var/tmp/balloonClientTest"
 	resetPath()
-	server := server.NewServer(":8079", path, "my-awesome-api-key", uint64(50000), "badger", false, false)
+	server := server.NewServer(":8081", path, "my-awesome-api-key", uint64(50000), "badger", false, false)
 	go (func() {
 		err := server.Run()
 		if err != nil {
@@ -50,7 +50,7 @@ func setupTest() (*server.Server, *HttpClient) {
 		}
 	})()
 
-	client = NewHttpClient("http://localhost:8079", "my-awesome-api-key")
+	client = NewHttpClient("http://localhost:8081", "my-awesome-api-key")
 	return server, client
 }
 
