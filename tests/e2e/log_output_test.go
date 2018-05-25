@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package log
+package e2e
 
 import (
 	"bytes"
@@ -24,35 +24,37 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/bbva/qed/log"
 )
 
 func tError(s, level string) {
-	SetLogger("test", level)
-	Error(fmt.Sprintf("%s", s))
+	log.SetLogger("test", level)
+	log.Error(fmt.Sprintf("%s", s))
 }
 func tErrorf(s, level string) {
-	SetLogger("test", level)
-	Errorf(fmt.Sprintf("%s %s", s, "%s"), "composed")
+	log.SetLogger("test", level)
+	log.Errorf(fmt.Sprintf("%s %s", s, "%s"), "composed")
 }
 
 func tInfo(s, level string) {
-	SetLogger("test", level)
-	Info(fmt.Sprintf("%s", s))
+	log.SetLogger("test", level)
+	log.Info(fmt.Sprintf("%s", s))
 }
 
 func tInfof(s, level string) {
-	SetLogger("test", level)
-	Infof(fmt.Sprintf("%s %s", s, "%s"), "composed")
+	log.SetLogger("test", level)
+	log.Infof(fmt.Sprintf("%s %s", s, "%s"), "composed")
 }
 
 func tDebug(s, level string) {
-	SetLogger("test", level)
-	Debug(fmt.Sprintf("%s", s))
+	log.SetLogger("test", level)
+	log.Debug(fmt.Sprintf("%s", s))
 }
 
 func tDebugf(s, level string) {
-	SetLogger("test", level)
-	Debugf(fmt.Sprintf("%s %s", s, "%s"), "composed")
+	log.SetLogger("test", level)
+	log.Debugf(fmt.Sprintf("%s %s", s, "%s"), "composed")
 }
 
 var testFuncMap = map[string]func(string, string){
@@ -105,32 +107,32 @@ func TestLogSuite(t *testing.T) {
 		return
 	}
 
-	assertSubprocess(t, DEBUG, "tError", testString, false, true)
-	assertSubprocess(t, DEBUG, "tErrorf", testString, false, true)
-	assertSubprocess(t, DEBUG, "tInfo", testString, false, false)
-	assertSubprocess(t, DEBUG, "tInfof", testString, false, false)
-	assertSubprocess(t, DEBUG, "tDebug", testString, false, false)
-	assertSubprocess(t, DEBUG, "tDebugf", testString, false, false)
+	assertSubprocess(t, log.DEBUG, "tError", testString, false, true)
+	assertSubprocess(t, log.DEBUG, "tErrorf", testString, false, true)
+	assertSubprocess(t, log.DEBUG, "tInfo", testString, false, false)
+	assertSubprocess(t, log.DEBUG, "tInfof", testString, false, false)
+	assertSubprocess(t, log.DEBUG, "tDebug", testString, false, false)
+	assertSubprocess(t, log.DEBUG, "tDebugf", testString, false, false)
 
-	assertSubprocess(t, INFO, "tError", testString, false, true)
-	assertSubprocess(t, INFO, "tErrorf", testString, false, true)
-	assertSubprocess(t, INFO, "tInfo", testString, false, false)
-	assertSubprocess(t, INFO, "tInfof", testString, false, false)
-	assertSubprocess(t, INFO, "tDebug", testString, true, false)
-	assertSubprocess(t, INFO, "tDebugf", testString, true, false)
+	assertSubprocess(t, log.INFO, "tError", testString, false, true)
+	assertSubprocess(t, log.INFO, "tErrorf", testString, false, true)
+	assertSubprocess(t, log.INFO, "tInfo", testString, false, false)
+	assertSubprocess(t, log.INFO, "tInfof", testString, false, false)
+	assertSubprocess(t, log.INFO, "tDebug", testString, true, false)
+	assertSubprocess(t, log.INFO, "tDebugf", testString, true, false)
 
-	assertSubprocess(t, ERROR, "tError", testString, false, true)
-	assertSubprocess(t, ERROR, "tErrorf", testString, false, true)
-	assertSubprocess(t, ERROR, "tInfo", testString, true, false)
-	assertSubprocess(t, ERROR, "tInfof", testString, true, false)
-	assertSubprocess(t, ERROR, "tDebug", testString, true, false)
-	assertSubprocess(t, ERROR, "tDebugf", testString, true, false)
+	assertSubprocess(t, log.ERROR, "tError", testString, false, true)
+	assertSubprocess(t, log.ERROR, "tErrorf", testString, false, true)
+	assertSubprocess(t, log.ERROR, "tInfo", testString, true, false)
+	assertSubprocess(t, log.ERROR, "tInfof", testString, true, false)
+	assertSubprocess(t, log.ERROR, "tDebug", testString, true, false)
+	assertSubprocess(t, log.ERROR, "tDebugf", testString, true, false)
 
-	assertSubprocess(t, SILENT, "tError", testString, true, false)
-	assertSubprocess(t, SILENT, "tErrorf", testString, true, false)
-	assertSubprocess(t, SILENT, "tInfo", testString, true, false)
-	assertSubprocess(t, SILENT, "tInfof", testString, true, false)
-	assertSubprocess(t, SILENT, "tDebug", testString, true, false)
-	assertSubprocess(t, SILENT, "tDebugf", testString, true, false)
+	assertSubprocess(t, log.SILENT, "tError", testString, true, false)
+	assertSubprocess(t, log.SILENT, "tErrorf", testString, true, false)
+	assertSubprocess(t, log.SILENT, "tInfo", testString, true, false)
+	assertSubprocess(t, log.SILENT, "tInfof", testString, true, false)
+	assertSubprocess(t, log.SILENT, "tDebug", testString, true, false)
+	assertSubprocess(t, log.SILENT, "tDebugf", testString, true, false)
 
 }
