@@ -150,7 +150,6 @@ func TestAddAndVerify256(t *testing.T) {
 			fmt.Printf("C %+v\n", commitment)
 			fmt.Printf("MP %+v\n", membershipProof)
 			fmt.Printf("P %+v\n", proof)
-			graphTree(ht, key, value)
 			t.Fatalf("incorrect test case: %d", i)
 		}
 	}
