@@ -102,8 +102,6 @@ func (s *Server) Run() error {
 		}()
 	}
 
-	
-
 	if s.tamperingServer != nil {
 		go func() {
 			log.Debug("	* Starting tampering HTTP server in addr: localhost:8081")
@@ -119,9 +117,9 @@ func (s *Server) Run() error {
 			log.Errorf("Can't start QED API HTTP Server: %s", err)
 		}
 	}()
-	
+
 	log.Debugf(" ready on %s\n", s.httpEndpoint)
-	
+
 	awaitTermSignal(s.Stop)
 
 	log.Debug("Stopping server, about to exit...")
