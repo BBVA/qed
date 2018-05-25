@@ -19,6 +19,7 @@ package client
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/log"
@@ -50,6 +51,7 @@ func setupTest() (*server.Server, *HttpClient) {
 		}
 	})()
 
+	time.Sleep(1)
 	client = NewHttpClient("http://127.0.0.1:8079", "my-awesome-api-key")
 	return server, client
 }
