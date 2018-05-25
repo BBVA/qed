@@ -19,6 +19,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -131,23 +132,23 @@ func (s *Server) Stop() {
 
 	if s.tamperingServer != nil {
 		log.Debugf("Tampering enabled: stopping server...")
-		if err := s.tamperingServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
-			panic(err)
+		if err := s.tamperingServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+			log.Error(err)
 		}
 		log.Debugf("Done.\n")
 	}
 
 	if s.profilingServer != nil {
 		log.Debugf("Profiling enabled: stopping server...")
-		if err := s.profilingServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
-			panic(err)
+		if err := s.profilingServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+			log.Error(err)
 		}
 		log.Debugf("Done.\n")
 	}
 
 	log.Debugf("Stopping HTTP server...")
-	if err := s.httpServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
-		panic(err)
+	if err := s.httpServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+		log.Error(err)
 	}
 
 	log.Debugf("Done. Exiting...\n")
