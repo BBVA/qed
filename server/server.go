@@ -157,7 +157,7 @@ func (s *Server) Stop() {
 
 func buildStorageEngine(storageName, dbPath string) (storage.Store, storage.Store, error) {
 	var frozen, leaves storage.Store
-	log.Info("Building storage engine...")
+	log.Debugf("Building storage engine...")
 	switch storageName {
 	case "badger":
 		frozen = badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
@@ -169,7 +169,7 @@ func buildStorageEngine(storageName, dbPath string) (storage.Store, storage.Stor
 		log.Error("Please select a valid storage backend")
 		return nil, nil, fmt.Errorf("Invalid storage name")
 	}
-	log.Info("Done.")
+	log.Debug("Done.")
 	return frozen, leaves, nil
 }
 
@@ -182,8 +182,6 @@ func buildBalloon(frozen, leaves storage.Store, apiKey string, cacheSize uint64)
 }
 
 func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon) *http.Server {
-
-	log.Info("Starting HTTP server...")
 	router := apihttp.NewApiHttp(balloon)
 	server := &http.Server{
 		Addr:    endpoint,
@@ -194,7 +192,6 @@ func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon) *http.Server 
 }
 
 func newProfilingServer(endpoint string) *http.Server {
-	log.Info("Starting profiling server...")
 	server := &http.Server{
 		Addr:    endpoint,
 		Handler: nil,
