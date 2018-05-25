@@ -46,7 +46,7 @@ type Server struct {
 	dbPath       string
 	apiKey       string
 	cacheSize    uint64
-	storageName  string
+	storages     []storage.Store
 
 	httpServer      *http.Server
 	tamperingServer *http.Server
@@ -65,21 +65,26 @@ func NewServer(
 	profiling bool,
 	tampering bool,
 ) *Server {
-	server := new(Server)
-	server.httpEndpoint = httpEndpoint
-	server.dbPath = dbPath
-	server.apiKey = apiKey
-	server.cacheSize = cacheSize
-	server.storageName = storageName
+
+	storages := make([]storage.Store, 0, 0)
 
 	frozen, leaves, err := buildStorageEngine(storageName, dbPath)
+	storages = append(storages, frozen, leaves)
 	balloon, err := buildBalloon(frozen, leaves, apiKey, cacheSize)
 	if err != nil {
 		log.Error(err)
 	}
 
-	server.httpServer = newHTTPServer(httpEndpoint, balloon)
-
+	server := &Server{
+		httpEndpoint,
+		dbPath,
+		apiKey,
+		cacheSize,
+		storages,
+		newHTTPServer(httpEndpoint, balloon),
+		nil,
+		nil,
+	}
 	if tampering {
 		server.tamperingServer = newTamperServer("localhost:8081", leaves.(storage.DeletableStore), hashing.Sha256Hasher)
 	}
@@ -87,7 +92,9 @@ func NewServer(
 	if profiling {
 		server.profilingServer = newProfilingServer("localhost:6060")
 	}
+
 	return server
+
 }
 
 func (s *Server) Run() error {
@@ -149,6 +156,10 @@ func (s *Server) Stop() {
 	log.Debugf("Stopping HTTP server...")
 	if err := s.httpServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
 		log.Error(err)
+	}
+
+	for _, st := range s.storages {
+		st.Close()
 	}
 
 	log.Debugf("Done. Exiting...\n")
