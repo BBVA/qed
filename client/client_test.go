@@ -61,7 +61,10 @@ func tearDownTest(s *server.Server) {
 func TestAdd(t *testing.T) {
 	server, client := setupTest()
 	defer tearDownTest(server)
-	client.Add("Hola mundo!")
+	_, err := client.Add("Hola mundo!")
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMembership(t *testing.T) {
