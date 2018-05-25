@@ -81,7 +81,6 @@ func TestAddVerify(t *testing.T) {
 				first.Event,
 			}
 			assert.True(t, client.Verify(result, verifyingSnapshot), "The proofs should be valid")
-
 		})
 
 	})

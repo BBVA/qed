@@ -265,7 +265,6 @@ func newTamperServer(endpoint string, store storage.DeletableStore, hasher hashi
 			log.Debugf("Delete: %v", store.Delete(tp.KeyDigest))
 
 		}
-
 		return
 
 	}
@@ -277,6 +276,5 @@ func newTamperServer(endpoint string, store storage.DeletableStore, hasher hashi
 		Addr:    endpoint,
 		Handler: apihttp.LogHandler(tamperApi),
 	}
-
 	return st
 }
