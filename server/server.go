@@ -20,7 +20,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
@@ -29,6 +28,7 @@ import (
 	"syscall"
 
 	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/api/tampering"
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/history"
@@ -86,7 +86,7 @@ func NewServer(
 		nil,
 	}
 	if tampering {
-		server.tamperingServer = newTamperServer("localhost:8081", leaves.(storage.DeletableStore), hashing.Sha256Hasher)
+		server.tamperingServer = newTamperingServer("localhost:8081", leaves.(storage.DeletableStore), hashing.Sha256Hasher)
 	}
 
 	if profiling {
@@ -197,7 +197,6 @@ func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon) *http.Server 
 		Addr:    endpoint,
 		Handler: apihttp.LogHandler(router),
 	}
-
 	return server
 }
 
@@ -206,7 +205,15 @@ func newProfilingServer(endpoint string) *http.Server {
 		Addr:    endpoint,
 		Handler: nil,
 	}
+	return server
+}
 
+func newTamperingServer(endpoint string, store storage.DeletableStore, hasher hashing.Hasher) *http.Server {
+	router := tampering.NewTamperingApi(store, hasher)
+	server := &http.Server{
+		Addr:    endpoint,
+		Handler: apihttp.LogHandler(router),
+	}
 	return server
 }
 
@@ -220,61 +227,4 @@ func awaitTermSignal(closeFn func()) {
 	log.Infof("Signal received: %v", sig)
 
 	closeFn()
-}
-
-func newTamperServer(endpoint string, store storage.DeletableStore, hasher hashing.Hasher) *http.Server {
-
-	type tamperEvent struct {
-		Key       []byte
-		KeyDigest []byte
-		Value     []byte
-	}
-
-	tamper := func(w http.ResponseWriter, r *http.Request) {
-
-		// Make sure we can only be called with an HTTP POST request.
-		if !(r.Method == "PATCH" || r.Method == "DELETE") {
-			w.Header().Set("Allow", "PATCH, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		if r.Body == nil {
-			http.Error(w, "Please send a request body", http.StatusBadRequest)
-			return
-		}
-
-		var tp tamperEvent
-		err := json.NewDecoder(r.Body).Decode(&tp)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		tp.KeyDigest = hasher(tp.Key)
-
-		switch r.Method {
-		case "PATCH":
-			get, _ := store.Get(tp.KeyDigest)
-			log.Debugf("Get: %v", get)
-			log.Debugf("Tamper: %v", store.Add(tp.KeyDigest, tp.Value))
-
-		case "DELETE":
-			get, _ := store.Get(tp.KeyDigest)
-			log.Debugf("Get: %v", get)
-			log.Debugf("Delete: %v", store.Delete(tp.KeyDigest))
-
-		}
-		return
-
-	}
-
-	tamperApi := http.NewServeMux()
-	tamperApi.HandleFunc("/tamper", apihttp.AuthHandlerMiddleware(http.HandlerFunc(tamper)))
-
-	st := &http.Server{
-		Addr:    endpoint,
-		Handler: apihttp.LogHandler(tamperApi),
-	}
-	return st
 }
