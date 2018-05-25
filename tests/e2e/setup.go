@@ -51,7 +51,6 @@ func setup() (scope.TestF, scope.TestF) {
 				t.Log(err)
 			}
 		})()
-
 	}
 
 	after := func(t *testing.T) {
@@ -59,7 +58,6 @@ func setup() (scope.TestF, scope.TestF) {
 			srv.Stop()
 		}
 	}
-
 	return before, after
 }
 

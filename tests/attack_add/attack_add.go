@@ -81,7 +81,6 @@ func myTargeter(endpoint string, hdr http.Header) vegeta.Targeter {
 		tgt.Header = hdr
 		tgt.Method = "POST"
 		tgt.URL = endpoint
-
 		return nil
 	}
 }
