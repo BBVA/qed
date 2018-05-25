@@ -21,52 +21,42 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/testutils/scope"
+	assert "github.com/stretchr/testify/require"
 )
 
-func tError(s, level string) {
-	log.SetLogger("test", level)
-	log.Error(fmt.Sprintf("%s", s))
-}
-func tErrorf(s, level string) {
-	log.SetLogger("test", level)
-	log.Errorf(fmt.Sprintf("%s %s", s, "%s"), "composed")
-}
-
-func tInfo(s, level string) {
-	log.SetLogger("test", level)
-	log.Info(fmt.Sprintf("%s", s))
-}
-
-func tInfof(s, level string) {
-	log.SetLogger("test", level)
-	log.Infof(fmt.Sprintf("%s %s", s, "%s"), "composed")
-}
-
-func tDebug(s, level string) {
-	log.SetLogger("test", level)
-	log.Debug(fmt.Sprintf("%s", s))
-}
-
-func tDebugf(s, level string) {
-	log.SetLogger("test", level)
-	log.Debugf(fmt.Sprintf("%s %s", s, "%s"), "composed")
-}
-
 var testFuncMap = map[string]func(string, string){
-	"tError":  tError,
-	"tErrorf": tErrorf,
-	"tInfo":   tInfo,
-	"tInfof":  tInfof,
-	"tDebug":  tDebug,
-	"tDebugf": tDebugf,
+	"tError": func(s, level string) {
+		log.SetLogger("test", level)
+		log.Error(fmt.Sprintf("%s", s))
+	},
+	"tErrorf": func(s, level string) {
+		log.SetLogger("test", level)
+		log.Errorf(fmt.Sprintf("%s %s", s, "%s"), "composed")
+	},
+	"tInfo": func(s, level string) {
+		log.SetLogger("test", level)
+		log.Info(fmt.Sprintf("%s", s))
+	},
+	"tInfof": func(s, level string) {
+		log.SetLogger("test", level)
+		log.Infof(fmt.Sprintf("%s %s", s, "%s"), "composed")
+	},
+	"tDebug": func(s, level string) {
+		log.SetLogger("test", level)
+		log.Debug(fmt.Sprintf("%s", s))
+	},
+	"tDebugf": func(s, level string) {
+		log.SetLogger("test", level)
+		log.Debugf(fmt.Sprintf("%s %s", s, "%s"), "composed")
+	},
 }
 
-func assertSubprocess(t *testing.T, level, testFunc, message string, silent, exit bool) {
+func subprocess(level, testFunc, message string) (*exec.ExitError, bool, string) {
 
 	cmd := exec.Command(os.Args[0], "-test.run=TestLogSuite")
 	var outb bytes.Buffer
@@ -75,64 +65,169 @@ func assertSubprocess(t *testing.T, level, testFunc, message string, silent, exi
 		fmt.Sprintf("SUBPROCESSED_TEST=%s", testFunc),
 		fmt.Sprintf("LOG_LEVEL=%s", level),
 	)
-
-	err := cmd.Run()
-	if e, ok := err.(*exec.ExitError); exit && (!ok || e.Success()) {
-		t.Errorf("log.Error ran with err %v, want exit status 1", err)
-	}
-
-	outString := outb.String()
-
-	if !silent {
-		if !strings.Contains(outString, message) {
-			t.Errorf("No message emmited %s %s", testFunc, level)
-		}
-		if regexp.MustCompile("f$").MatchString(testFunc) && !strings.Contains(outString, "composed") {
-			t.Errorf("No composed message emmited %s %s", testFunc, level)
-		}
-	}
-
-	if silent && strings.Contains(outString, message) {
-		t.Errorf("Stdout emmited %s: '%s'", testFunc, level)
-	}
+	command := cmd.Run()
+	err, ok := command.(*exec.ExitError)
+	return err, ok, outb.String()
 
 }
 
 func TestLogSuite(t *testing.T) {
 
-	testString := "called"
+	message := "called"
 
 	if cast := os.Getenv("SUBPROCESSED_TEST"); len(cast) > 0 {
-		testFuncMap[cast](testString, os.Getenv("LOG_LEVEL"))
+		testFuncMap[cast](message, os.Getenv("LOG_LEVEL"))
 		return
 	}
 
-	assertSubprocess(t, log.DEBUG, "tError", testString, false, true)
-	assertSubprocess(t, log.DEBUG, "tErrorf", testString, false, true)
-	assertSubprocess(t, log.DEBUG, "tInfo", testString, false, false)
-	assertSubprocess(t, log.DEBUG, "tInfof", testString, false, false)
-	assertSubprocess(t, log.DEBUG, "tDebug", testString, false, false)
-	assertSubprocess(t, log.DEBUG, "tDebugf", testString, false, false)
+	scenario, let := scope.Scope(t, func(t *testing.T) {}, func(t *testing.T) {})
 
-	assertSubprocess(t, log.INFO, "tError", testString, false, true)
-	assertSubprocess(t, log.INFO, "tErrorf", testString, false, true)
-	assertSubprocess(t, log.INFO, "tInfo", testString, false, false)
-	assertSubprocess(t, log.INFO, "tInfof", testString, false, false)
-	assertSubprocess(t, log.INFO, "tDebug", testString, true, false)
-	assertSubprocess(t, log.INFO, "tDebugf", testString, true, false)
+	scenario("Test output for log.DEBUG logger", func() {
 
-	assertSubprocess(t, log.ERROR, "tError", testString, false, true)
-	assertSubprocess(t, log.ERROR, "tErrorf", testString, false, true)
-	assertSubprocess(t, log.ERROR, "tInfo", testString, true, false)
-	assertSubprocess(t, log.ERROR, "tInfof", testString, true, false)
-	assertSubprocess(t, log.ERROR, "tDebug", testString, true, false)
-	assertSubprocess(t, log.ERROR, "tDebugf", testString, true, false)
+		let("test Error function", func(t *testing.T) {
+			err, ok, outString := subprocess(log.DEBUG, "tError", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, ok && !err.Success(), "Subprocess must exit with status 1")
+		})
 
-	assertSubprocess(t, log.SILENT, "tError", testString, true, false)
-	assertSubprocess(t, log.SILENT, "tErrorf", testString, true, false)
-	assertSubprocess(t, log.SILENT, "tInfo", testString, true, false)
-	assertSubprocess(t, log.SILENT, "tInfof", testString, true, false)
-	assertSubprocess(t, log.SILENT, "tDebug", testString, true, false)
-	assertSubprocess(t, log.SILENT, "tDebugf", testString, true, false)
+		let("test Errorf function", func(t *testing.T) {
+			err, ok, outString := subprocess(log.DEBUG, "tErrorf", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, ok && !err.Success(), "Subprocess must exit with status 1")
+			assert.True(t, strings.Contains(outString, "composed"), "If log formatted must show formatted strings")
+		})
+
+		let("test Info function", func(t *testing.T) {
+			_, _, outString := subprocess(log.DEBUG, "tInfo", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+		})
+
+		let("test Infof function", func(t *testing.T) {
+			_, _, outString := subprocess(log.DEBUG, "tInfof", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, strings.Contains(outString, "composed"), "If log formatted must show formatted strings")
+		})
+
+		let("test Debug function", func(t *testing.T) {
+			_, _, outString := subprocess(log.DEBUG, "tDebug", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+		})
+
+		let("test Debugf function", func(t *testing.T) {
+			_, _, outString := subprocess(log.DEBUG, "tDebugf", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, strings.Contains(outString, "composed"), "If log formatted must show formatted strings")
+		})
+
+	})
+
+	scenario("Test output for log.INFO logger", func() {
+
+		let("test Error function", func(t *testing.T) {
+			err, ok, outString := subprocess(log.INFO, "tError", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, ok && !err.Success(), "Subprocess must exit with status 1")
+		})
+
+		let("test Errorf function", func(t *testing.T) {
+			err, ok, outString := subprocess(log.INFO, "tErrorf", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, ok && !err.Success(), "Subprocess must exit with status 1")
+			assert.True(t, strings.Contains(outString, "composed"), "If log formatted must show formatted strings")
+		})
+
+		let("test Info function", func(t *testing.T) {
+			_, _, outString := subprocess(log.INFO, "tInfo", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+		})
+
+		let("test Infof function", func(t *testing.T) {
+			_, _, outString := subprocess(log.INFO, "tInfof", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, strings.Contains(outString, "composed"), "If log formatted must show formatted strings")
+		})
+
+		let("test Debug function", func(t *testing.T) {
+			_, _, outString := subprocess(log.INFO, "tDebug", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Debugf function", func(t *testing.T) {
+			_, _, outString := subprocess(log.INFO, "tDebugf", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+	})
+
+	scenario("Test output for log.ERROR logger", func() {
+
+		let("test Error function", func(t *testing.T) {
+			err, ok, outString := subprocess(log.ERROR, "tError", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, ok && !err.Success(), "Subprocess must exit with status 1")
+		})
+
+		let("test Errorf function", func(t *testing.T) {
+			err, ok, outString := subprocess(log.ERROR, "tErrorf", message)
+			assert.True(t, strings.Contains(outString, message), "Must show message string")
+			assert.True(t, ok && !err.Success(), "Subprocess must exit with status 1")
+			assert.True(t, strings.Contains(outString, "composed"), "If log formatted must show formatted strings")
+		})
+
+		let("test Info function", func(t *testing.T) {
+			_, _, outString := subprocess(log.ERROR, "tInfo", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Infof function", func(t *testing.T) {
+			_, _, outString := subprocess(log.ERROR, "tInfof", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Debug function", func(t *testing.T) {
+			_, _, outString := subprocess(log.ERROR, "tDebug", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Debugf function", func(t *testing.T) {
+			_, _, outString := subprocess(log.ERROR, "tDebugf", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+	})
+
+	scenario("Test output for log.SILENT logger", func() {
+
+		let("test Error function", func(t *testing.T) {
+			_, _, outString := subprocess(log.SILENT, "tError", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Errorf function", func(t *testing.T) {
+			_, _, outString := subprocess(log.SILENT, "tErrorf", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Info function", func(t *testing.T) {
+			_, _, outString := subprocess(log.SILENT, "tInfo", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Infof function", func(t *testing.T) {
+			_, _, outString := subprocess(log.SILENT, "tInfof", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Debug function", func(t *testing.T) {
+			_, _, outString := subprocess(log.SILENT, "tDebug", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+		let("test Debugf function", func(t *testing.T) {
+			_, _, outString := subprocess(log.SILENT, "tDebugf", message)
+			assert.False(t, strings.Contains(outString, message), "Must not show message string")
+		})
+
+	})
 
 }
