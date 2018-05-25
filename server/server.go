@@ -91,40 +91,40 @@ func NewServer(
 
 func (s *Server) Run() error {
 
-	log.Info("Starting QED server...")
+	log.Debugf("Starting QED server...")
 
 	if s.profilingServer != nil {
 		go func() {
-			log.Info("Starting profiling HTTP server in addr: localhost:6060")
+			log.Debugf("	* Starting profiling HTTP server in addr: localhost:6060")
 			if err := s.profilingServer.ListenAndServe(); err != http.ErrServerClosed {
 				log.Errorf("Can't start profiling HTTP server: %s", err)
 			}
 		}()
 	}
 
-	log.Infof("HTTP server ready and listening on %s", s.httpEndpoint)
+	
 
 	if s.tamperingServer != nil {
 		go func() {
-			log.Info("Starting tampering HTTP server in addr: localhost:8081")
+			log.Debug("	* Starting tampering HTTP server in addr: localhost:8081")
 			if err := s.tamperingServer.ListenAndServe(); err != http.ErrServerClosed {
 				log.Errorf("Can't start tampering HTTP server: %s", err)
 			}
 		}()
 	}
 
-	log.Infof("Profiling server ready and listening on %s", s.httpEndpoint)
-
 	go func() {
-		log.Info("Starting QED API HTTP server in addr: ", s.httpEndpoint)
+		log.Debug("	* Starting QED API HTTP server in addr: ", s.httpEndpoint)
 		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
 			log.Errorf("Can't start QED API HTTP Server: %s", err)
 		}
 	}()
-
+	
+	log.Debugf(" ready on %s\n", s.httpEndpoint)
+	
 	awaitTermSignal(s.Stop)
 
-	log.Info("Stopping server, about to exit...")
+	log.Debug("Stopping server, about to exit...")
 
 	return nil
 }
@@ -132,27 +132,27 @@ func (s *Server) Run() error {
 func (s *Server) Stop() {
 
 	if s.tamperingServer != nil {
-		log.Info("Tampering enabled: stopping server...")
+		log.Debugf("Tampering enabled: stopping server...")
 		if err := s.tamperingServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
 			panic(err)
 		}
-		log.Info("Done.")
+		log.Debugf("Done.\n")
 	}
 
 	if s.profilingServer != nil {
-		log.Info("Profiling enabled: stopping server...")
+		log.Debugf("Profiling enabled: stopping server...")
 		if err := s.profilingServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
 			panic(err)
 		}
-		log.Info("Done.")
+		log.Debugf("Done.\n")
 	}
 
-	log.Info("Stopping HTTP server...")
+	log.Debugf("Stopping HTTP server...")
 	if err := s.httpServer.Shutdown(nil); err != nil { // TODO include timeout instead nil
 		panic(err)
 	}
 
-	log.Info("Done. Exiting...")
+	log.Debugf("Done. Exiting...\n")
 }
 
 func buildStorageEngine(storageName, dbPath string) (storage.Store, storage.Store, error) {
