@@ -75,7 +75,7 @@ type Tree struct {
 	ops            chan interface{} // serialize operations
 }
 
-// NewTree returns a new history tree.
+// NewTree returns a new history Tree struct.
 func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 
 	t := &Tree{
@@ -192,8 +192,8 @@ func (t *Tree) operations() chan interface{} {
 	return operations
 }
 
-// Internal add function adds an event the system appends it to the history tree as
-// the i:th entry and then outputs a root hash as a commitment.
+// Internal add function adds an event the system appends it to the history
+// tree as the i:th entry and then outputs a root hash as a commitment.
 // t.ps://eprint.iacr.org/2015/007.pdf
 func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	version := binary.LittleEndian.Uint64(index)
@@ -218,7 +218,7 @@ func (t Tree) prove(key []byte, index, version uint64) (*MembershipProof, error)
 	return &proof, nil
 }
 
-// Struct Node is the content required to compute the auditPath in the auditor
+// Node is the struct required to compute the auditPath in the auditor
 type Node struct {
 	Digest       []byte
 	Index, Layer uint64
@@ -281,10 +281,14 @@ func uInt64AsBytes(i uint64) []byte {
 	return valuebytes
 }
 
+// frozenKey is a util to translate index and layer to the digest from the
+// frozen storage
 func frozenKey(index, layer uint64) []byte {
 	return append(uInt64AsBytes(index), uInt64AsBytes(layer)...)
 }
 
+// rootHash is a function that recursively traverses the nodes and returns the
+// nootNode digest.
 func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byte, error) {
 
 	var digest []byte
@@ -300,11 +304,13 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 	}
 
 	switch {
+
 	// we are at a leaf: A_v(i,0)
 	case layer == 0 && version >= index:
 		digest = t.leafHasher(Zero, eventDigest)
 		t.stats.leafHashes++
 		break
+
 	// A_v(i,r)
 	case version < index+pow(2, layer-1):
 		hash, err := t.rootHash(eventDigest, index, layer-1, version)
@@ -314,6 +320,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 		digest = t.leafHasher(One, hash)
 		t.stats.internalHashes++
 		break
+
 	// A_v(i,r)
 	case version >= index+pow(2, layer-1):
 		hash1, err := t.rootHash(eventDigest, index, layer-1, version)
@@ -327,6 +334,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 		digest = t.interiorHasher(One, hash1, hash2)
 		t.stats.internalHashes++
 		break
+
 	}
 
 	// froze the node with its new digest

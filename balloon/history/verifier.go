@@ -25,6 +25,8 @@ import (
 	"github.com/bbva/qed/log"
 )
 
+// Proof is the stuct that stores the information required for an history tree
+// proof of existance.
 type Proof struct {
 	auditPath      []Node
 	index          uint64
@@ -32,6 +34,8 @@ type Proof struct {
 	interiorHasher interiorHasher
 }
 
+// NewProof is a function that generates a Proof struct from the parameters
+// provided.
 func NewProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof {
 	return &Proof{
 		auditPath,
@@ -41,10 +45,13 @@ func NewProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof {
 	}
 }
 
+// String is the string representation of the Proof.
 func (p Proof) String() string {
 	return fmt.Sprintf(`{"auditPathLen": "%d"}`, len(p.auditPath))
 }
 
+// Verify will compute the given auditPaths and determine if a Proof object is
+// True or not.
 func (p Proof) Verify(expectedDigest []byte, key []byte, version uint64) bool {
 	// log.Debugf("\nVerifying commitment %v with auditpath %v, key %x and version %v\n", expectedDigest, p.auditPath, key, version)
 	depth := p.getDepth(version)
