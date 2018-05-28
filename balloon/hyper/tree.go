@@ -29,8 +29,8 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-// An Hyper Tree is an optimized Sparse Merkle Tree with
-// aggresive caching and optimized storage.
+// Tree is an optimized Sparse Merkle Tree with aggressive caching and
+// optimized storage.
 //
 // It builds the caching and storage strategy with the assumption
 // that the hash function used to compute the key of the values

@@ -230,7 +230,7 @@ type MembershipProof struct {
 	Nodes []Node
 }
 
-// Internal AuditPath function recursivelly iterate throught the history tree
+// Internal AuditPath function recursivelly iterate through the history tree
 // and store in proof input parameter the final path.
 func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof *MembershipProof) (err error) {
 	if layer == 0 || index > version {

@@ -220,7 +220,7 @@ func TestTamperAndVerify(t *testing.T) {
 	)
 
 	if tpProof.Verify(commitment, key) {
-		t.Errorf("TamperProof unsuccessfull")
+		t.Errorf("TamperProof unsuccessful")
 	}
 
 }
@@ -287,7 +287,7 @@ func TestDeleteAndVerify(t *testing.T) {
 	)
 
 	if tpProof.Verify(commitment, key) {
-		t.Errorf("TamperProof unsuccessfull")
+		t.Errorf("TamperProof unsuccessful")
 	}
 
 }
