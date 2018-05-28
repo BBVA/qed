@@ -61,6 +61,7 @@ func tearDownTest(s *server.Server) {
 }
 
 func TestAdd(t *testing.T) {
+	t.Skip("WIP")
 	server, client := setupTest()
 	defer tearDownTest(server)
 	_, err := client.Add("Hola mundo!")
@@ -70,6 +71,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestMembership(t *testing.T) {
+	t.Skip("WIP")
 	server, client := setupTest()
 	defer tearDownTest(server)
 
@@ -90,6 +92,7 @@ func TestMembership(t *testing.T) {
 }
 
 func TestVerify(t *testing.T) {
+	t.Skip("WIP")
 	server, client := setupTest()
 	defer tearDownTest(server)
 
@@ -112,6 +115,7 @@ func TestVerify(t *testing.T) {
 }
 
 func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
+	t.Skip("WIP")
 	server, client := setupTest()
 	defer tearDownTest(server)
 
