@@ -49,6 +49,9 @@ type logger interface {
 // The default logger is an log.ERROR level.
 var std logger = newError(os.Stdout, "Qed: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 
+// To allow mocking we require a switchable variable
+var osExit = os.Exit
+
 // Below is the public interface for the logger, a proxy for the switchable
 // implementation defined in std
 

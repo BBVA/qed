@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 )
 
 type errorLogger struct {
@@ -39,12 +38,12 @@ func newError(out io.Writer, prefix string, flag int) *errorLogger {
 // A impl 'l errorLogger' qed/log.Logger
 func (l errorLogger) Error(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
-	os.Exit(1)
+	osExit(1)
 }
 
 func (l errorLogger) Errorf(format string, v ...interface{}) {
 	l.Output(caller, fmt.Sprintf(format, v...))
-	os.Exit(1)
+	osExit(1)
 }
 
 func (l errorLogger) Info(v ...interface{})                  { return }

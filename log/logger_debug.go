@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 )
 
 type debugLogger struct {
@@ -39,7 +38,7 @@ func newDebug(out io.Writer, prefix string, flag int) *debugLogger {
 // A impl 'l debugLogger' qed/log.Logger
 func (l debugLogger) Error(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
-	os.Exit(1)
+	osExit(1)
 }
 
 func (l debugLogger) Info(v ...interface{}) {
@@ -52,7 +51,7 @@ func (l debugLogger) Debug(v ...interface{}) {
 
 func (l debugLogger) Errorf(format string, v ...interface{}) {
 	l.Output(caller, fmt.Sprintf(format, v...))
-	os.Exit(1)
+	osExit(1)
 }
 
 func (l debugLogger) Infof(format string, v ...interface{}) {

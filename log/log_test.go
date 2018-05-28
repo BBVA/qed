@@ -19,6 +19,7 @@ package log
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -77,18 +78,18 @@ func assertOutput(t *testing.T, exit, silent bool, level, testFunc, message stri
 	if exit {
 		assert.True(t, ok && !err.Success(), "Subprocess must exit with status 1")
 	} else {
-		assert.False(t, ok && !err.Success(), "Subprocess must exit with status 1")
+		assert.False(t, ok && !err.Success(), "Subprocess must not exit with status 1")
 	}
 
 	if !silent {
 		assert.True(t, strings.Contains(outString, message), "Must show message string")
 
 		if regexp.MustCompile("f$").MatchString(testFunc) {
-			assert.True(t, strings.Contains(outString, "composed"), "If log formatted must show formatted strings")
+			assert.True(t, strings.Contains(outString, "composed"), "Must show formatted strings")
 		}
 
 	} else {
-		assert.False(t, strings.Contains(outString, message), "Must show message string")
+		assert.False(t, strings.Contains(outString, message), "Must not show message string")
 	}
 
 }
@@ -129,5 +130,123 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, true, SILENT, "tInfof", message)
 	assertOutput(t, false, true, SILENT, "tDebug", message)
 	assertOutput(t, false, true, SILENT, "tDebugf", message)
+
+}
+
+func TestDebug(t *testing.T) {
+	var original = osExit
+	osExit = func(n int) {}
+	defer func() { osExit = original }()
+
+	var out bytes.Buffer
+	tLog := newDebug(&out, "test", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+
+	tLog.Error("message1")
+	assert.Regexp(t, "message1", out.String())
+	out.Reset()
+
+	tLog.Errorf("message2 %s", "comp")
+	assert.Regexp(t, "message2 comp", out.String())
+	out.Reset()
+
+	tLog.Info("message3")
+	assert.Regexp(t, "message3", out.String())
+	out.Reset()
+
+	tLog.Infof("message4 %s", "comp")
+	assert.Regexp(t, "message4 comp", out.String())
+	out.Reset()
+
+	tLog.Debug("message5")
+	assert.Regexp(t, "message5", out.String())
+	out.Reset()
+
+	tLog.Debugf("message6 %s", "comp")
+	assert.Regexp(t, "message6 comp", out.String())
+	out.Reset()
+
+}
+
+func TestInfo(t *testing.T) {
+
+	var original = osExit
+	osExit = func(n int) {}
+	defer func() { osExit = original }()
+
+	var out bytes.Buffer
+	tLog := newInfo(&out, "test", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+
+	tLog.Error("message1")
+	assert.Regexp(t, "message1", out.String())
+	out.Reset()
+
+	tLog.Errorf("message2 %s", "comp")
+	assert.Regexp(t, "message2 comp", out.String())
+	out.Reset()
+
+	tLog.Info("message3")
+	assert.Regexp(t, "message3", out.String())
+	out.Reset()
+
+	tLog.Infof("message4 %s", "comp")
+	assert.Regexp(t, "message4 comp", out.String())
+	out.Reset()
+
+	tLog.Debug("message5")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+	tLog.Debugf("message6 %s", "comp")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+}
+
+func TestError(t *testing.T) {
+
+	var original = osExit
+	osExit = func(n int) {}
+	defer func() { osExit = original }()
+
+	var out bytes.Buffer
+	tLog := newError(&out, "test", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+
+	tLog.Error("message1")
+	assert.Regexp(t, "message1", out.String())
+	out.Reset()
+
+	tLog.Errorf("message2 %s", "comp")
+	assert.Regexp(t, "message2 comp", out.String())
+	out.Reset()
+
+	tLog.Info("message3")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+	tLog.Infof("message4 %s", "comp")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+	tLog.Debug("message5")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+	tLog.Debugf("message6 %s", "comp")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+}
+
+func TestSilent(t *testing.T) {
+
+	var original = osExit
+	osExit = func(n int) {}
+	defer func() { osExit = original }()
+
+	tLog := newSilent()
+
+	tLog.Error("message1")
+
+	tLog.Errorf("message2 %s", "comp")
 
 }
