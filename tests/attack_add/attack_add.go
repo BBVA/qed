@@ -42,7 +42,7 @@ func main() {
 	targeter := myTargeter(*endpoint, http.Header{"Api-Key": []string{*apikey}})
 
 	atk := vegeta.NewAttacker(vegeta.Connections(*conn), vegeta.Workers(*workers), vegeta.Timeout(*timeout))
-	res := atk.Attack(targeter, *rate, *duration)
+	res := atk.Attack(targeter, *rate, *duration, "")
 	enc := vegeta.NewEncoder(os.Stdout)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
