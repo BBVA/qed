@@ -133,13 +133,13 @@ func (b *HyperBalloon) operations() chan interface{} {
 				case *add:
 					digest, err := b.add(msg.event)
 					if err != nil {
-						log.Error("Operations error: %v", err)
+						log.Error("Operations error: ", err)
 					}
 					msg.result <- digest
 				case *membership:
 					proof, err := b.genMembershipProof(msg.event, msg.version)
 					if err != nil {
-						log.Debug("Operations error: %v", err)
+						log.Debug("Operations error: ", err)
 					}
 					msg.result <- proof
 				default:
