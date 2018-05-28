@@ -27,7 +27,7 @@
 	if the data is there.
 
 	The default badger behaviour is to call fsync() on each write which obviously degrades
-	write performance severly. So to achieve our desired performance we need to disable it.
+	write performance severely. So to achieve our desired performance we need to disable it.
 
 	The approach of using mmap'ed files and calling fsync sporadically instead of each insert
 	seems to be the normal behaviour of popular databases. We need more references to
