@@ -36,7 +36,7 @@ type Balloon interface {
 	Close() chan bool
 }
 
-// HyperBallon is the struct that links together both hyper and history trees
+// HyperBalloon is the struct that links together both hyper and history trees
 // the balloon version and the ops channel for the balloon operations
 // serializer.
 type HyperBalloon struct {
@@ -68,7 +68,7 @@ type MembershipProof struct {
 	KeyDigest      []byte
 }
 
-// NewHyperBallon returns a HyperBalloon struct.
+// NewHyperBall0on returns a HyperBalloon struct.
 func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree) *HyperBalloon {
 
 	b := HyperBalloon{
