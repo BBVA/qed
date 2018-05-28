@@ -22,7 +22,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" // this wil enable the default profiling capabilities
 	"os"
 	"os/signal"
 	"syscall"
@@ -54,7 +54,6 @@ type Server struct {
 }
 
 // NewServer synthesizes a new Server based on the parameters it receives.
-//
 // Note that storageName must be one of 'badger', 'bolt'.
 func NewServer(
 	httpEndpoint string,
@@ -97,6 +96,7 @@ func NewServer(
 
 }
 
+// Run will start the server in a non-blockable fashion.
 func (s *Server) Run() error {
 
 	log.Debugf("Starting QED server...")
@@ -135,6 +135,7 @@ func (s *Server) Run() error {
 	return nil
 }
 
+// Stop will close all the channels from the mux servers.
 func (s *Server) Stop() {
 
 	if s.tamperingServer != nil {

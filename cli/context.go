@@ -26,6 +26,7 @@ type Context struct {
 	client *client.HttpClient
 }
 
+// NewContext will return a new instance of Context.
 func NewContext() *Context {
 	return &Context{}
 }
