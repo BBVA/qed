@@ -173,8 +173,8 @@ func TestMembership(t *testing.T) {
 	go func() {
 		proof <- &balloon.MembershipProof{
 			true,
-			[][]byte{[]byte{0x0}},
-			[]history.Node{history.Node{[]byte{0x0}, 0, 1}},
+			[][]byte{{0x0}},
+			[]history.Node{{[]byte{0x0}, 0, 1}},
 			version,
 			version,
 			version + 1,

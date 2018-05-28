@@ -42,7 +42,7 @@ func TestVerify(t *testing.T) {
 		{
 			key: []byte{0x1},
 			auditPath: []Node{
-				Node{[]byte{0x0}, 0, 0},
+				{[]byte{0x0}, 0, 0},
 			},
 			version:            1,
 			expectedCommitment: []byte{0x0},
@@ -50,7 +50,7 @@ func TestVerify(t *testing.T) {
 		{
 			key: []byte{0x2},
 			auditPath: []Node{
-				Node{[]byte{0x1}, 0, 1},
+				{[]byte{0x1}, 0, 1},
 			},
 			version:            2,
 			expectedCommitment: []byte{0x3},
@@ -58,8 +58,8 @@ func TestVerify(t *testing.T) {
 		{
 			key: []byte{0x3},
 			auditPath: []Node{
-				Node{[]byte{0x2}, 2, 0},
-				Node{[]byte{0x1}, 0, 1},
+				{[]byte{0x2}, 2, 0},
+				{[]byte{0x1}, 0, 1},
 			},
 			version:            3,
 			expectedCommitment: []byte{0x0},
@@ -67,7 +67,7 @@ func TestVerify(t *testing.T) {
 		{
 			key: []byte{0x4},
 			auditPath: []Node{
-				Node{[]byte{0x1}, 0, 2},
+				{[]byte{0x1}, 0, 2},
 			},
 			version:            4,
 			expectedCommitment: []byte{0x4},
@@ -77,9 +77,9 @@ func TestVerify(t *testing.T) {
 		{
 			key: []byte{0x0},
 			auditPath: []Node{
-				Node{[]byte{0x1}, 1, 0},
-				Node{[]byte{0x0}, 2, 1},
-				Node{[]byte{0x4}, 4, 2},
+				{[]byte{0x1}, 1, 0},
+				{[]byte{0x0}, 2, 1},
+				{[]byte{0x4}, 4, 2},
 			},
 			version:            4,
 			expectedCommitment: []byte{0x4},
@@ -87,9 +87,9 @@ func TestVerify(t *testing.T) {
 		{
 			key: []byte{0x2},
 			auditPath: []Node{
-				Node{[]byte{0x0}, 0, 1},
-				Node{[]byte{0x3}, 3, 0},
-				Node{[]byte{0x4}, 4, 2},
+				{[]byte{0x0}, 0, 1},
+				{[]byte{0x3}, 3, 0},
+				{[]byte{0x4}, 4, 2},
 			},
 			version:            4,
 			expectedCommitment: []byte{0x4},

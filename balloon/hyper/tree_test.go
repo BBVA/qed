@@ -77,14 +77,14 @@ func TestProve(t *testing.T) {
 	<-ht.Add(key, value)
 
 	expectedPath := [][]byte{
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
 	}
 	proof := <-ht.Prove(key)
 

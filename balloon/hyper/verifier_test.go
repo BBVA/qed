@@ -34,14 +34,14 @@ func TestVerify(t *testing.T) {
 	key := []byte{0xff}
 	value := uint64(1)
 	auditPath := [][]byte{
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
 	}
 
 	proof := NewFakeProof("test", auditPath, hasher)
