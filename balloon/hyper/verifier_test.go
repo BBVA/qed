@@ -72,7 +72,7 @@ func TestAddAndVerify(t *testing.T) {
 	membershipProof := <-ht.Prove(key)
 
 	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
-		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
+		t.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
 	proof := NewProof("/var/tmp/balloon.db", membershipProof.AuditPath, hasher)
@@ -103,7 +103,7 @@ func TestAddAndVerifyXor(t *testing.T) {
 	membershipProof := <-ht.Prove(key)
 
 	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
-		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
+		t.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
 	proof := NewProof("/var/tmp/balloon.db", membershipProof.AuditPath, hasher)
@@ -135,7 +135,7 @@ func TestAddAndVerifyPearson(t *testing.T) {
 	membershipProof := <-ht.Prove(key)
 
 	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
-		fmt.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
+		t.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
 	}
 
 	proof := NewProof("/var/tmp/balloon.db", membershipProof.AuditPath, hasher)
