@@ -30,8 +30,14 @@ type task struct {
 	run   func(t *testing.T)
 }
 
+// Let is the interface used in Scope generator.
 type Let func(string, func(t *testing.T))
+
+// Scenario is the interface used in Scope generator.
 type Scenario func(string, func())
+
+// TestF is the interface used in Scope generator as before and after interace
+// functions.
 type TestF func(t *testing.T)
 
 func report(format string, v ...interface{}) {
@@ -40,6 +46,17 @@ func report(format string, v ...interface{}) {
 	}
 }
 
+// Scope will return a scenario and let functions to semantically create e2e
+// tests. Will require a before an after functions to be run around each
+// scenario.
+//	scenario, let = scope.Scope(t, func(t *testing.T){}, func(t *testing.T) {})
+//
+//	scenario("This will generate a scope scenario), func(){
+//		truthy := true
+//		let("This is an isolated run with global and local scopes", func(t *testing.T) {
+//			assert.True(t, truthy)
+//		})
+//	})
 func Scope(t *testing.T, before, after TestF) (Scenario, Let) {
 	var tasks []task
 	var tx task

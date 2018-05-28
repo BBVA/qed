@@ -117,7 +117,7 @@ func TestAddAndVerify(t *testing.T) {
 	ht := NewFakeTree(store, hasher)
 
 	key := []byte("I AM A STRANGE LOOP")
-	var value uint64 = 0
+	var value uint64
 
 	commitment := <-ht.Add(key, uInt64AsBytes(value))
 	membershipProof := <-ht.Prove(key, 0, value)
