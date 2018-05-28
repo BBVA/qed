@@ -17,154 +17,122 @@
 package client
 
 import (
-	"os"
+	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/server"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
 	client *HttpClient
-	path   string
+	mux    *http.ServeMux
+	server *httptest.Server
 )
-
-func resetPath() {
-	os.RemoveAll(path)
-	os.MkdirAll(path, os.FileMode(0755))
-}
 
 func init() {
 	log.SetLogger("client-test", "info")
 }
 
-func setupTest() (*server.Server, *HttpClient) {
-	path = "/var/tmp/balloonClientTest"
-	resetPath()
-	server := server.NewServer("127.0.0.1:8079", path, "my-awesome-api-key", uint64(50000), "badger", false, false)
-	go (func() {
-		err := server.Run()
-		if err != nil {
-			log.Info(err)
-		}
-	})()
-
-	time.Sleep(1)
-	client = NewHttpClient("http://127.0.0.1:8079", "my-awesome-api-key")
-	return server, client
-}
-
-func tearDownTest(s *server.Server) {
-	s.Stop()
-}
-
-func TestAdd(t *testing.T) {
-	t.Skip("WIP")
-	server, client := setupTest()
-	defer tearDownTest(server)
-	_, err := client.Add("Hola mundo!")
-	if err != nil {
-		t.Fatal(err)
+func setup() func() {
+	mux = http.NewServeMux()
+	server = httptest.NewServer(mux)
+	client = NewHttpClient(server.URL, "my-awesome-api-key")
+	return func() {
+		server.Close()
 	}
+}
+
+func TestAddSuccess(t *testing.T) {
+	tearDown := setup()
+	defer tearDown()
+
+	event := "Hello world!"
+	fakeSnapshot := &apihttp.Snapshot{
+		HyperDigest:   []byte("hyper"),
+		HistoryDigest: []byte("history"),
+		Version:       0,
+		Event:         []byte(event),
+	}
+	result, _ := json.Marshal(fakeSnapshot)
+	mux.HandleFunc("/events", okHandler(result))
+
+	snapshot, err := client.Add(event)
+	assert.NoError(t, err)
+	assert.Equal(t, fakeSnapshot, snapshot, "The snapshots should match")
+
+}
+
+func TestAddWithServerFailure(t *testing.T) {
+	tearDown := setup()
+	defer tearDown()
+
+	event := "Hello world!"
+	mux.HandleFunc("/events", serverErrorHandler())
+
+	_, err := client.Add(event)
+	assert.Error(t, err)
+
 }
 
 func TestMembership(t *testing.T) {
-	t.Skip("WIP")
-	server, client := setupTest()
-	defer tearDownTest(server)
+	tearDown := setup()
+	defer tearDown()
 
-	snapshot, err := client.Add("Hola mundo!")
-	if err != nil {
-		t.Fatal(err)
+	event := "Hello world!"
+	version := uint64(0)
+	fakeResult := &apihttp.MembershipResult{
+		Key:       []byte(event),
+		KeyDigest: []byte("digest"),
+		IsMember:  true,
+		Proofs: &apihttp.Proofs{
+			HyperAuditPath:   make([][]byte, 0),
+			HistoryAuditPath: make([]apihttp.HistoryNode, 0),
+		},
+		CurrentVersion: version,
+		QueryVersion:   version,
+		ActualVersion:  version,
 	}
+	resultJSON, _ := json.Marshal(fakeResult)
+	mux.HandleFunc("/proofs/membership", okHandler(resultJSON))
 
-	proof, err := client.Membership(snapshot.Event, snapshot.Version)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !proof.IsMember {
-		t.Fatal("It should be a member")
-	}
+	result, err := client.Membership([]byte(event), version)
+	assert.NoError(t, err)
+	assert.Equal(t, fakeResult, result, "The results should match")
 
 }
 
-func TestVerify(t *testing.T) {
-	t.Skip("WIP")
-	server, client := setupTest()
-	defer tearDownTest(server)
+func TestMembershipWithServerFailure(t *testing.T) {
+	tearDown := setup()
+	defer tearDown()
 
-	snapshot, err := client.Add("Hello world!")
-	if err != nil {
-		t.Fatal(err)
-	}
+	event := "Hello world!"
+	mux.HandleFunc("/proofs/membership", serverErrorHandler())
 
-	proof, err := client.Membership(snapshot.Event, snapshot.Version)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	correct := client.Verify(proof, snapshot)
-
-	if !correct {
-		t.Fatal("correct should be true")
-	}
+	_, err := client.Membership([]byte(event), 0)
+	assert.Error(t, err)
 
 }
 
-func TestAddTwoEventsAndVerifyFirst(t *testing.T) {
-	t.Skip("WIP")
-	server, client := setupTest()
-	defer tearDownTest(server)
+// TODO implement a test to verify proofs using fake hash function
 
-	snapshot1, _ := client.Add("Test event 1")
-	snapshot2, _ := client.Add("Test event 2")
-
-	proof, err := client.Membership(snapshot1.Event, snapshot1.Version)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	verifyingSnapshot := &apihttp.Snapshot{
-		snapshot2.HyperDigest, // note that the hyper digest corresponds with the last one
-		snapshot1.HistoryDigest,
-		snapshot1.Version,
-		snapshot1.Event}
-	correct := client.Verify(proof, verifyingSnapshot)
-
-	if !correct {
-		t.Fatal("correct should be true")
+func okHandler(result []byte) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		out := new(bytes.Buffer)
+		json.Compact(out, result)
+		w.Write(out.Bytes())
 	}
 }
 
-func benchmarkAdd(i int, b *testing.B) {
-	server, client := setupTest()
-	defer tearDownTest(server)
-	b.ResetTimer()
-	for n := 0; n < i; n++ {
-		client.Add(string(n))
-	}
-}
-
-func BenchmarkAdd10(b *testing.B)       { benchmarkAdd(10, b) }
-func BenchmarkAdd100(b *testing.B)      { benchmarkAdd(100, b) }
-func BenchmarkAdd1000(b *testing.B)     { benchmarkAdd(1000, b) }
-func BenchmarkAdd10000(b *testing.B)    { benchmarkAdd(10000, b) }
-func BenchmarkAdd100000(b *testing.B)   { benchmarkAdd(100000, b) }
-func BenchmarkAdd10000000(b *testing.B) { benchmarkAdd(10000000, b) }
-
-func BenchmarkVerify(b *testing.B) {
-	server, client := setupTest()
-	defer tearDownTest(server)
-	b.ResetTimer()
-	b.N = 100000
-	for n := 0; n < b.N; n++ {
-		snapshot, _ := client.Add(string(n))
-		proof, _ := client.Membership(snapshot.Event, snapshot.Version)
-		if !client.Verify(proof, snapshot) {
-			b.Fatalf("correct  at %d should be true", n)
-		}
+func serverErrorHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
