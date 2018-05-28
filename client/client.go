@@ -117,7 +117,7 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipR
 }
 
 // Verify will compute the Proof given in Membership and the snapshot from the
-// add and returns a proof of existance.
+// add and returns a proof of existence.
 func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot) bool {
 
 	balloonProof := apihttp.ToBalloonProof(c.apiKey, result, hashing.Sha256Hasher)

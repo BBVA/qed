@@ -26,7 +26,7 @@ import (
 )
 
 // Proof is the stuct that stores the information required for an history tree
-// proof of existance.
+// proof of existence.
 type Proof struct {
 	auditPath      []Node
 	index          uint64
