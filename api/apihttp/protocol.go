@@ -23,20 +23,20 @@ import (
 	"github.com/bbva/qed/balloon/hyper"
 )
 
-// Struct Event is the public interface that Add handler function uses to
+// Event is the public struct that Add handler function uses to
 // parse the post params.
 type Event struct {
 	Event []byte
 }
 
-// Struct Membershipquery is the public interface that apihttp.Membership
+// MembershipQuery is the public struct that apihttp.Membership
 // Handler uses to parse the post params.
 type MembershipQuery struct {
 	Key     []byte
 	Version uint64
 }
 
-// Struct Snapshot is the public interface that apihttp.Add Handler call returns.
+// Snapshot is the public struct that apihttp.Add Handler call returns.
 type Snapshot struct {
 	HyperDigest   []byte
 	HistoryDigest []byte
@@ -46,21 +46,21 @@ type Snapshot struct {
 	// EventDigest   string
 }
 
-// Struct HistoryNode is part of the apihttp.MembershipResult used to parse the
+// HistoryNode is part of the apihttp.MembershipResult used to parse the
 // result of apihttp.Membership handler.
 type HistoryNode struct {
 	Digest       []byte
 	Index, Layer uint64
 }
 
-// Struct Proofs is part of the apihttp.MembershipResult used to parse the
+// Proofs is part of the apihttp.MembershipResult used to parse the
 // result if Membership Handler.
 type Proofs struct {
 	HyperAuditPath   [][]byte
 	HistoryAuditPath []HistoryNode
 }
 
-// Struct MembershipResult is the public structure that returns the Membership
+// MembershipResult is the public struct that returns the Membership
 // handler
 type MembershipResult struct {
 	Key                                         []byte
