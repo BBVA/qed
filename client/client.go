@@ -21,6 +21,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -60,10 +61,17 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode >= 500 {
+		return nil, fmt.Errorf("Unexpected server error")
+	}
+
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		return nil, fmt.Errorf("Invalid request")
+	}
 
 	return bodyBytes, nil
 
