@@ -246,7 +246,11 @@ func TestSilent(t *testing.T) {
 	tLog := newSilent()
 
 	tLog.Error("message1")
-
 	tLog.Errorf("message2 %s", "comp")
+
+	tLog.Info("message1")
+	tLog.Infof("message2 %s", "comp")
+	tLog.Debug("message1")
+	tLog.Debugf("message2 %s", "comp")
 
 }
