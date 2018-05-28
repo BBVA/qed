@@ -19,7 +19,6 @@ package hyper
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"testing"
 
 	"github.com/bbva/qed/balloon/hashing"

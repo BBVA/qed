@@ -22,10 +22,10 @@ import (
 	"github.com/bbva/qed/balloon/hashing"
 )
 
-// Constant Empty is a constant for empty leaves
+// Empty is a constant for empty leaves
 var Empty = []byte{0x00}
 
-// Constant Set is a constant for non-empty leaves
+// Set is a constant for non-empty leaves
 var Set = []byte{0x01}
 
 // leafHasher is the internal interface to be used in the hyper tree.
