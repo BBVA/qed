@@ -30,6 +30,7 @@ import (
 	"github.com/bbva/qed/balloon/hashing"
 )
 
+// HttpClient ist the stuct that has the required information for the cli.
 type HttpClient struct {
 	endpoint string
 	apiKey   string
@@ -37,6 +38,7 @@ type HttpClient struct {
 	http.Client
 }
 
+// NewHttpClient will return a new instance of HttpClient.
 func NewHttpClient(endpoint, apiKey string) *HttpClient {
 
 	return &HttpClient{
@@ -77,6 +79,7 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 
 }
 
+// Add will do a request to the server with a post data to store a new event.
 func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 
 	data, _ := json.Marshal(&apihttp.Event{[]byte(event)})
@@ -87,13 +90,13 @@ func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
 	}
 
 	var snapshot apihttp.Snapshot
-
 	json.Unmarshal(body, &snapshot)
 
 	return &snapshot, nil
 
 }
 
+// Membership will ask for a Proof to the server.
 func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipResult, error) {
 
 	query, _ := json.Marshal(&apihttp.MembershipQuery{
@@ -107,13 +110,14 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipR
 	}
 
 	var proof *apihttp.MembershipResult
-
 	json.Unmarshal(body, &proof)
 
 	return proof, nil
 
 }
 
+// Verify will compute the Proof given in Membership and the snapshot from the
+// add and returns a proof of existance.
 func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot) bool {
 
 	balloonProof := apihttp.ToBalloonProof(c.apiKey, result, hashing.Sha256Hasher)

@@ -103,7 +103,7 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 // These methods returns a channel with an appropriate type
 // for each operation to be consumed from when the data arrives.
 
-// Queues an Add operation to the tree and returns a channel
+// Add queues an internal add operation to the tree and returns a channel
 // when the result []byte will be sent when ready
 //
 // The resulting []byte correspond to the hash of the root element
@@ -125,7 +125,7 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 	return result
 }
 
-// Queues a Prove operation to the tree and returns a channel
+// Prove queues a internal prove operation to the tree and returns a channel
 // when the result *MembershipProof will be sent when ready
 func (t Tree) Prove(key []byte) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
@@ -133,7 +133,7 @@ func (t Tree) Prove(key []byte) chan *MembershipProof {
 	return result
 }
 
-// Queues a close operation to the tree and returns a channel
+// Close queues a internal close operation to the tree and returns a channel
 // were a true or false will be send when the operation is completed
 func (t Tree) Close() chan bool {
 	result := make(chan bool)

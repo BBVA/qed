@@ -27,13 +27,13 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-// Struct HealthCheckResponse contains the response from HealthCheckHandler.
+// HealthCheckResponse contains the response from HealthCheckHandler.
 type HealthCheckResponse struct {
 	Version int    `json:"version"`
 	Status  string `json:"status"`
 }
 
-// This handler checks the system status and returns it accordinly.
+// HealthCheckHandler checks the system status and returns it accordinly.
 // The http call it answer is:
 //	GET /health-check
 //
@@ -64,7 +64,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(out.Bytes())
 }
 
-// This handler posts an event into the system:
+// Add posts an event into the system:
 // The http post url is:
 //   POST /events
 //
@@ -114,7 +114,7 @@ func Add(balloon balloon.Balloon) http.HandlerFunc {
 	}
 }
 
-// This handler returns a membershipProof from the system
+// Membership returns a membershipProof from the system
 // The http post url is:
 //   POST /proofs/membership
 //
@@ -178,7 +178,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-// NewServer returns a new *http.ServeMux containing the current API handlers.
+// NewApiHttp returns a new *http.ServeMux containing the current API handlers.
 //	/health-check -> HealthCheckHandler
 //	/events -> Add
 //	/proofs/membership -> Membership
@@ -211,7 +211,7 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
-// WriteLog Logs the Http Status for a request into fileHandler and returns a
+// LogHandler Logs the Http Status for a request into fileHandler and returns a
 // httphandler function which is a wrapper to log the requests.
 func LogHandler(handle http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
