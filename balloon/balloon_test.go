@@ -101,14 +101,14 @@ func TestGenMembershipProof(t *testing.T) {
 	key := []byte{0x5a}
 	var version uint64 = 0
 	expectedHyperProof := [][]byte{
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
-		[]byte{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
+		{0x00},
 	}
 	expectedHistoryProof := [][]byte{}
 

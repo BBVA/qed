@@ -85,8 +85,8 @@ func TestProve(t *testing.T) {
 	}
 
 	expectedPath := [][]byte{
-		[]byte{0x01},
-		[]byte{0x00},
+		{0x01},
+		{0x00},
 	}
 	proof := <-ht.Prove([]byte{0x5}, 6, 6)
 
