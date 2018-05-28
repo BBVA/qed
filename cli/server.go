@@ -53,7 +53,7 @@ func NewServerCommand() *cobra.Command {
 
 			err := srv.Run()
 			if err != nil {
-				log.Errorf("Can't start QED server: ", err)
+				log.Errorf("Can't start QED server: %v", err)
 			}
 
 		},
