@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 )
 
 type infoLogger struct {
@@ -39,7 +38,7 @@ func newInfo(out io.Writer, prefix string, flag int) *infoLogger {
 // A impl 'l infoLogger' qed/log.Logger
 func (l infoLogger) Error(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
-	os.Exit(1)
+	osExit(1)
 }
 
 func (l infoLogger) Info(v ...interface{}) {
@@ -48,7 +47,7 @@ func (l infoLogger) Info(v ...interface{}) {
 
 func (l infoLogger) Errorf(format string, v ...interface{}) {
 	l.Output(caller, fmt.Sprintf(format, v...))
-	os.Exit(1)
+	osExit(1)
 }
 
 func (l infoLogger) Infof(format string, v ...interface{}) {
