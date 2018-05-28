@@ -94,7 +94,7 @@ func (b HyperBalloon) Add(event []byte) chan *Commitment {
 }
 
 // GenMembership is the public balloon interface to get a MembershipProof to
-// do a Existance Proof.
+// do a Existence Proof.
 func (b HyperBalloon) GenMembershipProof(event []byte, version uint64) chan *MembershipProof {
 	result := make(chan *MembershipProof)
 	b.ops <- &membership{
