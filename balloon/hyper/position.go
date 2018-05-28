@@ -21,7 +21,7 @@ import (
 	"fmt"
 )
 
-// A position identifies a unique node in the tree by its base, split and height
+// Position identifies a unique node in the tree by its base, split and height
 type Position struct {
 	base   []byte // the left-most leaf in this node subtree
 	split  []byte // the left-most leaf in the right branch of this node subtree
@@ -34,6 +34,7 @@ func (p Position) String() string {
 	return fmt.Sprintf("base: %b , split: %b , height: %d , n: %d", p.base, p.split, p.height, uint(p.n))
 }
 
+// Key is the position name to be used as identifier in the storage engine.
 func (p Position) Key() []byte {
 	// size of base in bytes + size of height in bytes is 36
 	// so we reserve that amount first

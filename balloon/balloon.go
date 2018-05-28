@@ -28,12 +28,17 @@ import (
 	"github.com/bbva/qed/log"
 )
 
+// Balloon is the public set of operations that can be done to a
+// HyperBalloon struct.
 type Balloon interface {
 	Add(event []byte) chan *Commitment
 	GenMembershipProof(event []byte, version uint64) chan *MembershipProof
 	Close() chan bool
 }
 
+// HyperBallon is the struct that links together both hyper and history trees
+// the balloon version and the ops channel for the balloon operations
+// serializer.
 type HyperBalloon struct {
 	history *history.Tree
 	hyper   *hyper.Tree
@@ -42,12 +47,17 @@ type HyperBalloon struct {
 	ops     chan interface{} // serialize operations
 }
 
+// Commitment is the struct that has both history and hyper digest and the
+// current version for that rootNode digests.
 type Commitment struct {
 	HistoryDigest []byte
 	HyperDigest   []byte
 	Version       uint64
 }
 
+// MembershipProof is the struct that is required to make a Exisitance Proof.
+// It has both Hyper and History AuditPaths, if it exists in first place and
+// Current, Actual and Query Versions.
 type MembershipProof struct {
 	Exists         bool
 	HyperProof     [][]byte
@@ -58,6 +68,7 @@ type MembershipProof struct {
 	KeyDigest      []byte
 }
 
+// NewHyperBallon returns a HyperBalloon struct.
 func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree) *HyperBalloon {
 
 	b := HyperBalloon{
@@ -72,6 +83,7 @@ func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.
 
 }
 
+// Add is the public balloon interface to add a event in the balloon tree.
 func (b HyperBalloon) Add(event []byte) chan *Commitment {
 	result := make(chan *Commitment)
 	b.ops <- &add{
@@ -81,6 +93,8 @@ func (b HyperBalloon) Add(event []byte) chan *Commitment {
 	return result
 }
 
+// GenMembership is the public balloon interface to get a MembershipProof to
+// do a Existance Proof.
 func (b HyperBalloon) GenMembershipProof(event []byte, version uint64) chan *MembershipProof {
 	result := make(chan *MembershipProof)
 	b.ops <- &membership{
@@ -91,6 +105,7 @@ func (b HyperBalloon) GenMembershipProof(event []byte, version uint64) chan *Mem
 	return result
 }
 
+// Close will close the balloon operations serializer channel.
 func (b HyperBalloon) Close() chan bool {
 	result := make(chan bool)
 
@@ -127,21 +142,25 @@ func (b *HyperBalloon) operations() chan interface{} {
 			select {
 			case op := <-operations:
 				switch msg := op.(type) {
+
 				case *close:
 					msg.result <- true
 					return
+
 				case *add:
 					digest, err := b.add(msg.event)
 					if err != nil {
 						log.Error("Operations error: ", err)
 					}
 					msg.result <- digest
+
 				case *membership:
 					proof, err := b.genMembershipProof(msg.event, msg.version)
 					if err != nil {
 						log.Debug("Operations error: ", err)
 					}
 					msg.result <- proof
+
 				default:
 					log.Error("Hyper tree Run() message not implemented!!")
 				}

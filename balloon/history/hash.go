@@ -28,10 +28,12 @@ var Zero = []byte{0x0}
 // if a node has a non-zero digest.
 var One = []byte{0x1}
 
-// leafHasher is the internal interface to be used in the history tree.
+// leafHasher is the internal function interface to be used in the history
+// tree.
 type leafHasher func([]byte, []byte) []byte
 
-// interiorHasher is the internal interface to be used in the history tree.
+// interiorHasher is the internal function interface to be used in the history
+// tree.
 type interiorHasher func([]byte, []byte, []byte) []byte
 
 // leafHasherF is a closure to create a leafHasher function with a

@@ -36,8 +36,8 @@ type Let func(string, func(t *testing.T))
 // Scenario is the interface used in Scope generator.
 type Scenario func(string, func())
 
-// TestF is the interface used in Scope generator as before and after interace
-// functions.
+// TestF is the interface used in Scope generator as before and after
+// interface functions.
 type TestF func(t *testing.T)
 
 func report(format string, v ...interface{}) {
