@@ -68,7 +68,7 @@ type MembershipProof struct {
 	KeyDigest      []byte
 }
 
-// NewHyperBall0on returns a HyperBalloon struct.
+// NewHyperBalloon returns a HyperBalloon struct.
 func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree) *HyperBalloon {
 
 	b := HyperBalloon{
