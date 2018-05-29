@@ -61,7 +61,6 @@ func NewRootCommand(ctx *Context) *cobra.Command {
 	cmd.AddCommand(newStartCommand())
 	cmd.AddCommand(newClientCommand(ctx))
 	cmd.AddCommand(newAuditorCommand(ctx))
-
 	cmd.AddCommand(newAddCommand(ctx))
 	cmd.AddCommand(newMembershipCommand(ctx))
 
