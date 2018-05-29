@@ -26,7 +26,7 @@ import (
 
 func main() {
 	ctx := cmd.NewContext()
-	if err := cmd.NewQedCommand(ctx).Execute(); err != nil {
+	if err := cmd.NewRootCommand(ctx).Execute(); err != nil {
 		os.Exit(-1)
 	}
 }

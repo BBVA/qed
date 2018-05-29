@@ -24,8 +24,8 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-// NewQedCommand is the main Parser for the qed cli.
-func NewQedCommand(ctx *Context) *cobra.Command {
+// NewRootCommand is the main Parser for the qed cli.
+func NewRootCommand(ctx *Context) *cobra.Command {
 	var (
 		endpoint, apiKey, logLevel string
 	)
