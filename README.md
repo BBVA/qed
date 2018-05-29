@@ -51,7 +51,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
  ```
     cd "$GOPATH"/src/github.com/bbva/qed
     mkdir /var/tmp/db_path
-    go run cmd/server/server.go -k key -p /var/tmp/db_path -l info
+    go run main.go start -k key -p /var/tmp/db_path -l info
  ```
 
  - Using the client
@@ -60,7 +60,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
      ```
 	go run				\
-		cmd/cli/qed.go		\
+		main.go			\
 		-k my-key			\
 		-e http://localhost:8080	\
 		add				\
@@ -72,7 +72,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
     ```
 	go run												\
-		cmd/cli/qed.go										\
+		main.go											\
 		-k my-key										\
 		-e http://localhost:8080								\
 		membership										\
@@ -86,7 +86,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
     ```
 	go run												\
-		cmd/cli/qed.go										\
+		main.go											\
 		-k my-key										\
 		-e http://localhost:8080								\
 		membership										\
@@ -114,7 +114,7 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 - Go profiling
 
   ```
-	go run
+	go run								\
 		-cpuprofile cpu.out						\
 		-memprofile mem.out						\
 		program.go

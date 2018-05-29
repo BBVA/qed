@@ -7,7 +7,7 @@ Run a Qed server for the first time:
 path=/var/tmp/balloon.db
 apiKey=server-api-key
 mkdir -p ${path}
-go run cmd/server/server.go -k ${apiKey} -p ${path}
+go run main.go start -k ${apiKey} -p ${path}
 ```
 
 The Qed server has the current flags *(apiKey is the only required):
@@ -31,7 +31,7 @@ endpoint=http://localhost:8080
 apiKey=server-api-key # this should be the same as the server
 
 echo > input.log
-tail -f input.log | go run cmd/cli/qed.go client -k ${apiKey} -e ${endpoint}
+tail -f input.log | go run main.go client -k ${apiKey} -e ${endpoint}
 ```
 
 Echoing a simple line will return a snapshot to stdout:
@@ -51,8 +51,8 @@ apiKey=server-api-key # this should be the same as the server
 
 echo > snapshots.log
 echo > input.log
-tail -f input.log | go run cmd/cli/qed.go client -k ${apiKey} -e ${endpoint} > snapshots.log &
-tail -f snapshots.log | go run cmd/cli/qed.go auditor -k ${apiKey} -e ${endpoint}
+tail -f input.log | go run main.go client -k ${apiKey} -e ${endpoint} > snapshots.log &
+tail -f snapshots.log | go run main.go auditor -k ${apiKey} -e ${endpoint}
 ```
 
 Echoing a simple line will return a Validation stage to stdout:
