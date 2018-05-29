@@ -24,7 +24,7 @@ import (
 	"github.com/bbva/qed/server"
 )
 
-func newServerCommand() *cobra.Command {
+func NewServerCommand() *cobra.Command {
 	var (
 		logLevel, endpoint, dbPath, apiKey, storageName string
 		cacheSize                                       uint64
