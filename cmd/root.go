@@ -58,6 +58,7 @@ func NewRootCommand(ctx *Context) *cobra.Command {
 	cmd.MarkPersistentFlagRequired("endpoint")
 	cmd.MarkPersistentFlagRequired("apikey")
 
+	cmd.AddCommand(newStartCommand())
 	cmd.AddCommand(newClientCommand(ctx))
 	cmd.AddCommand(newAuditorCommand(ctx))
 
