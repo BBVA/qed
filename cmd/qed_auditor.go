@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package cli
+package cmd
 
 import (
 	"bufio"
@@ -23,26 +23,31 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/bbva/qed/api/apihttp"
 )
 
-func newClientCommand(ctx *Context) *cobra.Command {
+func newAuditorCommand(ctx *Context) *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:   "client",
-		Short: "Client mode for qed",
-		Long:  `Client process for emitting events to a qed server`,
+		Use:   "auditor",
+		Short: "Auditor mode for qed",
+		Long:  `Auditor process that verifies commitments and events from a qed server`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			scanner := bufio.NewScanner(os.Stdin)
 			for scanner.Scan() {
-				snapshot, _ := ctx.client.Add(scanner.Text())
+				raw := scanner.Text()
+				snapshot := &apihttp.Snapshot{}
+				json.Unmarshal([]byte(raw), snapshot)
 
-				resp, err := json.Marshal(&snapshot)
-				if err != nil {
-					panic(err)
+				proof, _ := ctx.client.Membership(snapshot.Event, snapshot.Version)
+
+				if ctx.client.Verify(proof, snapshot) {
+					fmt.Println("Verify: OK")
+				} else {
+					fmt.Printf("Verify: KO, raw: %s\n", raw)
 				}
-				fmt.Printf("%s\n", resp)
-
 			}
 
 			return nil
