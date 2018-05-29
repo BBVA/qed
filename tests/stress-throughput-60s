@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 echo Starting server...
-go run ../cmd/server/server.go -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -l info &
+go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -l info &
 echo done.
 
 sleep 5
