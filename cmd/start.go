@@ -24,7 +24,7 @@ import (
 	"github.com/bbva/qed/server"
 )
 
-func NewServerCommand() *cobra.Command {
+func newStartCommand() *cobra.Command {
 	var (
 		logLevel, endpoint, dbPath, apiKey, storageName string
 		cacheSize                                       uint64
@@ -32,8 +32,8 @@ func NewServerCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "server",
-		Short: "The server for the verifiable log QED",
+		Use:   "start",
+		Short: "Start the server for the verifiable log QED",
 		Long:  ``,
 		// Args:  cobra.NoArgs(),
 
