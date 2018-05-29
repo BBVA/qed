@@ -15,7 +15,7 @@
 */
 
 // Package cli implements the command line commands qed and server.
-package cli
+package cmd
 
 import (
 	"github.com/spf13/cobra"

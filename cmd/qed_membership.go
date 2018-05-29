@@ -14,10 +14,11 @@
    limitations under the License.
 */
 
-package cli
+package cmd
 
 import (
 	"encoding/hex"
+
 	"github.com/bbva/qed/api/apihttp"
 
 	"github.com/spf13/cobra"
