@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package cli
+package cmd
 
 import (
 	"github.com/bbva/qed/client"

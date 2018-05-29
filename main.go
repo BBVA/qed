@@ -21,12 +21,12 @@ package main
 import (
 	"os"
 
-	"github.com/bbva/qed/cli"
+	"github.com/bbva/qed/cmd"
 )
 
 func main() {
-	ctx := cli.NewContext()
-	if err := cli.NewQedCommand(ctx).Execute(); err != nil {
+	ctx := cmd.NewContext()
+	if err := cmd.NewQedCommand(ctx).Execute(); err != nil {
 		os.Exit(-1)
 	}
 }
