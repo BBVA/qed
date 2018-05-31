@@ -16,12 +16,12 @@
 
 set -e 
 
-QED="go run ../main.go -l info -k path -e http://localhost:8080"
+QED="go run ../main.go -l info -k path"
 
 add_event(){
 	local event="$1"; shift
 	local value="$1"; shift
-	$QED  add --key "${event}" --value "${value}"
+	$QED client add --key "${event}" --value "${value}"
 }
 
 
@@ -40,7 +40,7 @@ verify_event() {
 	local history=$(echo "${commitment}" | grep "HistoryDigest" | awk -F': ' '{print $2;}')
 	local hyper=$(echo "${commitment}" | grep "HyperDigest: " | awk -F': ' '{print $2;}')
 	local version=$(echo "${commitment}" | grep "Version: " | awk -F': ' '{print $2;}')
-	$QED membership --historyDigest ${history}   --hyperDigest ${hyper}  --version ${version} --key ${event} --verify
+	$QED client membership --historyDigest ${history}   --hyperDigest ${hyper}  --version ${version} --key ${event} --verify
 }
 
 for i in $(seq 1 1000); do
