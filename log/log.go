@@ -129,7 +129,7 @@ func SetLogger(namespace, level string) {
 		std = newDebug(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	default:
 		l := newInfo(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-		l.Infof("Incorrect level of verbosity (%d) fallback to log.INFO", level)
+		l.Infof("Incorrect level of verbosity (%v) fallback to log.INFO", level)
 		std = l
 	}
 
