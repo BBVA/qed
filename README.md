@@ -35,66 +35,69 @@ A number of hash data structures have been proposed for storing data in a tamper
 
 Our work draws strongly from the **Balloon proposals**, with some modifications of our own that aim to improve scalability.
 
- ## Environment
+## Environment
 
  We use the [Go](https://golang.org) programming language and set up the environment as
  described in its [documentation](https://golang.org/doc/code.html)
 
- ## Getting started
+## Getting started
 
  - Download the software and its dependencies
  ```
-    go get -v -u -d github.com/bbva/qed/...
+ go get -v -u -d github.com/bbva/qed/...
  ```
  - Start the server
 
  ```
-    cd "$GOPATH"/src/github.com/bbva/qed
-    mkdir /var/tmp/db_path
-    go run main.go start -k key -p /var/tmp/db_path -l info
+ cd "$GOPATH/src/github.com/bbva/qed"
+ mkdir /var/tmp/db_path
+ go run main.go start -k key -p /var/tmp/db_path -l info
  ```
 
  - Using the client
 
      - add event
 
-     ```
-	go run				\
-		main.go			\
-		-k my-key			\
-		-e http://localhost:8080	\
-		add				\
-		--key 'test event'		\
-		--value 2
-     ```
+    ```
+    go run                                      \
+                main.go                         \
+                -k my-key                       \
+                client                          \
+                -e http://localhost:8080        \
+                add                             \
+                --key 'test event'              \
+                --value 2
+    ```
 
      - membership event
 
     ```
-	go run												\
-		main.go											\
-		-k my-key										\
-		-e http://localhost:8080								\
-		membership										\
-		--historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa	\
-		--hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b		\
-		--version 0										\
-		--key 'test event'
+    go run                                                                                              \
+                main.go                                                                                 \
+                -k my-key                                                                               \
+                client                                                                                  \
+                -e http://localhost:8080                                                                \
+                membership                                                                              \
+                --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa        \
+                --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b          \
+                --version 0                                                                             \
+                --key 'test event'
     ```
 
      - verify event
 
     ```
-	go run												\
-		main.go											\
-		-k my-key										\
-		-e http://localhost:8080								\
-		membership										\
-		--historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa	\
-		--hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b		\
-		--version 0										\
-		--key 'test event'									\
-		--verify
+    go run                                                                                              \
+                main.go                                                                                 \
+                -k my-key                                                                               \
+                client                                                                                  \
+                -e http://localhost:8080                                                                \
+                membership                                                                              \
+                --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa        \
+                --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b          \
+                --version 0                                                                             \
+                --key 'test event'                                                                      \
+                --verify
     ```
     See [usage](docs/usage.md) for the gory details.
 
@@ -102,34 +105,34 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
 - Go documentation server
 
-  ```
-     $ godoc -http=:6061 # http://localhost:6061/pkg/qed/
-  ```
+```
+godoc -http=:6061 # http://localhost:6061/pkg/qed/
+```
 
 - Test everything
 
-  ```
-     go test -v "$GOPATH"/src/github.com/bbva/qed/...
-  ```
+```
+go test -v "$GOPATH"/src/github.com/bbva/qed/...
+```
 - Go profiling
 
-  ```
-	go run								\
-		-cpuprofile cpu.out						\
-		-memprofile mem.out						\
-		program.go
+```
+go run                                                                  \
+        -cpuprofile cpu.out                                             \
+        -memprofile mem.out                                             \
+        program.go
 
-	go test								\
-		-v								\
-		-bench=BenchmarkAdd						\
-		-cpuprofile cpu.out						\
-		-memprofile mem.out						\
-		qed/balloon/hyper						\
-		-run ^$
+go test                                                                 \
+        -v                                                              \
+        -bench=BenchmarkAdd                                             \
+        -cpuprofile cpu.out                                             \
+        -memprofile mem.out                                             \
+        qed/balloon/hyper                                               \
+        -run ^$
 
-    go tool pprof hyper.test cpu.out
-    go tool pprof hyper.test cpu.out mem.out
-  ```
+go tool pprof hyper.test cpu.out
+go tool pprof hyper.test cpu.out mem.out
+```
 
 The server spawns an http server on port 6060 with the pprof api as described in https://golang.org/pkg/net/http/pprof/
 
