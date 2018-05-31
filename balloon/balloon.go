@@ -201,7 +201,7 @@ func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*Members
 	}
 
 	if exists && actualVersion <= version {
-		historyProof = <-b.history.Prove(hyperProof.ActualValue, actualVersion, version)
+		historyProof = <-b.history.ProveMembership(hyperProof.ActualValue, actualVersion, version)
 	} else {
 		return &MembershipProof{}, fmt.Errorf("Unable to get proof from history tree")
 	}

@@ -120,7 +120,7 @@ func TestAddAndVerify(t *testing.T) {
 	var value uint64
 
 	commitment := <-ht.Add(key, uInt64AsBytes(value))
-	membershipProof := <-ht.Prove(key, 0, value)
+	membershipProof := <-ht.ProveMembership(key, 0, value)
 
 	proof := NewProof(membershipProof.Nodes, value, hasher)
 	correct := proof.Verify(commitment, key, value)
@@ -142,7 +142,7 @@ func TestAddAndVerify256(t *testing.T) {
 		key := rand.Bytes(128)
 		value := i
 		commitment := <-ht.Add(key, uInt64AsBytes(value))
-		membershipProof := <-ht.Prove(key, i, value)
+		membershipProof := <-ht.ProveMembership(key, i, value)
 		proof := NewProof(membershipProof.Nodes, value, hasher)
 		correct := proof.Verify(commitment, key, value)
 
