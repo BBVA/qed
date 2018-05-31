@@ -117,11 +117,11 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 	return result
 }
 
-// Queues and Prove operation to the tree and returns a channel. The
+// ProveMembership queues a membership operation to the tree and returns a channel. The
 // MembershipProof struct will be sent when ready.
 func (t Tree) ProveMembership(key []byte, index, version uint64) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
-	t.ops <- &proof{
+	t.ops <- &membership{
 		key,
 		index,
 		version,
@@ -154,7 +154,7 @@ type add struct {
 }
 
 // Internal Struct proof for use in operations serializer
-type proof struct {
+type membership struct {
 	key            []byte
 	index, version uint64
 	result         chan *MembershipProof
@@ -182,8 +182,8 @@ func (t *Tree) operations() chan interface{} {
 					}
 					msg.result <- digest
 
-				case *proof:
-					proof, err := t.prove(msg.key, msg.index, msg.version)
+				case *membership:
+					proof, err := t.proveMembership(msg.key, msg.index, msg.version)
 					if err != nil {
 						log.Errorf("Operations error: %v", err)
 					}
@@ -219,9 +219,9 @@ func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	return rootDigest, nil
 }
 
-// Internal prove generates an auditPath and returns it as
+// Internal proveMembership generates an auditPath and returns it as
 // history.MembershipProof.
-func (t Tree) prove(key []byte, index, version uint64) (*MembershipProof, error) {
+func (t Tree) proveMembership(key []byte, index, version uint64) (*MembershipProof, error) {
 	var proof MembershipProof
 	err := t.auditPath(key, index, 0, t.getDepth(version), version, &proof)
 	if err != nil {
