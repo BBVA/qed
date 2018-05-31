@@ -20,15 +20,15 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
 )
 
+var (
+	apiKey, logLevel string
+)
+
 // NewRootCommand is the main Parser for the qed cli.
-func NewRootCommand(ctx *Context) *cobra.Command {
-	var (
-		endpoint, apiKey, logLevel string
-	)
+func NewRootCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:       "qed",
@@ -45,23 +45,18 @@ func NewRootCommand(ctx *Context) *cobra.Command {
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 
-			log.SetLogger("QedClient", logLevel)
-			ctx.client = client.NewHttpClient(endpoint, apiKey)
+			log.SetLogger("QedServer", logLevel)
 
 		},
 		TraverseChildren: true,
 	}
 
 	cmd.PersistentFlags().StringVarP(&logLevel, "log", "l", "error", "Choose between log levels: silent, error, info and debug")
-	cmd.PersistentFlags().StringVarP(&endpoint, "endpoint", "e", "", "Server endpoint")
 	cmd.PersistentFlags().StringVarP(&apiKey, "apikey", "k", "", "Server api key")
-	cmd.MarkPersistentFlagRequired("endpoint")
 	cmd.MarkPersistentFlagRequired("apikey")
 
 	cmd.AddCommand(newStartCommand())
-	cmd.AddCommand(newClientCommand(ctx))
-	cmd.AddCommand(newAddCommand(ctx))
-	cmd.AddCommand(newMembershipCommand(ctx))
+	cmd.AddCommand(newClientCommand())
 
 	return cmd
 }

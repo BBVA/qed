@@ -22,7 +22,7 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-func newAddCommand(ctx *Context) *cobra.Command {
+func newAddCommand(ctx *clientContext) *cobra.Command {
 
 	var key, value string
 

@@ -17,37 +17,38 @@
 package cmd
 
 import (
-	"bufio"
-	"encoding/json"
-	"fmt"
-	"os"
-
+	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/log"
 	"github.com/spf13/cobra"
 )
 
-func newClientCommand(ctx *Context) *cobra.Command {
+var clientEndpoint string
+
+func newClientCommand() *cobra.Command {
+
+	ctx := newClientContext()
 
 	cmd := &cobra.Command{
 		Use:   "client",
 		Short: "Client mode for qed",
 		Long:  `Client process for emitting events to a qed server`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-
-			scanner := bufio.NewScanner(os.Stdin)
-			for scanner.Scan() {
-				snapshot, _ := ctx.client.Add(scanner.Text())
-
-				resp, err := json.Marshal(&snapshot)
-				if err != nil {
-					panic(err)
-				}
-				fmt.Printf("%s\n", resp)
-
-			}
-
-			return nil
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			log.SetLogger("QedClient", logLevel)
+			ctx.client = client.NewHttpClient(clientEndpoint, apiKey)
 		},
+		TraverseChildren: true,
 	}
+
+	cmd.PersistentFlags().StringVarP(
+		&clientEndpoint,
+		"endpoint",
+		"e",
+		"http://localhost:8080",
+		"Endpoint for REST requests on (host:port)",
+	)
+
+	cmd.AddCommand(newAddCommand(ctx))
+	cmd.AddCommand(newMembershipCommand(ctx))
 
 	return cmd
 }
