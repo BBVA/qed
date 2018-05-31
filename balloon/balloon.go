@@ -190,7 +190,7 @@ func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*Members
 	var hyperProof *hyper.MembershipProof
 	var historyProof *history.MembershipProof
 
-	hyperProof = <-b.hyper.Prove(digest)
+	hyperProof = <-b.hyper.ProveMembership(digest)
 
 	var exists bool
 	var actualVersion uint64
