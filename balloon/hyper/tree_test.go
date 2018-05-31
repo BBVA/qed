@@ -86,7 +86,7 @@ func TestProve(t *testing.T) {
 		{0x00},
 		{0x00},
 	}
-	proof := <-ht.Prove(key)
+	proof := <-ht.ProveMembership(key)
 
 	if !comparePaths(expectedPath, proof.AuditPath) {
 		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.AuditPath)

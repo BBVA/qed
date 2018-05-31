@@ -68,7 +68,7 @@ func TestAddAndVerify(t *testing.T) {
 
 	commitment := <-ht.Add(key, valueBytes)
 
-	membershipProof := <-ht.Prove(key)
+	membershipProof := <-ht.ProveMembership(key)
 
 	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
 		t.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
@@ -99,7 +99,7 @@ func TestAddAndVerifyXor(t *testing.T) {
 	binary.LittleEndian.PutUint64(valueBytes, value)
 
 	commitment := <-ht.Add(key, valueBytes)
-	membershipProof := <-ht.Prove(key)
+	membershipProof := <-ht.ProveMembership(key)
 
 	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
 		t.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)
@@ -131,7 +131,7 @@ func TestAddAndVerifyPearson(t *testing.T) {
 
 	commitment := <-ht.Add(key, valueBytes)
 
-	membershipProof := <-ht.Prove(key)
+	membershipProof := <-ht.ProveMembership(key)
 
 	if !bytes.Equal(membershipProof.ActualValue, valueBytes) {
 		t.Errorf("Wrong proof: expected value %v, actual %v", value, membershipProof.ActualValue)

@@ -125,9 +125,9 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 	return result
 }
 
-// Prove queues a internal prove operation to the tree and returns a channel
+// ProveMembership queues a internal prove operation to the tree and returns a channel
 // when the result *MembershipProof will be sent when ready
-func (t Tree) Prove(key []byte) chan *MembershipProof {
+func (t Tree) ProveMembership(key []byte) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
 	t.ops <- &proof{key, result}
 	return result
