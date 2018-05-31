@@ -26,7 +26,7 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-func newMembershipCommand(ctx *Context) *cobra.Command {
+func newMembershipCommand(ctx *clientContext) *cobra.Command {
 
 	var version uint64
 	var verify bool

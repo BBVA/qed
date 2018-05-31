@@ -25,8 +25,7 @@ import (
 )
 
 func main() {
-	ctx := cmd.NewContext()
-	if err := cmd.NewRootCommand(ctx).Execute(); err != nil {
+	if err := cmd.NewRootCommand().Execute(); err != nil {
 		os.Exit(-1)
 	}
 }
