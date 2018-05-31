@@ -60,7 +60,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestProve(t *testing.T) {
+func TestProveMembership(t *testing.T) {
 	store, closeF := openBPlusStorage()
 	defer closeF()
 
@@ -88,7 +88,7 @@ func TestProve(t *testing.T) {
 		{0x01},
 		{0x00},
 	}
-	proof := <-ht.Prove([]byte{0x5}, 6, 6)
+	proof := <-ht.ProveMembership([]byte{0x5}, 6, 6)
 
 	if !comparePaths(expectedPath, proof.Nodes) {
 		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.Nodes)

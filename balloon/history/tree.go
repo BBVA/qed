@@ -75,6 +75,18 @@ type Tree struct {
 	ops            chan interface{} // serialize operations
 }
 
+// Node is the struct required to compute the auditPath in the auditor
+type Node struct {
+	Digest       []byte
+	Index, Layer uint64
+}
+
+// MembershipProof is a proof of membership of an event. It consist of an
+// array of Nodes.
+type MembershipProof struct {
+	Nodes []Node
+}
+
 // NewTree returns a new history Tree struct.
 func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 
@@ -107,7 +119,7 @@ func (t Tree) Add(digest, index []byte) chan []byte {
 
 // Queues and Prove operation to the tree and returns a channel. The
 // MembershipProof struct will be sent when ready.
-func (t Tree) Prove(key []byte, index, version uint64) chan *MembershipProof {
+func (t Tree) ProveMembership(key []byte, index, version uint64) chan *MembershipProof {
 	result := make(chan *MembershipProof, 0)
 	t.ops <- &proof{
 		key,
@@ -216,18 +228,6 @@ func (t Tree) prove(key []byte, index, version uint64) (*MembershipProof, error)
 		return nil, err
 	}
 	return &proof, nil
-}
-
-// Node is the struct required to compute the auditPath in the auditor
-type Node struct {
-	Digest       []byte
-	Index, Layer uint64
-}
-
-// MembershipProof is a proof of membership of an event. It consist of an
-// array of Nodes.
-type MembershipProof struct {
-	Nodes []Node
 }
 
 // Internal AuditPath function recursivelly iterate through the history tree
