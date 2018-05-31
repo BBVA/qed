@@ -26,9 +26,9 @@ import (
 
 func newStartCommand() *cobra.Command {
 	var (
-		logLevel, endpoint, dbPath, apiKey, storageName string
-		cacheSize                                       uint64
-		profiling, tampering                            bool
+		endpoint, dbPath, storageName string
+		cacheSize                     uint64
+		profiling, tampering          bool
 	)
 
 	cmd := &cobra.Command{
@@ -38,8 +38,6 @@ func newStartCommand() *cobra.Command {
 		// Args:  cobra.NoArgs(),
 
 		Run: func(cmd *cobra.Command, args []string) {
-
-			log.SetLogger("QedServer", logLevel)
 
 			srv := server.NewServer(
 				endpoint,
@@ -59,19 +57,15 @@ func newStartCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&apiKey, "apikey", "k", "", "Server api key")
 	cmd.Flags().StringVarP(&endpoint, "endpoint", "e", "0.0.0.0:8080", "Endpoint for REST requests on (host:port)")
 	cmd.Flags().StringVarP(&dbPath, "path", "p", "/var/tmp/qed.db", "Set default storage path.")
 	cmd.Flags().Uint64VarP(&cacheSize, "cache", "c", storage.SIZE25, "Initialize and reserve custom cache size.")
 	cmd.Flags().StringVarP(&storageName, "storage", "s", "badger", "Choose between different storage backends. Eg badge|bolt")
-	cmd.Flags().StringVarP(&logLevel, "log", "l", "error", "Choose between log levels: silent, error, info and debug")
 	cmd.Flags().BoolVarP(&profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 
 	// INFO: testing purposes
 	cmd.Flags().BoolVar(&tampering, "tampering", false, "Allow tampering api for proof demostrations")
 	cmd.Flags().MarkHidden("tampering")
-
-	cmd.MarkFlagRequired("apikey")
 
 	return cmd
 }
