@@ -26,7 +26,7 @@ import (
 
 // fakeLeafHasherF is a test helper function that prints in debug level the
 // hashing event.
-func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
+func fakeLeafHasherF(hasher hashing.Hasher) hashing.LeafHasher {
 	return func(a, key []byte) []byte {
 		digest := hasher(a, key)
 		log.Debug("Hashing leaf: a-> %b key-> %b :=> %b\n", a, key, digest)
@@ -36,7 +36,7 @@ func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
 
 // fakeInteriorHasherF is a test helper function that prints in debug level
 // the hashing event.
-func fakeInteriorHasherF(hasher hashing.Hasher) interiorHasher {
+func fakeInteriorHasherF(hasher hashing.Hasher) hashing.InteriorHasher {
 	return func(a, left, right []byte) []byte {
 		digest := hasher(a, left, right)
 		log.Debug("Hashing interior: a-> %b left-> %b right-> %b :=> %b\n", a, left, right, digest)
@@ -46,7 +46,7 @@ func fakeInteriorHasherF(hasher hashing.Hasher) interiorHasher {
 
 // fakeLeafHasherCleanF is a test helper function that only use the key
 // param for the salt.
-func fakeLeafHasherCleanF(hasher hashing.Hasher) leafHasher {
+func fakeLeafHasherCleanF(hasher hashing.Hasher) hashing.LeafHasher {
 	return func(a, key []byte) []byte {
 		return hasher(key)
 	}
@@ -54,7 +54,7 @@ func fakeLeafHasherCleanF(hasher hashing.Hasher) leafHasher {
 
 // fakeInteriorHasherCleanF is a test helper function that only hasher with
 // the left and right paramenters.
-func fakeInteriorHasherCleanF(hasher hashing.Hasher) interiorHasher {
+func fakeInteriorHasherCleanF(hasher hashing.Hasher) hashing.InteriorHasher {
 	return func(a, left, right []byte) []byte {
 		return hasher(left, right)
 	}
