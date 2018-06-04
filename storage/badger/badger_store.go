@@ -21,7 +21,7 @@ package badger
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/balloon/hyper/storage"
 
 	"github.com/bbva/qed/log"
 	b "github.com/dgraph-io/badger"

@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/btree"
 
-	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/balloon/hyper/storage"
 )
 
 type BPlusTreeStorage struct {

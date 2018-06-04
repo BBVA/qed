@@ -24,7 +24,7 @@ import (
 
 	b "github.com/coreos/bbolt"
 
-	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/log"
 )
 
