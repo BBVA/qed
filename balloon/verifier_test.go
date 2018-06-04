@@ -27,7 +27,7 @@ import (
 	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/cache"
 )
