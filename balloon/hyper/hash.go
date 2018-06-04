@@ -16,44 +16,8 @@
 
 package hyper
 
-import (
-	"bytes"
-
-	"github.com/bbva/qed/balloon/hashing"
-)
-
 // Empty is a constant for empty leaves
 var Empty = []byte{0x00}
 
 // Set is a constant for non-empty leaves
 var Set = []byte{0x01}
-
-// leafHasher is the internal interface to be used in the hyper tree.
-type leafHasher func([]byte, []byte, []byte) []byte
-
-// interiorHasher is the internal interface to be used in the hyper tree.
-type interiorHasher func([]byte, []byte, []byte, []byte) []byte
-
-// leafHasherF is a closure to create a leafHasher function with a
-// switchable hasher.
-func leafHasherF(hasher hashing.Hasher) leafHasher {
-	return func(id, a, base []byte) []byte {
-		if bytes.Equal(a, Empty) {
-			return hasher(id)
-		}
-
-		return hasher(id, base)
-	}
-}
-
-// interiorHasherF is a closure to create a interiorHasher function with a
-// switchable hasher.
-func interiorHasherF(hasher hashing.Hasher) interiorHasher {
-	return func(left, right, base, height []byte) []byte {
-		if bytes.Equal(left, right) {
-			return hasher(left, right)
-		}
-
-		return hasher(left, right, base, height)
-	}
-}

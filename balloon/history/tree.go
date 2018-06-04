@@ -69,8 +69,8 @@ import (
 //
 type Tree struct {
 	frozen         storage.Store // already computed nodes, that will not change
-	leafHasher     leafHasher
-	interiorHasher interiorHasher
+	leafHasher     hashing.LeafHasher
+	interiorHasher hashing.InteriorHasher
 	stats          *stats
 	ops            chan interface{} // serialize operations
 }
@@ -92,8 +92,8 @@ func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 
 	t := &Tree{
 		frozen,
-		leafHasherF(hasher),
-		interiorHasherF(hasher),
+		hashing.LeafHasherF(hasher),
+		hashing.InteriorHasherF(hasher),
 		new(stats),
 		nil,
 	}
