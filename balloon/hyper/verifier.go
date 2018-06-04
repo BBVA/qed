@@ -28,8 +28,8 @@ type Proof struct {
 	id             []byte
 	auditPath      [][]byte
 	digestLength   int
-	leafHasher     leafHasher
-	interiorHasher interiorHasher
+	leafHasher     hashing.LeafHasher
+	interiorHasher hashing.InteriorHasher
 }
 
 func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher) *Proof {
@@ -39,8 +39,8 @@ func NewProof(id string, auditPath [][]byte, hasher hashing.Hasher) *Proof {
 		[]byte(id),
 		auditPath,
 		digestLength,
-		leafHasherF(hasher),
-		interiorHasherF(hasher),
+		hashing.LeafHasherF(hasher),
+		hashing.InteriorHasherF(hasher),
 	}
 }
 
@@ -64,14 +64,16 @@ func (p Proof) Verify(expectedDigest []byte, key []byte, value uint64) bool {
 func (p Proof) rootHash(auditPath [][]byte, pos *Position, key, value []byte) []byte {
 	// log.Debugf("Calling rootHash with auditpath %v, position %v, key %v, and value %v\n", auditPath, pos, key, value)
 	if pos.height == 0 {
-		return p.leafHasher(p.id, value, pos.base)
+		return p.leafHasher(p.id, pos.base)
 	}
 	if !bitIsSet(key, p.digestLength-pos.height) { // if k_j == 0
 		left := p.rootHash(auditPath, pos.left(), key, value)
 		right := auditPath[pos.height-1]
-		return p.interiorHasher(left, right, pos.base, pos.heightBytes())
+		id := append(pos.base, pos.heightBytes()...)
+		return p.interiorHasher(id, left, right)
 	}
 	left := auditPath[pos.height-1]
 	right := p.rootHash(auditPath, pos.right(), key, value)
-	return p.interiorHasher(left, right, pos.base, pos.heightBytes())
+	id := append(pos.base, pos.heightBytes()...)
+	return p.interiorHasher(id, left, right)
 }

@@ -89,3 +89,25 @@ var PearsonHasher Hasher = func(data ...[]byte) []byte {
 	return []byte{r}
 
 }
+
+// leafHasher is the internal function interface to be used in the tree.
+type LeafHasher func([]byte, []byte) []byte
+
+// interiorHasher is the internal function interface to be used in the tree.
+type InteriorHasher func([]byte, []byte, []byte) []byte
+
+// leafHasherF is a closure to create a leafHasher function with a
+// switchable hasher.
+func LeafHasherF(hasher Hasher) LeafHasher {
+	return func(id, key []byte) []byte {
+		return hasher(id, key)
+	}
+}
+
+// interiorHasherF is a closure to create a interiorHasher function with a
+// switchable hasher.
+func InteriorHasherF(hasher Hasher) InteriorHasher {
+	return func(id, left, right []byte) []byte {
+		return hasher(id, left, right)
+	}
+}

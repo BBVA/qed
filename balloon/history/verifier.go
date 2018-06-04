@@ -30,8 +30,8 @@ import (
 type Proof struct {
 	auditPath      []Node
 	index          uint64
-	leafHasher     leafHasher
-	interiorHasher interiorHasher
+	leafHasher     hashing.LeafHasher
+	interiorHasher hashing.InteriorHasher
 }
 
 // NewProof is a function that generates a Proof struct from the parameters
@@ -40,8 +40,8 @@ func NewProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof {
 	return &Proof{
 		auditPath,
 		index,
-		leafHasherF(hasher),
-		interiorHasherF(hasher),
+		hashing.LeafHasherF(hasher),
+		hashing.InteriorHasherF(hasher),
 	}
 }
 

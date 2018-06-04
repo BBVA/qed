@@ -50,8 +50,8 @@ import (
 // those public methods.
 type Tree struct {
 	id             []byte // tree-wide constant
-	leafHasher     leafHasher
-	interiorHasher interiorHasher
+	leafHasher     hashing.LeafHasher
+	interiorHasher hashing.InteriorHasher
 	defaultHashes  [][]byte
 	cache          storage.Cache
 	leaves         storage.Store
@@ -76,8 +76,8 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 
 	tree := &Tree{
 		[]byte(id),
-		leafHasherF(hasher),
-		interiorHasherF(hasher),
+		hashing.LeafHasherF(hasher),
+		hashing.InteriorHasherF(hasher),
 		make([][]byte, digestLength),
 		cache,
 		leaves,
@@ -262,7 +262,8 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	}
 
 	t.stats.ih += 1
-	nodeHash = t.interiorHasher(left, right, pos.base, pos.heightBytes())
+	id := append(pos.base, pos.heightBytes()...)
+	nodeHash = t.interiorHasher(id, left, right)
 
 	// we re-cache all the nodes on each update
 	// if the node is whithin the cache area
@@ -295,7 +296,7 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 	if len(d) == 1 && pos.height == 0 {
 		t.stats.leaf += 1
 		t.stats.lh += 1
-		return t.leafHasher(t.id, value, pos.base)
+		return t.leafHasher(t.id, pos.base)
 	}
 
 	// if there are no more childs,
@@ -314,7 +315,8 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 	left := t.fromStorage(leftSlice, value, pos.left())
 	right := t.fromStorage(rightSlice, value, pos.right())
 	t.stats.ih += 1
-	return t.interiorHasher(left, right, pos.base, pos.heightBytes())
+	id := append(pos.base, pos.heightBytes()...)
+	return t.interiorHasher(id, left, right)
 }
 
 func (t *Tree) calcAuditPathFromCache(key []byte, pos *Position) [][]byte {
