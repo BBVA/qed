@@ -19,7 +19,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/bbva/qed/balloon/storage"
+	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 )
