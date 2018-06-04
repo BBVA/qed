@@ -19,7 +19,6 @@
 package hyper
 
 import (
-	"bytes"
 	"os"
 
 	"github.com/bbva/qed/balloon/hashing"
@@ -30,17 +29,14 @@ import (
 	"github.com/bbva/qed/storage/bplus"
 )
 
-func fakeLeafHasherF(hasher hashing.Hasher) leafHasher {
-	return func(id, value, base []byte) []byte {
-		if bytes.Equal(value, Empty) {
-			return hasher(Empty)
-		}
-		return hasher(base)
+func fakeLeafHasherF(hasher hashing.Hasher) hashing.LeafHasher {
+	return func(id, base []byte) []byte {
+		return hasher(id, base)
 	}
 }
 
-func fakeInteriorHasherF(hasher hashing.Hasher) interiorHasher {
-	return func(left, right, base, height []byte) []byte {
+func fakeInteriorHasherF(hasher hashing.Hasher) hashing.InteriorHasher {
+	return func(id, left, right []byte) []byte {
 		return hasher(left, right)
 	}
 }

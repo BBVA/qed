@@ -43,7 +43,7 @@ func TestVerify(t *testing.T) {
 		{0x00},
 	}
 
-	proof := NewFakeProof("test", auditPath, hasher)
+	proof := NewFakeProof(string(0x0), auditPath, hasher)
 
 	correct := proof.Verify(expectedCommitment, key, value)
 
