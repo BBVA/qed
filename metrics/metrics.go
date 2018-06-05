@@ -14,14 +14,18 @@
    limitations under the License.
 */
 
-package history
+package metrics
 
-// stats to measure the performance of the tree and the associated caches and
-// strategies
-type stats struct {
-	unfreezing     int
-	unfreezingHits int
-	freezing       int
-	leafHashes     int
-	internalHashes int
+import "expvar"
+
+var (
+	// HyperStats has a Map of all the stats relative to our Hyper Tree
+	Hyper *expvar.Map
+	// HistoryStats has a Map of all the stats relative to our History Tree
+	History *expvar.Map
+)
+
+func init() {
+	Hyper = expvar.NewMap("hyper_stats")
+	History = expvar.NewMap("history_stats")
 }

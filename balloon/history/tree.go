@@ -27,6 +27,7 @@ import (
 	"github.com/bbva/qed/balloon/history/storage"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 )
 
 // A History tree is a tree structure with a version metadata.
@@ -71,7 +72,6 @@ type Tree struct {
 	frozen         storage.Store // already computed nodes, that will not change
 	leafHasher     hashing.LeafHasher
 	interiorHasher hashing.InteriorHasher
-	stats          *stats
 	ops            chan interface{} // serialize operations
 }
 
@@ -94,7 +94,6 @@ func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
 		frozen,
 		hashing.LeafHasherF(hasher),
 		hashing.InteriorHasherF(hasher),
-		new(stats),
 		nil,
 	}
 
@@ -295,10 +294,10 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 
 	// try to unfroze first
 	if version >= index+pow(2, layer)-1 {
-		t.stats.unfreezing++
+		metrics.History.Add("unfreezing", 1)
 		digest, err := t.frozen.Get(frozenKey(index, layer))
 		if err == nil && len(digest) != 0 {
-			t.stats.unfreezingHits++
+			metrics.History.Add("unfreezing_hits", 1)
 			return digest, nil
 		}
 	}
@@ -308,7 +307,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 	// we are at a leaf: A_v(i,0)
 	case layer == 0 && version >= index:
 		digest = t.leafHasher(Zero, eventDigest)
-		t.stats.leafHashes++
+		metrics.History.Add("leaf_hashes", 1)
 		break
 
 	// A_v(i,r)
@@ -318,7 +317,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 			return nil, err
 		}
 		digest = t.leafHasher(One, hash)
-		t.stats.internalHashes++
+		metrics.History.Add("internal_hashes", 1)
 		break
 
 	// A_v(i,r)
@@ -332,14 +331,14 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 			return nil, err
 		}
 		digest = t.interiorHasher(One, hash1, hash2)
-		t.stats.internalHashes++
+		metrics.History.Add("internal_hashes", 1)
 		break
 
 	}
 
 	// froze the node with its new digest
 	if version >= index+pow(2, layer)-1 {
-		t.stats.freezing++
+		metrics.History.Add("freezung", 1)
 		err := t.frozen.Add(frozenKey(index, layer), digest)
 		if err != nil {
 			// if it was already frozen nothing happens

@@ -27,6 +27,7 @@ import (
 	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 )
 
 // Tree is an optimized Sparse Merkle Tree with aggressive caching and
@@ -55,7 +56,6 @@ type Tree struct {
 	defaultHashes  [][]byte
 	cache          storage.Cache
 	leaves         storage.Store
-	stats          *stats
 	cacheArea      *area
 	digestLength   int
 	ops            chan interface{} // serialize operations
@@ -81,7 +81,6 @@ func NewTree(id string, cache storage.Cache, leaves storage.Store, hasher hashin
 		make([][]byte, digestLength),
 		cache,
 		leaves,
-		new(stats),
 		newArea(digestLength-cacheLevels, digestLength),
 		digestLength,
 		nil,
@@ -246,7 +245,7 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 	// we need to go to database to get
 	// nodes
 	if !t.cacheArea.has(pos) {
-		t.stats.disk += 1
+		metrics.Hyper.Add("storage_reads", 1)
 		d := t.leaves.GetRange(pos.base, pos.end())
 		return t.fromStorage(d, value, pos)
 	}
@@ -261,14 +260,14 @@ func (t *Tree) toCache(key, value []byte, pos *Position) []byte {
 		right = t.toCache(key, value, pos.right())
 	}
 
-	t.stats.ih += 1
+	metrics.Hyper.Add("interior_hash", 1)
 	id := append(pos.base, pos.heightBytes()...)
 	nodeHash = t.interiorHasher(id, left, right)
 
 	// we re-cache all the nodes on each update
 	// if the node is whithin the cache area
 	if t.cacheArea.has(pos) {
-		t.stats.update += 1
+		metrics.Hyper.Add("update", 1)
 		t.cache.Put(pos.Key(), nodeHash)
 	}
 
@@ -280,12 +279,12 @@ func (t *Tree) fromCache(pos *Position) []byte {
 	// get the value from the cache
 	cachedHash, cached := t.cache.Get(pos.Key())
 	if cached {
-		t.stats.hits += 1
+		metrics.Hyper.Add("cached_hash", 1)
 		return cachedHash
 	}
 
 	// if there is no value in the cache,return a default hash
-	t.stats.dh += 1
+	metrics.Hyper.Add("default_hash", 1)
 	return t.defaultHashes[pos.height]
 
 }
@@ -294,15 +293,15 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 
 	// if we are a leaf, return our hash
 	if len(d) == 1 && pos.height == 0 {
-		t.stats.leaf += 1
-		t.stats.lh += 1
+		metrics.Hyper.Add("leaf", 1)
+		metrics.Hyper.Add("leaf_hash", 1)
 		return t.leafHasher(t.id, pos.base)
 	}
 
 	// if there are no more childs,
 	// return a default hash if i'm not in root node
 	if len(d) == 0 && pos.height != pos.n {
-		t.stats.dh += 1
+		metrics.Hyper.Add("default_hash", 1)
 		return t.defaultHashes[pos.height]
 	}
 
@@ -314,7 +313,7 @@ func (t *Tree) fromStorage(d storage.LeavesSlice, value []byte, pos *Position) [
 
 	left := t.fromStorage(leftSlice, value, pos.left())
 	right := t.fromStorage(rightSlice, value, pos.right())
-	t.stats.ih += 1
+	metrics.Hyper.Add("interior_hash", 1)
 	id := append(pos.base, pos.heightBytes()...)
 	return t.interiorHasher(id, left, right)
 }
