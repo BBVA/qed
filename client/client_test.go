@@ -19,12 +19,14 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/sign"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,18 +54,24 @@ func TestAddSuccess(t *testing.T) {
 	defer tearDown()
 
 	event := "Hello world!"
-	fakeSnapshot := &apihttp.Snapshot{
+	snap := &apihttp.Snapshot{
 		[]byte("hyper"),
 		[]byte("history"),
 		0,
 		[]byte(event),
 	}
-	result, _ := json.Marshal(fakeSnapshot)
+	sig, err := sign.Sign([]byte(fmt.Sprintf("%v", snap)))
+	fakeSignedSnapshot := &apihttp.SignedSnapshot{
+		snap,
+		sig,
+	}
+
+	result, _ := json.Marshal(fakeSignedSnapshot)
 	mux.HandleFunc("/events", okHandler(result))
 
-	snapshot, err := client.Add(event)
+	signedSnapshot, err := client.Add(event)
 	assert.NoError(t, err)
-	assert.Equal(t, fakeSnapshot, snapshot, "The snapshots should match")
+	assert.Equal(t, fakeSignedSnapshot, signedSnapshot, "The snapshots should match")
 
 }
 

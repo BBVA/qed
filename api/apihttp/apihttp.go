@@ -20,11 +20,13 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/sign"
 )
 
 // HealthCheckResponse contains the response from HealthCheckHandler.
@@ -77,7 +79,6 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
 //   }
 func Add(balloon balloon.Balloon) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -101,7 +102,20 @@ func Add(balloon balloon.Balloon) http.HandlerFunc {
 
 		// Wait for the response
 		response := <-balloon.Add(event.Event)
-		out, err := json.Marshal(Snapshot{response.HistoryDigest, response.HyperDigest, response.Version, event.Event})
+		snapshot := &Snapshot{
+			response.HistoryDigest,
+			response.HyperDigest,
+			response.Version,
+			event.Event,
+		}
+
+		signature, err := sign.Sign([]byte(fmt.Sprintf("%v", snapshot)))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		out, err := json.Marshal(SignedSnapshot{snapshot, signature})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
