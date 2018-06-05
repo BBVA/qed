@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/testutils/rand"
@@ -117,7 +118,7 @@ func BenchmarkAdd(b *testing.B) {
 		key := rand.Bytes(64)
 		<-ht.Add(key, uInt64AsBytes(uint64(i)))
 	}
-	b.Logf("stats = %+v\n", ht.stats)
+	b.Logf("stats = %+v\n", metrics.History)
 }
 
 func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {

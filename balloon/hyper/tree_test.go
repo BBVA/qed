@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/bbva/qed/metrics"
+
 	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage/cache"
@@ -118,5 +120,5 @@ func BenchmarkAdd(b *testing.B) {
 		store.Add(key, value)
 		<-ht.Add(key, value)
 	}
-	b.Logf("stats = %+v\n", ht.stats)
+	b.Logf("stats = %+v\n", metrics.Hyper)
 }
