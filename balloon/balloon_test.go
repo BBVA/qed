@@ -22,10 +22,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/balloon/hyper/storage"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/storage/bolt"
 	"github.com/bbva/qed/storage/bplus"

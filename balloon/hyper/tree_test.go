@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/hyper/storage"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage/cache"
 	"github.com/bbva/qed/testutils/rand"
 )
