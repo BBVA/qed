@@ -19,11 +19,13 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/sign"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/proof"
@@ -134,23 +136,30 @@ func TestAdd(t *testing.T) {
 	}
 
 	// Check the body response
-	snapshot := &Snapshot{}
-	json.Unmarshal([]byte(rr.Body.String()), snapshot)
+	signedSnapshot := &SignedSnapshot{}
 
-	if !bytes.Equal(snapshot.HyperDigest, []byte{0x1}) {
-		t.Errorf("HyperDigest is not consistent: %s", snapshot.HyperDigest)
+	json.Unmarshal([]byte(rr.Body.String()), signedSnapshot)
+
+	if !bytes.Equal(signedSnapshot.Snapshot.HyperDigest, []byte{0x1}) {
+		t.Errorf("HyperDigest is not consistent: %s", signedSnapshot.Snapshot.HyperDigest)
 	}
 
-	if !bytes.Equal(snapshot.HistoryDigest, []byte{0x0}) {
-		t.Errorf("HistoryDigest is not consistent %s", snapshot.HistoryDigest)
+	if !bytes.Equal(signedSnapshot.Snapshot.HistoryDigest, []byte{0x0}) {
+		t.Errorf("HistoryDigest is not consistent %s", signedSnapshot.Snapshot.HistoryDigest)
 	}
 
-	if snapshot.Version != 0 {
+	if signedSnapshot.Snapshot.Version != 0 {
 		t.Errorf("Version is not consistent")
 	}
 
-	if !bytes.Equal(snapshot.Event, []byte("this is a sample event")) {
+	if !bytes.Equal(signedSnapshot.Snapshot.Event, []byte("this is a sample event")) {
 		t.Errorf("Event is not consistent ")
+	}
+
+	signature, err := sign.Sign([]byte(fmt.Sprintf("%v", signedSnapshot.Snapshot)))
+
+	if !bytes.Equal(signedSnapshot.Signature, signature) {
+		t.Errorf("Signature is not consistent")
 	}
 
 }

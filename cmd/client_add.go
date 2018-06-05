@@ -33,7 +33,8 @@ func newAddCommand(ctx *clientContext) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Infof("Adding key [ %s ] with value [ %s ]\n", key, value)
 
-			snapshot, err := ctx.client.Add(key)
+			signedSnapshot, err := ctx.client.Add(key)
+			snapshot := signedSnapshot.Snapshot
 			if err != nil {
 				return err
 			}

@@ -81,19 +81,20 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 }
 
 // Add will do a request to the server with a post data to store a new event.
-func (c HttpClient) Add(event string) (*apihttp.Snapshot, error) {
+func (c HttpClient) Add(event string) (*apihttp.SignedSnapshot, error) {
 
 	data, _ := json.Marshal(&apihttp.Event{[]byte(event)})
 
 	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
+		fmt.Printf("blab bla %v", err)
 		return nil, err
 	}
 
-	var snapshot apihttp.Snapshot
-	json.Unmarshal(body, &snapshot)
+	var signedSnapshot apihttp.SignedSnapshot
+	json.Unmarshal(body, &signedSnapshot)
 
-	return &snapshot, nil
+	return &signedSnapshot, nil
 
 }
 

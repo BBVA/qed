@@ -45,6 +45,11 @@ type Snapshot struct {
 	Event         []byte
 }
 
+type SignedSnapshot struct {
+	Snapshot  *Snapshot
+	Signature []byte
+}
+
 type MembershipResult struct {
 	Exists         bool
 	Hyper          map[string][]byte
