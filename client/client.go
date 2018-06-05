@@ -27,7 +27,7 @@ import (
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/hashing"
 )
 
 // HttpClient ist the stuct that has the required information for the cli.

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/bbva/qed/api/apihttp"
-	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/hyper/storage"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
 

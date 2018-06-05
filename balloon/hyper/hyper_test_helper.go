@@ -21,8 +21,8 @@ package hyper
 import (
 	"os"
 
-	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/hyper/storage"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/storage/bolt"

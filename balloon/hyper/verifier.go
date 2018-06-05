@@ -21,7 +21,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/hashing"
 )
 
 type Proof struct {
