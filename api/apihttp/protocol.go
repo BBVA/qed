@@ -18,9 +18,9 @@ package apihttp
 
 import (
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/hashing"
 )
 
 // Event is the public struct that Add handler function uses to

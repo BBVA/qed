@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bbva/qed/balloon/hashing"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/testutils/rand"
 )
 

@@ -19,8 +19,8 @@
 package history
 
 import (
-	"github.com/bbva/qed/balloon/hashing"
 	"github.com/bbva/qed/balloon/history/storage"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
 
