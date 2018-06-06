@@ -136,6 +136,16 @@ go tool pprof hyper.test cpu.out mem.out
 
 The server spawns an http server on port 6060 with the pprof api as described in https://golang.org/pkg/net/http/pprof/
 
+- Server profiling
+
+```
+cd "$GOPATH/src/github.com/bbva/qed"
+mkdir /var/tmp/db_path
+go run main.go start -k key -p /var/tmp/db_path -l info --profiling
+```
+
+Spawns an regular http server at port 8080 and another one with the usage stats at port 6060 which can be accessed via http://localhost:6060/debug/vars
+
 ## Other projects, papers and references
 
 - github related projects
