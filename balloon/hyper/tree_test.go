@@ -17,108 +17,77 @@
 package hyper
 
 import (
-	"bytes"
+	"encoding/binary"
 	"testing"
 
-	"github.com/bbva/qed/metrics"
-
-	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage/cache"
 	"github.com/bbva/qed/testutils/rand"
+	assert "github.com/stretchr/testify/require"
 )
 
 func TestAdd(t *testing.T) {
-	store, closeF := openBPlusStorage()
-	defer closeF()
+	hasher := new(hashing.XorHasher)
+	digest := hasher.Do([]byte{0x0})
+	index := make([]byte, 8)
+	binary.LittleEndian.PutUint64(index, 0)
 
-	cache := cache.NewSimpleCache(0)
-	hasher := hashing.XorHasher
-	ht := NewTree(string(0x0), cache, store, hasher)
+	leaves, close := openBPlusStorage()
+	defer close()
+	cache := cache.NewSimpleCache(10)
 
-	var testCases = []struct {
-		key        []byte
-		commitment []byte
-	}{
-		{[]byte{0x00}, []byte{0x08}},
-		{[]byte{0x01}, []byte{0x09}},
-		{[]byte{0x2}, []byte{0x08}},
-		{[]byte{0x3}, []byte{0x0b}},
-		{[]byte{0x4}, []byte{0x0c}},
-		{[]byte{0x5}, []byte{0x09}},
-		{[]byte{0x6}, []byte{0x08}},
-		{[]byte{0x7}, []byte{0x0f}},
-		{[]byte{0x8}, []byte{0x0f}},
-		{[]byte{0x9}, []byte{0x06}},
-	}
-	value := []byte{0x01}
+	tree := NewTree(string(0x0), cache, leaves, hasher)
+	expectedRH := []byte{0x08}
 
-	for i, e := range testCases {
-		commitment := <-ht.Add(e.key, value)
+	rh, err := tree.Add(digest, index)
+	assert.Nil(t, err, "Error adding to the tree: %v", err)
+	assert.Equal(t, rh, expectedRH, "Incorrect root hash")
+}
 
-		if bytes.Compare(commitment, e.commitment) != 0 {
-			t.Fatalf("Expected commitment for test %d: %x, Actual: %x", i, e.commitment, commitment)
-		}
-	}
+func TestClose(t *testing.T) {
 
 }
 
-func TestProve(t *testing.T) {
+func TestProveMembership(t *testing.T) {
+	hasher := new(hashing.XorHasher)
+	digest := hasher.Do([]byte{0x0})
+	index := make([]byte, 8)
+	binary.LittleEndian.PutUint64(index, 0)
 
-	store, closeF := openBPlusStorage()
-	defer closeF()
+	leaves, close := openBPlusStorage()
+	defer close()
+	cache := cache.NewSimpleCache(10)
 
-	cache := cache.NewSimpleCache(0)
-	hasher := hashing.XorHasher
+	tree := NewTree(string(0x0), cache, leaves, hasher)
+	rh, err := tree.Add(digest, index)
+	assert.Nil(t, err, "Error adding to the tree: %v", err)
+	assert.Equal(t, rh, []byte{0x08}, "Incorrect root hash")
 
-	ht := NewTree(string(0x0), cache, store, hasher)
+	proof, _, err := tree.ProveMembership(digest)
+	assert.Nil(t, err, "Error adding to the tree: %v", err)
+	// pos := NewPosition([]byte{0x0}, []byte{0x00}, 8, 8, 3)
+	// assert.Equal(t, pos, proof.Pos(), "Incorrect position")
 
-	key := []byte{0x5a}
-	value := []byte{0x01}
+	ap := map[string][]uint8{"10|4": []uint8{0x0}, "04|2": []uint8{0x0}, "00|0": []uint8{0x0}, "80|7": []uint8{0x0}, "40|6": []uint8{0x0}, "20|5": []uint8{0x0}, "08|3": []uint8{0x0}, "02|1": []uint8{0x0}, "01|0": []uint8{0x0}}
+	assert.Equal(t, ap, proof.AuditPath(), "Incorrect audit path")
 
-	<-ht.Add(key, value)
-
-	expectedPath := [][]byte{
-		{0x00},
-		{0x00},
-		{0x00},
-		{0x00},
-		{0x00},
-		{0x00},
-		{0x00},
-		{0x00},
-	}
-	proof := <-ht.ProveMembership(key)
-
-	if !comparePaths(expectedPath, proof.AuditPath) {
-		t.Fatalf("Invalid path: expected %v, actual %v", expectedPath, proof.AuditPath)
-	}
-
-}
-
-func comparePaths(expected, actual [][]byte) bool {
-	for i, e := range expected {
-		if !bytes.Equal(e, actual[i]) {
-			return false
-		}
-	}
-	return true
 }
 
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage("/var/tmp/hyper_tree_test.db") //openBoltStorage()
 	defer closeF()
 
-	cache := cache.NewSimpleCache(storage.SIZE25)
-	hasher := hashing.Sha256Hasher
+	hasher := new(hashing.Sha256Hasher)
+	cache := cache.NewSimpleCache(1 << 25)
 	ht := NewTree(string(0x0), cache, store, hasher)
-
-	b.N = 1000000
+	b.ResetTimer()
+	b.N = 100000
 	for i := 0; i < b.N; i++ {
-		key := hashing.Sha256Hasher(rand.Bytes(32))
+		key := hasher.Do(rand.Bytes(32))
 		value := rand.Bytes(1)
 		store.Add(key, value)
-		<-ht.Add(key, value)
+		ht.Add(key, value)
 	}
 	b.Logf("stats = %+v\n", metrics.Hyper)
 }

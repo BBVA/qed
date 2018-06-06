@@ -53,10 +53,10 @@ func TestAddSuccess(t *testing.T) {
 
 	event := "Hello world!"
 	fakeSnapshot := &apihttp.Snapshot{
-		HyperDigest:   []byte("hyper"),
-		HistoryDigest: []byte("history"),
-		Version:       0,
-		Event:         []byte(event),
+		[]byte("hyper"),
+		[]byte("history"),
+		0,
+		[]byte(event),
 	}
 	result, _ := json.Marshal(fakeSnapshot)
 	mux.HandleFunc("/events", okHandler(result))
@@ -86,13 +86,11 @@ func TestMembership(t *testing.T) {
 	event := "Hello world!"
 	version := uint64(0)
 	fakeResult := &apihttp.MembershipResult{
-		Key:       []byte(event),
-		KeyDigest: []byte("digest"),
-		IsMember:  true,
-		Proofs: &apihttp.Proofs{
-			HyperAuditPath:   make([][]byte, 0),
-			HistoryAuditPath: make([]apihttp.HistoryNode, 0),
-		},
+		Key:            []byte(event),
+		KeyDigest:      []byte("digest"),
+		Exists:         true,
+		Hyper:          make(map[string][]byte),
+		History:        make(map[string][]byte),
 		CurrentVersion: version,
 		QueryVersion:   version,
 		ActualVersion:  version,

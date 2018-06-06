@@ -24,7 +24,8 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/history"
+	"github.com/bbva/qed/balloon/proof"
+	assert "github.com/stretchr/testify/require"
 )
 
 type fakeBalloon struct {
@@ -167,14 +168,14 @@ func TestMembership(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	proof := make(chan *balloon.MembershipProof)
-	handler := Membership(newMembershipOpFakeBalloon(proof))
-
+	p := make(chan *balloon.MembershipProof)
+	handler := Membership(newMembershipOpFakeBalloon(p))
+	expectedResult := &MembershipResult{Exists: true, Hyper: map[string][]uint8(nil), History: map[string][]uint8(nil), CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
 	go func() {
-		proof <- &balloon.MembershipProof{
+		p <- &balloon.MembershipProof{
 			true,
-			[][]byte{{0x0}},
-			[]history.Node{{[]byte{0x0}, 0, 1}},
+			proof.NewProof(nil, nil, nil),
+			proof.NewProof(nil, nil, nil),
 			version,
 			version,
 			version + 1,
@@ -193,52 +194,10 @@ func TestMembership(t *testing.T) {
 	}
 
 	// Check the body response
-	membershipResult := &MembershipResult{}
-	json.Unmarshal([]byte(rr.Body.String()), membershipResult)
+	actualResult := new(MembershipResult)
+	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	if !bytes.Equal(membershipResult.Key, key) {
-		t.Errorf("Key is not consistent ")
-	}
-
-	if !bytes.Equal(membershipResult.KeyDigest, []byte{0x0}) {
-		t.Errorf("KeyDigest is not consistent ")
-	}
-
-	if membershipResult.IsMember != true {
-		t.Errorf("IsMember is not consistent ")
-	}
-
-	if len(membershipResult.Proofs.HyperAuditPath) != 1 {
-		t.Errorf("Proofs.HyperAuditPath is not consistent ")
-	}
-
-	if !bytes.Equal(membershipResult.Proofs.HyperAuditPath[0], []byte{0x0}) {
-		t.Errorf("Proofs.HyperAuditPath is not consistent %v", membershipResult.Proofs.HyperAuditPath[0])
-	}
-
-	if len(membershipResult.Proofs.HistoryAuditPath) != 1 {
-		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
-	}
-
-	if !bytes.Equal(membershipResult.Proofs.HistoryAuditPath[0].Digest, []byte{0x0}) {
-		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
-	}
-
-	if membershipResult.Proofs.HistoryAuditPath[0].Index != 0 {
-		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
-	}
-
-	if membershipResult.Proofs.HistoryAuditPath[0].Layer != 1 {
-		t.Errorf("Proofs.HistoryAuditPath is not consistent ")
-	}
-
-	if membershipResult.QueryVersion != version {
-		t.Errorf("QueryVersion is not consistent ")
-	}
-
-	if membershipResult.ActualVersion != version+1 {
-		t.Errorf("ActualVersion is not consistent ")
-	}
+	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 

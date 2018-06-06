@@ -19,100 +19,112 @@ package hyper
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/bbva/qed/balloon/position"
 )
 
-// Position identifies a unique node in the tree by its base, split and height
 type Position struct {
-	base   []byte // the left-most leaf in this node subtree
-	split  []byte // the left-most leaf in the right branch of this node subtree
-	height int    // height in the tree of this node
-	n      int    // number of bits in the hash key
+	base       []byte
+	height     uint64
+	numBits    uint64
+	cacheLevel uint64
 }
 
-// returns a string representation of the position
+func NewPosition(base []byte, height, numBits, cacheLevel uint64) position.Position {
+	return Position{base, height, numBits, cacheLevel}
+}
+
+func NewRootPosition(numBits, cacheLevel uint64) position.Position {
+	base := make([]byte, numBits/8)
+	return NewPosition(base, numBits, numBits, cacheLevel)
+}
+
 func (p Position) String() string {
-	return fmt.Sprintf("base: %b , split: %b , height: %d , n: %d", p.base, p.split, p.height, uint(p.n))
+	return fmt.Sprintf("base: %b , split: %b , height: %d , numBits: %d", p.base, p.Split(), p.height, p.numBits)
 }
 
-// Key is the position name to be used as identifier in the storage engine.
 func (p Position) Key() []byte {
-	// size of base in bytes + size of height in bytes is 36
-	// so we reserve that amount first
-	key := make([]byte, 36)
-	copy(key, p.base)
-	copy(key[len(p.base):], p.heightBytes())
-	return key
+	return p.base
 }
 
-func (p Position) len() int {
-	return p.n / 8
+func (p Position) Height() uint64 {
+	return p.height
 }
 
-// returns a new position pointing to the left child
-func (p Position) left() *Position {
-	var np Position
-	np.base = p.base
-	np.height = p.height - 1
-	np.n = p.n
+func (p Position) Id() []byte {
+	id := make([]byte, p.len()+8)
+	copy(id, p.base)
+	copy(id[p.len():], p.heightBytes())
+	return id
+}
 
-	np.split = make([]byte, p.len())
-	copy(np.split, np.base)
+func (p Position) StringId() string {
+	return fmt.Sprintf("%x|%d", p.base, p.height)
+}
 
-	splitBit := np.n - np.height
-	if splitBit < np.n {
-		bitSet(np.split, splitBit)
+func (p Position) IsLeaf() bool {
+	return p.height == 0
+}
+
+func (p Position) Direction(target []byte) position.Direction {
+	if (p.height) == 0 {
+		return position.Halt
 	}
-
-	return &np
+	if !bitIsSet(target, p.numBits-p.height) {
+		return position.Left
+	}
+	return position.Right
 }
 
-// returns a new position pointing to the right child
-func (p Position) right() *Position {
-	var np Position
-	np.base = p.split
-	np.height = p.height - 1
-	np.n = p.n
+func (p Position) Left() position.Position {
+	return NewPosition(p.base, p.height-1, p.numBits, p.cacheLevel)
+}
 
-	np.split = make([]byte, p.len())
-	copy(np.split, np.base)
+func (p Position) Right() position.Position {
+	return NewPosition(p.Split(), p.height-1, p.numBits, p.cacheLevel)
+}
 
-	splitBit := np.n - np.height
-	if splitBit < np.n {
-		bitSet(np.split, splitBit)
+func (p Position) FirstLeaf() position.Position {
+	return NewPosition(p.base, 0, p.numBits, p.cacheLevel)
+}
+
+func (p Position) LastLeaf() position.Position {
+	layer := p.numBits - p.height
+	base := make([]byte, p.len())
+	copy(base, p.base)
+	for bit := layer; bit < p.numBits; bit++ {
+		bitSet(base, bit)
 	}
+	return NewPosition(base, 0, p.numBits, p.cacheLevel)
+}
 
-	return &np
+func (p Position) Split() []byte {
+	splitBit := p.numBits - p.height
+	split := make([]byte, p.len())
+	copy(split, p.base)
+	if splitBit < p.numBits {
+		bitSet(split, splitBit)
+	}
+	return split
+}
+
+func (p Position) ShouldBeCached() bool {
+	if p.height > p.cacheLevel {
+		return true
+	}
+	return false
 }
 
 func (p Position) heightBytes() []byte {
-	bytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(bytes, uint32(p.height))
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytes, p.height)
 	return bytes
 }
 
-func (p Position) end() []byte {
-	end := make([]byte, p.len())
-	layer := p.n - p.height
-	copy(end, p.base)
-	for b := layer; b < p.n; b++ {
-		bitSet(end, b)
-	}
-	return end
+func (p Position) len() uint64 {
+	return p.numBits / 8
 }
 
-// creates the tree root position
-func rootPosition(n int) *Position {
-	var p Position
-	p.height = n
-	p.n = n
-	p.base = make([]byte, p.len())
-	p.split = make([]byte, p.len())
-
-	bitSet(p.split, 0)
-
-	return &p
-}
-
-func bitIsSet(bits []byte, i int) bool { return bits[i/8]&(1<<uint(7-i%8)) != 0 }
-func bitSet(bits []byte, i int)        { bits[i/8] |= 1 << uint(7-i%8) }
-func bitUnset(bits []byte, i int)      { bits[i/8] &= 0 << uint(7-i%8) }
+func bitIsSet(bits []byte, i uint64) bool { return bits[i/8]&(1<<uint(7-i%8)) != 0 }
+func bitSet(bits []byte, i uint64)        { bits[i/8] |= 1 << uint(7-i%8) }
+func bitUnset(bits []byte, i uint64)      { bits[i/8] &= 0 << uint(7-i%8) }

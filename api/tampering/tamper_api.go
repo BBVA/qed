@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/bbva/qed/api/apihttp"
-	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
@@ -16,16 +15,24 @@ type tamperEvent struct {
 	Value     []byte
 }
 
+type DeletableStore interface {
+	Delete(key []byte) error
+	Add(key []byte, value []byte) error
+	GetRange(start, end []byte) [][]byte
+	Get(key []byte) ([]byte, error)
+	Close() error
+}
+
 // NewTamperingApi will return a mux server with the endpoint required to
 // tamper the server. it's a internal debug implementation. Running a server
 // with this enabled will run useless the qed server.
-func NewTamperingApi(store storage.DeletableStore, hasher hashing.Hasher) *http.ServeMux {
+func NewTamperingApi(store DeletableStore, hasher hashing.Hasher) *http.ServeMux {
 	api := http.NewServeMux()
 	api.HandleFunc("/tamper", apihttp.AuthHandlerMiddleware(http.HandlerFunc(tamperFunc(store, hasher))))
 	return api
 }
 
-func tamperFunc(store storage.DeletableStore, hasher hashing.Hasher) http.HandlerFunc {
+func tamperFunc(store DeletableStore, hasher hashing.Hasher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -47,7 +54,7 @@ func tamperFunc(store storage.DeletableStore, hasher hashing.Hasher) http.Handle
 			return
 		}
 
-		tp.KeyDigest = hasher(tp.Key)
+		tp.KeyDigest = hasher.Do(tp.Key)
 
 		switch r.Method {
 		case "PATCH":

@@ -21,7 +21,6 @@ package hyper
 import (
 	"os"
 
-	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/badger"
@@ -31,13 +30,13 @@ import (
 
 func fakeLeafHasherF(hasher hashing.Hasher) hashing.LeafHasher {
 	return func(id, base []byte) []byte {
-		return hasher(id, base)
+		return hasher.Do(id, base)
 	}
 }
 
 func fakeInteriorHasherF(hasher hashing.Hasher) hashing.InteriorHasher {
 	return func(id, left, right []byte) []byte {
-		return hasher(left, right)
+		return hasher.Do(left, right)
 	}
 }
 
@@ -71,15 +70,16 @@ func deleteFile(path string) {
 	}
 }
 
-func NewFakeTree(id string, cache storage.Cache, leaves storage.Store, hasher hashing.Hasher) *Tree {
+func NewFakeTree(id string, cache Cache, leaves Store, hasher hashing.Hasher) *Tree {
 
 	tree := NewTree(id, cache, leaves, hasher)
-	tree.leafHasher = fakeLeafHasherF(hasher)
-	tree.interiorHasher = fakeInteriorHasherF(hasher)
+	tree.leafHash = fakeLeafHasherF(hasher)
+	tree.interiorHash = fakeInteriorHasherF(hasher)
 
 	return tree
 }
 
+/*
 func NewFakeProof(id string, auditPath [][]byte, hasher hashing.Hasher) *Proof {
 
 	proof := NewProof(id, auditPath, hasher)
@@ -88,3 +88,4 @@ func NewFakeProof(id string, auditPath [][]byte, hasher hashing.Hasher) *Proof {
 
 	return proof
 }
+*/

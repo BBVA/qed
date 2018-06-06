@@ -14,10 +14,11 @@
    limitations under the License.
 */
 
-package hyper
+package history
 
-// Empty is a constant for empty leaves
-var Empty = []byte{0x00}
-
-// Set is a constant for non-empty leaves
-var Set = []byte{0x01}
+// Store interface defines what the trees expect from a storage engine to implement
+type Store interface {
+	Add(key []byte, value []byte) error
+	Get(key []byte) ([]byte, error)
+	Close() error
+}
