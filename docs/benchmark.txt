@@ -10,7 +10,7 @@ goarch: amd64
 pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	    254535 ns/op
 --- BENCH: BenchmarkAdd-8
-	tree_test.go:116: stats = &{hits:121785 disk:10000 dh:1330090 update:300000 leaf:5075 lh:5075 ih:1446950 lend:0}
+	tree_test.go:116: stats = &{cached_hash:121785 storage_reads:10000 default_hash:1330090 update:300000 leaf_hash:5075 leaf_hash:5075 interior_hash:1446950}
 PASS
 ok  	qed/balloon/hyper	2.774s
 
@@ -22,7 +22,7 @@ goarch: amd64
 pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	   4278588 ns/op
 --- BENCH: BenchmarkAdd-8
-	tree_test.go:116: stats = &{hits:121841 disk:10000 dh:1356809 update:300000 leaf:5194 lh:5194 ih:1473844 lend:0}
+	tree_test.go:116: stats = &{cached_hash:121841 storage_reads:10000 default_hash:1356809 update:300000 leaf_hash:5194 leaf_hash:5194 interior_hash:1473844}
 PASS
 ok  	qed/balloon/hyper	43.034s
 
@@ -34,7 +34,7 @@ goarch: amd64
 pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	   9738710 ns/op
 --- BENCH: BenchmarkAdd-8
-	tree_test.go:116: stats = &{hits:121675 disk:10000 dh:1320750 update:300000 leaf:5033 lh:5033 ih:1437458 lend:0}
+	tree_test.go:116: stats = &{cached_hash:121675 storage_reads:10000 default_hash:1320750 update:300000 leaf_hash:5033 leaf_hash:5033 interior_hash:1437458}
 PASS
 ok  	qed/balloon/hyper	97.616s
 
@@ -46,7 +46,7 @@ goarch: amd64
 pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	  10021413 ns/op
 --- BENCH: BenchmarkAdd-8
-	tree_test.go:116: stats = &{hits:121864 disk:10000 dh:1319886 update:300000 leaf:5030 lh:5030 ih:1436780 lend:0}
+	tree_test.go:116: stats = &{cached_hash:121864 storage_reads:10000 default_hash:1319886 update:300000 leaf_hash:5030 leaf_hash:5030 interior_hash:1436780}
 PASS
 ok  	qed/balloon/hyper	100.414s
 
@@ -58,7 +58,7 @@ goarch: amd64
 pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	  10478626 ns/op
 --- BENCH: BenchmarkAdd-8
-	tree_test.go:116: stats = &{hits:121738 disk:10000 dh:1313712 update:300000 leaf:5002 lh:5002 ih:1430452 lend:0}
+	tree_test.go:116: stats = &{cached_hash:121738 storage_reads:10000 default_hash:1313712 update:300000 leaf_hash:5002 leaf_hash:5002 interior_hash:1430452}
 PASS
 ok  	qed/balloon/hyper	104.980s
 
@@ -70,6 +70,6 @@ goarch: amd64
 pkg: qed/balloon/hyper
 BenchmarkAdd-8   	   10000	  10982723 ns/op
 --- BENCH: BenchmarkAdd-8
-	tree_test.go:116: stats = &{hits:121656 disk:10000 dh:1324369 update:300000 leaf:5049 lh:5049 ih:1441074 lend:0}
+	tree_test.go:116: stats = &{cached_hash:121656 storage_reads:10000 default_hash:1324369 update:300000 leaf_hash:5049 leaf_hash:5049 interior_hash:1441074}
 PASS
 ok  	qed/balloon/hyper	110.075s
