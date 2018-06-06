@@ -14,11 +14,26 @@
    limitations under the License.
 */
 
-// Package storage implements the Store public interface.
-package storage
+package hyper
 
+import (
+	"bytes"
+	"sort"
+)
+
+// Cache interface defines the operations a cache mechanism must implement to
+// be usable within the tree
+type Cache interface {
+	Put(key []byte, value []byte) error
+	Get(key []byte) ([]byte, bool)
+	Exists(key []byte) bool
+	Size() uint64
+}
+
+// Store interface defines what the trees expect from a storage engine to implement
 type Store interface {
 	Add(key []byte, value []byte) error
+	GetRange(start, end []byte) [][]byte
 	Get(key []byte) ([]byte, error)
 	Close() error
 }
@@ -27,4 +42,13 @@ type DeletableStore interface {
 	Delete(key []byte) error
 
 	Store
+}
+
+// Split splits the slice.
+func Split(ls [][]byte, s []byte) (left, right [][]byte) {
+	// the smallest index i where d[i] >= s
+	i := sort.Search(len(ls), func(i int) bool {
+		return bytes.Compare(ls[i], s) >= 0
+	})
+	return ls[:i], ls[i:]
 }

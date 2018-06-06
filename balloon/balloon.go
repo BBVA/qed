@@ -24,6 +24,7 @@ import (
 
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon/proof"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
@@ -60,8 +61,8 @@ type Commitment struct {
 // Current, Actual and Query Versions.
 type MembershipProof struct {
 	Exists         bool
-	HyperProof     [][]byte
-	HistoryProof   []history.Node
+	Hyper          *proof.Proof
+	History        *proof.Proof
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64
@@ -172,44 +173,58 @@ func (b *HyperBalloon) operations() chan interface{} {
 }
 
 func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
-	digest := b.hasher(event)
+	digest := b.hasher.Do(event)
 	version := b.version
 	index := make([]byte, 8)
 	binary.LittleEndian.PutUint64(index, version)
 	b.version++
+
+	history, err := b.history.Add(digest, index)
+	if err != nil {
+		return nil, err
+	}
+	hyper, err := b.hyper.Add(digest, index)
+	if err != nil {
+		return nil, err
+	}
 	return &Commitment{
-		<-b.history.Add(digest, index),
-		<-b.hyper.Add(digest, index),
+		history,
+		hyper,
 		version,
 	}, nil
 }
 
 func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*MembershipProof, error) {
-	digest := b.hasher(event)
+	var err error
+	var historyProof *proof.Proof
+	var hyperProof *proof.Proof
+	var actualValue []byte
 
-	var hyperProof *hyper.MembershipProof
-	var historyProof *history.MembershipProof
+	digest := b.hasher.Do(event)
 
-	hyperProof = <-b.hyper.ProveMembership(digest)
+	hyperProof, actualValue, err = b.hyper.ProveMembership(digest)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
+	}
 
 	var exists bool
 	var actualVersion uint64
 
-	if len(hyperProof.ActualValue) > 0 {
+	if len(actualValue) > 0 {
 		exists = true
-		actualVersion = binary.LittleEndian.Uint64(hyperProof.ActualValue)
+		actualVersion = binary.LittleEndian.Uint64(actualValue)
 	}
 
 	if exists && actualVersion <= version {
-		historyProof = <-b.history.ProveMembership(hyperProof.ActualValue, actualVersion, version)
+		historyProof, err = b.history.ProveMembership(actualValue, actualVersion, version)
 	} else {
-		return &MembershipProof{}, fmt.Errorf("Unable to get proof from history tree")
+		return &MembershipProof{}, fmt.Errorf("Unable to get proof from history tree: %v", err)
 	}
 
 	return &MembershipProof{
 		exists,
-		hyperProof.AuditPath,
-		historyProof.Nodes,
+		hyperProof,
+		historyProof,
 		version,
 		actualVersion,
 		b.version - 1, // notice, this is the current version of balloon version

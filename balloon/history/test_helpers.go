@@ -19,7 +19,6 @@
 package history
 
 import (
-	"github.com/bbva/qed/balloon/history/storage"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
@@ -28,7 +27,7 @@ import (
 // hashing event.
 func fakeLeafHasherF(hasher hashing.Hasher) hashing.LeafHasher {
 	return func(a, key []byte) []byte {
-		digest := hasher(a, key)
+		digest := hasher.Do(a, key)
 		log.Debug("Hashing leaf: a-> %b key-> %b :=> %b\n", a, key, digest)
 		return digest
 	}
@@ -38,7 +37,7 @@ func fakeLeafHasherF(hasher hashing.Hasher) hashing.LeafHasher {
 // the hashing event.
 func fakeInteriorHasherF(hasher hashing.Hasher) hashing.InteriorHasher {
 	return func(a, left, right []byte) []byte {
-		digest := hasher(a, left, right)
+		digest := hasher.Do(a, left, right)
 		log.Debug("Hashing interior: a-> %b left-> %b right-> %b :=> %b\n", a, left, right, digest)
 		return digest
 	}
@@ -48,7 +47,7 @@ func fakeInteriorHasherF(hasher hashing.Hasher) hashing.InteriorHasher {
 // param for the salt.
 func fakeLeafHasherCleanF(hasher hashing.Hasher) hashing.LeafHasher {
 	return func(a, key []byte) []byte {
-		return hasher(key)
+		return hasher.Do(key)
 	}
 }
 
@@ -56,37 +55,39 @@ func fakeLeafHasherCleanF(hasher hashing.Hasher) hashing.LeafHasher {
 // the left and right paramenters.
 func fakeInteriorHasherCleanF(hasher hashing.Hasher) hashing.InteriorHasher {
 	return func(a, left, right []byte) []byte {
-		return hasher(left, right)
+		return hasher.Do(left, right)
 	}
 }
 
 // NewFakeTree is a test helper public function that returns a history.Tree
 // pointer
-func NewFakeTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+func NewFakeTree(id string, frozen Store, hasher hashing.Hasher) *Tree {
 
-	tree := NewTree(frozen, hasher)
-	tree.leafHasher = fakeLeafHasherF(hasher)
-	tree.interiorHasher = fakeInteriorHasherF(hasher)
+	tree := NewTree(id, frozen, hasher)
+	tree.leafHash = fakeLeafHasherF(hasher)
+	tree.interiorHash = fakeInteriorHasherF(hasher)
 
 	return tree
 }
 
 // NewFakeCleanTree is a test helper public function.
-func NewFakeCleanTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+func NewFakeCleanTree(id string, frozen Store, hasher hashing.Hasher) *Tree {
 
-	tree := NewTree(frozen, hasher)
-	tree.leafHasher = fakeLeafHasherCleanF(hasher)
-	tree.interiorHasher = fakeInteriorHasherCleanF(hasher)
+	tree := NewTree(id, frozen, hasher)
+	tree.leafHash = fakeLeafHasherCleanF(hasher)
+	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
 
 	return tree
 }
 
 // NewFakeProof is a test helper public function.
-func NewFakeProof(auditPath []Node, index uint64, hasher hashing.Hasher) *Proof {
+/*
+func NewFakeProof(auditPath [][]byte, index uint64, hasher hashing.Hasher) *Proof {
 
 	proof := NewProof(auditPath, index, hasher)
-	proof.leafHasher = fakeLeafHasherF(hasher)
-	proof.interiorHasher = fakeInteriorHasherF(hasher)
+	proof.leafHash = fakeLeafHasherF(hasher)
+	proof.interiorHash = fakeInteriorHasherF(hasher)
 
 	return proof
 }
+*/

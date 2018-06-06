@@ -20,6 +20,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon/proof"
 	"github.com/bbva/qed/hashing"
 )
 
@@ -38,94 +39,49 @@ type MembershipQuery struct {
 
 // Snapshot is the public struct that apihttp.Add Handler call returns.
 type Snapshot struct {
-	HyperDigest   []byte
 	HistoryDigest []byte
+	HyperDigest   []byte
 	Version       uint64
 	Event         []byte
-	//TODO: implement this
-	// EventDigest   string
 }
 
-// HistoryNode is part of the apihttp.MembershipResult used to parse the
-// result of apihttp.Membership handler.
-type HistoryNode struct {
-	Digest       []byte
-	Index, Layer uint64
-}
-
-// Proofs is part of the apihttp.MembershipResult used to parse the
-// result if Membership Handler.
-type Proofs struct {
-	HyperAuditPath   [][]byte
-	HistoryAuditPath []HistoryNode
-}
-
-// MembershipResult is the public struct that returns the Membership
-// handler
 type MembershipResult struct {
-	Key                                         []byte
-	KeyDigest                                   []byte
-	IsMember                                    bool
-	Proofs                                      *Proofs
-	CurrentVersion, QueryVersion, ActualVersion uint64
-}
-
-// ToSnapshot translates the internal struct used in balloon
-// (balloon.Commitment and original event) to the public protocol struct
-// apihttp.Snapshot.
-func ToSnapshot(commitment *balloon.Commitment, event []byte) *Snapshot {
-	return &Snapshot{
-		commitment.HyperDigest,
-		commitment.HistoryDigest,
-		commitment.Version,
-		event,
-	}
-}
-
-// ToHistoryAuditPath translates the internal api balloon.history.Node to
-// public struct apihttp.HistoryNode array.
-func ToHistoryAuditPath(path []history.Node) []HistoryNode {
-	result := make([]HistoryNode, 0)
-	for _, elem := range path {
-		result = append(result, HistoryNode{elem.Digest, elem.Index, elem.Layer})
-	}
-	return result
+	Exists         bool
+	Hyper          map[string][]byte
+	History        map[string][]byte
+	CurrentVersion uint64
+	QueryVersion   uint64
+	ActualVersion  uint64
+	KeyDigest      []byte
+	Key            []byte
 }
 
 // ToMembershipProof translates internal api balloon.MembershipProof to the
 // public struct apihttp.MembershipResult.
-func ToMembershipProof(event []byte, proof *balloon.MembershipProof) *MembershipResult {
+func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResult {
 	return &MembershipResult{
-		event,
-		proof.KeyDigest,
-		proof.Exists,
-		&Proofs{
-			proof.HyperProof,
-			ToHistoryAuditPath(proof.HistoryProof),
-		},
-		proof.CurrentVersion,
-		proof.QueryVersion,
-		proof.ActualVersion,
+		mp.Exists,
+		mp.Hyper.AuditPath(),
+		mp.History.AuditPath(),
+		mp.CurrentVersion,
+		mp.QueryVersion,
+		mp.ActualVersion,
+		mp.KeyDigest,
+		key,
 	}
-}
-
-// ToHistoryNode translates public apihttp.HistoryNode to internal
-// balloon.history.Node struct array.
-func ToHistoryNode(path []HistoryNode) []history.Node {
-	result := make([]history.Node, 0)
-	for _, elem := range path {
-		result = append(result, history.Node{elem.Digest, elem.Index, elem.Layer})
-	}
-	return result
 }
 
 // ToBaloonProof translate public apihttp.MembershipResult:w to internal
 // balloon.Proof.
-func ToBalloonProof(id string, p *MembershipResult, hasher hashing.Hasher) *balloon.Proof {
 
-	historyProof := history.NewProof(ToHistoryNode(p.Proofs.HistoryAuditPath), p.QueryVersion, hasher)
-	hyperProof := hyper.NewProof(id, p.Proofs.HyperAuditPath, hasher)
+func ToBalloonProof(id []byte, mr *MembershipResult, hasher hashing.Hasher) (*proof.Proof, *proof.Proof) {
 
-	return balloon.NewProof(p.IsMember, hyperProof, historyProof, p.CurrentVersion, p.QueryVersion, p.ActualVersion, hasher)
+	historyPos := history.NewRootPosition(mr.CurrentVersion)
+	hyperPos := hyper.NewRootPosition(hasher.Len(), 0)
+
+	historyProof := proof.NewProof(historyPos, mr.History, hasher)
+	hyperProof := proof.NewProof(hyperPos, mr.Hyper, hasher)
+
+	return historyProof, hyperProof
 
 }

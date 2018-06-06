@@ -20,13 +20,13 @@ package client
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/bbva/qed/api/apihttp"
-	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 )
 
@@ -116,16 +116,27 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipR
 
 }
 
+func uint2bytes(i uint64) []byte {
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytes, i)
+	return bytes
+}
+
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
-func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot) bool {
 
-	balloonProof := apihttp.ToBalloonProof(c.apiKey, result, hashing.Sha256Hasher)
+func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot, hasher hashing.Hasher) bool {
 
-	return balloonProof.Verify(&balloon.Commitment{
-		snap.HistoryDigest,
-		snap.HyperDigest,
-		snap.Version,
-	}, snap.Event)
+	historyProof, hyperProof := apihttp.ToBalloonProof([]byte(c.apiKey), result, hasher)
 
+	// digest := hasher.Do(snap.Event)
+	hyperCorrect := hyperProof.Verify(snap.HyperDigest, result.KeyDigest, uint2bytes(result.QueryVersion))
+	if result.Exists {
+		if result.QueryVersion <= result.ActualVersion {
+			historyCorrect := historyProof.Verify(snap.HistoryDigest, uint2bytes(result.QueryVersion), result.KeyDigest)
+			return hyperCorrect && historyCorrect
+		}
+	}
+
+	return hyperCorrect
 }

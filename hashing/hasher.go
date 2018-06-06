@@ -22,11 +22,16 @@ import "crypto/sha256"
 
 // Hasher is the public interface to be used as placeholder for the concrete
 // implementations.
-type Hasher func(...[]byte) []byte
+type Hasher interface {
+	Do(...[]byte) []byte
+	Len() uint64
+}
 
 // Sha256Hasher implements the Hasher interface and computes the crypto/sha256
 // internal function.
-func Sha256Hasher(data ...[]byte) []byte {
+type Sha256Hasher struct{}
+
+func (s Sha256Hasher) Do(data ...[]byte) []byte {
 	hasher := sha256.New()
 
 	for i := 0; i < len(data); i++ {
@@ -36,9 +41,13 @@ func Sha256Hasher(data ...[]byte) []byte {
 	return hasher.Sum(nil)[:]
 }
 
+func (s Sha256Hasher) Len() uint64 { return uint64(256) }
+
 // XorHasher implements the Hasher interface and computes a xor function.
 // Handy for testing hash tree implementations.
-func XorHasher(data ...[]byte) []byte {
+type XorHasher struct{}
+
+func (x XorHasher) Do(data ...[]byte) []byte {
 	var result byte
 	for _, elem := range data {
 		var sum byte
@@ -49,10 +58,13 @@ func XorHasher(data ...[]byte) []byte {
 	}
 	return []byte{result}
 }
+func (s XorHasher) Len() uint64 { return uint64(8) }
 
 // PearsonHasher implements the Hasher interface and computes a 8 bit hash
 // function. Handy for testing hash tree implementations.
-func PearsonHasher(data ...[]byte) []byte {
+type PearsonHasher struct{}
+
+func (p PearsonHasher) Do(data ...[]byte) []byte {
 	lookupTable := [...]uint8{
 		// 0-255 shuffled in any (random) order suffices
 		98, 6, 85, 150, 36, 23, 112, 164, 135, 207, 169, 5, 26, 64, 165, 219, //  1
@@ -89,6 +101,7 @@ func PearsonHasher(data ...[]byte) []byte {
 	return []byte{r}
 
 }
+func (p PearsonHasher) Len() uint64 { return uint64(8) }
 
 // LeafHasher is the internal function interface to be used in the tree.
 type LeafHasher func([]byte, []byte) []byte
@@ -100,7 +113,7 @@ type InteriorHasher func([]byte, []byte, []byte) []byte
 // switchable hasher.
 func LeafHasherF(hasher Hasher) LeafHasher {
 	return func(id, key []byte) []byte {
-		return hasher(id, key)
+		return hasher.Do(id, key)
 	}
 }
 
@@ -108,6 +121,6 @@ func LeafHasherF(hasher Hasher) LeafHasher {
 // switchable hasher.
 func InteriorHasherF(hasher Hasher) InteriorHasher {
 	return func(id, left, right []byte) []byte {
-		return hasher(id, left, right)
+		return hasher.Do(id, left, right)
 	}
 }

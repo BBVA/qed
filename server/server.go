@@ -32,7 +32,6 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/badger"
@@ -40,13 +39,20 @@ import (
 	"github.com/bbva/qed/storage/cache"
 )
 
+type Store interface {
+	Add(key []byte, value []byte) error
+	GetRange(start, end []byte) [][]byte
+	Get(key []byte) ([]byte, error)
+	Close() error
+}
+
 // Server encapsulates the data and login to start/stop a QED server
 type Server struct {
 	httpEndpoint string
 	dbPath       string
 	apiKey       string
 	cacheSize    uint64
-	storages     []storage.Store
+	storages     []Store
 
 	httpServer      *http.Server
 	tamperingServer *http.Server
@@ -62,10 +68,10 @@ func NewServer(
 	cacheSize uint64,
 	storageName string,
 	profiling bool,
-	tampering bool,
+	tamper bool,
 ) *Server {
 
-	storages := make([]storage.Store, 0, 0)
+	storages := make([]Store, 0, 0)
 
 	frozen, leaves, err := buildStorageEngine(storageName, dbPath)
 	storages = append(storages, frozen, leaves)
@@ -84,8 +90,8 @@ func NewServer(
 		nil,
 		nil,
 	}
-	if tampering {
-		server.tamperingServer = newTamperingServer("localhost:8081", leaves.(storage.DeletableStore), hashing.Sha256Hasher)
+	if tamper {
+		server.tamperingServer = newTamperingServer("localhost:8081", leaves.(tampering.DeletableStore), new(hashing.Sha256Hasher))
 	}
 
 	if profiling {
@@ -166,8 +172,8 @@ func (s *Server) Stop() {
 	log.Debugf("Done. Exiting...\n")
 }
 
-func buildStorageEngine(storageName, dbPath string) (storage.Store, storage.Store, error) {
-	var frozen, leaves storage.Store
+func buildStorageEngine(storageName, dbPath string) (Store, Store, error) {
+	var frozen, leaves Store
 	log.Debugf("Building storage engine...")
 	switch storageName {
 	case "badger":
@@ -184,10 +190,10 @@ func buildStorageEngine(storageName, dbPath string) (storage.Store, storage.Stor
 	return frozen, leaves, nil
 }
 
-func buildBalloon(frozen, leaves storage.Store, apiKey string, cacheSize uint64) (*balloon.HyperBalloon, error) {
+func buildBalloon(frozen, leaves Store, apiKey string, cacheSize uint64) (*balloon.HyperBalloon, error) {
 	cache := cache.NewSimpleCache(cacheSize)
-	hasher := hashing.Sha256Hasher
-	history := history.NewTree(frozen, hasher)
+	hasher := new(hashing.Sha256Hasher)
+	history := history.NewTree(apiKey, frozen, hasher)
 	hyper := hyper.NewTree(apiKey, cache, leaves, hasher)
 	return balloon.NewHyperBalloon(hasher, history, hyper), nil
 }
@@ -209,7 +215,7 @@ func newProfilingServer(endpoint string) *http.Server {
 	return server
 }
 
-func newTamperingServer(endpoint string, store storage.DeletableStore, hasher hashing.Hasher) *http.Server {
+func newTamperingServer(endpoint string, store tampering.DeletableStore, hasher hashing.Hasher) *http.Server {
 	router := tampering.NewTamperingApi(store, hasher)
 	server := &http.Server{
 		Addr:    endpoint,
