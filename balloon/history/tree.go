@@ -338,7 +338,7 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 
 	// froze the node with its new digest
 	if version >= index+pow(2, layer)-1 {
-		metrics.History.Add("freezung", 1)
+		metrics.History.Add("freezing", 1)
 		err := t.frozen.Add(frozenKey(index, layer), digest)
 		if err != nil {
 			// if it was already frozen nothing happens
