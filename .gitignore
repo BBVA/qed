@@ -21,3 +21,9 @@ tests/report.bin
 # Custom editor or IDE project settings
 .vscode
 coverage.txt
+
+# Terraform
+*.terraform*
+*terraform.tfstate*
+*.tfstate*
+*terraform.tfvars*
