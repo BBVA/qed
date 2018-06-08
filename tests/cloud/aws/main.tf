@@ -88,11 +88,78 @@ module "ec2" {
   subnet_id                   = "${element(data.aws_subnet_ids.all.ids, 0)}"
   vpc_security_group_ids      = ["${module.security_group.this_security_group_id}"]
   associate_public_ip_address = true
-  key_name                    = "${aws_key_pair.qed-benchmark.key_name}"
+  key_name                    = "${aws_key_pair.qed-benchmark.key_name}" 
 
   root_block_device = [{
     volume_type = "gp2"
     volume_size = "${var.volume_size}"
     delete_on_termination = true
   }]
+}
+
+// Build qed and outputs a single binary file
+resource "null_resource" "build-qed" {
+  provisioner "local-exec" {
+    command = "go build ../../../"
+  }
+
+  depends_on = ["aws_eip.qed-benchmark"]
+
+}
+
+// Copies qed binary and bench tools to out EC2 instance using SSH
+resource "null_resource" "copy-qed" {
+  provisioner "file" {
+    source      = "../../../tests"
+    destination = "/tmp/qed"
+
+    connection {
+      host        = "${aws_eip.qed-benchmark.public_ip}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+  }
+
+  depends_on = ["null_resource.build-qed"]
+
+}
+
+resource "null_resource" "install-tools" {
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/qed/cloud/aws/install-tools /tmp/qed/cloud/aws/stress-throughput-60s /tmp/qed/cloud/aws/qed",
+      "/tmp/qed/cloud/aws/install-tools",
+    ]
+    connection {
+      host        = "${aws_eip.qed-benchmark.public_ip}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+  }
+
+  depends_on = ["null_resource.copy-qed"]
+
+}
+
+resource "null_resource" "run-benchmarks" {
+  provisioner "remote-exec" {
+    inline = [
+      "/tmp/qed/cloud/aws/stress-throughput-60s",
+    ]
+
+    connection {
+      host        = "${aws_eip.qed-benchmark.public_ip}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+  }
+
+  depends_on = ["null_resource.install-tools"]
+
 }
