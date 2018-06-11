@@ -15,8 +15,9 @@
 # limitations under the License.
 
 # Get developement tools and build Wrk
-sudo yum groupinstall 'Development Tools' -y
-sudo yum install -y openssl-devel git -y
+echo "Installing required stuff. Check logs at /tmp/yum_install.log"
+sudo yum groupinstall 'Development Tools' -y >> /tmp/yum_install.log
+sudo yum install -y openssl-devel git -y >> /tmp/yum_install.log
 git clone https://github.com/wg/wrk.git wrk
 cd wrk
 echo "Building Wrk. Check logs at /tmp/wrk_make.log"
