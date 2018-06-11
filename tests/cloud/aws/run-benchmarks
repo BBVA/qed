@@ -1,0 +1,78 @@
+#!/usr/bin/env sh
+
+# Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+export TF_LOG
+export TF_REGION="eu-west-1"
+export TF_VOL_SIZE="20"
+
+function clean_resources {
+    terraform destroy -var 'flavour=t2.micro' -var 'region=eu-west-1' -var "volume_size=20" -target=null_resource.copy-qed -auto-approve
+    sleep 10
+}
+
+function destroy_all_resources {
+    terraform destroy -var 'flavour=t2.micro' -var 'region=eu-west-1' -var "volume_size=20" -auto-approve
+}
+
+# Download Terraform modules
+terraform init -upgrade=true
+clean_resources
+
+# Run benchmarks with multiple instance types
+echo "Running benchmarks with General Purpose instances"
+
+# Hardware: High frequency Intel Xeon processors Clock Speed up to 3.3GHz on some T2 instance types [Intel Xeon CPU E5-2686 v4 @ 2.30GHz].
+# echo "Running on t2.large 2 vCPU 8GB RAM"
+# terraform apply -var 'flavour=t2.xlarge' -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+# clean_resources
+
+echo "Running on t2.large 4 vCPU 16GB RAM"
+terraform apply -var 'flavour=t2.2xlarge' -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+clean_resources
+
+# Hardware: 2.5 GHz Intel Xeon® Platinum 8175 processors with new Intel Advanced Vector Extension (AXV-512) instruction set [Intel Xeon Platinum].
+# echo "Running on m5.large 2 vCPU 8GB RAM"
+# terraform apply -var 'flavour=m5.large' -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}"
+# clean_resources
+
+echo "Running on m5.xlarge 4 vCPU 16GB RAM"
+terraform apply -var 'flavour=m5.xlarge' -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+clean_resources
+
+echo "Running benchmarks with Compute Optimized instances"
+# Hardware: 3.0 GHz Intel Xeon Platinum processors with new Intel Advanced Vector Extension 512 (AVX-512) instruction set [Intel Xeon Platinum].
+# echo "Running on c5.xlarge 4 vCPU 8GB RAM"
+# terraform apply -var 'flavour=c5.xlarge' -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+# clean_resources
+
+echo "Running on c5.2xlarge 8 vCPU 16GB RAM"
+terraform apply -var 'flavour=c5.2xlarge' -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+clean_resources
+
+echo "Running benchmarks with Compute Optimized instances"
+# Hardware: High Frequency Intel Xeon E5-2686 v4 (Broadwell) processors Clock Speed 2.3GHz [Intel Xeon E5-2686 v4].
+# echo "Running on r4.large 2 vCPU 15.25GB RAM"
+# terraform apply -var 'flavour=r4.large' -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+# clean_resources
+
+echo "Running on c5.2xlarge 4 vCPU 30.5GB RAM"
+terraform apply -var 'flavour=r4.xlarge' -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+
+echo "Terraform destroy all"
+destroy_all_resources
+
+
+
