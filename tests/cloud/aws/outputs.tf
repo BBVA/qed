@@ -35,6 +35,6 @@ output "instance_public_dns" {
 }
 
 output "credit_specification" {
-  description = "Credit specification of EC2 instance"
-  value       = "${module.ec2.credit_specification[0]}"
+  description = "Credit specification of EC2 instance (empty list for not t2 instance types)"
+  value       = "${module.ec2.credit_specification}"
 }
