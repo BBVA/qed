@@ -122,7 +122,7 @@ resource "null_resource" "copy-qed" {
     }
   }
 
-  depends_on = ["null_resource.build-qed"]
+  depends_on = ["null_resource.build-qed", "module.ec2"]
 
 }
 
