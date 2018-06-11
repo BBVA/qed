@@ -20,13 +20,13 @@
 package storage
 
 // SIZE20 is the amount of nodes needed for a 20-level cache
-const SIZE20 = 2 << 20
+const SIZE20 = 1 << 20
 
 // SIZE25 is the amount of nodes needed for a 25-level cache
-const SIZE25 = 2 << 25
+const SIZE25 = 1 << 25
 
 // SIZE30 is the amount of nodes needed for a 30-level cache
-const SIZE30 = 2 << 30
+const SIZE30 = 1 << 30
 
 // Cache interface defines the operations a cache mechanism must implement to
 // be usable within the tree
