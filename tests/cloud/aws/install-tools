@@ -18,9 +18,13 @@
 echo "Installing required stuff. Check logs at /tmp/yum_install.log"
 sudo yum groupinstall 'Development Tools' -y >> /tmp/yum_install.log
 sudo yum install -y openssl-devel git -y >> /tmp/yum_install.log
-git clone https://github.com/wg/wrk.git wrk
-cd wrk
-echo "Building Wrk. Check logs at /tmp/wrk_make.log"
-make >> /tmp/wrk_make.log
-# move the executable to somewhere in your PATH
-sudo cp wrk /usr/bin/wrk
+
+if [ ! -f /usr/bin/wrk ];
+then
+    echo "Building Wrk. Check logs at /tmp/wrk_make.log"
+    git clone -q https://github.com/wg/wrk.git wrk >> /tmp/wrk_make.log
+    cd wrk
+    make >> /tmp/wrk_make.log
+    # move the executable to somewhere in your PATH
+    sudo cp wrk /usr/bin/wrk
+fi
