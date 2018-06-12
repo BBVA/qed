@@ -21,7 +21,8 @@ echo done.
 sleep 10
 
 echo Stress time!
-wrk -t100 -c100 -d60s --latency -s /tmp/qed/attack_add/attack_add.lua http://localhost:8080
+wrk -t100 -c100 -d60s --latency -s /tmp/qed/attack_add/attack_add.lua http://localhost:8080 >> /tmp/"$(curl -s http://169.254.169.254/latest/meta-data/instance-type)-results.txt"
+cat /proc/cpuinfo >> /tmp/"$(curl -s http://169.254.169.254/latest/meta-data/instance-type)-results.txt"
 echo done.
 
 echo Cleanup...
