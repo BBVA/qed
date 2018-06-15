@@ -104,7 +104,7 @@ func LeafHasherF(hasher Hasher) LeafHasher {
 	}
 }
 
-// interiorHasherF is a closure to create a interiorHasher function with a
+// InteriorHasherF is a closure to create a interiorHasher function with a
 // switchable hasher.
 func InteriorHasherF(hasher Hasher) InteriorHasher {
 	return func(id, left, right []byte) []byte {
