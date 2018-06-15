@@ -26,7 +26,7 @@ type Hasher func(...[]byte) []byte
 
 // Sha256Hasher implements the Hasher interface and computes the crypto/sha256
 // internal function.
-var Sha256Hasher Hasher = func(data ...[]byte) []byte {
+func Sha256Hasher(data ...[]byte) []byte {
 	hasher := sha256.New()
 
 	for i := 0; i < len(data); i++ {
@@ -38,7 +38,7 @@ var Sha256Hasher Hasher = func(data ...[]byte) []byte {
 
 // XorHasher implements the Hasher interface and computes a xor function.
 // Handy for testing hash tree implementations.
-var XorHasher Hasher = func(data ...[]byte) []byte {
+func XorHasher(data ...[]byte) []byte {
 	var result byte
 	for _, elem := range data {
 		var sum byte
@@ -52,7 +52,7 @@ var XorHasher Hasher = func(data ...[]byte) []byte {
 
 // PearsonHasher implements the Hasher interface and computes a 8 bit hash
 // function. Handy for testing hash tree implementations.
-var PearsonHasher Hasher = func(data ...[]byte) []byte {
+func PearsonHasher(data ...[]byte) []byte {
 	lookupTable := [...]uint8{
 		// 0-255 shuffled in any (random) order suffices
 		98, 6, 85, 150, 36, 23, 112, 164, 135, 207, 169, 5, 26, 64, 165, 219, //  1
