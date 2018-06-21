@@ -22,6 +22,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bbva/qed/balloon/proof"
+
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage/badger"
@@ -63,13 +65,13 @@ func TestProveMembership(t *testing.T) {
 	assert.Nil(t, err, "Error adding to the tree: %v", err)
 	assert.Equal(t, []byte{0x00}, rh, "Incorrect root hash")
 
-	proof, err := tree.ProveMembership(digest, 0, 0)
+	pf, err := tree.ProveMembership(digest, 0, 0)
 	assert.Nil(t, err, "Error adding to the tree: %v", err)
 	pos := NewPosition(0, 0, 0)
 
-	ap := make(map[string][]byte, 1)
+	ap := make(proof.AuditPath)
 	ap[pos.StringId()] = []byte{0x0}
-	assert.Equal(t, proof.AuditPath(), ap, "Incorrect audit path")
+	assert.Equal(t, pf.AuditPath(), ap, "Incorrect audit path")
 
 }
 
@@ -91,12 +93,12 @@ func TestProveMembershipN(t *testing.T) {
 		tree.Add(digest, index)
 	}
 
-	proof, err := tree.ProveMembership(digest, 8, 9)
+	pf, err := tree.ProveMembership(digest, 8, 9)
 
 	assert.Nil(t, err, "Error adding to the tree: %v", err)
 
-	ap := map[string][]uint8{"0|3": []uint8{0x7}, "12|2": []uint8{0xe}, "10|1": []uint8{0xb}, "9|0": []uint8{0x0}, "8|0": []uint8{0x0}}
-	assert.Equal(t, ap, proof.AuditPath(), "Incorrect audit path")
+	ap := proof.AuditPath{"0|3": []uint8{0x7}, "12|2": []uint8{0xe}, "10|1": []uint8{0xb}, "9|0": []uint8{0x0}, "8|0": []uint8{0x0}}
+	assert.Equal(t, ap, pf.AuditPath(), "Incorrect audit path")
 
 }
 

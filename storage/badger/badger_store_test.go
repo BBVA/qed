@@ -113,8 +113,8 @@ func TestDelete(t *testing.T) {
 	store.Delete([]byte{0x0})
 
 	value, _ := store.Get([]byte{0x0})
-	if value != nil {
-		t.Errorf("Value should be nil, got '%v' instead", value)
+	if len(value) != 0 {
+		t.Errorf("Value should be empty, got '%v' instead", value)
 	}
 }
 

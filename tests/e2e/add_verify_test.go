@@ -16,7 +16,6 @@
 package e2e
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/bbva/qed/api/apihttp"
@@ -77,12 +76,11 @@ func TestAddVerify(t *testing.T) {
 
 		let("Verify first event", func(t *testing.T) {
 			snap := &apihttp.Snapshot{
-				last.HyperDigest, // note that the hyper digest corresponds with the last one
 				first.HistoryDigest,
+				last.HyperDigest,
 				first.Version,
 				first.Event,
 			}
-			fmt.Println(snap)
 			assert.True(t, client.Verify(result, snap, new(hashing.Sha256Hasher)), "The proofs should be valid")
 		})
 

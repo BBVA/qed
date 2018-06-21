@@ -61,8 +61,8 @@ type MembershipResult struct {
 func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResult {
 	return &MembershipResult{
 		mp.Exists,
-		mp.Hyper.AuditPath(),
-		mp.History.AuditPath(),
+		mp.HyperProof.AuditPath(),
+		mp.HistoryProof.AuditPath(),
 		mp.CurrentVersion,
 		mp.QueryVersion,
 		mp.ActualVersion,
@@ -74,14 +74,14 @@ func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResu
 // ToBaloonProof translate public apihttp.MembershipResult:w to internal
 // balloon.Proof.
 
-func ToBalloonProof(id []byte, mr *MembershipResult, hasher hashing.Hasher) (*proof.Proof, *proof.Proof) {
+func ToBalloonProof(id []byte, mr *MembershipResult, hasher hashing.Hasher) *balloon.MembershipProof {
 
-	historyPos := history.NewRootPosition(mr.CurrentVersion)
+	historyPos := history.NewRootPosition(mr.QueryVersion)
 	hyperPos := hyper.NewRootPosition(hasher.Len(), 0)
 
 	historyProof := proof.NewProof(historyPos, mr.History, hasher)
 	hyperProof := proof.NewProof(hyperPos, mr.Hyper, hasher)
 
-	return historyProof, hyperProof
+	return balloon.NewMembershipProof(mr.Exists, hyperProof, historyProof, mr.CurrentVersion, mr.ActualVersion, mr.QueryVersion, mr.KeyDigest, hasher)
 
 }

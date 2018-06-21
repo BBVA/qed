@@ -61,12 +61,67 @@ type Commitment struct {
 // Current, Actual and Query Versions.
 type MembershipProof struct {
 	Exists         bool
-	Hyper          *proof.Proof
-	History        *proof.Proof
+	HyperProof     proof.Verifiable
+	HistoryProof   proof.Verifiable
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64
 	KeyDigest      []byte
+	hasher         hashing.Hasher
+}
+
+func NewMembershipProof(
+	exists bool,
+	hyperProof proof.Verifiable,
+	historyProof proof.Verifiable,
+	currentVersion uint64,
+	queryVersion uint64,
+	actualVersion uint64,
+	keyDigest []byte,
+	hasher hashing.Hasher,
+) *MembershipProof {
+	return &MembershipProof{
+		exists,
+		hyperProof,
+		historyProof,
+		currentVersion,
+		queryVersion,
+		actualVersion,
+		keyDigest,
+		hasher,
+	}
+}
+
+func (p MembershipProof) Verify(commitment *Commitment, event []byte) bool {
+	if p.HyperProof == nil || p.HistoryProof == nil {
+		return false
+	}
+
+	digest := p.hasher.Do(event)
+	hyperCorrect := p.HyperProof.Verify(
+		commitment.HyperDigest,
+		digest,
+		uint2bytes(p.QueryVersion),
+	)
+
+	if p.Exists {
+		if p.QueryVersion <= p.ActualVersion {
+			historyCorrect := p.HistoryProof.Verify(
+				commitment.HistoryDigest,
+				uint2bytes(p.QueryVersion),
+				digest,
+			)
+			return hyperCorrect && historyCorrect
+		}
+	}
+
+	return hyperCorrect
+}
+
+func uint2bytes(i uint64) []byte {
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytes, i)
+	return bytes
 }
 
 // NewHyperBalloon returns a HyperBalloon struct.
@@ -196,39 +251,29 @@ func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
 
 func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*MembershipProof, error) {
 	var err error
-	var historyProof *proof.Proof
-	var hyperProof *proof.Proof
+	var mp MembershipProof
 	var actualValue []byte
+	mp.KeyDigest = b.hasher.Do(event)
+	mp.QueryVersion = version
+	mp.CurrentVersion = b.version - 1
 
-	digest := b.hasher.Do(event)
-
-	hyperProof, actualValue, err = b.hyper.ProveMembership(digest)
+	mp.HyperProof, actualValue, err = b.hyper.ProveMembership(mp.KeyDigest)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
 	}
 
-	var exists bool
-	var actualVersion uint64
-
 	if len(actualValue) > 0 {
-		exists = true
-		actualVersion = binary.LittleEndian.Uint64(actualValue)
+		mp.Exists = true
+		mp.ActualVersion = binary.LittleEndian.Uint64(actualValue)
 	}
 
-	if exists && actualVersion <= version {
-		historyProof, err = b.history.ProveMembership(actualValue, actualVersion, version)
+	if mp.Exists && mp.ActualVersion <= mp.QueryVersion {
+		mp.HistoryProof, err = b.history.ProveMembership(actualValue, mp.ActualVersion, mp.QueryVersion)
 	} else {
-		return &MembershipProof{}, fmt.Errorf("Unable to get proof from history tree: %v", err)
+		mp.Exists = false
+		return &mp, fmt.Errorf("Unable to get proof from history tree: %v", err)
 	}
 
-	return &MembershipProof{
-		exists,
-		hyperProof,
-		historyProof,
-		version,
-		actualVersion,
-		b.version - 1, // notice, this is the current version of balloon version
-		digest,
-	}, nil
+	return &mp, nil
 
 }
