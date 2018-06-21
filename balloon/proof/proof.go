@@ -20,17 +20,23 @@ package proof
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/bbva/qed/balloon/position"
 	"github.com/bbva/qed/hashing"
 )
+
+type Verifiable interface {
+	Verify([]byte, []byte, []byte) bool
+	AuditPath() AuditPath
+}
 
 func NewProof(root position.Position, ap AuditPath, hasher hashing.Hasher) *Proof {
 	return &Proof{
 		root,
 		ap,
 		hashing.InteriorHasherF(hasher),
-		hashing.LeafHasherF(hasher),
+		hashing.LeafHasherF(hasher), // TODO not necessary?
 	}
 }
 
@@ -43,7 +49,7 @@ type Proof struct {
 	lh        hashing.LeafHasher
 }
 
-func (p Proof) AuditPath() map[string][]byte {
+func (p Proof) AuditPath() AuditPath {
 	return p.auditPath
 }
 
@@ -55,7 +61,7 @@ func (p Proof) InteriorHash(id []byte, h1 []byte, h2 []byte) []byte {
 	return p.ih(id, h1, h2)
 }
 
-func computeHash(p Proof, pos position.Position, key, value []byte, auditPath map[string][]byte) []byte {
+func computeHash(p Proof, pos position.Position, key, value []byte, auditPath AuditPath) []byte {
 
 	var digest []byte
 	direction := pos.Direction(key)
@@ -72,13 +78,12 @@ func computeHash(p Proof, pos position.Position, key, value []byte, auditPath ma
 	return digest
 }
 
-// NewRootHyperPosition(p.treeId, p.numBits, 0)
-// NewRootHistoryPosition(p.treeId, p.version, p.version)
 func (p Proof) Verify(expectedDigest []byte, key, value []byte) bool {
 	ap := p.AuditPath()
 	if len(ap) == 0 {
 		return false
 	}
 	recomputed := computeHash(p, p.root, key, value, ap)
+	fmt.Printf("Expected: %x, Recomputed: %x\n", expectedDigest, recomputed)
 	return bytes.Equal(expectedDigest, recomputed)
 }

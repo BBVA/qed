@@ -52,7 +52,7 @@ func (s BadgerStorage) Get(key []byte) ([]byte, error) {
 	switch err {
 	case nil:
 		return value, nil
-	case b.ErrEmptyKey:
+	case b.ErrKeyNotFound:
 		return make([]byte, 0), nil
 	default:
 		return nil, err

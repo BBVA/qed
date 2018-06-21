@@ -23,6 +23,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/bbva/qed/hashing"
+
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/proof"
 	assert "github.com/stretchr/testify/require"
@@ -172,15 +174,16 @@ func TestMembership(t *testing.T) {
 	handler := Membership(newMembershipOpFakeBalloon(p))
 	expectedResult := &MembershipResult{Exists: true, Hyper: map[string][]uint8(nil), History: map[string][]uint8(nil), CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
 	go func() {
-		p <- &balloon.MembershipProof{
+		p <- balloon.NewMembershipProof(
 			true,
 			proof.NewProof(nil, nil, nil),
 			proof.NewProof(nil, nil, nil),
 			version,
 			version,
-			version + 1,
+			version+1,
 			[]byte{0x0},
-		}
+			new(hashing.Sha256Hasher),
+		)
 	}()
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method

@@ -18,12 +18,16 @@ package balloon
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 	"testing"
 
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon/proof"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/storage/bolt"
@@ -79,6 +83,352 @@ func TestAdd(t *testing.T) {
 		if bytes.Compare(commitment.HistoryDigest, e.historyDigest) != 0 {
 			t.Fatalf("Wrong history digest for test %d: expected: %x, Actual: %x", i, e.historyDigest, commitment.HistoryDigest)
 		}
+	}
+
+}
+
+func TestGenMembershipProof(t *testing.T) {
+
+	frozen, frozenCloseF := openBPlusStorage()
+	leaves, leavesCloseF := openBPlusStorage()
+	defer frozenCloseF()
+	defer leavesCloseF()
+
+	cache := cache.NewSimpleCache(0)
+	hasher := new(hashing.XorHasher)
+
+	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
+	historyT := history.NewFakeTree(string(0x0), frozen, hasher)
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+
+	key := []byte{0x5a}
+	var version uint64 = 0
+	expectedHyperAuditPath := map[string][]byte{
+		"5a|0": {0x00},
+		"5b|0": {0x00},
+		"58|1": {0x00},
+		"5c|2": {0x00},
+		"50|3": {0x00},
+		"40|4": {0x00},
+		"60|5": {0x00},
+		"00|6": {0x00},
+		"80|7": {0x00},
+	}
+	expectedHistoryAuditPath := map[string][]byte{
+		"0|0": {0x5a},
+	}
+
+	<-balloon.Add(key)
+
+	proof := <-balloon.GenMembershipProof(key, version)
+
+	if !proof.Exists {
+		t.Fatalf("Wrong proof: the event should exist")
+	}
+
+	if proof.QueryVersion != version {
+		t.Fatalf("The query version does not match: expected %d, actual %d", version, proof.QueryVersion)
+	}
+
+	if proof.ActualVersion != version {
+		t.Fatalf("The actual version does not match: expected %d, actual %d", version, proof.ActualVersion)
+	}
+
+	if !compareAuditPaths(expectedHyperAuditPath, proof.HyperProof.AuditPath()) {
+		t.Fatalf("Wrong hyper audit path: expected %v, actual %v", expectedHyperAuditPath, proof.HyperProof.AuditPath())
+	}
+
+	if !compareAuditPaths(expectedHistoryAuditPath, proof.HistoryProof.AuditPath()) {
+		t.Fatalf("Wrong history audit path: expected %v, actual %v", expectedHistoryAuditPath, proof.HistoryProof.AuditPath())
+	}
+
+}
+
+func compareAuditPaths(expected, actual proof.AuditPath) bool {
+	if len(expected) != len(actual) {
+		return false
+	}
+
+	for k, v := range expected {
+		if !bytes.Equal(v, actual[k]) {
+			return false
+		}
+	}
+	return true
+}
+
+type FakeVerifiable struct {
+	result bool
+}
+
+func NewFakeVerifiable(result bool) *FakeVerifiable {
+	return &FakeVerifiable{result}
+}
+
+func (f FakeVerifiable) Verify(commitment, event, version []byte) bool {
+	return f.result
+}
+
+func (f FakeVerifiable) AuditPath() proof.AuditPath {
+	return make(map[string][]byte)
+}
+
+func TestVerify(t *testing.T) {
+
+	testCases := []struct {
+		exists         bool
+		hyperOK        bool
+		historyOK      bool
+		currentVersion uint64
+		queryVersion   uint64
+		actualVersion  uint64
+		expectedResult bool
+	}{
+		// Event exists, queryVersion <= actualVersion, and both trees verify it
+		{true, true, true, uint64(0), uint64(0), uint64(0), true},
+		// Event exists, queryVersion <= actualVersion, but HyperTree does not verify it
+		{true, false, true, uint64(0), uint64(0), uint64(0), false},
+		// Event exists, queryVersion <= actualVersion, but HistoryTree does not verify it
+		{true, true, false, uint64(0), uint64(0), uint64(0), false},
+
+		// Event exists, queryVersion > actualVersion, and both trees verify it
+		{true, true, true, uint64(1), uint64(1), uint64(0), true},
+		// Event exists, queryVersion > actualVersion, but HyperTree does not verify it
+		{true, false, true, uint64(1), uint64(1), uint64(0), false},
+
+		// Event does not exist, HyperTree verifies it
+		{false, true, false, uint64(0), uint64(0), uint64(0), true},
+		// Event does not exist, HyperTree does not verify it
+		{false, false, false, uint64(0), uint64(0), uint64(0), false},
+	}
+
+	for i, c := range testCases {
+		event := []byte("Yadda yadda")
+		commitment := &Commitment{
+			[]byte("Some hyperDigest"),
+			[]byte("Some historyDigest"),
+			c.actualVersion,
+		}
+		proof := NewMembershipProof(
+			c.exists,
+			NewFakeVerifiable(c.hyperOK),
+			NewFakeVerifiable(c.historyOK),
+			c.currentVersion,
+			c.queryVersion,
+			c.actualVersion,
+			event,
+			new(hashing.Sha256Hasher),
+		)
+		result := proof.Verify(commitment, event)
+
+		if result != c.expectedResult {
+			t.Fatalf("Unexpected result '%v' in test case '%d'", result, i)
+		}
+	}
+}
+
+func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, *badger.BadgerStorage, func()) {
+	dir, err := ioutil.TempDir("/var/tmp/", "balloon.test")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	frozen, frozenCloseF := openBadgerStorage(fmt.Sprintf("%s/frozen", dir))
+	leaves, leavesCloseF := openBadgerStorage(fmt.Sprintf("%s/leaves", dir))
+	cache := cache.NewSimpleCache(1 << 20)
+
+	hyperT := hyper.NewTree(id, cache, leaves, hasher)
+	historyT := history.NewTree(id, frozen, hasher)
+	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+
+	return balloon, leaves, func() {
+		frozenCloseF()
+		leavesCloseF()
+		os.RemoveAll(dir)
+	}
+}
+
+func TestAddAndVerify(t *testing.T) {
+
+	id := string(0x0)
+	hasher := new(hashing.Sha256Hasher)
+
+	balloon, _, closeF := createBalloon(id, hasher)
+	defer closeF()
+
+	key := []byte("Never knows best")
+	keyDigest := hasher.Do(key)
+
+	commitment := <-balloon.Add(key)
+	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	historyProof := proof.NewProof(history.NewRootPosition(commitment.Version), membershipProof.HistoryProof.AuditPath(), hasher)
+	hyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), membershipProof.HyperProof.AuditPath(), hasher)
+
+	proof := NewMembershipProof(
+		membershipProof.Exists,
+		hyperProof,
+		historyProof,
+		membershipProof.CurrentVersion,
+		membershipProof.QueryVersion,
+		membershipProof.ActualVersion,
+		keyDigest,
+		hasher,
+	)
+
+	correct := proof.Verify(commitment, key)
+
+	if !correct {
+		t.Errorf("Proof is incorrect")
+	}
+
+}
+
+func TestTamperAndVerify(t *testing.T) {
+
+	id := string(0x0)
+	hasher := new(hashing.Sha256Hasher)
+
+	balloon, store, closeF := createBalloon(id, hasher)
+	defer closeF()
+
+	key := []byte("Never knows best")
+	keyDigest := hasher.Do(key)
+
+	commitment := <-balloon.Add(key)
+	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	historyProof := proof.NewProof(history.NewRootPosition(commitment.Version), membershipProof.HistoryProof.AuditPath(), hasher)
+	hyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), membershipProof.HyperProof.AuditPath(), hasher)
+
+	memProof := NewMembershipProof(
+		membershipProof.Exists,
+		hyperProof,
+		historyProof,
+		membershipProof.CurrentVersion,
+		membershipProof.QueryVersion,
+		membershipProof.ActualVersion,
+		keyDigest,
+		hasher,
+	)
+
+	correct := memProof.Verify(commitment, key)
+	if !correct {
+		t.Errorf("Proof is incorrect")
+	}
+
+	original, _ := store.Get(keyDigest)
+
+	tamperVal := ^uint64(0) // max uint ftw!
+	tpBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(tpBytes, tamperVal)
+
+	err := store.Add(keyDigest, tpBytes)
+	if err != nil {
+		t.Fatal("store add returned not nil value")
+	}
+
+	tampered, _ := store.Get(keyDigest)
+	if bytes.Compare(tpBytes, tampered) != 0 {
+		t.Fatal("Tamper unsuccesfull")
+	}
+	if bytes.Compare(original, tampered) == 0 {
+		t.Fatal("Tamper unsuccesfull")
+	}
+
+	tpMembershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	tpHyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), tpMembershipProof.HyperProof.AuditPath(), hasher)
+
+	if tpMembershipProof.HistoryProof != nil {
+		t.Fatal("The history proof must be nil")
+	}
+
+	tpProof := NewMembershipProof(
+		tpMembershipProof.Exists,
+		tpHyperProof,
+		nil,
+		tpMembershipProof.CurrentVersion,
+		tpMembershipProof.QueryVersion,
+		tpMembershipProof.ActualVersion,
+		keyDigest,
+		hasher,
+	)
+
+	if tpProof.Verify(commitment, key) {
+		t.Errorf("TamperProof unsuccessful")
+	}
+
+}
+
+func TestDeleteAndVerify(t *testing.T) {
+
+	id := string(0x0)
+	hasher := new(hashing.Sha256Hasher)
+
+	balloon, store, closeF := createBalloon(id, hasher)
+	defer closeF()
+
+	key := []byte("Never knows best")
+	keyDigest := hasher.Do(key)
+
+	commitment := <-balloon.Add(key)
+	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	historyProof := proof.NewProof(history.NewRootPosition(commitment.Version), membershipProof.HistoryProof.AuditPath(), hasher)
+	hyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), membershipProof.HyperProof.AuditPath(), hasher)
+
+	memProof := NewMembershipProof(
+		membershipProof.Exists,
+		hyperProof,
+		historyProof,
+		membershipProof.CurrentVersion,
+		membershipProof.QueryVersion,
+		membershipProof.ActualVersion,
+		keyDigest,
+		hasher,
+	)
+
+	correct := memProof.Verify(commitment, key)
+	if !correct {
+		t.Errorf("Proof is incorrect")
+	}
+
+	tamperVal := ^uint64(0) // max uint ftw!
+	tpBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(tpBytes, tamperVal)
+
+	err := store.Delete(keyDigest)
+	if err != nil {
+		t.Fatal("store.Delete returned not nil value")
+	}
+
+	tampered, _ := store.Get(keyDigest)
+	if len(tampered) > 0 {
+		t.Fatal("Tamper unsuccesfull")
+	}
+
+	tpMembershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
+
+	tpHyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), tpMembershipProof.HyperProof.AuditPath(), hasher)
+
+	if tpMembershipProof.HistoryProof != nil {
+		t.Fatal("The history proof must be nil")
+	}
+
+	tpProof := NewMembershipProof(
+		tpMembershipProof.Exists,
+		tpHyperProof,
+		nil,
+		tpMembershipProof.CurrentVersion,
+		tpMembershipProof.QueryVersion,
+		tpMembershipProof.ActualVersion,
+		keyDigest,
+		hasher,
+	)
+
+	if tpProof.Verify(commitment, key) {
+		t.Errorf("TamperProof unsuccessful")
 	}
 
 }

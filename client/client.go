@@ -27,6 +27,7 @@ import (
 	"net/http"
 
 	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 )
 
@@ -127,16 +128,12 @@ func uint2bytes(i uint64) []byte {
 
 func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot, hasher hashing.Hasher) bool {
 
-	historyProof, hyperProof := apihttp.ToBalloonProof([]byte(c.apiKey), result, hasher)
+	proof := apihttp.ToBalloonProof([]byte(c.apiKey), result, hasher)
 
-	// digest := hasher.Do(snap.Event)
-	hyperCorrect := hyperProof.Verify(snap.HyperDigest, result.KeyDigest, uint2bytes(result.QueryVersion))
-	if result.Exists {
-		if result.QueryVersion <= result.ActualVersion {
-			historyCorrect := historyProof.Verify(snap.HistoryDigest, uint2bytes(result.QueryVersion), result.KeyDigest)
-			return hyperCorrect && historyCorrect
-		}
-	}
+	return proof.Verify(&balloon.Commitment{
+		snap.HistoryDigest,
+		snap.HyperDigest,
+		snap.Version,
+	}, snap.Event)
 
-	return hyperCorrect
 }
