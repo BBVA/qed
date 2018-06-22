@@ -112,7 +112,7 @@ func (t *Tree) toCache(key, value []byte, pos position.Position) []byte {
 		first := pos.FirstLeaf()
 		last := pos.LastLeaf()
 		d := t.leaves.GetRange(first.Key(), last.Key())
-		return t.fromStorage(d, value, pos)
+		return t.fromStorage(d, pos)
 	}
 
 	// if not, the node hash is the hash of our left and right child
@@ -160,13 +160,13 @@ func (t *Tree) fromCache(pos position.Position) []byte {
 
 }
 
-func (t *Tree) fromStorage(d [][]byte, value []byte, pos position.Position) []byte {
+func (t *Tree) fromStorage(d [][]byte, pos position.Position) []byte {
 
 	// if we are a leaf, return our hash
 	if len(d) == 1 && pos.IsLeaf() {
 		metrics.Hyper.Add("leaf", 1)
 		metrics.Hyper.Add("leaf_hash", 1)
-		return t.leafHash(pos.Id(), pos.Key())
+		return t.leafHash(d[0], pos.Key())
 	}
 
 	// if there are no more childs,
@@ -183,8 +183,8 @@ func (t *Tree) fromStorage(d [][]byte, value []byte, pos position.Position) []by
 	rightChild := pos.Right()
 	leftSlice, rightSlice := Split(d, rightChild.Key())
 
-	left := t.fromStorage(leftSlice, value, pos.Left())
-	right := t.fromStorage(rightSlice, value, rightChild)
+	left := t.fromStorage(leftSlice, pos.Left())
+	right := t.fromStorage(rightSlice, rightChild)
 	metrics.Hyper.Add("interior_hash", 1)
 	return t.interiorHash(pos.Id(), left, right)
 }
@@ -227,14 +227,14 @@ func (t *Tree) auditPathFromStorage(d [][]byte, key []byte, pos position.Positio
 
 	switch {
 	case direction == position.Halt && pos.IsLeaf():
-		ap[pos.StringId()] = t.fromStorage(d, key, pos)
+		ap[pos.StringId()] = t.fromStorage(d, pos)
 	case direction == position.Left:
 		right := pos.Right()
-		ap[right.StringId()] = t.fromStorage(rightSlice, key, right)
+		ap[right.StringId()] = t.fromStorage(rightSlice, right)
 		t.auditPathFromStorage(leftSlice, key, pos.Left(), ap)
 	case direction == position.Right:
 		left := pos.Left()
-		ap[left.StringId()] = t.fromStorage(leftSlice, key, left)
+		ap[left.StringId()] = t.fromStorage(leftSlice, left)
 		t.auditPathFromStorage(rightSlice, key, pos.Right(), ap)
 	}
 
