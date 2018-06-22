@@ -20,7 +20,6 @@ package proof
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/bbva/qed/balloon/position"
 	"github.com/bbva/qed/hashing"
@@ -84,6 +83,5 @@ func (p Proof) Verify(expectedDigest []byte, key, value []byte) bool {
 		return false
 	}
 	recomputed := computeHash(p, p.root, key, value, ap)
-	fmt.Printf("Expected: %x, Recomputed: %x\n", expectedDigest, recomputed)
 	return bytes.Equal(expectedDigest, recomputed)
 }
