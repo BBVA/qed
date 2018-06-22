@@ -101,7 +101,7 @@ func Add(balloon balloon.Balloon) http.HandlerFunc {
 
 		// Wait for the response
 		response := <-balloon.Add(event.Event)
-		out, err := json.Marshal(ToSnapshot(response, event.Event))
+		out, err := json.Marshal(Snapshot{response.HistoryDigest, response.HyperDigest, response.Version, event.Event})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -148,7 +148,7 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 		// Wait for the response
 		proof := <-balloon.GenMembershipProof(query.Key, query.Version)
 
-		out, err := json.Marshal(ToMembershipProof(query.Key, proof))
+		out, err := json.Marshal(ToMembershipResult(query.Key, proof))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

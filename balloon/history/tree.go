@@ -23,10 +23,11 @@ package history
 import (
 	"encoding/binary"
 	"math"
+	"sync"
 
-	"github.com/bbva/qed/balloon/history/storage"
+	"github.com/bbva/qed/balloon/position"
+	"github.com/bbva/qed/balloon/proof"
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 )
 
@@ -68,207 +69,66 @@ import (
 // with the following formula:
 //  layer = ceil(log(index))
 //
+
 type Tree struct {
-	frozen         storage.Store // already computed nodes, that will not change
-	leafHasher     hashing.LeafHasher
-	interiorHasher hashing.InteriorHasher
-	ops            chan interface{} // serialize operations
-}
-
-// Node is the struct required to compute the auditPath in the auditor
-type Node struct {
-	Digest       []byte
-	Index, Layer uint64
-}
-
-// MembershipProof is a proof of membership of an event. It consist of an
-// array of Nodes.
-type MembershipProof struct {
-	Nodes []Node
+	treeId       []byte
+	frozen       Store
+	hasher       hashing.Hasher
+	interiorHash hashing.InteriorHasher
+	leafHash     hashing.LeafHasher
+	sync.RWMutex
 }
 
 // NewTree returns a new history Tree struct.
-func NewTree(frozen storage.Store, hasher hashing.Hasher) *Tree {
+func NewTree(id string, frozen Store, hasher hashing.Hasher) *Tree {
+	var m sync.RWMutex
 
 	t := &Tree{
+		[]byte(id),
 		frozen,
-		hashing.LeafHasherF(hasher),
+		hasher,
 		hashing.InteriorHasherF(hasher),
-		nil,
+		hashing.LeafHasherF(hasher),
+		m,
 	}
-
-	// start tree goroutine to handle
-	// tree operations
-	t.ops = t.operations()
 
 	return t
 }
 
-// Queues an Add operation to the tree and returns a channel. The result
-// []byte will be sent when ready.
-func (t Tree) Add(digest, index []byte) chan []byte {
-	result := make(chan []byte, 0)
-	t.ops <- &add{
-		digest,
-		index,
-		result,
-	}
-	return result
+func (t Tree) Close() {
+	t.Lock()
+	defer t.Unlock()
+	t.frozen.Close()
 }
 
-// ProveMembership queues a membership operation to the tree and returns a channel. The
-// MembershipProof struct will be sent when ready.
-func (t Tree) ProveMembership(key []byte, index, version uint64) chan *MembershipProof {
-	result := make(chan *MembershipProof, 0)
-	t.ops <- &membership{
-		key,
-		index,
-		version,
-		result,
-	}
-	return result
-}
+func (t *Tree) Add(eventDigest, index []byte) ([]byte, error) {
+	t.Lock()
+	defer t.Unlock()
 
-// Queues a Stop operation to the tree and returns a channel
-// were a true or false will be send when the operation is completed
-func (t Tree) Close() chan bool {
-	result := make(chan bool)
-	t.ops <- &close{true, result}
-	return result
-}
-
-// INTERNALS
-
-// Internally we use a channel API to serialize operations
-// but external we use exported methods to be called
-// by others.
-// These methods returns a channel with an appropriate type
-// for each operation to be consumed from when the data arrives.
-
-// Internal Struct add for use in operations serializer
-type add struct {
-	digest []byte
-	index  []byte
-	result chan []byte
-}
-
-// Internal Struct proof for use in operations serializer
-type membership struct {
-	key            []byte
-	index, version uint64
-	result         chan *MembershipProof
-}
-
-// Internal Struct close for use in operations serializer
-type close struct {
-	stop   bool
-	result chan bool
-}
-
-// Internal operations serializer runs internal commands by type assertion.
-func (t *Tree) operations() chan interface{} {
-	operations := make(chan interface{}, 0)
-	go func() {
-		for {
-			select {
-			case op := <-operations:
-				switch msg := op.(type) {
-
-				case *add:
-					digest, err := t.add(msg.digest, msg.index)
-					if err != nil {
-						log.Errorf("Operations error: %v", err)
-					}
-					msg.result <- digest
-
-				case *membership:
-					proof, err := t.proveMembership(msg.key, msg.index, msg.version)
-					if err != nil {
-						log.Errorf("Operations error: %v", err)
-					}
-					msg.result <- proof
-
-				case *close:
-					t.frozen.Close()
-					msg.result <- true
-					return
-
-				default:
-					log.Error("Hyper tree Run() message not implemented!!")
-
-				}
-			}
-		}
-	}()
-	return operations
-}
-
-// Internal add function adds an event the system appends it to the history
-// tree as the i:th entry and then outputs a root hash as a commitment.
-// t.ps://eprint.iacr.org/2015/007.pdf
-func (t *Tree) add(eventDigest []byte, index []byte) ([]byte, error) {
 	version := binary.LittleEndian.Uint64(index)
 
 	// calculate commitment as C_n = A_n(0,d)
-	depth := t.getDepth(version)
-	rootDigest, err := t.rootHash(eventDigest, 0, depth, version)
+	rootDigest, err := t.computeHash(eventDigest, NewRootPosition(version), version)
 	if err != nil {
 		return nil, err
 	}
 	return rootDigest, nil
 }
 
-// Internal proveMembership generates an auditPath and returns it as
-// history.MembershipProof.
-func (t Tree) proveMembership(key []byte, index, version uint64) (*MembershipProof, error) {
-	var proof MembershipProof
-	err := t.auditPath(key, index, 0, t.getDepth(version), version, &proof)
+func (t Tree) ProveMembership(key []byte, index, version uint64) (*proof.Proof, error) {
+	t.Lock()
+	defer t.Unlock()
+
+	ap := make(proof.AuditPath)
+	pos := NewRootPosition(version)
+	err := t.auditPath(key, index, version, pos, ap)
 	if err != nil {
 		return nil, err
 	}
-	return &proof, nil
+
+	return proof.NewProof(pos, ap, t.hasher), nil
 }
 
-// Internal AuditPath function recursivelly iterate through the history tree
-// and store in proof input parameter the final path.
-func (t Tree) auditPath(key []byte, target, index, layer, version uint64, proof *MembershipProof) (err error) {
-	if layer == 0 || index > version {
-		return
-	}
-
-	// the number of events to the left of the node
-	n := index + pow(2, layer-1)
-	if target < n {
-		// go left, but should we save right first? We need to save right if there are any leaf nodes
-		// fixed by the right node (otherwise we know it's hash is nil), dictated by the version of the
-		// tree we are generating
-		if version >= n {
-			node := new(Node)
-			node.Index = n
-			node.Layer = layer - 1
-			node.Digest, err = t.rootHash(key, node.Index, node.Layer, version)
-			if err != nil {
-				return
-			}
-			proof.Nodes = append(proof.Nodes, *node)
-		}
-		return t.auditPath(key, target, index, layer-1, version, proof)
-	}
-	// go right, once we have saved the left node
-	node := new(Node)
-	node.Index = index
-	node.Layer = layer - 1
-
-	node.Digest, err = t.rootHash(key, node.Index, node.Layer, version)
-	if err != nil {
-		return
-	}
-	proof.Nodes = append(proof.Nodes, *node)
-
-	return t.auditPath(key, target, n, layer-1, version, proof)
-}
-
-// getDepth Returns the current layer or depth of the tree
 func (t Tree) getDepth(index uint64) uint64 {
 	return uint64(math.Ceil(math.Log2(float64(index + 1))))
 }
@@ -280,66 +140,54 @@ func uInt64AsBytes(i uint64) []byte {
 	return valuebytes
 }
 
-// frozenKey is a util to translate index and layer to the digest from the
-// frozen storage
-func frozenKey(index, layer uint64) []byte {
-	return append(uInt64AsBytes(index), uInt64AsBytes(layer)...)
-}
-
-// rootHash is a function that recursively traverses the nodes and returns the
-// nootNode digest.
-func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byte, error) {
+func (t *Tree) computeHash(eventDigest []byte, pos position.Position, version uint64) ([]byte, error) {
 
 	var digest []byte
 
 	// try to unfroze first
-	if version >= index+pow(2, layer)-1 {
+	if pos.ShouldBeCached() {
 		metrics.History.Add("unfreezing", 1)
-		digest, err := t.frozen.Get(frozenKey(index, layer))
+		digest, err := t.frozen.Get(pos.Id())
 		if err == nil && len(digest) != 0 {
-			metrics.History.Add("unfreezing_hits", 1)
 			return digest, nil
 		}
 	}
 
+	direction := pos.Direction(uInt64AsBytes(version))
+
 	switch {
-
-	// we are at a leaf: A_v(i,0)
-	case layer == 0 && version >= index:
-		digest = t.leafHasher(Zero, eventDigest)
+	case direction == position.Halt && pos.IsLeaf():
 		metrics.History.Add("leaf_hashes", 1)
-		break
-
-	// A_v(i,r)
-	case version < index+pow(2, layer-1):
-		hash, err := t.rootHash(eventDigest, index, layer-1, version)
+		digest = t.leafHash(pos.Id(), eventDigest)
+	case direction == position.Left:
+		hash, err := t.computeHash(eventDigest, pos.Left(), version)
 		if err != nil {
 			return nil, err
 		}
-		digest = t.leafHasher(One, hash)
+		metrics.History.Add("leaf_hashes", 1)
+		digest = t.leafHash(pos.Id(), hash)
+	case direction == position.Right:
+		hash1, err := t.computeHash(eventDigest, pos.Left(), version)
+		if err != nil {
+			return nil, err
+		}
+		hash2, err := t.computeHash(eventDigest, pos.Right(), version)
+		if err != nil {
+			return nil, err
+		}
 		metrics.History.Add("internal_hashes", 1)
-		break
-
-	// A_v(i,r)
-	case version >= index+pow(2, layer-1):
-		hash1, err := t.rootHash(eventDigest, index, layer-1, version)
-		if err != nil {
-			return nil, err
-		}
-		hash2, err := t.rootHash(eventDigest, index+pow(2, layer-1), layer-1, version)
-		if err != nil {
-			return nil, err
-		}
-		digest = t.interiorHasher(One, hash1, hash2)
-		metrics.History.Add("internal_hashes", 1)
-		break
-
+		digest = t.interiorHash(pos.Id(), hash1, hash2)
+	default:
+		// nodes needed by audit path which are beyond the version
+		// are 0x0
+		metrics.History.Add("leaf_hashes", 1)
+		digest = t.leafHash(pos.Id(), []byte{0x0})
 	}
 
 	// froze the node with its new digest
-	if version >= index+pow(2, layer)-1 {
+	if pos.ShouldBeCached() {
 		metrics.History.Add("freezing", 1)
-		err := t.frozen.Add(frozenKey(index, layer), digest)
+		err := t.frozen.Add(pos.Id(), digest)
 		if err != nil {
 			// if it was already frozen nothing happens
 		}
@@ -348,7 +196,32 @@ func (t *Tree) rootHash(eventDigest []byte, index, layer, version uint64) ([]byt
 	return digest, nil
 }
 
-// Utility to calculate arbitraty pow and return an int64
-func pow(x, y uint64) uint64 {
-	return uint64(math.Pow(float64(x), float64(y)))
+func (t Tree) auditPath(key []byte, targetIndex, version uint64, pos position.Position, ap proof.AuditPath) (err error) {
+
+	direction := pos.Direction(uInt64AsBytes(targetIndex))
+
+	switch {
+	case direction == position.Halt && pos.IsLeaf():
+		err = t.appendHashToPath(key, pos, version, ap)
+		return
+	case direction == position.Left:
+		t.appendHashToPath(key, pos.Right(), version, ap)
+		return t.auditPath(key, targetIndex, version, pos.Left(), ap)
+	case direction == position.Right:
+		t.appendHashToPath(key, pos.Left(), version, ap)
+		return t.auditPath(key, targetIndex, version, pos.Right(), ap)
+	default:
+		panic("WTF")
+		return
+	}
+
+}
+
+func (t Tree) appendHashToPath(key []byte, pos position.Position, version uint64, ap proof.AuditPath) (err error) {
+	hash, err := t.computeHash(key, pos, version)
+	if err != nil {
+		return err
+	}
+	ap[pos.StringId()] = hash
+	return
 }

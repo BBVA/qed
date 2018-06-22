@@ -14,12 +14,29 @@
    limitations under the License.
 */
 
-package history
+// Package balloon implements the tree interface to interact with both hyper
+// and history trees.
+package position
 
-// Constant Zero is the 0x0 byte, and it is used as a prefix to know
-// if a node has a zero digest.
-var Zero = []byte{0x0}
+type Direction int
 
-// Constant One is the 0x1 byte, and it is used as a prefix to know
-// if a node has a non-zero digest.
-var One = []byte{0x1}
+const (
+	Left Direction = iota
+	Right
+	Halt
+)
+
+type Position interface {
+	String() string
+	Key() []byte    // the index or base of a position
+	Height() uint64 // or layer
+	Id() []byte     // identifies unambiguously a position (concatenation of the key and the height/layer)
+	StringId() string
+	Left() Position
+	Right() Position
+	Direction([]byte) Direction
+	IsLeaf() bool
+	FirstLeaf() Position
+	LastLeaf() Position
+	ShouldBeCached() bool
+}

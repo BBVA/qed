@@ -23,8 +23,6 @@ import (
 	"errors"
 
 	"github.com/google/btree"
-
-	"github.com/bbva/qed/balloon/hyper/storage"
 )
 
 type BPlusTreeStorage struct {
@@ -56,8 +54,8 @@ func (s BPlusTreeStorage) Get(key []byte) ([]byte, error) {
 	return item.(KVPair).Value, nil
 }
 
-func (s BPlusTreeStorage) GetRange(start, end []byte) storage.LeavesSlice {
-	var leaves storage.LeavesSlice
+func (s BPlusTreeStorage) GetRange(start, end []byte) [][]byte {
+	var leaves [][]byte
 	s.store.AscendGreaterOrEqual(KVPair{start, nil}, func(i btree.Item) bool {
 		if bytes.Compare(i.(KVPair).Key, end) > 0 {
 			return false

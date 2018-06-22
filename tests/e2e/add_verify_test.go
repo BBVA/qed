@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/testutils/scope"
 	assert "github.com/stretchr/testify/require"
@@ -49,14 +50,14 @@ func TestAddVerify(t *testing.T) {
 
 			result, err := client.Membership([]byte(event), snapshot.Version)
 			assert.NoError(t, err)
-			assert.True(t, result.IsMember, "The queried key should be a member")
+			assert.True(t, result.Exists, "The queried key should be a member")
 			assert.Equal(t, result.QueryVersion, snapshot.Version, "The query version doest't match the queried one: expected %d, actual %d", snapshot.Version, result.QueryVersion)
 			assert.Equal(t, result.ActualVersion, snapshot.Version, "The actual version should match the queried one: expected %d, actual %d", snapshot.Version, result.ActualVersion)
 			assert.Equal(t, result.CurrentVersion, snapshot.Version, "The current version should match the queried one: expected %d, actual %d", snapshot.Version, result.CurrentVersion)
 			assert.Equal(t, []byte(event), result.Key, "The returned event doesn't math the original one: expected %s, actual %s", event, result.Key)
 			assert.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
-			assert.False(t, len(result.Proofs.HyperAuditPath) == 0, "The hyper proof cannot be empty")
-			assert.False(t, result.ActualVersion > 0 && len(result.Proofs.HistoryAuditPath) == 0, "The history proof cannot be empty when version is greater than 0")
+			assert.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
+			assert.False(t, result.ActualVersion > 0 && len(result.History) == 0, "The history proof cannot be empty when version is greater than 0")
 
 		})
 	})
@@ -74,13 +75,13 @@ func TestAddVerify(t *testing.T) {
 		})
 
 		let("Verify first event", func(t *testing.T) {
-			verifyingSnapshot := &apihttp.Snapshot{
-				last.HyperDigest, // note that the hyper digest corresponds with the last one
+			snap := &apihttp.Snapshot{
 				first.HistoryDigest,
+				last.HyperDigest,
 				first.Version,
 				first.Event,
 			}
-			assert.True(t, client.Verify(result, verifyingSnapshot), "The proofs should be valid")
+			assert.True(t, client.Verify(result, snap, new(hashing.Sha256Hasher)), "The proofs should be valid")
 		})
 
 	})

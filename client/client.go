@@ -20,6 +20,7 @@ package client
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -116,13 +117,20 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipR
 
 }
 
+func uint2bytes(i uint64) []byte {
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytes, i)
+	return bytes
+}
+
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
-func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot) bool {
 
-	balloonProof := apihttp.ToBalloonProof(c.apiKey, result, hashing.Sha256Hasher)
+func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot, hasher hashing.Hasher) bool {
 
-	return balloonProof.Verify(&balloon.Commitment{
+	proof := apihttp.ToBalloonProof([]byte(c.apiKey), result, hasher)
+
+	return proof.Verify(&balloon.Commitment{
 		snap.HistoryDigest,
 		snap.HyperDigest,
 		snap.Version,

@@ -19,7 +19,6 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 )
@@ -59,7 +58,7 @@ func newStartCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&endpoint, "endpoint", "e", "0.0.0.0:8080", "Endpoint for REST requests on (host:port)")
 	cmd.Flags().StringVarP(&dbPath, "path", "p", "/var/tmp/qed.db", "Set default storage path.")
-	cmd.Flags().Uint64VarP(&cacheSize, "cache", "c", storage.SIZE25, "Initialize and reserve custom cache size.")
+	cmd.Flags().Uint64VarP(&cacheSize, "cache", "c", 1<<25, "Initialize and reserve custom cache size.")
 	cmd.Flags().StringVarP(&storageName, "storage", "s", "badger", "Choose between different storage backends. Eg badge|bolt")
 	cmd.Flags().BoolVarP(&profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 

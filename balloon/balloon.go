@@ -24,6 +24,7 @@ import (
 
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon/proof"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
@@ -60,12 +61,67 @@ type Commitment struct {
 // Current, Actual and Query Versions.
 type MembershipProof struct {
 	Exists         bool
-	HyperProof     [][]byte
-	HistoryProof   []history.Node
+	HyperProof     proof.Verifiable
+	HistoryProof   proof.Verifiable
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64
 	KeyDigest      []byte
+	hasher         hashing.Hasher
+}
+
+func NewMembershipProof(
+	exists bool,
+	hyperProof proof.Verifiable,
+	historyProof proof.Verifiable,
+	currentVersion uint64,
+	queryVersion uint64,
+	actualVersion uint64,
+	keyDigest []byte,
+	hasher hashing.Hasher,
+) *MembershipProof {
+	return &MembershipProof{
+		exists,
+		hyperProof,
+		historyProof,
+		currentVersion,
+		queryVersion,
+		actualVersion,
+		keyDigest,
+		hasher,
+	}
+}
+
+func (p MembershipProof) Verify(commitment *Commitment, event []byte) bool {
+	if p.HyperProof == nil || p.HistoryProof == nil {
+		return false
+	}
+
+	digest := p.hasher.Do(event)
+	hyperCorrect := p.HyperProof.Verify(
+		commitment.HyperDigest,
+		digest,
+		uint2bytes(p.QueryVersion),
+	)
+
+	if p.Exists {
+		if p.QueryVersion <= p.ActualVersion {
+			historyCorrect := p.HistoryProof.Verify(
+				commitment.HistoryDigest,
+				uint2bytes(p.QueryVersion),
+				digest,
+			)
+			return hyperCorrect && historyCorrect
+		}
+	}
+
+	return hyperCorrect
+}
+
+func uint2bytes(i uint64) []byte {
+	bytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(bytes, i)
+	return bytes
 }
 
 // NewHyperBalloon returns a HyperBalloon struct.
@@ -172,48 +228,52 @@ func (b *HyperBalloon) operations() chan interface{} {
 }
 
 func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
-	digest := b.hasher(event)
+	digest := b.hasher.Do(event)
 	version := b.version
 	index := make([]byte, 8)
 	binary.LittleEndian.PutUint64(index, version)
 	b.version++
+
+	history, err := b.history.Add(digest, index)
+	if err != nil {
+		return nil, err
+	}
+	hyper, err := b.hyper.Add(digest, index)
+	if err != nil {
+		return nil, err
+	}
 	return &Commitment{
-		<-b.history.Add(digest, index),
-		<-b.hyper.Add(digest, index),
+		history,
+		hyper,
 		version,
 	}, nil
 }
 
 func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*MembershipProof, error) {
-	digest := b.hasher(event)
+	var err error
+	var mp MembershipProof
+	var actualValue []byte
+	mp.KeyDigest = b.hasher.Do(event)
+	mp.QueryVersion = version
+	mp.CurrentVersion = b.version - 1
 
-	var hyperProof *hyper.MembershipProof
-	var historyProof *history.MembershipProof
-
-	hyperProof = <-b.hyper.ProveMembership(digest)
-
-	var exists bool
-	var actualVersion uint64
-
-	if len(hyperProof.ActualValue) > 0 {
-		exists = true
-		actualVersion = binary.LittleEndian.Uint64(hyperProof.ActualValue)
+	mp.HyperProof, actualValue, err = b.hyper.ProveMembership(mp.KeyDigest)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
 	}
 
-	if exists && actualVersion <= version {
-		historyProof = <-b.history.ProveMembership(hyperProof.ActualValue, actualVersion, version)
+	if len(actualValue) > 0 {
+		mp.Exists = true
+		mp.ActualVersion = binary.LittleEndian.Uint64(actualValue)
+	}
+
+	if mp.Exists && mp.ActualVersion <= mp.QueryVersion {
+		mp.HistoryProof, err = b.history.ProveMembership(actualValue, mp.ActualVersion, mp.QueryVersion)
 	} else {
-		return &MembershipProof{}, fmt.Errorf("Unable to get proof from history tree")
+		mp.Exists = false
+		return &mp, fmt.Errorf("Unable to get proof from history tree: %v", err)
 	}
 
-	return &MembershipProof{
-		exists,
-		hyperProof.AuditPath,
-		historyProof.Nodes,
-		version,
-		actualVersion,
-		b.version - 1, // notice, this is the current version of balloon version
-		digest,
-	}, nil
+	return &mp, nil
 
 }
