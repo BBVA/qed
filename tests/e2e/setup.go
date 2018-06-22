@@ -25,13 +25,13 @@ import (
 )
 
 var endpoint, apiKey, storageType, listenAddr string
-var cacheLevels uint64
+var cacheSize uint64
 
 func init() {
 	listenAddr = ":8079"
 	endpoint = "http://127.0.0.1:8079"
 	apiKey = "my-awesome-api-key"
-	cacheLevels = 50000
+	cacheSize = 50000
 	storageType = "badger"
 }
 
@@ -43,7 +43,7 @@ func setup() (scope.TestF, scope.TestF) {
 		os.RemoveAll(path)
 		os.MkdirAll(path, os.FileMode(0755))
 
-		srv = server.NewServer(listenAddr, path, apiKey, cacheLevels, storageType, false, true)
+		srv = server.NewServer(listenAddr, path, apiKey, cacheSize, storageType, false, true)
 
 		go (func() {
 			err := srv.Run()

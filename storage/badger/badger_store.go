@@ -21,8 +21,6 @@ package badger
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/hyper/storage"
-
 	"github.com/bbva/qed/log"
 	b "github.com/dgraph-io/badger"
 	bo "github.com/dgraph-io/badger/options"
@@ -54,15 +52,15 @@ func (s BadgerStorage) Get(key []byte) ([]byte, error) {
 	switch err {
 	case nil:
 		return value, nil
-	case b.ErrEmptyKey:
+	case b.ErrKeyNotFound:
 		return make([]byte, 0), nil
 	default:
 		return nil, err
 	}
 }
 
-func (s BadgerStorage) GetRange(start, end []byte) storage.LeavesSlice {
-	var leaves storage.LeavesSlice
+func (s BadgerStorage) GetRange(start, end []byte) [][]byte {
+	var leaves [][]byte
 
 	s.db.View(func(txn *b.Txn) error {
 		opts := b.DefaultIteratorOptions

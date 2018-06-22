@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package hyper
+package history
 
 import (
 	"testing"
@@ -25,53 +25,53 @@ import (
 
 func TestString(t *testing.T) {
 
-	p := NewPosition([]byte{0x00}, 0, 8, 0)
+	p := NewPosition(0, 0, 0)
 
-	assert.Equal(t, "base: [0] , split: [0] , height: 0 , numBits: 8", p.String(), "Invalid hyper position")
+	assert.Equal(t, p.String(), "index: 0 , layer: 0", "Invalid history position")
 }
 
 func TestPositionId(t *testing.T) {
-	p := NewPosition([]byte{0x00}, 0, 8, 0)
-	assert.Equal(t, p.Id(), make([]byte, 9), "Invalid hyper position")
+	p := NewPosition(0, 0, 0)
+	assert.Equal(t, p.Id(), make([]byte, 16), "Invalid history position")
 }
 
 func TestPositionStringId(t *testing.T) {
-	p := NewPosition([]byte{0x00}, 0, 8, 0)
-	assert.Equal(t, p.StringId(), "00|0", "Invalid hyper position")
+	p := NewPosition(0, 0, 0)
+	assert.Equal(t, p.StringId(), "0|0", "Invalid history position")
 }
 
 func TestPositionLeft(t *testing.T) {
-	p := NewPosition([]byte{0x00}, 1, 8, 0)
+	p := NewPosition(0, 1, 0)
 	l := p.Left()
-	assert.Equal(t, []byte{0x0}, l.Key(), "Invalid index")
+	assert.Equal(t, make([]byte, 8), l.Key(), "Invalid index")
 	assert.Equal(t, uint64(0), l.Height(), "Invalid height")
-	assert.Equal(t, "base: [0] , split: [0] , height: 0 , numBits: 8", l.String(), "Invalid hyper position")
+	assert.Equal(t, l.String(), "index: 0 , layer: 0", "Invalid history position")
 }
 
 func TestPositionRight(t *testing.T) {
-	p := NewPosition([]byte{0x00}, 1, 8, 0)
+	p := NewPosition(0, 1, 0)
 	r := p.Right()
-	assert.Equal(t, []byte{0x1}, r.Key(), "Invalid index")
+	assert.Equal(t, []byte{0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, r.Key(), "Invalid index")
 	assert.Equal(t, uint64(0), r.Height(), "Invalid height")
-	assert.Equal(t, "base: [1] , split: [1] , height: 0 , numBits: 8", r.String(), "Invalid hyper position")
+	assert.Equal(t, r.String(), "index: 1 , layer: 0", "Invalid history position")
 }
 
 func TestPositionDirection(t *testing.T) {
-	p := NewPosition([]byte{0x00}, 2, 8, 0)
-	assert.Equal(t, position.Left, p.Direction(p.Left().Key()), "Invalid direction")
-	assert.Equal(t, position.Right, p.Direction(p.Right().Key()), "Invalid direction")
+	p := NewPosition(0, 2, 4)
+	assert.Equal(t, p.Direction(p.Left().Key()), position.Left, "Invalid direction")
+	assert.Equal(t, p.Direction(p.Right().Key()), position.Right, "Invalid direction")
 }
 
 func TestPositionIsLeaf(t *testing.T) {
-	p := NewPosition([]byte{0x00}, 0, 8, 0)
+	p := NewPosition(0, 0, 0)
 	assert.True(t, p.IsLeaf(), "Position should be a leaf")
-	p = NewPosition([]byte{0x00}, 1, 8, 0)
+	p = NewPosition(0, 1, 0)
 	assert.False(t, p.IsLeaf(), "Position shouldn't be a leaf")
 }
 
 func TestPositionShouldBeCached(t *testing.T) {
-	p := NewPosition([]byte{0x00}, 8, 8, 1)
+	p := NewPosition(0, 0, 1)
 	assert.True(t, p.ShouldBeCached(), "Position should be cached")
-	p = NewPosition([]byte{0x00}, 1, 8, 1)
+	p = NewPosition(1, 1, 0)
 	assert.False(t, p.ShouldBeCached(), "Position shouldn't be cached")
 }

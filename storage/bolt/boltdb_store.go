@@ -24,7 +24,6 @@ import (
 
 	b "github.com/coreos/bbolt"
 
-	"github.com/bbva/qed/balloon/hyper/storage"
 	"github.com/bbva/qed/log"
 )
 
@@ -60,8 +59,8 @@ func (s BoltStorage) Get(key []byte) ([]byte, error) {
 	return value, nil
 }
 
-func (s BoltStorage) GetRange(start, end []byte) storage.LeavesSlice {
-	var leaves storage.LeavesSlice
+func (s BoltStorage) GetRange(start, end []byte) [][]byte {
+	var leaves [][]byte
 
 	s.db.View(func(tx *b.Tx) error {
 		cursor := tx.Bucket(s.bucket).Cursor()
