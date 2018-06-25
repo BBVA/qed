@@ -16,6 +16,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/bbva/qed/api/apihttp"
@@ -86,4 +87,46 @@ func TestAddVerify(t *testing.T) {
 
 	})
 
+	scenario("Add 10 events, verify event with index i", func() {
+		var p1, p2 *apihttp.MembershipResult
+		var err error
+		const size int = 10
+
+		var s [size]*apihttp.Snapshot
+
+		for i := 0; i < size; i++ {
+			s[i], _ = client.Add(fmt.Sprintf("Test Event %d", i))
+		}
+
+		i := 3
+		j := 6
+		k := 9
+
+		let("Get proofs p1, p2 for event with index i in versions j and k", func(t *testing.T) {
+			p1, err = client.Membership(s[i].Event, s[j].Version)
+			assert.NoError(t, err)
+			p2, err = client.Membership(s[i].Event, s[k].Version)
+			assert.NoError(t, err)
+		})
+
+		let("Verify both proofs against index i event", func(t *testing.T) {
+			snap := &apihttp.Snapshot{
+				s[j].HistoryDigest,
+				s[9].HyperDigest,
+				s[j].Version,
+				s[i].Event,
+			}
+			assert.True(t, client.Verify(p1, snap, new(hashing.Sha256Hasher)), "p1 should be valid")
+
+			snap = &apihttp.Snapshot{
+				s[k].HistoryDigest,
+				s[9].HyperDigest,
+				s[k].Version,
+				s[i].Event,
+			}
+			assert.True(t, client.Verify(p2, snap, new(hashing.Sha256Hasher)), "p2 should be valid")
+
+		})
+
+	})
 }
