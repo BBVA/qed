@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/balloon"
@@ -50,6 +51,26 @@ func NewHttpClient(endpoint, apiKey string) *HttpClient {
 
 }
 
+func (c HttpClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
+
+	var retries uint
+
+	for {
+		resp, err := c.Do(req)
+		if err != nil {
+			if retries == 5 {
+				return nil, err
+			}
+			retries = retries + 1
+			delay := time.Duration(10 << retries * time.Millisecond)
+			time.Sleep(delay)
+			continue
+		}
+		return resp, err
+	}
+
+}
+
 func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 
 	req, err := http.NewRequest(method, c.endpoint+path, bytes.NewBuffer(data))
@@ -60,7 +81,7 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Api-Key", c.apiKey)
 
-	resp, err := c.Do(req)
+	resp, err := c.exponentialBackoff(req)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +108,6 @@ func (c HttpClient) Add(event string) (*apihttp.SignedSnapshot, error) {
 
 	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
-		fmt.Printf("blab bla %v", err)
 		return nil, err
 	}
 
