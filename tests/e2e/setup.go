@@ -16,7 +16,6 @@
 package e2e
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -25,14 +24,12 @@ import (
 	"github.com/bbva/qed/testutils/scope"
 )
 
-var apiKey, storageType string
-var listenAddr, cacheSize uint64
-var getClient func() *client.HttpClient
-var incrementalPort uint64
+var endpoint, apiKey, storageType, listenAddr string
+var cacheSize uint64
 
 func init() {
-	incrementalPort = 1
-	listenAddr = 8099
+	listenAddr = ":8079"
+	endpoint = "http://127.0.0.1:8079"
 	apiKey = "my-awesome-api-key"
 	cacheSize = 50000
 	storageType = "badger"
@@ -42,15 +39,11 @@ func setup() (scope.TestF, scope.TestF) {
 	var srv *server.Server
 	path := "/var/tmp/balloonE2E"
 
-	port := fmt.Sprintf(":%d", listenAddr+incrementalPort)
-	endpoint := fmt.Sprintf("http://127.0.0.1%s", port)
-	incrementalPort++
-
 	before := func(t *testing.T) {
 		os.RemoveAll(path)
 		os.MkdirAll(path, os.FileMode(0755))
 
-		srv = server.NewServer(port, path, apiKey, cacheSize, storageType, false, true)
+		srv = server.NewServer(listenAddr, path, apiKey, cacheSize, storageType, false, true)
 
 		go (func() {
 			err := srv.Run()
@@ -65,11 +58,9 @@ func setup() (scope.TestF, scope.TestF) {
 			srv.Stop()
 		}
 	}
-
-	getClient = func() *client.HttpClient {
-		return client.NewHttpClient(endpoint, "my-awesome-api-key")
-	}
-
 	return before, after
+}
 
+func getClient() *client.HttpClient {
+	return client.NewHttpClient("http://localhost:8079", "my-awesome-api-key")
 }
