@@ -44,7 +44,8 @@ func TestAddAndVerifyXor(t *testing.T) {
 
 	commitment, err := ht.Add(key, valueBytes)
 	assert.Nil(t, err, "Error must be nil")
-	membershipProof, actualValue, err := ht.ProveMembership(key)
+
+	membershipProof, actualValue, err := ht.ProveMembership(key, valueBytes)
 	assert.Nil(t, err, "Error must be nil")
 
 	assert.Equal(t, valueBytes, actualValue, "Incorrect actual value")
@@ -75,7 +76,7 @@ func TestAddAndVerifyPearson(t *testing.T) {
 
 	commitment, err := ht.Add(key, valueBytes)
 	assert.Nil(t, err, "Error must be nil")
-	membershipProof, actualValue, err := ht.ProveMembership(key)
+	membershipProof, actualValue, err := ht.ProveMembership(key, valueBytes)
 	assert.Nil(t, err, "Error must be nil")
 
 	assert.Equal(t, valueBytes, actualValue, "Incorrect actual value")
@@ -106,7 +107,7 @@ func TestAddAndVerifySha256(t *testing.T) {
 
 	commitment, err := ht.Add(key, valueBytes)
 	assert.Nil(t, err, "Error must be nil")
-	membershipProof, actualValue, err := ht.ProveMembership(key)
+	membershipProof, actualValue, err := ht.ProveMembership(key, valueBytes)
 	assert.Nil(t, err, "Error must be nil")
 
 	assert.Equal(t, valueBytes, actualValue, "Incorrect actual value")

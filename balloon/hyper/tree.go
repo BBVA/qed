@@ -86,7 +86,7 @@ func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
 	return t.toCache(key, value, NewRootPosition(t.numBits, t.cacheLevel)), nil
 }
 
-func (t Tree) ProveMembership(key []byte) (*proof.Proof, []byte, error) {
+func (t Tree) ProveMembership(key []byte, value []byte) (*proof.Proof, []byte, error) {
 	t.Lock()
 	defer t.Unlock()
 	value, err := t.leaves.Get(key) // TODO check existence
@@ -97,7 +97,7 @@ func (t Tree) ProveMembership(key []byte) (*proof.Proof, []byte, error) {
 
 	ap := make(proof.AuditPath)
 	rootPos := NewRootPosition(t.numBits, t.cacheLevel)
-	t.auditPathFromCache(key, rootPos, ap)
+	t.auditPathFromCache(key, value, rootPos, ap)
 
 	return proof.NewProof(rootPos, ap, t.hasher), value, nil
 }
@@ -112,7 +112,7 @@ func (t *Tree) toCache(key, value []byte, pos position.Position) []byte {
 		first := pos.FirstLeaf()
 		last := pos.LastLeaf()
 		d := t.leaves.GetRange(first.Key(), last.Key())
-		return t.fromStorage(d, pos)
+		return t.fromStorage(d, value, pos)
 	}
 
 	// if not, the node hash is the hash of our left and right child
@@ -160,13 +160,13 @@ func (t *Tree) fromCache(pos position.Position) []byte {
 
 }
 
-func (t *Tree) fromStorage(d [][]byte, pos position.Position) []byte {
+func (t *Tree) fromStorage(d [][]byte, value []byte, pos position.Position) []byte {
 
 	// if we are a leaf, return our hash
 	if len(d) == 1 && pos.IsLeaf() {
 		metrics.Hyper.Add("leaf", 1)
 		metrics.Hyper.Add("leaf_hash", 1)
-		return t.leafHash(d[0], pos.Key())
+		return t.leafHash(d[0], value)
 	}
 
 	// if there are no more childs,
@@ -183,13 +183,13 @@ func (t *Tree) fromStorage(d [][]byte, pos position.Position) []byte {
 	rightChild := pos.Right()
 	leftSlice, rightSlice := Split(d, rightChild.Key())
 
-	left := t.fromStorage(leftSlice, pos.Left())
-	right := t.fromStorage(rightSlice, rightChild)
+	left := t.fromStorage(leftSlice, value, pos.Left())
+	right := t.fromStorage(rightSlice, value, rightChild)
 	metrics.Hyper.Add("interior_hash", 1)
 	return t.interiorHash(pos.Id(), left, right)
 }
 
-func (t *Tree) auditPathFromCache(key []byte, pos position.Position, ap proof.AuditPath) (err error) {
+func (t *Tree) auditPathFromCache(key, value []byte, pos position.Position, ap proof.AuditPath) (err error) {
 	// if we are beyond the cache zone
 	// we need to go to database to get
 	// nodes
@@ -197,7 +197,7 @@ func (t *Tree) auditPathFromCache(key []byte, pos position.Position, ap proof.Au
 		first := pos.FirstLeaf()
 		last := pos.LastLeaf()
 		leaves := t.leaves.GetRange(first.Key(), last.Key())
-		return t.auditPathFromStorage(leaves, key, pos, ap)
+		return t.auditPathFromStorage(leaves, key, value, pos, ap)
 	}
 
 	direction := pos.Direction(key)
@@ -206,11 +206,11 @@ func (t *Tree) auditPathFromCache(key []byte, pos position.Position, ap proof.Au
 	case direction == position.Left:
 		right := pos.Right()
 		ap[right.StringId()] = t.fromCache(right)
-		t.auditPathFromCache(key, pos.Left(), ap)
+		t.auditPathFromCache(key, value, pos.Left(), ap)
 	case direction == position.Right:
 		left := pos.Left()
 		ap[left.StringId()] = t.fromCache(left)
-		t.auditPathFromCache(key, pos.Right(), ap)
+		t.auditPathFromCache(key, value, pos.Right(), ap)
 	case direction == position.Halt:
 		panic("this should never happen")
 	}
@@ -218,7 +218,7 @@ func (t *Tree) auditPathFromCache(key []byte, pos position.Position, ap proof.Au
 	return
 }
 
-func (t *Tree) auditPathFromStorage(d [][]byte, key []byte, pos position.Position, ap proof.AuditPath) (err error) {
+func (t *Tree) auditPathFromStorage(d [][]byte, key, value []byte, pos position.Position, ap proof.AuditPath) (err error) {
 
 	direction := pos.Direction(key)
 
@@ -227,15 +227,15 @@ func (t *Tree) auditPathFromStorage(d [][]byte, key []byte, pos position.Positio
 
 	switch {
 	case direction == position.Halt && pos.IsLeaf():
-		ap[pos.StringId()] = t.fromStorage(d, pos)
+		ap[pos.StringId()] = t.fromStorage(d, value, pos)
 	case direction == position.Left:
 		right := pos.Right()
-		ap[right.StringId()] = t.fromStorage(rightSlice, right)
-		t.auditPathFromStorage(leftSlice, key, pos.Left(), ap)
+		ap[right.StringId()] = t.fromStorage(rightSlice, value, right)
+		t.auditPathFromStorage(leftSlice, key, value, pos.Left(), ap)
 	case direction == position.Right:
 		left := pos.Left()
-		ap[left.StringId()] = t.fromStorage(leftSlice, left)
-		t.auditPathFromStorage(rightSlice, key, pos.Right(), ap)
+		ap[left.StringId()] = t.fromStorage(leftSlice, value, left)
+		t.auditPathFromStorage(rightSlice, key, value, pos.Right(), ap)
 	}
 
 	return
