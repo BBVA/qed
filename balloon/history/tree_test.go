@@ -33,73 +33,282 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-	hasher := new(hashing.XorHasher)
-	digest := hasher.Do([]byte{0x0})
-	index := make([]byte, 8)
+
+	testCases := []struct {
+		eventDigest      []byte
+		expectedRootHash []byte
+	}{
+		{[]byte{0x0}, []byte{0x0}},
+		{[]byte{0x1}, []byte{0x1}},
+		{[]byte{0x2}, []byte{0x3}},
+		{[]byte{0x3}, []byte{0x0}},
+		{[]byte{0x4}, []byte{0x4}},
+		{[]byte{0x5}, []byte{0x1}},
+		{[]byte{0x6}, []byte{0x7}},
+		{[]byte{0x7}, []byte{0x0}},
+		{[]byte{0x8}, []byte{0x8}},
+		{[]byte{0x9}, []byte{0x1}},
+	}
 
 	frozen, close := openBPlusStorage()
 	defer close()
 
-	expectedRH := []byte{0x00}
+	hasher := new(hashing.XorHasher)
+	tree := NewTree("treeId", frozen, hasher)
+	tree.leafHash = fakeLeafHasherCleanF(hasher)
+	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
+	// Note that we are using fake hashing functions and the index
+	// as the value of the event's digest to make predictable hashes
 
-	tree := NewTree(string(0x0), frozen, hasher)
-	rh, err := tree.Add(digest, index)
-	assert.Nil(t, err, "Error adding to the tree: %v", err)
-	assert.Equal(t, expectedRH, rh, "Incorrect root hash")
-}
-
-func TestClose(t *testing.T) {
+	for i, c := range testCases {
+		index := uint64(i)
+		rh, err := tree.Add(c.eventDigest, uint64AsBytes(index))
+		assert.NoError(t, err, "Error while adding to the tree")
+		assert.Equalf(t, c.expectedRootHash, rh, "Incorrect root hash for index %d", i)
+	}
 
 }
 
 func TestProveMembership(t *testing.T) {
-	hasher := new(hashing.XorHasher)
-	digest := hasher.Do([]byte{0x0})
-	index := make([]byte, 8)
+
+	testCases := []struct {
+		eventDigest []byte
+		auditPath   proof.AuditPath
+	}{
+		{
+			[]byte{0x0},
+			proof.AuditPath{"0|0": []uint8{0x0}}, // TODO this should be empty!!!
+		},
+		{
+			[]byte{0x1},
+			proof.AuditPath{"0|0": []uint8{0x0}, "1|0": []uint8{0x1}},
+		},
+		{
+			[]byte{0x2},
+			proof.AuditPath{"0|1": []uint8{0x1}, "2|0": []uint8{0x2}},
+		},
+		{
+			[]byte{0x3},
+			proof.AuditPath{"0|1": []uint8{0x1}, "2|0": []uint8{0x2}, "3|0": []uint8{0x3}},
+		},
+		{
+			[]byte{0x4},
+			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}},
+		},
+		{
+			[]byte{0x5},
+			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}, "5|0": []uint8{0x5}},
+		},
+		{
+			[]byte{0x6},
+			proof.AuditPath{"0|2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}},
+		},
+		{
+			[]byte{0x7},
+			proof.AuditPath{"0|2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}, "7|0": []uint8{0x7}},
+		},
+		{
+			[]byte{0x8},
+			proof.AuditPath{"0|3": []uint8{0x0}, "8|0": []uint8{0x8}},
+		},
+		{
+			[]byte{0x9},
+			proof.AuditPath{"0|3": []uint8{0x0}, "8|0": []uint8{0x8}, "9|0": []uint8{0x9}},
+		},
+	}
 
 	frozen, close := openBPlusStorage()
 	defer close()
 
-	tree := NewTree(string(0x0), frozen, hasher)
-	rh, err := tree.Add(digest, index)
-	assert.Nil(t, err, "Error adding to the tree: %v", err)
-	assert.Equal(t, []byte{0x00}, rh, "Incorrect root hash")
+	hasher := new(hashing.XorHasher)
+	tree := NewTree("treeId", frozen, hasher)
+	tree.leafHash = fakeLeafHasherCleanF(hasher)
+	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
+	// Note that we are using fake hashing functions and the index
+	// as the value of the event's digest to make predictable hashes
 
-	pf, err := tree.ProveMembership(digest, 0, 0)
-	assert.Nil(t, err, "Error adding to the tree: %v", err)
-	pos := NewPosition(0, 0, 0)
+	for i, c := range testCases {
+		index := uint64(i)
+		_, err := tree.Add(c.eventDigest, uint64AsBytes(index))
+		assert.NoError(t, err, "Error while adding to the tree")
 
-	ap := make(proof.AuditPath)
-	ap[pos.StringId()] = []byte{0x0}
-	assert.Equal(t, pf.AuditPath(), ap, "Incorrect audit path")
+		pf, err := tree.ProveMembership(c.eventDigest, index, index)
+		assert.NoError(t, err, "Error proving membership")
+		assert.Equalf(t, c.auditPath, pf.AuditPath(), "Incorrect audit path for index %d", i)
+	}
+}
+
+func TestProveMembershipWithInvalidTargetVersion(t *testing.T) {
+	frozen, close := openBPlusStorage()
+	defer close()
+
+	hasher := new(hashing.XorHasher)
+	tree := NewTree("treeId", frozen, hasher)
+
+	_, err := tree.ProveMembership([]byte{0x0}, 1, 0)
+	assert.Error(t, err, "An error should occur")
+}
+
+func TestProveMembershipNonConsecutive(t *testing.T) {
+	frozen, close := openBPlusStorage()
+	defer close()
+
+	hasher := new(hashing.XorHasher)
+	tree := NewTree("treeId", frozen, hasher)
+	tree.leafHash = fakeLeafHasherCleanF(hasher)
+	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
+	// Note that we are using fake hashing functions and the index
+	// as the value of the event's digest to make predictable hashes
+
+	// add nine events
+	for i := uint64(0); i < 9; i++ {
+		eventDigest := uint64AsBytes(i)
+		index := uint64AsBytes(i)
+		_, err := tree.Add(eventDigest, index)
+		assert.NoError(t, err, "Error while adding to the tree")
+	}
+
+	// query for membership with event 0 and version 8
+	pf, err := tree.ProveMembership([]byte{0x0}, 0, 8)
+	assert.NoError(t, err, "Error proving membership")
+	expectedAuditPath := proof.AuditPath{"0|0": []uint8{0x0}, "1|0": []uint8{0x1}, "2|1": []uint8{0x1}, "4|2": []uint8{0x0}, "8|3": []uint8{0x8}}
+	assert.Equal(t, expectedAuditPath, pf.AuditPath(), "Invalid audit path")
+}
+
+func TestProveIncremental(t *testing.T) {
+
+	testCases := []struct {
+		eventDigest []byte
+		auditPath   proof.AuditPath
+	}{
+		{
+			[]byte{0x0},
+			proof.AuditPath{"0|0": []uint8{0x0}}, // TODO this should be empty!!!
+		},
+		{
+			[]byte{0x1},
+			proof.AuditPath{"0|0": []uint8{0x0}, "1|0": []uint8{0x1}},
+		},
+		{
+			[]byte{0x2},
+			proof.AuditPath{"0|0": []uint8{0x0}, "1|0": []uint8{0x1}, "2|0": []uint8{0x2}},
+		},
+		{
+			[]byte{0x3},
+			proof.AuditPath{"0|1": []uint8{0x1}, "2|0": []uint8{0x2}, "3|0": []uint8{0x3}},
+		},
+		{
+			[]byte{0x4},
+			proof.AuditPath{"0|1": []uint8{0x1}, "2|0": []uint8{0x2}, "3|0": []uint8{0x3}, "4|0": []uint8{0x4}},
+		},
+		{
+			[]byte{0x5},
+			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}, "5|0": []uint8{0x5}},
+		},
+		{
+			[]byte{0x6},
+			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}, "5|0": []uint8{0x5}, "6|0": []uint8{0x6}},
+		},
+		{
+			[]byte{0x7},
+			proof.AuditPath{"0|2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}, "7|0": []uint8{0x7}},
+		},
+		{
+			[]byte{0x8},
+			proof.AuditPath{"0|2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}, "7|0": []uint8{0x7}, "8|0": []uint8{0x8}},
+		},
+		{
+			[]byte{0x9},
+			proof.AuditPath{"0|3": []uint8{0x0}, "8|0": []uint8{0x8}, "9|0": []uint8{0x9}},
+		},
+	}
+
+	frozen, close := openBPlusStorage()
+	defer close()
+
+	hasher := new(hashing.XorHasher)
+	tree := NewTree("treeId", frozen, hasher)
+	tree.leafHash = fakeLeafHasherCleanF(hasher)
+	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
+	// Note that we are using fake hashing functions and the index
+	// as the value of the event's digest to make predictable hashes
+
+	for i, c := range testCases {
+		index := uint64(i)
+		_, err := tree.Add(c.eventDigest, uint64AsBytes(index))
+		assert.NoError(t, err, "Error while adding to the tree")
+
+		pf, err := tree.ProveIncremental(testCases[max(0, i-1)].eventDigest, c.eventDigest, uint64(max(0, i-1)), index)
+		assert.NoError(t, err, "Error while querying for incremental proof in test case: %d", i)
+		assert.Equal(t, c.auditPath, pf.AuditPath(), "Invalid audit path in test case: %d", i)
+	}
 
 }
 
-func TestProveMembershipN(t *testing.T) {
-	var err error
-	var digest []byte
-	var i uint64
-	hasher := new(hashing.XorHasher)
-
+func TestProveIncrementalWithInvalidTargetVersion(t *testing.T) {
 	frozen, close := openBPlusStorage()
 	defer close()
 
+	hasher := new(hashing.XorHasher)
 	tree := NewTree("treeId", frozen, hasher)
 
-	for i = 0; i < 10; i++ {
-		index := make([]byte, 8)
-		binary.LittleEndian.PutUint64(index, i)
-		digest = hasher.Do(index)
-		tree.Add(digest, index)
+	_, err := tree.ProveIncremental([]byte{0x1}, []byte{0x0}, 1, 0)
+	assert.Error(t, err, "An error should occur")
+}
+
+func TestProveIncrementalNonConsecutive(t *testing.T) { // TODO add more test cases!!
+	frozen, close := openBPlusStorage()
+	defer close()
+
+	hasher := new(hashing.XorHasher)
+	tree := NewTree("treeId", frozen, hasher)
+	tree.leafHash = fakeLeafHasherCleanF(hasher)
+	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
+	// Note that we are using fake hashing functions and the index
+	// as the value of the event's digest to make predictable hashes
+
+	// add nine events
+	for i := uint64(0); i < 9; i++ {
+		eventDigest := uint64AsBytes(i)
+		index := uint64AsBytes(i)
+		_, err := tree.Add(eventDigest, index)
+		assert.NoError(t, err, "Error while adding to the tree")
 	}
 
-	pf, err := tree.ProveMembership(digest, 8, 9)
+	// query for consistency with event 2 and version 8
+	pf, err := tree.ProveIncremental(uint64AsBytes(2), uint64AsBytes(8), 2, 8)
+	assert.NoError(t, err, "Error while querying for incremental proof")
+	expectedAuditPath := proof.AuditPath{
+		"0|1": []uint8{0x1}, "2|0": []uint8{0x2}, "3|0": []uint8{0x3},
+		"4|2": []uint8{0x0}, "8|0": []uint8{0x8},
+	}
+	assert.Equal(t, expectedAuditPath, pf.AuditPath(), "Invalid audit path")
+}
 
-	assert.Nil(t, err, "Error adding to the tree: %v", err)
+func TestProveIncrementalSameVersions(t *testing.T) {
+	frozen, close := openBPlusStorage()
+	defer close()
 
-	ap := proof.AuditPath{"0|3": []uint8{0x7}, "12|2": []uint8{0xe}, "10|1": []uint8{0xb}, "9|0": []uint8{0x0}, "8|0": []uint8{0x0}}
-	assert.Equal(t, ap, pf.AuditPath(), "Incorrect audit path")
+	hasher := new(hashing.XorHasher)
+	tree := NewTree("treeId", frozen, hasher)
+	tree.leafHash = fakeLeafHasherCleanF(hasher)
+	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
+	// Note that we are using fake hashing functions and the index
+	// as the value of the event's digest to make predictable hashes
 
+	// add nine events
+	for i := uint64(0); i < 9; i++ {
+		eventDigest := uint64AsBytes(i)
+		index := uint64AsBytes(i)
+		_, err := tree.Add(eventDigest, index)
+		assert.NoError(t, err, "Error while adding to the tree")
+	}
+
+	// query for consistency with event 8 and version 8
+	pf, err := tree.ProveIncremental(uint64AsBytes(8), uint64AsBytes(8), 8, 8)
+	assert.NoError(t, err, "Error while querying for incremental proof")
+	expectedAuditPath := proof.AuditPath{"0|3": []uint8{0x0}, "8|0": []uint8{0x8}}
+	assert.Equal(t, expectedAuditPath, pf.AuditPath(), "Invalid audit path")
 }
 
 func BenchmarkAdd(b *testing.B) {
