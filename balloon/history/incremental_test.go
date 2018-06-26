@@ -53,6 +53,10 @@ func TestVerifyIncremental(t *testing.T) {
 			proof.AuditPath{"2|0": []uint8{0x2}, "3|0": []uint8{0x3}, "4|0": []uint8{0x4}, "0|1": []uint8{0x1}},
 			2, 4, []byte{0x3}, []byte{0x4},
 		},
+		{
+			proof.AuditPath{"0,2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}, "7|0": []uint8{0x7}},
+			6, 7, []byte{0x7}, []byte{0x0},
+		},
 	}
 
 	lh := fakeLeafHasherCleanF(new(hashing.XorHasher))
@@ -62,4 +66,53 @@ func TestVerifyIncremental(t *testing.T) {
 		proof := IncrementalProof{c.start, c.end, c.auditPath, ih, lh}
 		assert.True(t, proof.Verify(c.startDigest, c.endDigest))
 	}
+}
+
+func TestProveAndVerifyConsecutivelyN(t *testing.T) {
+	frozen, close := openBPlusStorage()
+	defer close()
+
+	hasher := new(hashing.Sha256Hasher)
+	tree := NewTree("treeId", frozen, hasher)
+
+	const size int = 10
+	eventDigests := make([][]byte, size)
+	digests := make([][]byte, size)
+	var err error
+
+	for i := 0; i < size; i++ {
+		index := uint64(i)
+		eventDigests[i] = uint64AsBytes(index)
+		digests[i], err = tree.Add(eventDigests[i], uint64AsBytes(index))
+		assert.NoError(t, err, "Error while adding to the tree")
+
+		pf, err := tree.ProveIncremental(eventDigests[max(0, i-1)], eventDigests[i], uint64(max(0, i-1)), uint64(i))
+		assert.NoError(t, err, "Error while querying for incremental proof")
+		assert.True(t, pf.Verify(digests[max(0, i-1)], digests[i]), "The proof should verfify correctly")
+	}
+}
+
+func TestProveAndVerifyNonConsecutively(t *testing.T) {
+	frozen, close := openBPlusStorage()
+	defer close()
+
+	hasher := new(hashing.Sha256Hasher)
+	tree := NewTree("treeId", frozen, hasher)
+
+	const size int = 10
+	eventDigests := make([][]byte, size)
+	digests := make([][]byte, size)
+	var err error
+
+	for i := 0; i < size; i++ {
+		index := uint64(i)
+		eventDigests[i] = uint64AsBytes(index)
+		digests[i], err = tree.Add(eventDigests[i], uint64AsBytes(index))
+		assert.NoError(t, err, "Error while adding to the tree")
+	}
+
+	// query for consistency with event 2 and version 8
+	pf, err := tree.ProveIncremental(eventDigests[2], eventDigests[8], uint64(2), uint64(8))
+	assert.NoError(t, err, "Error while querying for incremental proof")
+	assert.True(t, pf.Verify(digests[2], digests[8]), "The proof should verfify correctly")
 }
