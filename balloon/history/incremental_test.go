@@ -49,6 +49,10 @@ func TestVerifyIncremental(t *testing.T) {
 			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}, "5|0": []uint8{0x5}, "6|0": []uint8{0x6}, "7|0": []uint8{0x7}},
 			4, 7, []byte{0x4}, []byte{0x0},
 		},
+		{
+			proof.AuditPath{"2|0": []uint8{0x2}, "3|0": []uint8{0x3}, "4|0": []uint8{0x4}, "0|1": []uint8{0x1}},
+			2, 4, []byte{0x3}, []byte{0x4},
+		},
 	}
 
 	lh := fakeLeafHasherCleanF(new(hashing.XorHasher))
