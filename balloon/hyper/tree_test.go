@@ -65,7 +65,7 @@ func TestProveMembership(t *testing.T) {
 	assert.Nil(t, err, "Error adding to the tree: %v", err)
 	assert.Equal(t, rh, []byte{0x08}, "Incorrect root hash")
 
-	pf, _, err := tree.ProveMembership(digest)
+	pf, _, err := tree.ProveMembership(digest, index)
 	assert.Nil(t, err, "Error adding to the tree: %v", err)
 	// pos := NewPosition([]byte{0x0}, []byte{0x00}, 8, 8, 3)
 	// assert.Equal(t, pos, proof.Pos(), "Incorrect position")
