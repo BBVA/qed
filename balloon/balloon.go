@@ -257,7 +257,10 @@ func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*Members
 	mp.QueryVersion = version
 	mp.CurrentVersion = b.version - 1
 
-	mp.HyperProof, actualValue, err = b.hyper.ProveMembership(mp.KeyDigest)
+	versionBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(versionBytes, version)
+
+	mp.HyperProof, actualValue, err = b.hyper.ProveMembership(mp.KeyDigest, versionBytes)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
 	}

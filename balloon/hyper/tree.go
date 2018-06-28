@@ -89,6 +89,7 @@ func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
 func (t Tree) ProveMembership(key []byte, value []byte) (*proof.Proof, []byte, error) {
 	t.Lock()
 	defer t.Unlock()
+
 	value, err := t.leaves.Get(key) // TODO check existence
 	if err != nil {
 		log.Debug(t.leaves)
