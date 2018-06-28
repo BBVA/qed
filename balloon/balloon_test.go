@@ -46,8 +46,8 @@ func TestAdd(t *testing.T) {
 	cache := cache.NewSimpleCache(0)
 	hasher := new(hashing.XorHasher)
 
-	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher)
-	historyT := history.NewFakeTree(string(0x0), frozen, hasher)
+	hyperT := hyper.NewFakeTree(string(0x00), cache, leaves, hasher)
+	historyT := history.NewFakeTree(string(0x00), frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	var testCases = []struct {
@@ -56,16 +56,16 @@ func TestAdd(t *testing.T) {
 		historyDigest []byte
 		version       uint64
 	}{
-		{"test event 0", []byte{0x0}, []byte{0x4a}, 0},
-		{"test event 1", []byte{0x0}, []byte{0x01}, 1},
-		{"test event 2", []byte{0x0}, []byte{0x4a}, 2},
-		{"test event 3", []byte{0x0}, []byte{0x0}, 3},
-		{"test event 4", []byte{0x0}, []byte{0x4a}, 4},
-		{"test event 5", []byte{0x0}, []byte{0x0}, 5},
-		{"test event 6", []byte{0x0}, []byte{0x4d}, 6},
-		{"test event 7", []byte{0x0}, []byte{0x7}, 7},
-		{"test event 8", []byte{0x0}, []byte{0x41}, 8},
-		{"test event 9", []byte{0x0}, []byte{0x0b}, 9},
+		{"test event 0", []byte{0x4a}, []byte{0x4a}, 0},
+		{"test event 1", []byte{0x01}, []byte{0x01}, 1},
+		{"test event 2", []byte{0x4b}, []byte{0x4a}, 2},
+		{"test event 3", []byte{0x00}, []byte{0x00}, 3},
+		{"test event 4", []byte{0x4a}, []byte{0x4a}, 4},
+		{"test event 5", []byte{0x01}, []byte{0x00}, 5},
+		{"test event 6", []byte{0x4b}, []byte{0x4d}, 6},
+		{"test event 7", []byte{0x00}, []byte{0x07}, 7},
+		{"test event 8", []byte{0x4a}, []byte{0x41}, 8},
+		{"test event 9", []byte{0x01}, []byte{0x0b}, 9},
 	}
 
 	for i, e := range testCases {
@@ -89,6 +89,7 @@ func TestAdd(t *testing.T) {
 
 func TestGenMembershipProof(t *testing.T) {
 
+	t.Skip("TODO: Decide wether this snapshotting tests are required…")
 	frozen, frozenCloseF := openBPlusStorage()
 	leaves, leavesCloseF := openBPlusStorage()
 	defer frozenCloseF()
@@ -97,22 +98,21 @@ func TestGenMembershipProof(t *testing.T) {
 	cache := cache.NewSimpleCache(0)
 	hasher := new(hashing.XorHasher)
 
-	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
+	hyperT := hyper.NewFakeTree(string(0x0), cache, leaves, hasher)
 	historyT := history.NewFakeTree(string(0x0), frozen, hasher)
 	balloon := NewHyperBalloon(hasher, historyT, hyperT)
 
 	key := []byte{0x5a}
 	var version uint64 = 0
 	expectedHyperAuditPath := map[string][]byte{
-		"5a|0": {0x00},
-		"5b|0": {0x00},
-		"58|1": {0x00},
-		"5c|2": {0x00},
 		"50|3": {0x00},
 		"40|4": {0x00},
-		"60|5": {0x00},
-		"00|6": {0x00},
+		"5a|0": {0x00},
 		"80|7": {0x00},
+		"00|6": {0x00},
+		"5c|2": {0x00},
+		"58|1": {0x00},
+		"5b|0": {0x00},
 	}
 	expectedHistoryAuditPath := map[string][]byte{
 		"0|0": {0x5a},
