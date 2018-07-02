@@ -20,7 +20,7 @@ type Signable interface {
 	Verify(message, sig []byte) (bool, error)
 }
 
-var std Signable = NewRSASigner(4096)
+var std Signable = NewEdSigner()
 
 func Sign(message []byte) ([]byte, error)      { return std.Sign(message) }
 func Verify(message, sig []byte) (bool, error) { return std.Verify(message, sig) }
