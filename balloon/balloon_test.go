@@ -18,10 +18,7 @@ package balloon
 
 import (
 	"bytes"
-	"encoding/binary"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"os"
 	"testing"
 
@@ -29,9 +26,6 @@ import (
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/balloon/proof"
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/storage/badger"
-	"github.com/bbva/qed/storage/bolt"
-	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/storage/cache"
 	"github.com/bbva/qed/testutils/rand"
 )
@@ -227,212 +221,6 @@ func TestVerify(t *testing.T) {
 	}
 }
 
-func createBalloon(id string, hasher hashing.Hasher) (*HyperBalloon, *badger.BadgerStorage, func()) {
-	dir, err := ioutil.TempDir("/var/tmp/", "balloon.test")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	frozen, frozenCloseF := openBadgerStorage(fmt.Sprintf("%s/frozen", dir))
-	leaves, leavesCloseF := openBadgerStorage(fmt.Sprintf("%s/leaves", dir))
-	cache := cache.NewSimpleCache(1 << 20)
-
-	hyperT := hyper.NewTree(id, cache, leaves, hasher)
-	historyT := history.NewTree(id, frozen, hasher)
-	balloon := NewHyperBalloon(hasher, historyT, hyperT)
-
-	return balloon, leaves, func() {
-		frozenCloseF()
-		leavesCloseF()
-		os.RemoveAll(dir)
-	}
-}
-
-func TestAddAndVerify(t *testing.T) {
-
-	id := string(0x0)
-	hasher := new(hashing.Sha256Hasher)
-
-	balloon, _, closeF := createBalloon(id, hasher)
-	defer closeF()
-
-	key := []byte("Never knows best")
-	keyDigest := hasher.Do(key)
-
-	commitment := <-balloon.Add(key)
-	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
-
-	historyProof := proof.NewProof(history.NewRootPosition(commitment.Version), membershipProof.HistoryProof.AuditPath(), hasher)
-	hyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), membershipProof.HyperProof.AuditPath(), hasher)
-
-	proof := NewMembershipProof(
-		membershipProof.Exists,
-		hyperProof,
-		historyProof,
-		membershipProof.CurrentVersion,
-		membershipProof.QueryVersion,
-		membershipProof.ActualVersion,
-		keyDigest,
-		hasher,
-	)
-
-	correct := proof.Verify(commitment, key)
-
-	if !correct {
-		t.Errorf("Proof is incorrect")
-	}
-
-}
-
-func TestTamperAndVerify(t *testing.T) {
-
-	id := string(0x0)
-	hasher := new(hashing.Sha256Hasher)
-
-	balloon, store, closeF := createBalloon(id, hasher)
-	defer closeF()
-
-	key := []byte("Never knows best")
-	keyDigest := hasher.Do(key)
-
-	commitment := <-balloon.Add(key)
-	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
-
-	historyProof := proof.NewProof(history.NewRootPosition(commitment.Version), membershipProof.HistoryProof.AuditPath(), hasher)
-	hyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), membershipProof.HyperProof.AuditPath(), hasher)
-
-	memProof := NewMembershipProof(
-		membershipProof.Exists,
-		hyperProof,
-		historyProof,
-		membershipProof.CurrentVersion,
-		membershipProof.QueryVersion,
-		membershipProof.ActualVersion,
-		keyDigest,
-		hasher,
-	)
-
-	correct := memProof.Verify(commitment, key)
-	if !correct {
-		t.Errorf("Proof is incorrect")
-	}
-
-	original, _ := store.Get(keyDigest)
-
-	tamperVal := ^uint64(0) // max uint ftw!
-	tpBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(tpBytes, tamperVal)
-
-	err := store.Add(keyDigest, tpBytes)
-	if err != nil {
-		t.Fatal("store add returned not nil value")
-	}
-
-	tampered, _ := store.Get(keyDigest)
-	if bytes.Compare(tpBytes, tampered) != 0 {
-		t.Fatal("Tamper unsuccesfull")
-	}
-	if bytes.Compare(original, tampered) == 0 {
-		t.Fatal("Tamper unsuccesfull")
-	}
-
-	tpMembershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
-
-	tpHyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), tpMembershipProof.HyperProof.AuditPath(), hasher)
-
-	if tpMembershipProof.HistoryProof != nil {
-		t.Fatal("The history proof must be nil")
-	}
-
-	tpProof := NewMembershipProof(
-		tpMembershipProof.Exists,
-		tpHyperProof,
-		nil,
-		tpMembershipProof.CurrentVersion,
-		tpMembershipProof.QueryVersion,
-		tpMembershipProof.ActualVersion,
-		keyDigest,
-		hasher,
-	)
-
-	if tpProof.Verify(commitment, key) {
-		t.Errorf("TamperProof unsuccessful")
-	}
-
-}
-
-func TestDeleteAndVerify(t *testing.T) {
-
-	id := string(0x0)
-	hasher := new(hashing.Sha256Hasher)
-
-	balloon, store, closeF := createBalloon(id, hasher)
-	defer closeF()
-
-	key := []byte("Never knows best")
-	keyDigest := hasher.Do(key)
-
-	commitment := <-balloon.Add(key)
-	membershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
-
-	historyProof := proof.NewProof(history.NewRootPosition(commitment.Version), membershipProof.HistoryProof.AuditPath(), hasher)
-	hyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), membershipProof.HyperProof.AuditPath(), hasher)
-
-	memProof := NewMembershipProof(
-		membershipProof.Exists,
-		hyperProof,
-		historyProof,
-		membershipProof.CurrentVersion,
-		membershipProof.QueryVersion,
-		membershipProof.ActualVersion,
-		keyDigest,
-		hasher,
-	)
-
-	correct := memProof.Verify(commitment, key)
-	if !correct {
-		t.Errorf("Proof is incorrect")
-	}
-
-	tamperVal := ^uint64(0) // max uint ftw!
-	tpBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(tpBytes, tamperVal)
-
-	err := store.Delete(keyDigest)
-	if err != nil {
-		t.Fatal("store.Delete returned not nil value")
-	}
-
-	tampered, _ := store.Get(keyDigest)
-	if len(tampered) > 0 {
-		t.Fatal("Tamper unsuccesfull")
-	}
-
-	tpMembershipProof := <-balloon.GenMembershipProof(key, commitment.Version)
-
-	tpHyperProof := proof.NewProof(hyper.NewRootPosition(hasher.Len(), 0), tpMembershipProof.HyperProof.AuditPath(), hasher)
-
-	if tpMembershipProof.HistoryProof != nil {
-		t.Fatal("The history proof must be nil")
-	}
-
-	tpProof := NewMembershipProof(
-		tpMembershipProof.Exists,
-		tpHyperProof,
-		nil,
-		tpMembershipProof.CurrentVersion,
-		tpMembershipProof.QueryVersion,
-		tpMembershipProof.ActualVersion,
-		keyDigest,
-		hasher,
-	)
-
-	if tpProof.Verify(commitment, key) {
-		t.Errorf("TamperProof unsuccessful")
-	}
-
-}
-
 //https://play.golang.org/p/nP241T7HXBj
 // test event 0 : 4a [1001010] - 00 [0]
 // test event 1 : 4b [1001011] - 01 [1]
@@ -502,34 +290,4 @@ func BenchmarkAddBadger(b *testing.B) {
 		<-r
 	}
 
-}
-
-func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
-	store := bplus.NewBPlusTreeStorage()
-	return store, func() {
-		store.Close()
-	}
-}
-
-func openBoltStorage(path string) (*bolt.BoltStorage, func()) {
-	store := bolt.NewBoltStorage(path, "test")
-	return store, func() {
-		store.Close()
-		deleteFile(path)
-	}
-}
-
-func openBadgerStorage(path string) (*badger.BadgerStorage, func()) {
-	store := badger.NewBadgerStorage(path)
-	return store, func() {
-		store.Close()
-		deleteFile(path)
-	}
-}
-
-func deleteFile(path string) {
-	err := os.RemoveAll(path)
-	if err != nil {
-		fmt.Printf("Unable to remove db file %s", err)
-	}
 }
