@@ -32,6 +32,14 @@ type IncrementalProof struct {
 	leafHash     hashing.LeafHasher
 }
 
+func NewIncrementalProof(start, end uint64, ap proof.AuditPath, ih hashing.InteriorHasher, lh hashing.LeafHasher) *IncrementalProof {
+	return &IncrementalProof{start, end, ap, ih, lh}
+}
+
+func (p IncrementalProof) AuditPath() proof.AuditPath {
+	return p.auditPath
+}
+
 func (p IncrementalProof) Verify(startDigest, endDigest []byte) bool {
 	startRoot := NewRootPosition(p.start)
 	endRoot := NewRootPosition(p.end)
@@ -42,7 +50,7 @@ func (p IncrementalProof) Verify(startDigest, endDigest []byte) bool {
 	binary.PutUvarint(endBytes, p.end)
 
 	startRecomputed := p.computeStartHash(startRoot, p.auditPath, startBytes)
-	endRecomputed := p.computeEndHash(endRoot, p.auditPath, endBytes)
+	endRecomputed := p.computeEndHash(endRoot, p.auditPath, startBytes, endBytes)
 
 	return bytes.Equal(startRecomputed, startDigest) && bytes.Equal(endRecomputed, endDigest)
 }
@@ -71,28 +79,31 @@ func (p IncrementalProof) computeStartHash(pos position.Position, ap proof.Audit
 	return digest
 }
 
-func (p IncrementalProof) computeEndHash(pos position.Position, ap proof.AuditPath, index []byte) []byte {
+func (p IncrementalProof) computeEndHash(pos position.Position, ap proof.AuditPath, start, end []byte) []byte {
 	var ok bool
 	var left, right []byte
 	var digest []byte
-	direction := pos.Direction(index)
+	direction := pos.Direction(end)
 
 	switch {
 	case direction == position.Halt && pos.IsLeaf():
 		digest = ap[pos.StringId()]
 	case direction == position.Left:
-		right, ok = ap[pos.Right().StringId()]
-		if !ok {
-			right = p.computeEndHash(pos.Right(), ap, index)
-		}
-		left = p.computeEndHash(pos.Left(), ap, index)
-		digest = p.interiorHash(pos.Id(), left, right)
+		left = p.computeEndHash(pos.Left(), ap, start, end)
+		digest = p.leafHash(pos.Id(), left)
 	case direction == position.Right:
 		left, ok = ap[pos.Left().StringId()]
 		if !ok {
-			left = p.computeEndHash(pos.Left(), ap, index)
+			startIndex := binary.LittleEndian.Uint64(start)
+			if startIndex%2 == 0 {
+				nextIndex := make([]byte, 8)
+				binary.LittleEndian.PutUint64(nextIndex, startIndex+1)
+				left = p.computeStartHash(pos.Left(), ap, nextIndex)
+			} else {
+				left = p.computeStartHash(pos.Left(), ap, start)
+			}
 		}
-		right = p.computeEndHash(pos.Right(), ap, index)
+		right = p.computeEndHash(pos.Right(), ap, start, end)
 		digest = p.interiorHash(pos.Id(), left, right)
 	}
 
