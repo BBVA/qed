@@ -21,7 +21,9 @@
 package history
 
 import (
+	"bytes"
 	"encoding/binary"
+	"errors"
 	"math"
 	"sync"
 
@@ -119,6 +121,10 @@ func (t Tree) ProveMembership(key []byte, index, version uint64) (*proof.Proof, 
 	t.Lock()
 	defer t.Unlock()
 
+	if index < 0 || index > version {
+		return nil, errors.New("invalid index, has to be: 0 <= index <= version")
+	}
+
 	ap := make(proof.AuditPath)
 	pos := NewRootPosition(version)
 	err := t.auditPath(key, index, version, pos, ap)
@@ -127,6 +133,24 @@ func (t Tree) ProveMembership(key []byte, index, version uint64) (*proof.Proof, 
 	}
 
 	return proof.NewProof(pos, ap, t.hasher), nil
+}
+
+func (t Tree) ProveIncremental(startKey, endKey []byte, startVersion, endVersion uint64) (*IncrementalProof, error) {
+	t.Lock()
+	defer t.Unlock()
+
+	if startVersion < 0 || startVersion > endVersion {
+		return nil, errors.New("invalid startVersion, has to be: 0 <= endVersion <= endVersion")
+	}
+
+	ap := make(proof.AuditPath)
+	endPosition := NewRootPosition(endVersion)
+
+	err := t.incAuditPath(startKey, endKey, startVersion, endVersion, endPosition, ap)
+	if err != nil {
+		return nil, err
+	}
+	return NewIncrementalProof(startVersion, endVersion, ap, t.interiorHash, t.leafHash), nil
 }
 
 func (t Tree) getDepth(index uint64) uint64 {
@@ -177,11 +201,6 @@ func (t *Tree) computeHash(eventDigest []byte, pos position.Position, version ui
 		}
 		metrics.History.Add("internal_hashes", 1)
 		digest = t.interiorHash(pos.Id(), hash1, hash2)
-	default:
-		// nodes needed by audit path which are beyond the version
-		// are 0x0
-		metrics.History.Add("leaf_hashes", 1)
-		digest = t.leafHash(pos.Id(), []byte{0x0})
 	}
 
 	// froze the node with its new digest
@@ -205,7 +224,10 @@ func (t Tree) auditPath(key []byte, targetIndex, version uint64, pos position.Po
 		err = t.appendHashToPath(key, pos, version, ap)
 		return
 	case direction == position.Left:
-		t.appendHashToPath(key, pos.Right(), version, ap)
+		right := pos.Right()
+		if bytes.Compare(right.Key(), uInt64AsBytes(version)) <= 0 {
+			t.appendHashToPath(key, right, version, ap)
+		}
 		return t.auditPath(key, targetIndex, version, pos.Left(), ap)
 	case direction == position.Right:
 		t.appendHashToPath(key, pos.Left(), version, ap)
@@ -224,4 +246,27 @@ func (t Tree) appendHashToPath(key []byte, pos position.Position, version uint64
 	}
 	ap[pos.StringId()] = hash
 	return
+}
+
+func (t Tree) incAuditPath(startKey, endKey []byte, startIndex, endIndex uint64, pos position.Position, ap proof.AuditPath) (err error) {
+	startDirection := pos.Direction(uInt64AsBytes(startIndex))
+	endDirection := pos.Direction(uInt64AsBytes(endIndex))
+
+	switch {
+	case startDirection == endDirection && startDirection == position.Halt && pos.IsLeaf():
+		t.appendHashToPath(endKey, pos, endIndex, ap)
+	case startDirection == endDirection && startDirection == position.Left:
+		right := pos.Right()
+		if bytes.Compare(right.Key(), uInt64AsBytes(endIndex)) <= 0 {
+			t.appendHashToPath(endKey, right, endIndex, ap)
+		}
+		err = t.incAuditPath(startKey, endKey, startIndex, endIndex, pos.Left(), ap)
+	case startDirection == endDirection && startDirection == position.Right:
+		t.appendHashToPath(endKey, pos.Left(), endIndex, ap)
+		err = t.incAuditPath(startKey, endKey, startIndex, endIndex, pos.Right(), ap)
+	case startDirection == position.Left:
+		err = t.auditPath(startKey, startIndex, endIndex, pos.Left(), ap) // debería ser el last key, no endIndex
+		err = t.auditPath(endKey, endIndex, endIndex, pos.Right(), ap)
+	}
+	return err
 }

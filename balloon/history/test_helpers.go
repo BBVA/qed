@@ -19,6 +19,8 @@
 package history
 
 import (
+	"encoding/binary"
+
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
@@ -91,3 +93,16 @@ func NewFakeProof(auditPath [][]byte, index uint64, hasher hashing.Hasher) *Proo
 	return proof
 }
 */
+
+func uint64AsBytes(index uint64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, index)
+	return b
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
