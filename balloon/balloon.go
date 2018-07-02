@@ -118,6 +118,10 @@ func (p MembershipProof) Verify(commitment *Commitment, event []byte) bool {
 	return hyperCorrect
 }
 
+type IncrementalProof struct {
+	history.IncrementalProof
+}
+
 func uint2bytes(i uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, i)
@@ -161,6 +165,18 @@ func (b HyperBalloon) GenMembershipProof(event []byte, version uint64) chan *Mem
 	return result
 }
 
+// GenIncrementalProof is the public balloon interface to get an IncrementalProof to
+// generate a consistency proof
+func (b HyperBalloon) GenIncrementalProof(start, end uint64) chan *IncrementalProof {
+	result := make(chan *IncrementalProof)
+	b.ops <- &incremental{
+		start,
+		end,
+		result,
+	}
+	return result
+}
+
 // Close will close the balloon operations serializer channel.
 func (b HyperBalloon) Close() chan bool {
 	result := make(chan bool)
@@ -183,6 +199,12 @@ type membership struct {
 	event   []byte
 	version uint64
 	result  chan *MembershipProof
+}
+
+type incremental struct {
+	start  uint64
+	end    uint64
+	result chan *IncrementalProof
 }
 
 type close struct {
@@ -212,6 +234,13 @@ func (b *HyperBalloon) operations() chan interface{} {
 
 				case *membership:
 					proof, err := b.genMembershipProof(msg.event, msg.version)
+					if err != nil {
+						log.Debug("Operations error: ", err)
+					}
+					msg.result <- proof
+
+				case *incremental:
+					proof, err := b.genIncrementalProof(msg.start, msg.end)
 					if err != nil {
 						log.Debug("Operations error: ", err)
 					}
@@ -279,4 +308,17 @@ func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*Members
 
 	return &mp, nil
 
+}
+
+func (b HyperBalloon) genIncrementalProof(start, end uint64) (*IncrementalProof, error) {
+
+	startKey := uint2bytes(start)
+	endKey := uint2bytes(end)
+
+	proof, err := b.history.ProveIncremental(startKey, endKey, start, end)
+	if err != nil {
+		return nil, err
+	}
+
+	return &IncrementalProof{*proof}, nil
 }
