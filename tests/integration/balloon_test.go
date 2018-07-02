@@ -26,9 +26,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/testutils/storage"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
@@ -206,24 +204,6 @@ func TestDeleteAndVerify(t *testing.T) {
 		t.Errorf("TamperProof unsuccessful")
 	}
 
-}
-
-func TestGenIncrementalAndVerify(t *testing.T) {
-	hasher := new(hashing.Sha256Hasher)
-	b, store, closeF := createBalloon("treeId", hasher)
-	defer closeF()
-
-	c := make([]*balloon.Commitment, 0)
-	for i := 0; i < 10; i++ {
-		c[i] = <-b.Add(rand.Bytes(10))
-	}
-
-	start := 2
-	end := 9
-	proof := <-b.GenIncrementalProof(start, end)
-
-	correct := proof.Verify(c[start], c[end])
-	assert.True(t, correct, "Unable to verify incremental proof")
 }
 
 func createBalloon(id string, hasher hashing.Hasher) (*balloon.HyperBalloon, *badger.BadgerStorage, func()) {
