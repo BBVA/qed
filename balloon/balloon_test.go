@@ -28,12 +28,13 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage/cache"
 	"github.com/bbva/qed/testutils/rand"
+	"github.com/bbva/qed/testutils/storage"
 )
 
 func TestAdd(t *testing.T) {
 
-	frozen, frozenCloseF := openBPlusStorage()
-	leaves, leavesCloseF := openBPlusStorage()
+	frozen, frozenCloseF := storage.NewBPlusStorage()
+	leaves, leavesCloseF := storage.NewBPlusStorage()
 	defer frozenCloseF()
 	defer leavesCloseF()
 
@@ -84,8 +85,8 @@ func TestAdd(t *testing.T) {
 func TestGenMembershipProof(t *testing.T) {
 
 	t.Skip("TODO: Decide wether this snapshotting tests are required…")
-	frozen, frozenCloseF := openBPlusStorage()
-	leaves, leavesCloseF := openBPlusStorage()
+	frozen, frozenCloseF := storage.NewBPlusStorage()
+	leaves, leavesCloseF := storage.NewBPlusStorage()
 	defer frozenCloseF()
 	defer leavesCloseF()
 
@@ -242,8 +243,8 @@ func BenchmarkAddBolt(b *testing.B) {
 	path := "/var/tmp/bench_balloon_add"
 	os.MkdirAll(path, os.FileMode(0755))
 
-	frozen, frozenCloseF := openBoltStorage(fmt.Sprintf("%s/frozen", path))
-	leaves, leavesCloseF := openBoltStorage(fmt.Sprintf("%s/leaves", path))
+	frozen, frozenCloseF := storage.NewBoltStorage(fmt.Sprintf("%s/frozen", path))
+	leaves, leavesCloseF := storage.NewBoltStorage(fmt.Sprintf("%s/leaves", path))
 	defer frozenCloseF()
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
@@ -269,8 +270,8 @@ func BenchmarkAddBadger(b *testing.B) {
 	path := "/var/tmp/bench_balloon_add"
 	os.MkdirAll(path, os.FileMode(0755))
 
-	frozen, frozenCloseF := openBadgerStorage(fmt.Sprintf("%s/frozen", path))
-	leaves, leavesCloseF := openBadgerStorage(fmt.Sprintf("%s/leaves", path))
+	frozen, frozenCloseF := storage.NewBadgerStorage(fmt.Sprintf("%s/frozen", path))
+	leaves, leavesCloseF := storage.NewBadgerStorage(fmt.Sprintf("%s/leaves", path))
 	defer frozenCloseF()
 	defer leavesCloseF()
 	defer deleteFilesInDir(path)
