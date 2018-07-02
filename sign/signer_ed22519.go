@@ -15,12 +15,35 @@
 */
 package sign
 
-type Signable interface {
-	Sign(message []byte) ([]byte, error)
-	Verify(message, sig []byte) (bool, error)
+import (
+	"crypto/rand"
+
+	"golang.org/x/crypto/ed25519"
+)
+
+type EdSigner struct {
+	privateKey ed25519.PrivateKey
+	publicKey  ed25519.PublicKey
 }
 
-var std Signable = NewEdSigner()
+func NewEdSigner() Signable {
 
-func Sign(message []byte) ([]byte, error)      { return std.Sign(message) }
-func Verify(message, sig []byte) (bool, error) { return std.Verify(message, sig) }
+	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+
+	return &EdSigner{
+		privateKey,
+		publicKey,
+	}
+
+}
+
+func (s *EdSigner) Sign(message []byte) ([]byte, error) {
+	return ed25519.Sign(s.privateKey, message), nil
+}
+
+func (s *EdSigner) Verify(message, sig []byte) (bool, error) {
+	return ed25519.Verify(s.publicKey, message, sig), nil
+}
