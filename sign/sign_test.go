@@ -17,6 +17,7 @@ func testSign(t *testing.T, signer Signable) {
 	assert.True(t, result, "Must be verified")
 
 }
+func TestNilSign(t *testing.T)   { testSign(t, NewNilSigner()) }
 func TestRsaSign(t *testing.T)   { testSign(t, NewRSASigner(2048)) }
 func TestEdSign(t *testing.T)    { testSign(t, NewEdSigner()) }
 func TestEcdsaSign(t *testing.T) { testSign(t, NewEcdsaSigner()) }

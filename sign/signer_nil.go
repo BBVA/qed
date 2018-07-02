@@ -15,12 +15,16 @@
 */
 package sign
 
-type Signable interface {
-	Sign(message []byte) ([]byte, error)
-	Verify(message, sig []byte) (bool, error)
+type NilSigner struct{}
+
+func NewNilSigner() Signable {
+	return &NilSigner{}
 }
 
-var std Signable = NewEdSigner()
+func (s *NilSigner) Sign(message []byte) ([]byte, error) {
+	return nil, nil
+}
 
-func Sign(message []byte) ([]byte, error)      { return std.Sign(message) }
-func Verify(message, sig []byte) (bool, error) { return std.Verify(message, sig) }
+func (s *NilSigner) Verify(message, sig []byte) (bool, error) {
+	return true, nil
+}
