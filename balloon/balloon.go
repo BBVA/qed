@@ -129,7 +129,7 @@ func NewIncrementalProof(start, end uint64, auditPath proof.AuditPath, hasher ha
 	return &IncrementalProof{start, end, auditPath, hasher}
 }
 
-func (p IncrementalProof) Verify(start, end Commitment) bool {
+func (p IncrementalProof) Verify(start, end *Commitment) bool {
 	proof := history.NewIncrementalProof(p.Start, p.End, p.AuditPath, hashing.InteriorHasherF(p.hasher), hashing.LeafHasherF(p.hasher))
 	return proof.Verify(start.HistoryDigest, end.HistoryDigest)
 }
