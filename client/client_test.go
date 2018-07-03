@@ -124,6 +124,37 @@ func TestMembershipWithServerFailure(t *testing.T) {
 
 }
 
+func TestIncremental(t *testing.T) {
+	tearDown := setup()
+	defer tearDown()
+
+	start := uint64(2)
+	end := uint64(8)
+	fakeResult := &apihttp.IncrementalResponse{
+		start,
+		end,
+		map[string][]byte{"0|0": []uint8{0x0}},
+	}
+
+	resultJSON, _ := json.Marshal(fakeResult)
+	mux.HandleFunc("/proofs/incremental", okHandler(resultJSON))
+
+	result, err := client.Incremental(start, end)
+	assert.NoError(t, err)
+	assert.Equal(t, fakeResult, result, "The results should match")
+}
+
+func TestIncrementalWithServerFailure(t *testing.T) {
+	tearDown := setup()
+	defer tearDown()
+
+	mux.HandleFunc("/proofs/incremental", serverErrorHandler())
+
+	_, err := client.Incremental(uint64(2), uint64(8))
+	assert.Error(t, err)
+
+}
+
 // TODO implement a test to verify proofs using fake hash function
 
 func okHandler(result []byte) func(http.ResponseWriter, *http.Request) {
