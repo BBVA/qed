@@ -138,6 +138,25 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipR
 
 }
 
+// Incremental will ask for an IncrementalProof to the server.
+func (c HttpClient) Incremental(start, end uint64) (*apihttp.IncrementalResponse, error) {
+
+	query, _ := json.Marshal(&apihttp.IncrementalRequest{
+		start,
+		end,
+	})
+
+	body, err := c.doReq("POST", "/proofs/incremental", query)
+	if err != nil {
+		return nil, err
+	}
+
+	var response *apihttp.IncrementalResponse
+	json.Unmarshal(body, &response)
+
+	return response, nil
+}
+
 func uint2bytes(i uint64) []byte {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, i)
@@ -156,5 +175,24 @@ func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snaps
 		snap.HyperDigest,
 		snap.Version,
 	}, snap.Event)
+
+}
+
+func (c HttpClient) VerifyIncremental(result *apihttp.IncrementalResponse, startSnapshot, endSnapshot *apihttp.SignedSnapshot, hasher hashing.Hasher) bool {
+
+	proof := apihttp.ToIncrementalProof(result, hasher)
+
+	startCommitment := &balloon.Commitment{
+		startSnapshot.Snapshot.HistoryDigest,
+		startSnapshot.Snapshot.HyperDigest,
+		startSnapshot.Snapshot.Version,
+	}
+	endCommitment := &balloon.Commitment{
+		endSnapshot.Snapshot.HistoryDigest,
+		endSnapshot.Snapshot.HyperDigest,
+		endSnapshot.Snapshot.Version,
+	}
+
+	return proof.Verify(startCommitment, endCommitment)
 
 }
