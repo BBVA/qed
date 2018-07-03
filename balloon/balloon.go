@@ -34,6 +34,7 @@ import (
 type Balloon interface {
 	Add(event []byte) chan *Commitment
 	GenMembershipProof(event []byte, version uint64) chan *MembershipProof
+	GenIncrementalProof(start, end uint64) chan *IncrementalProof
 	Close() chan bool
 }
 
@@ -119,7 +120,18 @@ func (p MembershipProof) Verify(commitment *Commitment, event []byte) bool {
 }
 
 type IncrementalProof struct {
-	history.IncrementalProof
+	Start, End uint64
+	AuditPath  proof.AuditPath
+	hasher     hashing.Hasher
+}
+
+func NewIncrementalProof(start, end uint64, auditPath proof.AuditPath, hasher hashing.Hasher) *IncrementalProof {
+	return &IncrementalProof{start, end, auditPath, hasher}
+}
+
+func (p IncrementalProof) Verify(start, end Commitment) bool {
+	proof := history.NewIncrementalProof(p.Start, p.End, p.AuditPath, hashing.InteriorHasherF(p.hasher), hashing.LeafHasherF(p.hasher))
+	return proof.Verify(start.HistoryDigest, end.HistoryDigest)
 }
 
 func uint2bytes(i uint64) []byte {
@@ -320,5 +332,5 @@ func (b HyperBalloon) genIncrementalProof(start, end uint64) (*IncrementalProof,
 		return nil, err
 	}
 
-	return &IncrementalProof{*proof}, nil
+	return NewIncrementalProof(start, end, proof.AuditPath(), b.hasher), nil
 }

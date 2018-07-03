@@ -61,6 +61,17 @@ type MembershipResult struct {
 	Key            []byte
 }
 
+type IncrementalRequest struct {
+	Start uint64
+	End   uint64
+}
+
+type IncrementalResponse struct {
+	Start     uint64
+	End       uint64
+	AuditPath map[string][]byte
+}
+
 // ToMembershipProof translates internal api balloon.MembershipProof to the
 // public struct apihttp.MembershipResult.
 func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResult {
@@ -89,4 +100,16 @@ func ToBalloonProof(id []byte, mr *MembershipResult, hasher hashing.Hasher) *bal
 
 	return balloon.NewMembershipProof(mr.Exists, hyperProof, historyProof, mr.CurrentVersion, mr.ActualVersion, mr.QueryVersion, mr.KeyDigest, hasher)
 
+}
+
+func ToIncrementalResponse(proof *balloon.IncrementalProof) *IncrementalResponse {
+	return &IncrementalResponse{
+		proof.Start,
+		proof.End,
+		proof.AuditPath,
+	}
+}
+
+func ToIncrementalProof(ir *IncrementalResponse, hasher hashing.Hasher) *balloon.IncrementalProof {
+	return balloon.NewIncrementalProof(ir.Start, ir.End, ir.AuditPath, hasher)
 }

@@ -175,6 +175,49 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 	}
 }
 
+// Incremental returns an incrementalProof from the system
+// The http post url is:
+//   POST /proofs/incremental
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 201 and the body contains:
+//   {
+//     "start": "2",
+//     "end": "8",
+//     "auditPath": ["<truncated for clarity in docs>"]
+//   }
+func Incremental(balloon balloon.Balloon) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Make sure we can only be called with an HTTP POST request.
+		if r.Method != "POST" {
+			w.Header().Set("Allow", "POST")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		var request IncrementalRequest
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Wait for the response
+		proof := <-balloon.GenIncrementalProof(request.Start, request.End)
+
+		out, err := json.Marshal(ToIncrementalResponse(proof))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(out)
+		return
+
+	}
+}
+
 // AuthHandlerMiddleware function is an HTTP handler wrapper that performs
 // simple authorization tasks. Currently only checks that Api-Key it's present.
 //
