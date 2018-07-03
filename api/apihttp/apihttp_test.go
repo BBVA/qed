@@ -33,9 +33,10 @@ import (
 )
 
 type fakeBalloon struct {
-	addch  chan *balloon.Commitment
-	stopch chan bool
-	proof  chan *balloon.MembershipProof
+	addch   chan *balloon.Commitment
+	stopch  chan bool
+	proofch chan *balloon.MembershipProof
+	incch   chan *balloon.IncrementalProof
 }
 
 func (b fakeBalloon) Add(event []byte) chan *balloon.Commitment {
@@ -47,10 +48,41 @@ func (b fakeBalloon) Close() chan bool {
 }
 
 func (b fakeBalloon) GenMembershipProof(event []byte, version uint64) chan *balloon.MembershipProof {
-	return b.proof
+	return b.proofch
+}
+
+func (b fakeBalloon) GenIncrementalProof(start, end uint64) chan *balloon.IncrementalProof {
+	return b.incch
 }
 
 func newAddOpFakeBalloon(addch chan *balloon.Commitment) fakeBalloon {
+	closech := make(chan bool)
+	proofch := make(chan *balloon.MembershipProof)
+	incch := make(chan *balloon.IncrementalProof)
+
+	return fakeBalloon{
+		addch,
+		closech,
+		proofch,
+		incch,
+	}
+}
+
+func newMembershipOpFakeBalloon(proofch chan *balloon.MembershipProof) fakeBalloon {
+	addch := make(chan *balloon.Commitment)
+	incch := make(chan *balloon.IncrementalProof)
+	closech := make(chan bool)
+
+	return fakeBalloon{
+		addch,
+		closech,
+		proofch,
+		incch,
+	}
+}
+
+func newIncrementalOpFakeBalloon(incch chan *balloon.IncrementalProof) fakeBalloon {
+	addch := make(chan *balloon.Commitment)
 	closech := make(chan bool)
 	proofch := make(chan *balloon.MembershipProof)
 
@@ -58,17 +90,7 @@ func newAddOpFakeBalloon(addch chan *balloon.Commitment) fakeBalloon {
 		addch,
 		closech,
 		proofch,
-	}
-}
-
-func newMembershipOpFakeBalloon(proofch chan *balloon.MembershipProof) fakeBalloon {
-	addch := make(chan *balloon.Commitment)
-	closech := make(chan bool)
-
-	return fakeBalloon{
-		addch,
-		closech,
-		proofch,
+		incch,
 	}
 }
 
@@ -211,6 +233,50 @@ func TestMembership(t *testing.T) {
 
 	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
+}
+
+func TestIncremental(t *testing.T) {
+	start := uint64(2)
+	end := uint64(8)
+	query, _ := json.Marshal(IncrementalRequest{
+		start,
+		end,
+	})
+
+	req, err := http.NewRequest("POST", "/proof/incremental", bytes.NewBuffer(query))
+	assert.NoError(t, err, "Error querying for incremental proof")
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	incch := make(chan *balloon.IncrementalProof)
+	handler := Incremental(newIncrementalOpFakeBalloon(incch))
+	expectedResult := &IncrementalResponse{
+		start,
+		end,
+		map[string][]byte{"0|0": []uint8{0x0}},
+	}
+	go func() {
+		incch <- balloon.NewIncrementalProof(
+			start, 
+			end, 
+			proof.AuditPath{"0|0": []uint8{0x0}},
+			new(hashing.Sha256Hasher),
+		)
+	}()
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	status := rr.Code
+	assert.Equalf(t, http.StatusOK, status, "handler returned wrong status code: got %v want %v", status, http.StatusOK)
+
+	// Check the body response
+	actualResult := new(IncrementalResponse)
+	json.Unmarshal([]byte(rr.Body.String()), actualResult)
+
+	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
 }
 
 func TestAuthHandlerMiddleware(t *testing.T) {
