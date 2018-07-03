@@ -245,6 +245,7 @@ func NewApiHttp(balloon balloon.Balloon) *http.ServeMux {
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
 	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
+	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
 
 	return api
 }
