@@ -222,7 +222,7 @@ func TestGenIncrementalAndVerify(t *testing.T) {
 	end := 7
 	proof := <-b.GenIncrementalProof(uint64(start), uint64(end))
 
-	correct := proof.Verify(c[start].HistoryDigest, c[end].HistoryDigest)
+	correct := proof.Verify(c[start], c[end])
 	assert.True(t, correct, "Unable to verify incremental proof")
 }
 
