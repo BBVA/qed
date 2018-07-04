@@ -137,7 +137,8 @@ func TestAdd(t *testing.T) {
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	addch := make(chan *balloon.Commitment)
-	handler := Add(newAddOpFakeBalloon(addch))
+	signer := sign.NewSigner()
+	handler := Add(newAddOpFakeBalloon(addch), signer)
 
 	go func() {
 		addch <- &balloon.Commitment{
@@ -178,7 +179,7 @@ func TestAdd(t *testing.T) {
 		t.Errorf("Event is not consistent ")
 	}
 
-	signature, err := sign.Sign([]byte(fmt.Sprintf("%v", signedSnapshot.Snapshot)))
+	signature, err := signer.Sign([]byte(fmt.Sprintf("%v", signedSnapshot.Snapshot)))
 
 	if !bytes.Equal(signedSnapshot.Signature, signature) {
 		t.Errorf("Signature is not consistent")

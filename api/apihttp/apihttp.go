@@ -78,7 +78,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //     "Version": 1,
 //     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
 //   }
-func Add(balloon balloon.Balloon) http.HandlerFunc {
+func Add(balloon balloon.Balloon, signer sign.Signable) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -109,7 +109,7 @@ func Add(balloon balloon.Balloon) http.HandlerFunc {
 			event.Event,
 		}
 
-		signature, err := sign.Sign([]byte(fmt.Sprintf("%v", snapshot)))
+		signature, err := signer.Sign([]byte(fmt.Sprintf("%v", snapshot)))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -239,11 +239,11 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/health-check -> HealthCheckHandler
 //	/events -> Add
 //	/proofs/membership -> Membership
-func NewApiHttp(balloon balloon.Balloon) *http.ServeMux {
+func NewApiHttp(balloon balloon.Balloon, signer sign.Signable) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
-	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
+	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon, signer)))
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
 
