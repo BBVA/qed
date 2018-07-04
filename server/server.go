@@ -34,6 +34,7 @@ import (
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/storage/bolt"
 	"github.com/bbva/qed/storage/cache"
@@ -69,6 +70,7 @@ func NewServer(
 	storageName string,
 	profiling bool,
 	tamper bool,
+	signer sign.Signable,
 ) *Server {
 
 	storages := make([]Store, 0, 0)
@@ -86,7 +88,7 @@ func NewServer(
 		apiKey,
 		cacheSize,
 		storages,
-		newHTTPServer(httpEndpoint, balloon),
+		newHTTPServer(httpEndpoint, balloon, signer),
 		nil,
 		nil,
 	}
@@ -198,8 +200,8 @@ func buildBalloon(frozen, leaves Store, apiKey string, cacheSize uint64) (*ballo
 	return balloon.NewHyperBalloon(hasher, history, hyper), nil
 }
 
-func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon) *http.Server {
-	router := apihttp.NewApiHttp(balloon)
+func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon, signer sign.Signable) *http.Server {
+	router := apihttp.NewApiHttp(balloon, signer)
 	server := &http.Server{
 		Addr:    endpoint,
 		Handler: apihttp.LogHandler(router),
