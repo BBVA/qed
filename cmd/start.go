@@ -21,13 +21,14 @@ import (
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
+	"github.com/bbva/qed/sign"
 )
 
 func newStartCommand() *cobra.Command {
 	var (
-		endpoint, dbPath, storageName string
-		cacheSize                     uint64
-		profiling, tampering          bool
+		endpoint, dbPath, storageName, privateKeyPath string
+		cacheSize                                     uint64
+		profiling, tampering                          bool
 	)
 
 	cmd := &cobra.Command{
@@ -38,6 +39,11 @@ func newStartCommand() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, args []string) {
 
+			signer, err := sign.NewSignerFromFile(privateKeyPath)
+			if err != nil {
+				log.Error(err)
+			}
+
 			srv := server.NewServer(
 				endpoint,
 				dbPath,
@@ -46,9 +52,10 @@ func newStartCommand() *cobra.Command {
 				storageName,
 				profiling,
 				tampering,
+				signer,
 			)
 
-			err := srv.Run()
+			err = srv.Run()
 			if err != nil {
 				log.Errorf("Can't start QED server: %v", err)
 			}
@@ -60,6 +67,7 @@ func newStartCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&dbPath, "path", "p", "/var/tmp/qed.db", "Set default storage path.")
 	cmd.Flags().Uint64VarP(&cacheSize, "cache", "c", 1<<25, "Initialize and reserve custom cache size.")
 	cmd.Flags().StringVarP(&storageName, "storage", "s", "badger", "Choose between different storage backends. Eg badge|bolt")
+	cmd.Flags().StringVarP(&privateKeyPath, "keypath", "y", "~/.ssh/id_ed25519", "Path to the ed25519 key file")
 	cmd.Flags().BoolVarP(&profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 
 	// INFO: testing purposes

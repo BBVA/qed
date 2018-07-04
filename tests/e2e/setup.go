@@ -21,6 +21,7 @@ import (
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/server"
+	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/testutils/scope"
 )
 
@@ -43,7 +44,7 @@ func setup() (scope.TestF, scope.TestF) {
 		os.RemoveAll(path)
 		os.MkdirAll(path, os.FileMode(0755))
 
-		srv = server.NewServer(listenAddr, path, apiKey, cacheSize, storageType, false, true)
+		srv = server.NewServer(listenAddr, path, apiKey, cacheSize, storageType, false, true, sign.NewSigner())
 
 		go (func() {
 			err := srv.Run()
