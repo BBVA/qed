@@ -49,6 +49,7 @@ func newClientCommand() *cobra.Command {
 
 	cmd.AddCommand(newAddCommand(ctx))
 	cmd.AddCommand(newMembershipCommand(ctx))
+	cmd.AddCommand(newIncrementalCommand(ctx))
 
 	return cmd
 }
