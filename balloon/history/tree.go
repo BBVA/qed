@@ -168,7 +168,7 @@ func (t *Tree) computeHash(eventDigest []byte, pos position.Position, version ui
 
 	var digest []byte
 
-	// try to unfroze first
+	// try to unfreeze it first
 	if pos.ShouldBeCached() {
 		metrics.History.Add("unfreezing", 1)
 		digest, err := t.frozen.Get(pos.Id())
@@ -203,7 +203,7 @@ func (t *Tree) computeHash(eventDigest []byte, pos position.Position, version ui
 		digest = t.interiorHash(pos.Id(), hash1, hash2)
 	}
 
-	// froze the node with its new digest
+	// freeze the node with its new digest
 	if pos.ShouldBeCached() {
 		metrics.History.Add("freezing", 1)
 		err := t.frozen.Add(pos.Id(), digest)
