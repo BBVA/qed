@@ -111,8 +111,12 @@ func TestProveAndVerifyNonConsecutively(t *testing.T) {
 		assert.NoError(t, err, "Error while adding to the tree")
 	}
 
-	// query for consistency with event 2 and version 8
-	pf, err := tree.ProveIncremental(eventDigests[2], eventDigests[8], uint64(2), uint64(8))
-	assert.NoError(t, err, "Error while querying for incremental proof")
-	assert.True(t, pf.Verify(digests[2], digests[8]), "The proof should verfify correctly")
+	for i := 0; i < size-1; i++ {
+		for j := i + 1; j < size; j++ {
+			pf, err := tree.ProveIncremental(eventDigests[2], eventDigests[8], uint64(2), uint64(8))
+			assert.NoErrorf(t, err, "Error while querying for incremental proof between versions %d and %d", i, j)
+			assert.Truef(t, pf.Verify(digests[2], digests[8]), "The proof should verfify correctly for versions %d, and %d", i, j)
+		}
+	}
+
 }

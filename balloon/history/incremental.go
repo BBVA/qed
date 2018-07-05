@@ -64,6 +64,25 @@ func (p IncrementalProof) computeStartHash(pos position.Position, ap proof.Audit
 		digest = ap[pos.StringId()]
 	case direction == position.Left:
 		left := p.computeStartHash(pos.Left(), ap, index)
+		digest = p.leafHash(pos.Id(), left)
+	case direction == position.Right:
+		left := ap[pos.Left().StringId()]
+		right := p.computeStartHash(pos.Right(), ap, index)
+		digest = p.interiorHash(pos.Id(), left, right)
+	}
+
+	return digest
+}
+
+func (p IncrementalProof) computeEndLeftHash(pos position.Position, ap proof.AuditPath, index []byte) []byte {
+	var digest []byte
+	direction := pos.Direction(index)
+
+	switch {
+	case direction == position.Halt && pos.IsLeaf():
+		digest = ap[pos.StringId()]
+	case direction == position.Left:
+		left := p.computeEndLeftHash(pos.Left(), ap, index)
 		if pos.Height() == 1 {
 			digest = p.leafHash(pos.Id(), left)
 		} else {
@@ -72,7 +91,7 @@ func (p IncrementalProof) computeStartHash(pos position.Position, ap proof.Audit
 		}
 	case direction == position.Right:
 		left := ap[pos.Left().StringId()]
-		right := p.computeStartHash(pos.Right(), ap, index)
+		right := p.computeEndLeftHash(pos.Right(), ap, index)
 		digest = p.interiorHash(pos.Id(), left, right)
 	}
 
@@ -98,9 +117,9 @@ func (p IncrementalProof) computeEndHash(pos position.Position, ap proof.AuditPa
 			if startIndex%2 == 0 {
 				nextIndex := make([]byte, 8)
 				binary.LittleEndian.PutUint64(nextIndex, startIndex+1)
-				left = p.computeStartHash(pos.Left(), ap, nextIndex)
+				left = p.computeEndLeftHash(pos.Left(), ap, nextIndex)
 			} else {
-				left = p.computeStartHash(pos.Left(), ap, start)
+				left = p.computeEndLeftHash(pos.Left(), ap, start)
 			}
 		}
 		right = p.computeEndHash(pos.Right(), ap, start, end)
