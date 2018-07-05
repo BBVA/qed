@@ -256,10 +256,6 @@ func (t Tree) incAuditPath(startKey, endKey []byte, startIndex, endIndex uint64,
 	case startDirection == endDirection && startDirection == position.Halt && pos.IsLeaf():
 		t.appendHashToPath(endKey, pos, endIndex, ap)
 	case startDirection == endDirection && startDirection == position.Left:
-		right := pos.Right()
-		if bytes.Compare(right.Key(), uInt64AsBytes(endIndex)) <= 0 {
-			t.appendHashToPath(endKey, right, endIndex, ap)
-		}
 		err = t.incAuditPath(startKey, endKey, startIndex, endIndex, pos.Left(), ap)
 	case startDirection == endDirection && startDirection == position.Right:
 		t.appendHashToPath(endKey, pos.Left(), endIndex, ap)
