@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"io/ioutil"
-	"sync"
 
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
@@ -31,31 +30,26 @@ type Signable interface {
 	Verify(message, sig []byte) (bool, error)
 }
 
-type EdSigner struct {
+type Ed25519Signer struct {
 	privateKey ed25519.PrivateKey
 	publicKey  ed25519.PublicKey
-
-	sync.RWMutex
 }
 
 func NewSigner() Signable {
-	var m sync.RWMutex
 
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		panic(err)
 	}
 
-	return &EdSigner{
+	return &Ed25519Signer{
 		privateKey,
 		publicKey,
-		m,
 	}
 
 }
 
 func NewSignerFromFile(privateKeyPath string) (Signable, error) {
-	var m sync.RWMutex
 
 	privateKeyBytes, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {
@@ -68,10 +62,9 @@ func NewSignerFromFile(privateKeyPath string) (Signable, error) {
 		return nil, err
 	}
 
-	signer := &EdSigner{
+	signer := &Ed25519Signer{
 		privateKey,
 		privateKey.Public().(ed25519.PublicKey),
-		m,
 	}
 
 	message := []byte("test message")
@@ -85,16 +78,11 @@ func NewSignerFromFile(privateKeyPath string) (Signable, error) {
 
 }
 
-func (s *EdSigner) Sign(message []byte) ([]byte, error) {
-	s.Lock()
-	defer s.Unlock()
-
+func (s *Ed25519Signer) Sign(message []byte) ([]byte, error) {
 	return ed25519.Sign(s.privateKey, message), nil
 }
 
-func (s *EdSigner) Verify(message, sig []byte) (bool, error) {
-	s.Lock()
-	defer s.Unlock()
+func (s *Ed25519Signer) Verify(message, sig []byte) (bool, error) {
 
 	return ed25519.Verify(s.publicKey, message, sig), nil
 }
