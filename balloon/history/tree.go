@@ -69,7 +69,7 @@ import (
 //
 // The depth of the tree is the maxium layer level, and can be calculated
 // with the following formula:
-//  layer = ceil(log(index))
+//  layer = ceil(log(index + 1))
 //
 
 type Tree struct {
