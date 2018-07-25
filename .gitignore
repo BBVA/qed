@@ -23,6 +23,7 @@ cover.html
 
 # Custom editor or IDE project settings
 .vscode
+.vs
 coverage.txt
 
 # Terraform
