@@ -212,7 +212,7 @@ func TestVerify(t *testing.T) {
 			c.queryVersion,
 			c.actualVersion,
 			event,
-			new(hashing.Sha256Hasher),
+			hashing.NewSha256Hasher(),
 		)
 		result := proof.Verify(commitment, event)
 
@@ -250,11 +250,10 @@ func BenchmarkAddBolt(b *testing.B) {
 	defer deleteFilesInDir(path)
 
 	cache := cache.NewSimpleCache(1 << 25)
-	hasher := new(hashing.Sha256Hasher)
 
-	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
-	historyT := history.NewTree(string(0x0), frozen, hasher)
-	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+	hyperT := hyper.NewTree(string(0x0), cache, leaves, hashing.NewSha256Hasher())
+	historyT := history.NewTree(string(0x0), frozen, hashing.NewSha256Hasher())
+	balloon := NewHyperBalloon(hashing.NewSha256Hasher(), historyT, hyperT)
 
 	b.ResetTimer()
 	b.N = 10000
@@ -277,11 +276,10 @@ func BenchmarkAddBadger(b *testing.B) {
 	defer deleteFilesInDir(path)
 
 	cache := cache.NewSimpleCache(1 << 25)
-	hasher := new(hashing.Sha256Hasher)
 
-	hyperT := hyper.NewTree(string(0x0), cache, leaves, hasher)
-	historyT := history.NewTree(string(0x0), frozen, hasher)
-	balloon := NewHyperBalloon(hasher, historyT, hyperT)
+	hyperT := hyper.NewTree(string(0x0), cache, leaves, hashing.NewSha256Hasher())
+	historyT := history.NewTree(string(0x0), frozen, hashing.NewSha256Hasher())
+	balloon := NewHyperBalloon(hashing.NewSha256Hasher(), historyT, hyperT)
 
 	b.ResetTimer()
 	b.N = 10000
