@@ -214,7 +214,7 @@ func TestMembership(t *testing.T) {
 			version,
 			version+1,
 			[]byte{0x0},
-			new(hashing.Sha256Hasher),
+			hashing.NewSha256Hasher(),
 		)
 	}()
 
@@ -258,10 +258,10 @@ func TestIncremental(t *testing.T) {
 	}
 	go func() {
 		incch <- balloon.NewIncrementalProof(
-			start, 
-			end, 
+			start,
+			end,
 			proof.AuditPath{"0|0": []uint8{0x0}},
-			new(hashing.Sha256Hasher),
+			hashing.NewSha256Hasher(),
 		)
 	}()
 

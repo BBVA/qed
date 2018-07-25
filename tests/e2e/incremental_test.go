@@ -56,7 +56,7 @@ func TestIncrementalConsistency(t *testing.T) {
 		})
 
 		let("Verify the proof", func(t *testing.T) {
-			assert.True(t, client.VerifyIncremental(result, snapshots[2], snapshots[8], new(hashing.Sha256Hasher)), "The proofs should be valid")
+			assert.True(t, client.VerifyIncremental(result, snapshots[2], snapshots[8], hashing.NewSha256Hasher()), "The proofs should be valid")
 		})
 
 	})

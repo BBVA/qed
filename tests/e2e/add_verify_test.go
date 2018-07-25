@@ -83,7 +83,7 @@ func TestAddVerify(t *testing.T) {
 				first.Snapshot.Version,
 				first.Snapshot.Event,
 			}
-			assert.True(t, client.Verify(result, snap, new(hashing.Sha256Hasher)), "The proofs should be valid")
+			assert.True(t, client.Verify(result, snap, hashing.NewSha256Hasher()), "The proofs should be valid")
 		})
 
 	})
@@ -117,7 +117,7 @@ func TestAddVerify(t *testing.T) {
 				s[j].Snapshot.Version,
 				s[i].Snapshot.Event,
 			}
-			assert.True(t, client.Verify(p1, snap, new(hashing.Sha256Hasher)), "p1 should be valid")
+			assert.True(t, client.Verify(p1, snap, hashing.NewSha256Hasher()), "p1 should be valid")
 
 			snap = &apihttp.Snapshot{
 				s[k].Snapshot.HistoryDigest,
@@ -125,7 +125,7 @@ func TestAddVerify(t *testing.T) {
 				s[k].Snapshot.Version,
 				s[i].Snapshot.Event,
 			}
-			assert.True(t, client.Verify(p2, snap, new(hashing.Sha256Hasher)), "p2 should be valid")
+			assert.True(t, client.Verify(p2, snap, hashing.NewSha256Hasher()), "p2 should be valid")
 
 		})
 
