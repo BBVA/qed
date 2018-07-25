@@ -67,7 +67,7 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 
 				log.Infof("Verifying with commitment: \n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
 					hyperDigest, historyDigest, version)
-				if ctx.client.Verify(proof, snapshot, new(hashing.Sha256Hasher)) {
+				if ctx.client.Verify(proof, snapshot, hashing.NewSha256Hasher()) {
 					log.Info("Verify: OK")
 				} else {
 					log.Info("Verify: KO")

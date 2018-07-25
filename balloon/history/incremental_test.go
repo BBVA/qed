@@ -72,8 +72,7 @@ func TestProveAndVerifyConsecutivelyN(t *testing.T) {
 	frozen, close := openBPlusStorage()
 	defer close()
 
-	hasher := new(hashing.Sha256Hasher)
-	tree := NewTree("treeId", frozen, hasher)
+	tree := NewTree("treeId", frozen, hashing.NewSha256Hasher())
 
 	const size int = 10
 	eventDigests := make([][]byte, size)
@@ -96,8 +95,7 @@ func TestProveAndVerifyNonConsecutively(t *testing.T) {
 	frozen, close := openBPlusStorage()
 	defer close()
 
-	hasher := new(hashing.Sha256Hasher)
-	tree := NewTree("treeId", frozen, hasher)
+	tree := NewTree("treeId", frozen, hashing.NewSha256Hasher())
 
 	const size int = 10
 	eventDigests := make([][]byte, size)

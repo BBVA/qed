@@ -314,7 +314,7 @@ func TestProveIncrementalSameVersions(t *testing.T) {
 func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage()
 	defer closeF()
-	ht := NewTree("treeId", store, new(hashing.Sha256Hasher))
+	ht := NewTree("treeId", store, hashing.NewSha256Hasher())
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := rand.Bytes(64)
