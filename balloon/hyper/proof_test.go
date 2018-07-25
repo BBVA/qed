@@ -96,7 +96,7 @@ func TestAddAndVerifySha256(t *testing.T) {
 	leaves, closeF := openBPlusStorage()
 	defer closeF()
 
-	hasher := new(hashing.Sha256Hasher)
+	hasher := hashing.NewSha256Hasher()
 	ht := NewTree(string(0x0), cache.NewSimpleCache(0), leaves, hasher)
 
 	key := hasher.Do([]byte("a test event"))

@@ -40,7 +40,7 @@ import (
 
 func TestAddAndVerify(t *testing.T) {
 
-	hasher := new(hashing.Sha256Hasher)
+	hasher := hashing.NewSha256Hasher()
 	b, _, closeF := createBalloon("treeId", hasher)
 	defer closeF()
 
@@ -71,7 +71,7 @@ func TestAddAndVerify(t *testing.T) {
 
 func TestTamperAndVerify(t *testing.T) {
 
-	hasher := new(hashing.Sha256Hasher)
+	hasher := hashing.NewSha256Hasher()
 	b, store, closeF := createBalloon("treeId", hasher)
 	defer closeF()
 
@@ -143,7 +143,7 @@ func TestTamperAndVerify(t *testing.T) {
 
 func TestDeleteAndVerify(t *testing.T) {
 
-	hasher := new(hashing.Sha256Hasher)
+	hasher := hashing.NewSha256Hasher()
 	b, store, closeF := createBalloon("treeId", hasher)
 	defer closeF()
 
@@ -209,7 +209,7 @@ func TestDeleteAndVerify(t *testing.T) {
 }
 
 func TestGenIncrementalAndVerify(t *testing.T) {
-	hasher := new(hashing.Sha256Hasher)
+	hasher := hashing.NewSha256Hasher()
 	b, _, closeF := createBalloon("treeId", hasher)
 	defer closeF()
 	size := 10

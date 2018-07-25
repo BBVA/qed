@@ -93,7 +93,7 @@ func NewServer(
 		nil,
 	}
 	if tamper {
-		server.tamperingServer = newTamperingServer("localhost:8081", leaves.(tampering.DeletableStore), new(hashing.Sha256Hasher))
+		server.tamperingServer = newTamperingServer("localhost:8081", leaves.(tampering.DeletableStore), hashing.NewSha256Hasher())
 	}
 
 	if profiling {
@@ -194,10 +194,9 @@ func buildStorageEngine(storageName, dbPath string) (Store, Store, error) {
 
 func buildBalloon(frozen, leaves Store, apiKey string, cacheSize uint64) (*balloon.HyperBalloon, error) {
 	cache := cache.NewSimpleCache(cacheSize)
-	hasher := new(hashing.Sha256Hasher)
-	history := history.NewTree(apiKey, frozen, hasher)
-	hyper := hyper.NewTree(apiKey, cache, leaves, hasher)
-	return balloon.NewHyperBalloon(hasher, history, hyper), nil
+	history := history.NewTree(apiKey, frozen, hashing.NewSha256Hasher())
+	hyper := hyper.NewTree(apiKey, cache, leaves, hashing.NewSha256Hasher())
+	return balloon.NewHyperBalloon(hashing.NewSha256Hasher(), history, hyper), nil
 }
 
 func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon, signer sign.Signable) *http.Server {

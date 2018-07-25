@@ -43,6 +43,7 @@ type Tree struct {
 // NewTree returns  a new Hyper Tree given all its dependencies
 func NewTree(id string, cache Cache, leaves Store, hasher hashing.Hasher) *Tree {
 	var m sync.RWMutex
+
 	cacheLevels := uint64(math.Max(0.0, math.Floor(math.Log(float64(cache.Size()))/math.Log(2.0))))
 	numBits := hasher.Len()
 

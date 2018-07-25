@@ -18,7 +18,10 @@
 // implementations.
 package hashing
 
-import "crypto/sha256"
+import (
+	"crypto/sha256"
+	"hash"
+)
 
 // Hasher is the public interface to be used as placeholder for the concrete
 // implementations.
@@ -29,16 +32,23 @@ type Hasher interface {
 
 // Sha256Hasher implements the Hasher interface and computes the crypto/sha256
 // internal function.
-type Sha256Hasher struct{}
+type Sha256Hasher struct {
+	underlying hash.Hash
+}
+
+func NewSha256Hasher() *Sha256Hasher {
+	return &Sha256Hasher{underlying: sha256.New()}
+}
 
 func (s Sha256Hasher) Do(data ...[]byte) []byte {
-	hasher := sha256.New()
+
+	s.underlying.Reset()
 
 	for i := 0; i < len(data); i++ {
-		hasher.Write(data[i])
+		s.underlying.Write(data[i])
 	}
 
-	return hasher.Sum(nil)[:]
+	return s.underlying.Sum(nil)[:]
 }
 
 func (s Sha256Hasher) Len() uint64 { return uint64(256) }

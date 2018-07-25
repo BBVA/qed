@@ -79,7 +79,7 @@ func BenchmarkAdd(b *testing.B) {
 	store, closeF := openBadgerStorage("/var/tmp/hyper_tree_test.db") //openBoltStorage()
 	defer closeF()
 
-	hasher := new(hashing.Sha256Hasher)
+	hasher := hashing.NewSha256Hasher()
 	cache := cache.NewSimpleCache(1 << 25)
 	ht := NewTree(string(0x0), cache, store, hasher)
 	b.ResetTimer()
