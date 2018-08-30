@@ -1,4 +1,4 @@
-package db
+package badger
 
 import (
 	"bytes"
@@ -6,30 +6,30 @@ import (
 	"log"
 
 	"github.com/bbva/qed/db"
-	"github.com/dgraph-io/badger"
-	"github.com/dgraph-io/badger/options"
+	b "github.com/dgraph-io/badger"
+	bo "github.com/dgraph-io/badger/options"
 )
 
 type BadgerStore struct {
-	db *badger.DB
+	db *b.DB
 }
 
 func NewBadgerStore(path string) *BadgerStore {
-	opts := badger.DefaultOptions
-	opts.TableLoadingMode = options.MemoryMap
-	opts.ValueLogLoadingMode = options.FileIO
+	opts := b.DefaultOptions
+	opts.TableLoadingMode = bo.MemoryMap
+	opts.ValueLogLoadingMode = bo.FileIO
 	opts.Dir = path
 	opts.ValueDir = path
 	opts.SyncWrites = false
-	db, err := badger.Open(opts)
+	db, err := b.Open(opts)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return &BadgerStore{db}
 }
 
-func (s BadgerStore) Mutate(mutations []db.Mutation) error {
-	return s.db.Update(func(txn *badger.Txn) error {
+func (s BadgerStore) Mutate(mutations ...db.Mutation) error {
+	return s.db.Update(func(txn *b.Txn) error {
 		for _, m := range mutations {
 			key := append([]byte{m.Prefix}, m.Key...)
 			err := txn.Set(key, m.Value)
@@ -45,8 +45,8 @@ func (s BadgerStore) GetRange(prefix byte, start, end []byte) (db.KVRange, error
 	result := make(db.KVRange, 0)
 	startKey := append([]byte{prefix}, start...)
 	endKey := append([]byte{prefix}, end...)
-	err := s.db.View(func(txn *badger.Txn) error {
-		opts := badger.DefaultIteratorOptions
+	err := s.db.View(func(txn *b.Txn) error {
+		opts := b.DefaultIteratorOptions
 		opts.PrefetchValues = false
 		it := txn.NewIterator(opts)
 		defer it.Close()
@@ -75,7 +75,7 @@ func (s BadgerStore) GetRange(prefix byte, start, end []byte) (db.KVRange, error
 func (s BadgerStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 	result := new(db.KVPair)
 	result.Key = key
-	err := s.db.View(func(txn *badger.Txn) error {
+	err := s.db.View(func(txn *b.Txn) error {
 		k := append([]byte{prefix}, key...)
 		item, err := txn.Get(k)
 		if err != nil {
@@ -92,7 +92,7 @@ func (s BadgerStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 	switch err {
 	case nil:
 		return result, nil
-	case badger.ErrKeyNotFound:
+	case b.ErrKeyNotFound:
 		return nil, db.ErrKeyNotFound
 	default:
 		return nil, err
@@ -103,6 +103,12 @@ func (s BadgerStore) Close() error {
 	return s.db.Close()
 }
 
+func (s BadgerStore) Delete(prefix byte, key []byte) error {
+	return s.db.Update(func(txn *b.Txn) error {
+		k := append([]byte{prefix}, key...)
+		return txn.Delete(k)
+	})
+}
 func (s *BadgerStore) Backup(w io.Writer, since uint64) error {
 	_, err := s.db.Backup(w, since)
 	return err
