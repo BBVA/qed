@@ -191,10 +191,10 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 }
 
 func openBadgerStorage() (*BadgerStorage, func()) {
-	store := NewBadgerStorage("/var/tmp/badger_store_test.db")
+	store := NewBadgerStorage("/var/tmp/old_badger_store_test.db")
 	return store, func() {
 		store.Close()
-		deleteFile("/var/tmp/badger_store_test.db")
+		deleteFile("/var/tmp/old_badger_store_test.db")
 	}
 }
 

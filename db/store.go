@@ -19,12 +19,16 @@ var (
 )
 
 type Store interface {
-	Mutate(mutations []Mutation) error
+	Mutate(mutations ...Mutation) error
 	GetRange(prefix byte, start, end []byte) (KVRange, error)
 	Get(prefix byte, key []byte) (*KVPair, error)
 	Close() error
 }
 
+type DeletableStore interface {
+	Store
+	Delete(key []byte) error
+}
 type ManagedStore interface {
 	Store
 	Backup(w io.Writer, since uint64) error
