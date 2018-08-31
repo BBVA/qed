@@ -1,6 +1,6 @@
 package common
 
-import "github.com/aalda/trees/log"
+import "github.com/bbva/qed/log"
 
 type AuditPath map[string]Digest
 
