@@ -23,7 +23,7 @@ type fsmAddResponse struct {
 }
 
 type BalloonFSM struct {
-	hasher common.Hasher
+	hasherF func() common.Hasher
 
 	store   db.ManagedStore
 	version uint64
@@ -32,9 +32,9 @@ type BalloonFSM struct {
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
 
-func NewBalloonFSM(hasher common.Hasher, dbPath string) *BalloonFSM {
+func NewBalloonFSM(dbPath string, hasherF func() common.Hasher) *BalloonFSM {
 	return &BalloonFSM{
-		hasher:  hasher,
+		hasherF: hasherF,
 		store:   bdb.NewBadgerStore(dbPath),
 		version: 0,
 	}
@@ -85,7 +85,7 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	}
 	fsm.version = util.BytesAsUint64(kv.Value) + 1
 
-	fsm.balloon = NewBalloon(fsm.version, fsm.hasher, fsm.store)
+	fsm.balloon = NewBalloon(fsm.version, fsm.store, fsm.hasherF)
 
 	return nil
 }

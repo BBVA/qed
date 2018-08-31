@@ -20,19 +20,17 @@ type Balloon struct {
 	hyperTree   *hyper.HyperTree
 }
 
-func NewBalloon(initialVersion uint64, hasher common.Hasher, store db.Store) *Balloon {
-	historyHasher := hasher
-	hyperHasher := hasher
+func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Hasher) *Balloon {
 
 	var historyCache common.Cache
 	var hyperCache common.ModifiableCache
 
-	historyTree := history.NewHistoryTree(historyHasher, historyCache)
-	hyperTree := hyper.NewHyperTree(hyperHasher, store, hyperCache)
+	historyTree := history.NewHistoryTree(hasherF(), historyCache)
+	hyperTree := hyper.NewHyperTree(hasherF(), store, hyperCache)
 
 	return &Balloon{
 		version:     initialVersion,
-		hasher:      hasher,
+		hasher:      hasherF(),
 		store:       store,
 		historyTree: historyTree,
 		hyperTree:   hyperTree,

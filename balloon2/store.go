@@ -113,7 +113,7 @@ func (b *BalloonStore) Open(enableSingle bool) error {
 	}
 
 	// Instantiate balloon FSM
-	fsm := NewBalloonFSM(common.NewSha256Hasher(), b.dbPath)
+	fsm := NewBalloonFSM(b.dbPath, common.NewSha256Hasher)
 
 	// Instantiate the Raft system
 	ra, err := raft.NewRaft(config, fsm, logStore, stableStore, snapshots, transport)
