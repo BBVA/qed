@@ -76,9 +76,8 @@ func TestAuditPathVisitor(t *testing.T) {
 		},
 	}
 
-	visitor := NewAuditPathVisitor(NewComputeHashVisitor(NewFakeXorHasher()))
-
 	for i, c := range testCases {
+		visitor := NewAuditPathVisitor(NewComputeHashVisitor(NewFakeXorHasher()))
 		c.visitable.PostOrder(visitor)
 		auditPath := visitor.Result()
 		require.Equalf(t, c.expectedAuditPath, auditPath, "The audit path %v should be equal to the expected %v in test case %d", auditPath, c.expectedAuditPath, i)
