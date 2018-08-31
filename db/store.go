@@ -58,10 +58,14 @@ func NewKVRange() KVRange {
 	return make(KVRange, 0)
 }
 
-func (r KVRange) InsertSorted(p KVPair) KVRange {
-	index := sort.Search(len(r), func(i int) bool {
-		return bytes.Compare(r[i].Key, p.Key) > 0
+func getIndex(r KVRange, key []byte) int {
+	return sort.Search(len(r), func(i int) bool {
+		return bytes.Compare(r[i].Key, key) >= 0
 	})
+}
+
+func (r KVRange) InsertSorted(p KVPair) KVRange {
+	index := getIndex(r, p.Key)
 	r = append(r, p)
 	copy(r[index+1:], r[index:])
 	r[index] = p
@@ -70,16 +74,12 @@ func (r KVRange) InsertSorted(p KVPair) KVRange {
 
 func (r KVRange) Split(key []byte) (left, right KVRange) {
 	// the smallest index i where r[i] >= index
-	index := sort.Search(len(r), func(i int) bool {
-		return bytes.Compare(r[i].Key, key) >= 0
-	})
+	index := getIndex(r, key)
 	return r[:index], r[index:]
 }
 
 func (r KVRange) Get(key []byte) KVPair {
-	index := sort.Search(len(r), func(i int) bool {
-		return bytes.Compare(r[i].Key, key) >= 0
-	})
+	index := getIndex(r, key)
 	if index < len(r) && bytes.Equal(r[index].Key, key) {
 		return r[index]
 	} else {
