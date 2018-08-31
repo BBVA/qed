@@ -42,21 +42,43 @@ func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Has
 type Commitment struct {
 	HistoryDigest common.Digest
 	HyperDigest   common.Digest
-	Version       uint16
+	Version       uint64
 }
 
 // MembershipProof is the struct that is required to make a Exisitance Proof.
 // It has both Hyper and History AuditPaths, if it exists in first place and
 // Current, Actual and Query Versions.
 type MembershipProof struct {
-	Exists           bool
-	HyperAuditPath   common.AuditPath
-	HistoryAuditPath common.AuditPath
-	CurrentVersion   uint64
-	QueryVersion     uint64
-	ActualVersion    uint64 //required for consistency proof
-	KeyDigest        common.Digest
-	hasher           common.Hasher
+	Exists         bool
+	HyperProof     common.Verifiable
+	HistoryProof   common.Verifiable
+	CurrentVersion uint64
+	QueryVersion   uint64
+	ActualVersion  uint64 //required for consistency proof
+	KeyDigest      common.Digest
+	hasher         common.Hasher
+}
+
+func NewMembershipProof(
+	exists bool,
+	hyperProof, historyProof common.Verifiable,
+	currentVersion, queryVersion, actualVersion uint64,
+	keyDigest common.Digest,
+	hasher common.Hasher) *MembershipProof {
+	return &MembershipProof{
+		exists,
+		hyperProof,
+		historyProof,
+		currentVersion,
+		queryVersion,
+		actualVersion,
+		keyDigest,
+		hasher,
+	}
+}
+
+func (p MembershipProof) Verify(commitment *Commitment, event []byte) bool {
+	return false
 }
 
 type IncrementalProof struct {
