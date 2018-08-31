@@ -75,9 +75,62 @@ func TestGenMembershipProof(t *testing.T) {
 	require.True(t, proof.Exists, "The event should exist")
 	require.Equalf(t, version, proof.QueryVersion, "The query version does not match: expected %d, actual %d", version, proof.QueryVersion)
 	require.Equalf(t, version, proof.ActualVersion, "The actual version does not match: expected %d, actual %d", version, proof.ActualVersion)
-	require.Equalf(t, proof.HyperAuditPath, expectedHyperAuditPath, "Wrong hyper audit path: expected %v, actual %v", expectedHyperAuditPath, proof.HyperAuditPath)
-	require.Equalf(t, proof.HistoryAuditPath, expectedHistoryAuditPath, "Wrong history audit path: expected %v, actual %v", expectedHistoryAuditPath, proof.HistoryAuditPath)
+	require.Equalf(t, proof.HyperProof.AuditPath(), expectedHyperAuditPath, "Wrong hyper audit path: expected %v, actual %v", expectedHyperAuditPath, proof.HyperProof.AuditPath())
+	require.Equalf(t, proof.HistoryProof.AuditPath(), expectedHistoryAuditPath, "Wrong history audit path: expected %v, actual %v", expectedHistoryAuditPath, proof.HistoryProof.AuditPath())
 
+}
+
+func TestVerify(t *testing.T) {
+
+	testCases := []struct {
+		exists         bool
+		hyperOK        bool
+		historyOK      bool
+		currentVersion uint64
+		queryVersion   uint64
+		actualVersion  uint64
+		expectedResult bool
+	}{
+		// Event exists, queryVersion <= actualVersion, and both trees verify it
+		{true, true, true, uint64(0), uint64(0), uint64(0), true},
+		// Event exists, queryVersion <= actualVersion, but HyperTree does not verify it
+		{true, false, true, uint64(0), uint64(0), uint64(0), false},
+		// Event exists, queryVersion <= actualVersion, but HistoryTree does not verify it
+		{true, true, false, uint64(0), uint64(0), uint64(0), false},
+
+		// Event exists, queryVersion > actualVersion, and both trees verify it
+		{true, true, true, uint64(1), uint64(1), uint64(0), true},
+		// Event exists, queryVersion > actualVersion, but HyperTree does not verify it
+		{true, false, true, uint64(1), uint64(1), uint64(0), false},
+
+		// Event does not exist, HyperTree verifies it
+		{false, true, false, uint64(0), uint64(0), uint64(0), true},
+		// Event does not exist, HyperTree does not verify it
+		{false, false, false, uint64(0), uint64(0), uint64(0), false},
+	}
+
+	for i, c := range testCases {
+		event := []byte("Yadda yadda")
+		commitment := &Commitment{
+			common.Digest("Some hyperDigest"),
+			common.Digest("Some historyDigest"),
+			c.actualVersion,
+		}
+		proof := NewMembershipProof(
+			c.exists,
+			common.NewFakeVerifiable(c.hyperOK),
+			common.NewFakeVerifiable(c.historyOK),
+			c.currentVersion,
+			c.queryVersion,
+			c.actualVersion,
+			event,
+			common.NewSha256Hasher(),
+		)
+
+		result := proof.Verify(commitment, event)
+
+		require.Equalf(t, c.expectedResult, result, "Unexpected result '%v' in test case '%d'", result, i)
+	}
 }
 
 func BenchmarkAddBadger(b *testing.B) {
