@@ -158,7 +158,7 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 }
 
 func openBPlusTreeStore() (*BPlusTreeStore, func()) {
-	store := NewBPlusTreeStorage()
+	store := NewBPlusTreeStore()
 	return store, func() {
 		store.Close()
 	}

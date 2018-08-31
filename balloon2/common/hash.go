@@ -15,6 +15,10 @@ type Hasher interface {
 
 type XorHasher struct{}
 
+func NewXorHasher() Hasher {
+	return new(XorHasher)
+}
+
 func (x XorHasher) Salted(salt []byte, data ...[]byte) Digest {
 	data = append(data, salt)
 	return x.Do(data...)
@@ -37,7 +41,7 @@ type Sha256Hasher struct {
 	underlying hash.Hash
 }
 
-func NewSha256Hasher() *Sha256Hasher {
+func NewSha256Hasher() Hasher {
 	return &Sha256Hasher{underlying: sha256.New()}
 }
 
@@ -70,4 +74,12 @@ func (h *FakeHasher) Do(data ...[]byte) Digest {
 
 func (h FakeHasher) Len() uint16 {
 	return h.underlying.Len()
+}
+
+func NewFakeXorHasher() Hasher {
+	return &FakeHasher{NewXorHasher()}
+}
+
+func NewFakeSha256Hasher() Hasher {
+	return &FakeHasher{NewSha256Hasher()}
 }

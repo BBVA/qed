@@ -11,7 +11,7 @@ type BPlusTreeStore struct {
 	db *btree.BTree
 }
 
-func NewBPlusTreeStorage() *BPlusTreeStore {
+func NewBPlusTreeStore() *BPlusTreeStore {
 	return &BPlusTreeStore{btree.New(2)}
 }
 
