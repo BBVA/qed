@@ -1,8 +1,6 @@
 package history
 
 import (
-	"fmt"
-
 	"github.com/bbva/qed/balloon2/common"
 )
 
@@ -34,7 +32,6 @@ func (p *InsertPruner) traverse(pos common.Position, eventDigest common.Digest) 
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
-			fmt.Println(pos)
 			panic("this digest should be in cache")
 		}
 		return common.NewCached(pos, digest)
