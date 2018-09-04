@@ -61,3 +61,40 @@ func (t *HistoryTree) Add(eventDigest common.Digest, version uint64) (common.Dig
 
 	return rh, mutations, nil
 }
+
+func (t *HistoryTree) ProveMembership(index, version uint64) (common.AuditPath, error) {
+	t.lock.Lock() // TODO REMOVE THIS!!!
+	defer t.lock.Unlock()
+
+	log.Debugf("Proving membership for index %d with version %d", index, version)
+
+	// visitors
+	computeHash := common.NewComputeHashVisitor(t.hasher)
+	calcAuditPath := common.NewAuditPathVisitor(computeHash)
+
+	// build pruning context
+	var resolver CacheResolver
+	switch index == version {
+	case true:
+		resolver = NewSingleTargetedCacheResolver(version)
+	case false:
+		resolver = NewDoubleTargetedCacheResolver(index, version)
+	}
+	context := PruningContext{
+		navigator:     NewHistoryTreeNavigator(version),
+		cacheResolver: resolver,
+		cache:         t.cache,
+	}
+
+	// traverse from root and generate a visitable pruned tree
+	pruned := NewSearchPruner(context).Prune()
+
+	// print := common.NewPrintVisitor(t.getDepth(version))
+	// pruned.PreOrder(print)
+	// log.Debugf("Pruned tree: %s", print.Result())
+
+	// visit the pruned tree
+	pruned.PostOrder(calcAuditPath)
+
+	return calcAuditPath.Result(), nil
+}
