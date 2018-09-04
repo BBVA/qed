@@ -1,6 +1,10 @@
 package history
 
-import "github.com/bbva/qed/balloon2/common"
+import (
+	"fmt"
+
+	"github.com/bbva/qed/balloon2/common"
+)
 
 type PruningContext struct {
 	navigator     common.TreeNavigator
@@ -30,6 +34,7 @@ func (p *InsertPruner) traverse(pos common.Position, eventDigest common.Digest) 
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
+			fmt.Println(pos)
 			panic("this digest should be in cache")
 		}
 		return common.NewCached(pos, digest)
@@ -44,14 +49,16 @@ func (p *InsertPruner) traverse(pos common.Position, eventDigest common.Digest) 
 		return common.NewPartialNode(pos, left)
 	}
 	right := p.traverse(rightPos, eventDigest)
+	var result common.Visitable
 	if p.navigator.IsRoot(pos) {
-		result := common.NewRoot(pos, left, right)
-		if p.shouldCollect(pos) {
-			return common.NewCollectable(pos, result)
-		}
-		return result
+		result = common.NewRoot(pos, left, right)
+	} else {
+		result = common.NewNode(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	if p.shouldCollect(pos) {
+		return common.NewCollectable(pos, result)
+	}
+	return result
 }
 
 func (p InsertPruner) shouldCollect(pos common.Position) bool {
