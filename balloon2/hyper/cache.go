@@ -32,7 +32,11 @@ func (r SingleTargetedCacheResolver) ShouldCache(pos common.Position) bool {
 	This method does not reach leafs. Goes from root (bit := 0) to height=1 (bit := numbits - 1)
 */
 func (r SingleTargetedCacheResolver) IsOnPath(pos common.Position) bool {
-	bit := r.numBits - pos.Height() - 1
+	height := pos.Height()
+	if height == r.numBits {
+		return true
+	}
+	bit := r.numBits - height - 1
 	return bitIsSet(r.targetKey, bit) == bitIsSet(pos.Index(), bit)
 }
 
