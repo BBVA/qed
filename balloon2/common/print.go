@@ -36,7 +36,7 @@ func (v *PrintVisitor) VisitCached(pos Position, cachedDigest Digest) {
 	v.tokens = append(v.tokens, fmt.Sprintf("%sCached(%v)[%x]", v.indent(pos.Height()), pos, cachedDigest))
 }
 func (v *PrintVisitor) VisitCollectable(pos Position) {
-	v.tokens = append(v.tokens, fmt.Sprintf("%Collectable(%v)", v.indent(pos.Height()), pos))
+	v.tokens = append(v.tokens, fmt.Sprintf("%sCollectable(%v)", v.indent(pos.Height()), pos))
 }
 
 func (v PrintVisitor) indent(height uint16) string {
