@@ -9,7 +9,7 @@ import (
 
 func TestInsertPruner(t *testing.T) {
 
-	cache := NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(common.Digest{0x0})
 
 	testCases := []struct {
 		version        uint64
@@ -125,7 +125,7 @@ func TestInsertPruner(t *testing.T) {
 
 func TestSearchPruner(t *testing.T) {
 
-	cache := NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(common.Digest{0x0})
 
 	testCases := []struct {
 		version        uint64
@@ -229,7 +229,7 @@ func TestSearchPruner(t *testing.T) {
 
 func TestSearchPrunerConsistency(t *testing.T) {
 
-	cache := NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(common.Digest{0x0})
 
 	testCases := []struct {
 		index, version uint64
@@ -359,7 +359,7 @@ func TestSearchPrunerConsistency(t *testing.T) {
 
 func TestSearchPrunerIncremental(t *testing.T) {
 
-	cache := NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(common.Digest{0x0})
 
 	testCases := []struct {
 		start, end     uint64
@@ -497,7 +497,7 @@ func TestSearchPrunerIncremental(t *testing.T) {
 
 func TestVerifyPruner(t *testing.T) {
 
-	cache := NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(common.Digest{0x0})
 
 	testCases := []struct {
 		index, version uint64
@@ -585,7 +585,7 @@ func TestVerifyPruner(t *testing.T) {
 
 func TestVerifyPrunerIncremental(t *testing.T) {
 
-	cache := NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(common.Digest{0x0})
 
 	testCases := []struct {
 		start, end     uint64
@@ -693,16 +693,4 @@ func TestVerifyPrunerIncremental(t *testing.T) {
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
 
-}
-
-type FakeCache struct {
-	FixedDigest common.Digest
-}
-
-func NewFakeCache(fixedDigest common.Digest) *FakeCache {
-	return &FakeCache{fixedDigest}
-}
-
-func (c FakeCache) Get(common.Position) (common.Digest, bool) {
-	return common.Digest{0x0}, true
 }
