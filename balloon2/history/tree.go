@@ -62,11 +62,14 @@ func (t *HistoryTree) Add(eventDigest common.Digest, version uint64) (common.Dig
 	return rh, mutations, nil
 }
 
-func (t *HistoryTree) ProveMembership(index, version uint64) (common.AuditPath, error) {
+func (t *HistoryTree) ProveMembership(index, version uint64) (proof MembershipProof, err error) {
 	t.lock.Lock() // TODO REMOVE THIS!!!
 	defer t.lock.Unlock()
 
 	log.Debugf("Proving membership for index %d with version %d", index, version)
+
+	proof.Index = index
+	proof.Version = version
 
 	// visitors
 	computeHash := common.NewComputeHashVisitor(t.hasher)
@@ -96,5 +99,7 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (common.AuditPath, 
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)
 
-	return calcAuditPath.Result(), nil
+	proof.AuditPath = calcAuditPath.Result()
+
+	return proof, nil
 }
