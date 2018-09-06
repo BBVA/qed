@@ -1,7 +1,6 @@
 package hyper
 
 import (
-	"fmt"
 	"testing"
 
 	assert "github.com/stretchr/testify/require"
@@ -21,16 +20,16 @@ func TestInsertPruner(t *testing.T) {
 	cacheLevel := uint16(4)
 
 	cache := common.NewSimpleCache(4)
-	store, closeF := common.OpenBadgerStore("/var/tmp/balloon.hyper.test")
-	defer closeF()
 
 	testCases := []struct {
 		key, value     []byte
+		storeMutation  []db.Mutation
 		expectedPruned common.Visitable
 	}{
 		{
-			key:   []byte{0},
-			value: []byte{0},
+			key:           []byte{0},
+			value:         []byte{0},
+			storeMutation: []db.Mutation{},
 			expectedPruned: common.NewRoot(NewPosition([]byte{0}, 8),
 				common.NewCollectable(NewPosition([]byte{0}, 7),
 					common.NewNode(NewPosition([]byte{0}, 7),
@@ -56,6 +55,9 @@ func TestInsertPruner(t *testing.T) {
 		{
 			key:   []byte{2},
 			value: []byte{1},
+			storeMutation: []db.Mutation{
+				*db.NewMutation(db.IndexPrefix, []byte{0}, []byte{0}),
+			},
 			expectedPruned: common.NewRoot(NewPosition([]byte{0}, 8),
 				common.NewCollectable(NewPosition([]byte{0}, 7),
 					common.NewNode(NewPosition([]byte{0}, 7),
@@ -83,6 +85,9 @@ func TestInsertPruner(t *testing.T) {
 	}
 
 	for i, c := range testCases {
+		store := bplus.NewBPlusTreeStore()
+		store.Mutate(c.storeMutation...)
+
 		context := PruningContext{
 			navigator:     NewHyperTreeNavigator(numBits),
 			cacheResolver: NewSingleTargetedCacheResolver(numBits, cacheLevel, c.key),
@@ -93,7 +98,7 @@ func TestInsertPruner(t *testing.T) {
 				common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0},
 			},
 		}
-		fmt.Println("---------------")
+
 		pruned := NewInsertPruner(c.key, c.value, context).Prune()
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
