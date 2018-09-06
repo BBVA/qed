@@ -156,6 +156,7 @@ func BenchmarkAdd(b *testing.B) {
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := hasher.Do(rand.Bytes(32))
-		tree.Add(key, uint64(i))
+		_, mutations, _ := tree.Add(key, uint64(i))
+		store.Mutate(mutations...)
 	}
 }
