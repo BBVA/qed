@@ -7,6 +7,7 @@ import (
 	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/db/bplus"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -354,4 +355,23 @@ func max(x, y int) int {
 		return x
 	}
 	return y
+}
+
+func BenchmarkAdd(b *testing.B) {
+
+	log.SetLogger("BenchmarkAdd", log.SILENT)
+
+	store, closeF := common.OpenBadgerStore("/var/tmp/history_tree_test.db")
+	defer closeF()
+
+	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	tree := NewHistoryTree(common.NewSha256Hasher(), cache)
+
+	b.N = 100000
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		key := rand.Bytes(64)
+		_, mutations, _ := tree.Add(key, i)
+		store.Mutate(mutations...)
+	}
 }
