@@ -35,3 +35,11 @@ func NewHyperTree(hasher common.Hasher, store db.Store, cache common.ModifiableC
 	}
 	return tree
 }
+
+func (t *HyperTree) Add(key, value []byte) (common.Digest, []db.Mutation, error) {
+	return nil, nil, nil
+}
+
+func (t HyperTree) QueryMembership(key []byte) (*QueryProof, error) {
+	return nil, nil
+}
