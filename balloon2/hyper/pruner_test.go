@@ -19,8 +19,6 @@ func TestInsertPruner(t *testing.T) {
 	numBits := uint16(8)
 	cacheLevel := uint16(4)
 
-	cache := common.NewSimpleCache(4)
-
 	testCases := []struct {
 		key, value     []byte
 		storeMutation  []db.Mutation
@@ -82,11 +80,44 @@ func TestInsertPruner(t *testing.T) {
 				common.NewCached(NewPosition([]byte{128}, 7), common.Digest{0}),
 			),
 		},
+		{
+			key:   []byte{255},
+			value: []byte{2},
+			storeMutation: []db.Mutation{
+				*db.NewMutation(db.IndexPrefix, []byte{0}, []byte{0}),
+				*db.NewMutation(db.IndexPrefix, []byte{2}, []byte{1}),
+			},
+			expectedPruned: common.NewRoot(NewPosition([]byte{0}, 8),
+				common.NewCached(NewPosition([]byte{0}, 7), common.Digest{0}),
+				common.NewCollectable(NewPosition([]byte{128}, 7),
+					common.NewNode(NewPosition([]byte{128}, 7),
+						common.NewCached(NewPosition([]byte{128}, 6), common.Digest{0}),
+						common.NewCollectable(NewPosition([]byte{192}, 6),
+							common.NewNode(NewPosition([]byte{192}, 6),
+								common.NewCached(NewPosition([]byte{192}, 5), common.Digest{0}),
+								common.NewCollectable(NewPosition([]byte{224}, 5),
+									common.NewNode(NewPosition([]byte{224}, 5),
+										common.NewCached(NewPosition([]byte{224}, 4), common.Digest{0}),
+										common.NewNode(NewPosition([]byte{240}, 4),
+											common.NewCached(NewPosition([]byte{240}, 3), common.Digest{0}),
+											common.NewNode(NewPosition([]byte{248}, 3),
+												common.NewCached(NewPosition([]byte{248}, 2), common.Digest{0}),
+												common.NewNode(NewPosition([]byte{252}, 2),
+													common.NewCached(NewPosition([]byte{252}, 1), common.Digest{0}),
+													common.NewNode(NewPosition([]byte{254}, 1),
+														common.NewCached(NewPosition([]byte{254}, 0), common.Digest{0}),
+														common.NewLeaf(NewPosition([]byte{255}, 0), []byte{2}))))))))),
+					),
+				),
+			),
+		},
 	}
 
 	for i, c := range testCases {
 		store := bplus.NewBPlusTreeStore()
 		store.Mutate(c.storeMutation...)
+
+		cache := common.NewSimpleCache(4)
 
 		context := PruningContext{
 			navigator:     NewHyperTreeNavigator(numBits),
