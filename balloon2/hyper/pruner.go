@@ -1,8 +1,6 @@
 package hyper
 
 import (
-	"fmt"
-
 	"github.com/bbva/qed/balloon2/common"
 	"github.com/bbva/qed/db"
 )
@@ -47,6 +45,7 @@ func (p *InsertPruner) traverse(pos common.Position, leaves db.KVRange) common.V
 	if !p.cacheResolver.ShouldCache(pos) {
 		first := p.navigator.DescendToFirst(pos)
 		last := p.navigator.DescendToLast(pos)
+
 		kvRange, _ := p.store.GetRange(db.IndexPrefix, first.Index(), last.Index())
 
 		// replace leaves with new slice and append the previous to the new one
@@ -73,8 +72,6 @@ func (p *InsertPruner) traverseWithoutCache(pos common.Position, leaves db.KVRan
 		return common.NewLeaf(pos, leaves[0].Value)
 	}
 	if !p.navigator.IsRoot(pos) && len(leaves) == 0 {
-		fmt.Println(">>>>>>", pos, leaves)
-
 		return common.NewCached(pos, p.defaultHashes[pos.Height()])
 	}
 	if len(leaves) > 1 && p.navigator.IsLeaf(pos) {
