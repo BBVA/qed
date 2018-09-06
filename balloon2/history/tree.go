@@ -62,14 +62,11 @@ func (t *HistoryTree) Add(eventDigest common.Digest, version uint64) (common.Dig
 	return rh, mutations, nil
 }
 
-func (t *HistoryTree) ProveMembership(index, version uint64) (proof MembershipProof, err error) {
+func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, error) {
 	t.lock.Lock() // TODO REMOVE THIS!!!
 	defer t.lock.Unlock()
 
 	log.Debugf("Proving membership for index %d with version %d", index, version)
-
-	proof.Index = index
-	proof.Version = version
 
 	// visitors
 	computeHash := common.NewComputeHashVisitor(t.hasher)
@@ -99,7 +96,34 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (proof MembershipPr
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)
 
-	proof.AuditPath = calcAuditPath.Result()
+	proof := NewMembershipProof(index, version, calcAuditPath.Result(), t.hasher)
+
+	return proof, nil
+}
+
+func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	log.Debugf("Proving consistency between versions %d and %d", start, end)
+
+	// visitors
+	computeHash := common.NewComputeHashVisitor(t.hasher)
+	calcAuditPath := common.NewAuditPathVisitor(computeHash)
+
+	// build pruning context
+	context := PruningContext{
+		navigator:     NewHistoryTreeNavigator(end),
+		cacheResolver: NewIncrementalCacheResolver(start, end),
+		cache:         t.cache,
+	}
+
+	// traverse from root and generate a visitable pruned tree
+	pruned := NewSearchPruner(context).Prune()
+
+	// visit the pruned tree
+	pruned.PostOrder(calcAuditPath)
+	proof := NewIncrementalProof(start, end, calcAuditPath.Result(), t.hasher)
 
 	return proof, nil
 }

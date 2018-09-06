@@ -7,7 +7,6 @@ import (
 	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/db/bplus"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -226,30 +225,133 @@ func TestProveMembership(t *testing.T) {
 
 }
 
-func TestProveMembershipNonConsecutive(t *testing.T) {
+func TestProveConsistency(t *testing.T) {
 
-	log.SetLogger("TestProveMembershipNonConsecutive", log.INFO)
+	log.SetLogger("TestProveConsistency", log.INFO)
+
+	testCases := []struct {
+		eventDigest       common.Digest
+		expectedAuditPath common.AuditPath
+	}{
+		{
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}},
+		},
+		{
+			eventDigest:       common.Digest{0x1},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}, "1|0": common.Digest{0x1}},
+		},
+		{
+			eventDigest:       common.Digest{0x2},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}, "1|0": common.Digest{0x1}, "2|0": common.Digest{0x2}},
+		},
+		{
+			eventDigest:       common.Digest{0x3},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}, "3|0": common.Digest{0x3}},
+		},
+		{
+			eventDigest:       common.Digest{0x4},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}, "3|0": common.Digest{0x3}, "4|0": common.Digest{0x4}},
+		},
+		{
+			eventDigest:       common.Digest{0x5},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|0": common.Digest{0x4}, "5|0": common.Digest{0x5}},
+		},
+		{
+			eventDigest:       common.Digest{0x6},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|0": common.Digest{0x4}, "5|0": common.Digest{0x5}, "6|0": common.Digest{0x6}},
+		},
+		{
+			eventDigest:       common.Digest{0x7},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|1": common.Digest{0x1}, "6|0": common.Digest{0x6}, "7|0": common.Digest{0x7}},
+		},
+		{
+			eventDigest:       common.Digest{0x8},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|1": common.Digest{0x1}, "6|0": common.Digest{0x6}, "7|0": common.Digest{0x7}, "8|0": common.Digest{0x8}},
+		},
+		{
+			eventDigest:       common.Digest{0x9},
+			expectedAuditPath: common.AuditPath{"0|3": common.Digest{0x0}, "8|0": common.Digest{0x8}, "9|0": common.Digest{0x9}},
+		},
+	}
 
 	store := bplus.NewBPlusTreeStore()
 	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
 	tree := NewHistoryTree(common.NewFakeXorHasher(), cache)
 
-	// add nine events
-	for i := uint64(0); i < 9; i++ {
-		eventDigest := util.Uint64AsBytes(i)
-		_, mutations, _ := tree.Add(eventDigest, i)
+	for i, c := range testCases {
+		index := uint64(i)
+		_, mutations, err := tree.Add(c.eventDigest, index)
+		require.NoError(t, err)
 		store.Mutate(mutations...)
+
+		start := uint64(max(0, i-1))
+		end := index
+		proof, err := tree.ProveConsistency(start, end)
+		require.NoError(t, err)
+		assert.Equalf(t, start, proof.StartVersion, "The start version should match for test case %d", i)
+		assert.Equalf(t, end, proof.EndVersion, "The start version should match for test case %d", i)
+		assert.Equal(t, c.expectedAuditPath, proof.AuditPath, "Invalid audit path in test case: %d", i)
 	}
 
-	// query for membership with event 0 and version 8
-	index := uint64(0)
-	version := uint64(8)
-	expectedAuditPath := common.AuditPath{"1|0": common.Digest{0x1}, "2|1": common.Digest{0x1}, "4|2": common.Digest{0x0}, "8|0": common.Digest{0x8}}
-	mp, err := tree.ProveMembership(index, version)
+}
 
-	require.NoError(t, err)
-	assert.Equal(t, expectedAuditPath, mp.AuditPath, "Invalid audit path")
-	assert.Equal(t, index, mp.Index, "The index should math")
-	assert.Equal(t, version, mp.Version, "The version should match")
+func TestProveConsistencySameVersions(t *testing.T) {
 
+	log.SetLogger("TestProveConsistencySameVersions", log.INFO)
+
+	testCases := []struct {
+		index             uint64
+		eventDigest       common.Digest
+		expectedAuditPath common.AuditPath
+	}{
+		{
+			index:             0,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}},
+		},
+		{
+			index:             1,
+			eventDigest:       common.Digest{0x1},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}, "1|0": common.Digest{0x1}},
+		},
+		{
+			index:             2,
+			eventDigest:       common.Digest{0x2},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}},
+		},
+		{
+			index:             3,
+			eventDigest:       common.Digest{0x3},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}, "3|0": common.Digest{0x3}},
+		},
+		{
+			index:             4,
+			eventDigest:       common.Digest{0x4},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|0": common.Digest{0x4}},
+		},
+	}
+
+	store := bplus.NewBPlusTreeStore()
+	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	tree := NewHistoryTree(common.NewFakeXorHasher(), cache)
+
+	for i, c := range testCases {
+		_, mutations, err := tree.Add(c.eventDigest, c.index)
+		require.NoError(t, err)
+		store.Mutate(mutations...)
+
+		proof, err := tree.ProveConsistency(c.index, c.index)
+		require.NoError(t, err)
+		assert.Equalf(t, c.index, proof.StartVersion, "The start version should match for test case %d", i)
+		assert.Equalf(t, c.index, proof.EndVersion, "The start version should match for test case %d", i)
+		assert.Equal(t, c.expectedAuditPath, proof.AuditPath, "Invalid audit path in test case: %d", i)
+	}
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
 }
