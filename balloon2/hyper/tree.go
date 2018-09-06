@@ -22,7 +22,7 @@ type HyperTree struct {
 
 func NewHyperTree(hasher common.Hasher, store db.Store, cache common.ModifiableCache) *HyperTree {
 	var lock sync.RWMutex
-	cacheLevel := uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
+	cacheLevel := hasher.Len() - uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
 	tree := &HyperTree{
 		lock:          lock,
 		store:         store,
