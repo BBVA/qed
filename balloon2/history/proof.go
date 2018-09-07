@@ -8,7 +8,7 @@ import (
 )
 
 type MembershipProof struct {
-	AuditPath      common.AuditPath
+	auditPath      common.AuditPath
 	Index, Version uint64
 	hasher         common.Hasher // TODO should we remove this and pass as an argument when verifying?
 	// TODO should we include the eventDigest?
@@ -16,15 +16,19 @@ type MembershipProof struct {
 
 func NewMembershipProof(index, version uint64, auditPath common.AuditPath, hasher common.Hasher) *MembershipProof {
 	return &MembershipProof{
-		AuditPath: auditPath,
+		auditPath: auditPath,
 		Index:     index,
 		Version:   version,
 		hasher:    hasher,
 	}
 }
 
+func (p MembershipProof) AuditPath() common.AuditPath {
+	return p.auditPath
+}
+
 // Verify verifies a membership proof
-func (p MembershipProof) Verify(expectedDigest, eventDigest common.Digest) (correct bool) {
+func (p MembershipProof) Verify(eventDigest []byte, expectedDigest common.Digest) (correct bool) {
 	log.Debugf("Verifying membership for version %d", p.Version)
 
 	// visitors
@@ -40,7 +44,7 @@ func (p MembershipProof) Verify(expectedDigest, eventDigest common.Digest) (corr
 	context := PruningContext{
 		navigator:     NewHistoryTreeNavigator(p.Version),
 		cacheResolver: cacheResolver,
-		cache:         p.AuditPath,
+		cache:         p.auditPath,
 	}
 
 	// traverse from root and generate a visitable pruned tree
