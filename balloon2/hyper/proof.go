@@ -9,7 +9,7 @@ import (
 
 type QueryProof struct {
 	Key, Value []byte
-	AuditPath  common.AuditPath
+	auditPath  common.AuditPath
 	hasher     common.Hasher
 }
 
@@ -17,9 +17,13 @@ func NewQueryProof(key, value []byte, auditPath common.AuditPath, hasher common.
 	return &QueryProof{
 		Key:       key,
 		Value:     value,
-		AuditPath: auditPath,
+		auditPath: auditPath,
 		hasher:    hasher,
 	}
+}
+
+func (p QueryProof) AuditPath() common.AuditPath {
+	return p.auditPath
 }
 
 // Verify verifies a membership query for a provided key from an expected
@@ -29,7 +33,7 @@ func (p QueryProof) Verify(key []byte, expectedDigest common.Digest) (valid bool
 
 	log.Debugf("Verifying membership query for key %x", key)
 
-	if len(p.AuditPath) == 0 {
+	if len(p.auditPath) == 0 {
 		// and empty audit path shows non-membership for any key
 		return p.Value == nil
 	}
@@ -41,7 +45,7 @@ func (p QueryProof) Verify(key []byte, expectedDigest common.Digest) (valid bool
 	context := PruningContext{
 		navigator:     NewHyperTreeNavigator(p.hasher.Len()),
 		cacheResolver: nil,
-		cache:         p.AuditPath,
+		cache:         p.auditPath,
 		store:         nil,
 		defaultHashes: nil,
 	}

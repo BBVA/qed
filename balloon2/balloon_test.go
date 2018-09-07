@@ -3,6 +3,7 @@ package balloon2
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon2/common"
@@ -22,10 +23,10 @@ func TestAdd(t *testing.T) {
 		store.Mutate(mutations...)
 
 		require.NoError(t, err)
-		require.Truef(t, len(mutations) > 0, "There should be some mutations in test %d", i)
-		require.Equalf(t, i, commitment.Version, "Wrong version in test %d", i)
-		require.NotNil(t, commitment.HyperDigest, "The HyperDigest shouldn't be nil in test %d", i)
-		require.NotNil(t, commitment.HistoryDigest, "The HistoryDigest shouldn't be nil in test %d", i)
+		assert.Truef(t, len(mutations) > 0, "There should be some mutations in test %d", i)
+		assert.Equalf(t, i, commitment.Version, "Wrong version in test %d", i)
+		assert.NotNil(t, commitment.HyperDigest, "The HyperDigest shouldn't be nil in test %d", i)
+		assert.NotNil(t, commitment.HistoryDigest, "The HistoryDigest shouldn't be nil in test %d", i)
 	}
 
 }
@@ -39,29 +40,19 @@ func TestQueryMembership(t *testing.T) {
 
 	key := []byte{0x5a}
 	version := uint64(0)
-	expectedHyperAuditPath := common.AuditPath{
-		"50|3": common.Digest{0x00},
-		"40|4": common.Digest{0x00},
-		"5a|0": common.Digest{0x00},
-		"80|7": common.Digest{0x00},
-		"00|6": common.Digest{0x00},
-		"5c|2": common.Digest{0x00},
-		"58|1": common.Digest{0x00},
-		"5b|0": common.Digest{0x00},
-	}
-	expectedHistoryAuditPath := map[string][]byte{
-		"0|0": common.Digest{0x5a},
-	}
 
-	balloon.Add(key)
+	_, mutations, err := balloon.Add(key)
+	require.NoError(t, err)
+	store.Mutate(mutations...)
+
 	proof, err := balloon.QueryMembership(key, version)
 
 	require.NoError(t, err)
-	require.True(t, proof.Exists, "The event should exist")
-	require.Equalf(t, version, proof.QueryVersion, "The query version does not match: expected %d, actual %d", version, proof.QueryVersion)
-	require.Equalf(t, version, proof.ActualVersion, "The actual version does not match: expected %d, actual %d", version, proof.ActualVersion)
-	require.Equalf(t, proof.HyperProof.AuditPath(), expectedHyperAuditPath, "Wrong hyper audit path: expected %v, actual %v", expectedHyperAuditPath, proof.HyperProof.AuditPath())
-	require.Equalf(t, proof.HistoryProof.AuditPath(), expectedHistoryAuditPath, "Wrong history audit path: expected %v, actual %v", expectedHistoryAuditPath, proof.HistoryProof.AuditPath())
+	assert.True(t, proof.Exists, "The event should exist")
+	assert.Equalf(t, version, proof.QueryVersion, "The query version does not match: expected %d, actual %d", version, proof.QueryVersion)
+	assert.Equalf(t, version, proof.ActualVersion, "The actual version does not match: expected %d, actual %d", version, proof.ActualVersion)
+	assert.NotNil(t, proof.HyperProof, "The hyper proof should not be nil")
+	assert.NotNil(t, proof.HistoryProof, "The history proof should not be nil")
 
 }
 

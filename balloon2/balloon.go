@@ -1,6 +1,7 @@
 package balloon2
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/bbva/qed/balloon2/common"
@@ -157,7 +158,35 @@ func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
 }
 
 func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
-	return nil, nil
+
+	var proof MembershipProof
+
+	proof.KeyDigest = b.hasher.Do(event)
+	proof.QueryVersion = version
+	proof.CurrentVersion = b.version - 1
+
+	hyperProof, err := b.hyperTree.QueryMembership(proof.KeyDigest)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
+	}
+	proof.HyperProof = hyperProof
+
+	if len(hyperProof.Value) > 0 {
+		proof.Exists = true
+		proof.ActualVersion = util.BytesAsUint64(hyperProof.Value)
+	}
+
+	if proof.Exists && proof.ActualVersion <= proof.QueryVersion {
+		historyProof, err := b.historyTree.ProveMembership(proof.ActualVersion, proof.QueryVersion)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to get proof from history tree: %v", err)
+		}
+		proof.HistoryProof = historyProof
+	} else {
+		proof.Exists = false
+	}
+
+	return &proof, nil
 }
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
