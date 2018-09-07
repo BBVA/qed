@@ -10,7 +10,7 @@ func (p AuditPath) Get(pos Position) (Digest, bool) {
 }
 
 type Verifiable interface {
-	Verify(expectedDigest Digest, key, value []byte) bool
+	Verify(key []byte, expectedDigest Digest) bool
 	AuditPath() AuditPath
 }
 
@@ -22,7 +22,7 @@ func NewFakeVerifiable(result bool) *FakeVerifiable {
 	return &FakeVerifiable{result}
 }
 
-func (f FakeVerifiable) Verify(commitment Digest, key, value []byte) bool {
+func (f FakeVerifiable) Verify(key []byte, commitment Digest) bool {
 	return f.result
 }
 
