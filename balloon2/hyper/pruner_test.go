@@ -160,30 +160,22 @@ func TestSearchPruner(t *testing.T) {
 							common.NewNode(NewPosition([]byte{0}, 4),
 								common.NewNode(NewPosition([]byte{0}, 3),
 									common.NewNode(NewPosition([]byte{0}, 2),
-
 										common.NewNode(NewPosition([]byte{0}, 1),
 											common.NewLeaf(NewPosition([]byte{0}, 0), []byte{0}),
 											common.NewCollectable(NewPosition([]byte{1}, 0),
 												common.NewCached(NewPosition([]byte{1}, 0), common.Digest{0}))),
-
 										common.NewCollectable(NewPosition([]byte{2}, 1),
 											common.NewCached(NewPosition([]byte{2}, 1), common.Digest{0}))),
-
 									common.NewCollectable(NewPosition([]byte{4}, 2),
 										common.NewCached(NewPosition([]byte{4}, 2), common.Digest{0}))),
-
 								common.NewCollectable(NewPosition([]byte{8}, 3),
 									common.NewCached(NewPosition([]byte{8}, 3), common.Digest{0}))),
-
 							common.NewCollectable(NewPosition([]byte{16}, 4),
 								common.NewCached(NewPosition([]byte{16}, 4), common.Digest{0}))),
-
 						common.NewCollectable(NewPosition([]byte{32}, 5),
 							common.NewCached(NewPosition([]byte{32}, 5), common.Digest{0}))),
-
 					common.NewCollectable(NewPosition([]byte{64}, 6),
 						common.NewCached(NewPosition([]byte{64}, 6), common.Digest{0}))),
-
 				common.NewCollectable(NewPosition([]byte{128}, 7),
 					common.NewCached(NewPosition([]byte{128}, 7), common.Digest{0})),
 			),
