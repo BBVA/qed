@@ -14,7 +14,7 @@ import (
 
 func TestAdd(t *testing.T) {
 
-	log.SetLogger("TestAdd", log.DEBUG)
+	log.SetLogger("TestAdd", log.INFO)
 
 	testCases := []struct {
 		eventDigest      common.Digest
@@ -89,7 +89,7 @@ func TestProveMembership(t *testing.T) {
 		},
 	}
 
-	log.SetLogger("TestProveMembership", log.DEBUG)
+	log.SetLogger("TestProveMembership", log.INFO)
 
 	for i, c := range testCases {
 		store := bplus.NewBPlusTreeStore()
@@ -104,13 +104,13 @@ func TestProveMembership(t *testing.T) {
 
 		pf, err := tree.QueryMembership(digest)
 		assert.NoErrorf(t, err, "Error adding to the tree: %v for index %d", err, i)
-		assert.Equalf(t, c.expectedAuditPath, pf.AuditPath, "Incorrect audit path for index %d", i)
+		assert.Equalf(t, c.expectedAuditPath, pf.AuditPath(), "Incorrect audit path for index %d", i)
 	}
 }
 
 func TestAddAndVerify(t *testing.T) {
 
-	log.SetLogger("TestAddAndVerify", log.DEBUG)
+	log.SetLogger("TestAddAndVerify", log.INFO)
 
 	value := uint64(0)
 
