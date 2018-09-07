@@ -137,7 +137,7 @@ func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDig
 	context := PruningContext{
 		navigator:     NewHyperTreeNavigator(t.hasher.Len()),
 		cacheResolver: NewSingleTargetedCacheResolver(t.hasher.Len(), t.cacheLevel, eventDigest),
-		cache:         proof.AuditPath,
+		cache:         proof.AuditPath(),
 		store:         t.store,
 		defaultHashes: t.defaultHashes,
 	}
