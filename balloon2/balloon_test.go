@@ -6,54 +6,39 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/db/bplus"
 	"github.com/bbva/qed/testutils/rand"
-	"github.com/bbva/qed/testutils/storage"
 )
 
 func TestAdd(t *testing.T) {
 
-	store, closeF := storage.NewBPlusTreeStore()
-	defer closeF()
+	store := bplus.NewBPlusTreeStore()
+	defer store.Close()
 
-	balloon := NewBalloon(0, store, common.NewFakeXorHasher)
+	balloon := NewBalloon(0, store, common.NewSha256Hasher)
 
-	var testCases = []struct {
-		event         string
-		hyperDigest   common.Digest
-		historyDigest common.Digest
-		version       uint64
-	}{
-		{"test event 0", common.Digest{0x4a}, common.Digest{0x4a}, 0},
-		{"test event 1", common.Digest{0x01}, common.Digest{0x01}, 1},
-		{"test event 2", common.Digest{0x4b}, common.Digest{0x4a}, 2},
-		{"test event 3", common.Digest{0x00}, common.Digest{0x00}, 3},
-		{"test event 4", common.Digest{0x4a}, common.Digest{0x4a}, 4},
-		{"test event 5", common.Digest{0x01}, common.Digest{0x00}, 5},
-		{"test event 6", common.Digest{0x4b}, common.Digest{0x4d}, 6},
-		{"test event 7", common.Digest{0x00}, common.Digest{0x07}, 7},
-		{"test event 8", common.Digest{0x4a}, common.Digest{0x41}, 8},
-		{"test event 9", common.Digest{0x01}, common.Digest{0x0b}, 9},
-	}
+	for i := uint64(0); i < 9; i++ {
+		commitment, mutations, err := balloon.Add(rand.Bytes(128))
+		store.Mutate(mutations...)
 
-	for i, e := range testCases {
-		commitment, err := balloon.Add([]byte(e.event))
 		require.NoError(t, err)
-		require.Equalf(t, commitment.Version, e.version, "Wrong version for test %d: expected %d, actual %d", i, e.version, commitment.Version)
-		require.Equalf(t, commitment.HyperDigest, e.hyperDigest, "Wrong index digest for test %d: expected: %x, Actual: %x", i, e.hyperDigest, commitment.HyperDigest)
-		require.Equalf(t, commitment.HistoryDigest, e.historyDigest, "Wrong history digest for test %d: expected: %x, Actual: %x", i, e.historyDigest, commitment.HistoryDigest)
+		require.Truef(t, len(mutations) > 0, "There should be some mutations in test %d", i)
+		require.Equalf(t, i, commitment.Version, "Wrong version in test %d", i)
+		require.NotNil(t, commitment.HyperDigest, "The HyperDigest shouldn't be nil in test %d", i)
+		require.NotNil(t, commitment.HistoryDigest, "The HistoryDigest shouldn't be nil in test %d", i)
 	}
 
 }
 
-func TestGenMembershipProof(t *testing.T) {
+func TestQueryMembership(t *testing.T) {
 
-	store, closeF := storage.NewBPlusTreeStore()
-	defer closeF()
+	store := bplus.NewBPlusTreeStore()
+	defer store.Close()
 
 	balloon := NewBalloon(0, store, common.NewFakeXorHasher)
 
 	key := []byte{0x5a}
-	version := uint16(0)
+	version := uint64(0)
 	expectedHyperAuditPath := common.AuditPath{
 		"50|3": common.Digest{0x00},
 		"40|4": common.Digest{0x00},
@@ -69,7 +54,7 @@ func TestGenMembershipProof(t *testing.T) {
 	}
 
 	balloon.Add(key)
-	proof, err := balloon.GenMembershipProof(key, version)
+	proof, err := balloon.QueryMembership(key, version)
 
 	require.NoError(t, err)
 	require.True(t, proof.Exists, "The event should exist")
@@ -80,7 +65,7 @@ func TestGenMembershipProof(t *testing.T) {
 
 }
 
-func TestVerify(t *testing.T) {
+func TestMembershipProofVerify(t *testing.T) {
 
 	testCases := []struct {
 		exists         bool
@@ -127,23 +112,24 @@ func TestVerify(t *testing.T) {
 			common.NewSha256Hasher(),
 		)
 
-		result := proof.Verify(commitment, event)
+		result := proof.Verify(event, commitment)
 
 		require.Equalf(t, c.expectedResult, result, "Unexpected result '%v' in test case '%d'", result, i)
 	}
 }
 
 func BenchmarkAddBadger(b *testing.B) {
-	store, closeF := storage.NewBadgerStore("/var/tmp/ballon_bench.db")
+	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_bench.db")
 	defer closeF()
 
-	balloon := NewBalloon(0, store, common.NewFakeSha256Hasher)
+	balloon := NewBalloon(0, store, common.NewSha256Hasher)
 
 	b.ResetTimer()
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
-		balloon.Add(event)
+		_, mutations, _ := balloon.Add(event)
+		store.Mutate(mutations...)
 	}
 
 }
