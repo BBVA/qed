@@ -9,6 +9,7 @@ import (
 	"github.com/bbva/qed/balloon2/common"
 	"github.com/bbva/qed/db/bplus"
 	"github.com/bbva/qed/testutils/rand"
+	"github.com/bbva/qed/util"
 )
 
 func TestAdd(t *testing.T) {
@@ -38,21 +39,27 @@ func TestQueryMembership(t *testing.T) {
 
 	balloon := NewBalloon(0, store, common.NewFakeXorHasher)
 
-	key := []byte{0x5a}
-	version := uint64(0)
+	testCases := []struct {
+		key     []byte
+		version uint64
+	}{
+		{[]byte{0x5a}, uint64(0)},
+	}
 
-	_, mutations, err := balloon.Add(key)
-	require.NoError(t, err)
-	store.Mutate(mutations...)
+	for i, c := range testCases {
+		_, mutations, err := balloon.Add(c.key)
+		require.NoErrorf(t, err, "Error adding event %d", i)
+		store.Mutate(mutations...)
 
-	proof, err := balloon.QueryMembership(key, version)
+		proof, err := balloon.QueryMembership(c.key, c.version)
 
-	require.NoError(t, err)
-	assert.True(t, proof.Exists, "The event should exist")
-	assert.Equalf(t, version, proof.QueryVersion, "The query version does not match: expected %d, actual %d", version, proof.QueryVersion)
-	assert.Equalf(t, version, proof.ActualVersion, "The actual version does not match: expected %d, actual %d", version, proof.ActualVersion)
-	assert.NotNil(t, proof.HyperProof, "The hyper proof should not be nil")
-	assert.NotNil(t, proof.HistoryProof, "The history proof should not be nil")
+		require.NoError(t, err)
+		assert.True(t, proof.Exists, "The event should exist in test %d ", i)
+		assert.Equalf(t, c.version, proof.QueryVersion, "The query version does not match in test %d : expected %d, actual %d", i, c.version, proof.QueryVersion)
+		assert.Equalf(t, c.version, proof.ActualVersion, "The actual version does not match in test %d : expected %d, actual %d", i, c.version, proof.ActualVersion)
+		assert.NotNil(t, proof.HyperProof, "The hyper proof should not be nil in test %d ", i)
+		assert.NotNil(t, proof.HistoryProof, "The history proof should not be nil in test %d ", i)
+	}
 
 }
 
@@ -106,6 +113,34 @@ func TestMembershipProofVerify(t *testing.T) {
 		result := proof.Verify(event, commitment)
 
 		require.Equalf(t, c.expectedResult, result, "Unexpected result '%v' in test case '%d'", result, i)
+	}
+}
+
+func TestQueryConsistencyProof(t *testing.T) {
+
+	testCases := []struct {
+		start, end uint64
+	}{
+		{uint64(0), uint64(2)},
+	}
+
+	for i, c := range testCases {
+		store := bplus.NewBPlusTreeStore()
+		defer store.Close()
+		balloon := NewBalloon(0, store, common.NewFakeXorHasher)
+
+		for j := 0; j <= int(c.end); j++ {
+			_, mutations, err := balloon.Add(util.Uint64AsBytes(uint64(j)))
+			require.NoErrorf(t, err, "Error adding event %d", j)
+			store.Mutate(mutations...)
+		}
+
+		proof, err := balloon.QueryConsistency(c.start, c.end)
+
+		require.NoError(t, err)
+		assert.Equalf(t, c.start, proof.Start, "The query start does not match in test %d: expected %d, actual %d", i, c.start, proof.Start)
+		assert.Equalf(t, c.end, proof.End, "The query end does not match in test %d: expected %d, actual %d", i, c.end, proof.End)
+		assert.Truef(t, len(proof.AuditPath) > 0, "The lenght of the audith path should be >0 in test %d ", i)
 	}
 }
 

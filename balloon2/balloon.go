@@ -190,7 +190,20 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 }
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
-	return nil, nil
+
+	var proof IncrementalProof
+
+	proof.Start = start
+	proof.End = end
+	proof.hasher = b.hasher
+
+	historyProof, err := b.historyTree.ProveConsistency(start, end)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get proof from history tree: %v", err)
+	}
+	proof.AuditPath = historyProof.AuditPath
+
+	return &proof, nil
 }
 
 func (b *Balloon) Close() {
