@@ -21,13 +21,13 @@ func TestInsertPruner(t *testing.T) {
 
 	testCases := []struct {
 		key, value     []byte
-		storeMutation  []db.Mutation
+		storeMutations []db.Mutation
 		expectedPruned common.Visitable
 	}{
 		{
-			key:           []byte{0},
-			value:         []byte{0},
-			storeMutation: []db.Mutation{},
+			key:            []byte{0},
+			value:          []byte{0},
+			storeMutations: []db.Mutation{},
 			expectedPruned: common.NewRoot(NewPosition([]byte{0}, 8),
 				common.NewCollectable(NewPosition([]byte{0}, 7),
 					common.NewNode(NewPosition([]byte{0}, 7),
@@ -53,7 +53,7 @@ func TestInsertPruner(t *testing.T) {
 		{
 			key:   []byte{2},
 			value: []byte{1},
-			storeMutation: []db.Mutation{
+			storeMutations: []db.Mutation{
 				*db.NewMutation(db.IndexPrefix, []byte{0}, []byte{0}),
 			},
 			expectedPruned: common.NewRoot(NewPosition([]byte{0}, 8),
@@ -83,7 +83,7 @@ func TestInsertPruner(t *testing.T) {
 		{
 			key:   []byte{255},
 			value: []byte{2},
-			storeMutation: []db.Mutation{
+			storeMutations: []db.Mutation{
 				*db.NewMutation(db.IndexPrefix, []byte{0}, []byte{0}),
 				*db.NewMutation(db.IndexPrefix, []byte{2}, []byte{1}),
 			},
@@ -115,7 +115,7 @@ func TestInsertPruner(t *testing.T) {
 
 	for i, c := range testCases {
 		store := bplus.NewBPlusTreeStore()
-		store.Mutate(c.storeMutation...)
+		store.Mutate(c.storeMutations...)
 
 		cache := common.NewSimpleCache(4)
 
@@ -142,12 +142,12 @@ func TestSearchPruner(t *testing.T) {
 
 	testCases := []struct {
 		key            []byte
-		storeMutation  []db.Mutation
+		storeMutations []db.Mutation
 		expectedPruned common.Visitable
 	}{
 		{
 			key: []byte{0},
-			storeMutation: []db.Mutation{
+			storeMutations: []db.Mutation{
 				*db.NewMutation(db.IndexPrefix, []byte{0}, []byte{0}),
 			},
 			expectedPruned: common.NewRoot(NewPosition([]byte{0}, 8),
@@ -179,7 +179,7 @@ func TestSearchPruner(t *testing.T) {
 		},
 		{
 			key: []byte{6},
-			storeMutation: []db.Mutation{
+			storeMutations: []db.Mutation{
 				*db.NewMutation(db.IndexPrefix, []byte{1}, []byte{1}),
 				*db.NewMutation(db.IndexPrefix, []byte{6}, []byte{6}),
 			},
@@ -217,7 +217,7 @@ func TestSearchPruner(t *testing.T) {
 
 	for i, c := range testCases {
 		store := bplus.NewBPlusTreeStore()
-		store.Mutate(c.storeMutation...)
+		store.Mutate(c.storeMutations...)
 
 		cache := common.NewSimpleCache(4)
 
