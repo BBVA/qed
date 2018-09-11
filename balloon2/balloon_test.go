@@ -64,7 +64,6 @@ func TestQueryMembership(t *testing.T) {
 }
 
 func TestMembershipProofVerify(t *testing.T) {
-
 	testCases := []struct {
 		exists         bool
 		hyperOK        bool
@@ -142,6 +141,10 @@ func TestQueryConsistencyProof(t *testing.T) {
 		assert.Equalf(t, c.end, proof.End, "The query end does not match in test %d: expected %d, actual %d", i, c.end, proof.End)
 		assert.Truef(t, len(proof.AuditPath) > 0, "The lenght of the audith path should be >0 in test %d ", i)
 	}
+}
+
+func TestConsistencyProofVerify(t *testing.T) {
+	// Tests already done in history>proof_test.go
 }
 
 func BenchmarkAddBadger(b *testing.B) {
