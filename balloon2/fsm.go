@@ -18,7 +18,7 @@ type fsmGenericResponse struct {
 }
 
 type fsmAddResponse struct {
-	commitment Commitment
+	commitment *Commitment
 	error      error
 }
 
@@ -26,7 +26,7 @@ type BalloonFSM struct {
 	hasherF func() common.Hasher
 
 	store   db.ManagedStore
-	version uint64
+	version uint64 // TODO remove this???
 	balloon *Balloon
 
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
@@ -38,6 +38,14 @@ func NewBalloonFSM(dbPath string, hasherF func() common.Hasher) *BalloonFSM {
 		store:   bdb.NewBadgerStore(dbPath),
 		version: 0,
 	}
+}
+
+func (fsm BalloonFSM) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+	return fsm.balloon.QueryMembership(event, version)
+}
+
+func (fsm BalloonFSM) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
+	return fsm.balloon.QueryConsistency(start, end)
 }
 
 // Apply applies a Raft log entry to the database.
@@ -55,7 +63,7 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 		if err := json.Unmarshal(cmd.Sub, &sub); err != nil {
 			return &fsmGenericResponse{error: err}
 		}
-		return fsm.applyAdd(sub.Key, sub.Value)
+		return fsm.applyAdd(sub.Event)
 	default:
 		return &fsmGenericResponse{error: fmt.Errorf("unknown command: %v", cmd.Type)}
 	}
@@ -94,6 +102,11 @@ func (fsm *BalloonFSM) Close() error {
 	return fsm.store.Close()
 }
 
-func (fsm *BalloonFSM) applyAdd(key, value string) *fsmAddResponse {
-	return nil
+func (fsm *BalloonFSM) applyAdd(event []byte) *fsmAddResponse {
+	commitment, mutations, err := fsm.balloon.Add(event)
+	if err != nil {
+		return &fsmAddResponse{error: err}
+	}
+	fsm.store.Mutate(mutations...)
+	return &fsmAddResponse{commitment: commitment}
 }
