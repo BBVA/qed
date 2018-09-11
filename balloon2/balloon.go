@@ -107,7 +107,25 @@ func (p MembershipProof) Verify(event []byte, commitment *Commitment) bool {
 type IncrementalProof struct {
 	Start, End uint64
 	AuditPath  common.AuditPath
-	hasher     common.Hasher
+	Hasher     common.Hasher
+}
+
+func NewIncrementalProof(
+	start, end uint64,
+	auditPath common.AuditPath,
+	hasher common.Hasher,
+) *IncrementalProof {
+	return &IncrementalProof{
+		start,
+		end,
+		auditPath,
+		hasher,
+	}
+}
+
+func (p IncrementalProof) Verify(commitmentStart, commitmentEnd *Commitment) bool {
+	ip := history.NewIncrementalProof(p.Start, p.End, p.AuditPath, p.Hasher)
+	return ip.Verify(commitmentStart.HistoryDigest, commitmentEnd.HistoryDigest)
 }
 
 func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
@@ -195,7 +213,7 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 
 	proof.Start = start
 	proof.End = end
-	proof.hasher = b.hasher
+	proof.Hasher = b.hasher
 
 	historyProof, err := b.historyTree.ProveConsistency(start, end)
 	if err != nil {
