@@ -30,6 +30,9 @@ func newCommand(t commandType, d interface{}) (*command, error) {
 }
 
 type insertSubCommand struct {
-	Key   string `json:"key,omitempty"`
-	Value string `json:"value,omitempty"`
+	Event []byte `json:"event,omitempty"`
+}
+
+func newInsertSubCommand(event []byte) *insertSubCommand {
+	return &insertSubCommand{event}
 }

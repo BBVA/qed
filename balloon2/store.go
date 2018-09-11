@@ -1,6 +1,7 @@
 package balloon2
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -24,6 +25,10 @@ var (
 	// ErrBalloonInvalidState is returned when a Balloon is in an invalid
 	// state for the requested operation.
 	ErrBalloonInvalidState = errors.New("balloon not in valid state")
+
+	// ErrNotLeader is returned when a node attempts to execute a leader-only
+	// operation.
+	ErrNotLeader = errors.New("not leader")
 )
 
 // BalloonStore is a replicated verifiable key-value store, where changes are made via Raft consensus.
@@ -48,6 +53,7 @@ type BalloonStore struct {
 	raftStable      raft.StableStore        // Persistent k-v store.
 	raftBadgerStore *raftbadger.BadgerStore // Physical store.
 
+	fsm *BalloonFSM // balloon's finite state machine
 }
 
 // New returns a new BalloonStore.
@@ -113,10 +119,10 @@ func (b *BalloonStore) Open(enableSingle bool) error {
 	}
 
 	// Instantiate balloon FSM
-	fsm := NewBalloonFSM(b.dbPath, common.NewSha256Hasher)
+	b.fsm = NewBalloonFSM(b.dbPath, common.NewSha256Hasher)
 
 	// Instantiate the Raft system
-	ra, err := raft.NewRaft(config, fsm, logStore, stableStore, snapshots, transport)
+	ra, err := raft.NewRaft(config, b.fsm, logStore, stableStore, snapshots, transport)
 	if err != nil {
 		return fmt.Errorf("new raft: %s", err)
 	}
@@ -137,6 +143,48 @@ func (b *BalloonStore) Open(enableSingle bool) error {
 		log.Info("no bootstrap needed")
 	}
 
+	return nil
+}
+
+// Join joins a node, identified by id and located ad addr, to this store.
+// The node must be ready to respond to Raft communications at that address.
+func (b *BalloonStore) Join(nodeID, addr string) error {
+
+	log.Infof("received join request for remote node %s at %s", nodeID, addr)
+
+	configFuture := b.raft.GetConfiguration()
+	if err := configFuture.Error(); err != nil {
+		log.Errorf("failed to get raft configuration: %v", err)
+		return err
+	}
+
+	for _, srv := range configFuture.Configuration().Servers {
+		// If a node already exists with either the joining node's ID or address,
+		// that node may need to be removed from the config first.
+		if srv.ID == raft.ServerID(nodeID) || srv.Address == raft.ServerAddress(addr) {
+			// However if *both* the ID and the address are the same, then nothing -- not even
+			// a join operation -- is needed.
+			if srv.Address == raft.ServerAddress(addr) && srv.ID == raft.ServerID(nodeID) {
+				log.Infof("node %s at %s already member of cluster, ignoring join request", nodeID, addr)
+				return nil
+			}
+
+			future := b.raft.RemoveServer(srv.ID, 0, 0)
+			if err := future.Error(); err != nil {
+				return fmt.Errorf("error removing existing node %s at %s: %s", nodeID, addr, err)
+			}
+		}
+	}
+
+	f := b.raft.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(addr), 0, 0)
+	if e := f.(raft.Future); e.Error() != nil {
+		if e.Error() == raft.ErrNotLeader {
+			return ErrNotLeader
+		}
+		return e.Error()
+	}
+
+	log.Infof("node %s at %s joined successfully", nodeID, addr)
 	return nil
 }
 
@@ -197,4 +245,33 @@ func (b *BalloonStore) createDatabase() error {
 	log.Infof("Badger database opened at %s", b.dbPath)
 	b.db = db
 	return nil
+}
+
+func (b *BalloonStore) Add(event []byte) (*Commitment, error) {
+	cmd, err := newCommand(insert, newInsertSubCommand(event))
+	if err != nil {
+		return nil, err
+	}
+	cmdBytes, err := json.Marshal(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	f := b.raft.Apply(cmdBytes, raftTimeout)
+	if e := f.(raft.Future); e.Error() != nil {
+		if e.Error() == raft.ErrNotLeader {
+			return nil, ErrNotLeader
+		}
+		return nil, e.Error()
+	}
+	resp := f.Response().(fsmAddResponse)
+	return resp.commitment, nil
+}
+
+func (b BalloonStore) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+	return b.fsm.QueryMembership(event, version)
+}
+
+func (b BalloonStore) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
+	return b.fsm.QueryConsistency(start, end)
 }
