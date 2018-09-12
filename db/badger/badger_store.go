@@ -99,6 +99,47 @@ func (s BadgerStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 	}
 }
 
+type BadgerKVPairReader struct {
+	prefix    byte
+	txn       *b.Txn
+	it        *b.Iterator
+	batchSize int
+}
+
+func NewBadgerKVPairReader(prefix byte, batchSize int, txn *b.Txn) *BadgerKVPairReader {
+	opts := b.DefaultIteratorOptions
+	opts.PrefetchSize = batchSize
+	it := txn.NewIterator(opts)
+	it.Seek([]byte{prefix})
+	return &BadgerKVPairReader{prefix, txn, it, batchSize}
+}
+
+func (r *BadgerKVPairReader) Read(buffer []db.KVPair) (n int, err error) {
+	for n = 0; r.it.ValidForPrefix([]byte{r.prefix}) && n < r.batchSize; r.it.Next() {
+		item := r.it.Item()
+		var key, value []byte
+		key = item.KeyCopy(key)
+		value, err := item.ValueCopy(value)
+		if err != nil {
+			break
+		}
+		buffer = append(buffer, db.KVPair{key, value})
+		n++
+	}
+
+	// TODO should i close the iterator and transaction?
+	return n, err
+}
+
+func (r *BadgerKVPairReader) Close() {
+	r.it.Close()
+	r.txn.Discard()
+}
+
+func (s BadgerStore) GetAll(prefix byte, batchSize int) db.KVPairReader {
+	return NewBadgerKVPairReader(prefix, batchSize, s.db.NewTransaction(false))
+}
+
 func (s BadgerStore) Close() error {
 	return s.db.Close()
 }
