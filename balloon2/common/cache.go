@@ -10,6 +10,7 @@ type Cache interface {
 
 type ModifiableCache interface {
 	Put(pos Position, value Digest)
+	Fill(r db.KVPairReader) error
 	Cache
 }
 type PassThroughCache struct {
@@ -50,4 +51,21 @@ func (c *SimpleCache) Put(pos Position, value Digest) {
 	var key [keySize]byte
 	copy(key[:], pos.Bytes())
 	c.cached[key] = value
+}
+
+func (c *SimpleCache) Fill(r db.KVPairReader) (err error) {
+	defer r.Close()
+	entries := make([]db.KVPair, 0)
+	for {
+		n, err := r.Read(entries)
+		if err != nil || n == 0 {
+			break
+		}
+		for _, entry := range entries {
+			var key [keySize]byte
+			copy(key[:], entry.Key)
+			c.cached[key] = entry.Value
+		}
+	}
+	return nil
 }
