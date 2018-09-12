@@ -22,6 +22,7 @@ type Store interface {
 	Mutate(mutations ...Mutation) error
 	GetRange(prefix byte, start, end []byte) (KVRange, error)
 	Get(prefix byte, key []byte) (*KVPair, error)
+	GetAll(prefix byte, batchSize int) *KVPairReader
 	Close() error
 }
 
@@ -50,6 +51,11 @@ type KVPair struct {
 
 func NewKVPair(key, value []byte) KVPair {
 	return KVPair{Key: key, Value: value}
+}
+
+type KVPairReader interface {
+	Read([]KVPair) (n int, err error)
+	Close()
 }
 
 type KVRange []KVPair

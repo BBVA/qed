@@ -7,6 +7,8 @@ import (
 
 	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/testutils/rand"
+	"github.com/bbva/qed/util"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -121,6 +123,48 @@ func TestDelete(t *testing.T) {
 
 		_, err = store.Get(prefix, test.key)
 		require.Equalf(t, test.expectedError, err, "Error getting non-existent key in test: %s", test.testname)
+	}
+
+}
+
+func TestGetAll(t *testing.T) {
+
+	prefix := db.HyperCachePrefix
+	numElems := uint16(1000)
+	testCases := []struct {
+		batchSize    int
+		numBatches   int
+		lastBatchLen int
+	}{
+		{10, 100, 10},
+		{20, 50, 20},
+		{17, 59, 14},
+	}
+
+	store, closeF := openBadgerStore()
+	defer closeF()
+
+	// insert
+	for i := uint16(0); i < numElems; i++ {
+		key := util.Uint16AsBytes(i)
+		store.Mutate(*db.NewMutation(prefix, key, key))
+	}
+
+	for i, c := range testCases {
+		reader := store.GetAll(db.HyperCachePrefix, c.batchSize)
+		entries := make([]db.KVPair, c.batchSize)
+
+		numBatches := 0
+
+		for {
+			n, _ := reader.Read(entries)
+			if n == 0 {
+				break
+			}
+			numBatches++
+		}
+		reader.Close()
+		assert.Equalf(t, c.numBatches, numBatches, "The number of batches should match for test case %d", i)
 	}
 
 }
