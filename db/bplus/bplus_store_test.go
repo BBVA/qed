@@ -5,6 +5,8 @@ import (
 
 	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/testutils/rand"
+	"github.com/bbva/qed/util"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,6 +89,47 @@ func TestGetRange(t *testing.T) {
 		slice, err := store.GetRange(prefix, []byte{test.start}, []byte{test.end})
 		require.NoError(t, err)
 		require.Equalf(t, len(slice), test.size, "Slice length invalid: expected %d, actual %d", test.size, len(slice))
+	}
+
+}
+
+func TestGetAll(t *testing.T) {
+
+	prefix := db.HyperCachePrefix
+	numElems := uint16(1000)
+	testCases := []struct {
+		batchSize    int
+		numBatches   int
+		lastBatchLen int
+	}{
+		{10, 100, 10},
+		{20, 50, 20},
+		{17, 59, 14},
+	}
+
+	store, closeF := openBPlusTreeStore()
+	defer closeF()
+
+	// insert
+	for i := uint16(0); i < numElems; i++ {
+		key := util.Uint16AsBytes(i)
+		store.Mutate(*db.NewMutation(prefix, key, key))
+	}
+
+	for i, c := range testCases {
+		reader := store.GetAll(db.HyperCachePrefix, c.batchSize)
+		numBatches := 0
+
+		for {
+			entries := make([]db.KVPair, c.batchSize)
+			n, _ := reader.Read(entries)
+			if n == 0 {
+				break
+			}
+			numBatches++
+		}
+		reader.Close()
+		assert.Equalf(t, c.numBatches, numBatches, "The number of batches should match for test case %d", i)
 	}
 
 }

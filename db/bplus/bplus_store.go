@@ -2,6 +2,7 @@ package bplus
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/bbva/qed/db"
 	"github.com/google/btree"
@@ -57,6 +58,49 @@ func (s *BPlusTreeStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 	} else {
 		return nil, db.ErrKeyNotFound
 	}
+}
+
+type BPlusKVPairReader struct {
+	prefix    byte
+	batchSize int
+	db        *btree.BTree
+	lastKey   []byte
+}
+
+func NewBPlusKVPairReader(prefix byte, batchSize int, db *btree.BTree) *BPlusKVPairReader {
+	return &BPlusKVPairReader{
+		prefix:    prefix,
+		batchSize: batchSize,
+		db:        db,
+		lastKey:   []byte{prefix},
+	}
+}
+
+func (r *BPlusKVPairReader) Read(buffer []db.KVPair) (n int, err error) {
+	fmt.Println(r.lastKey)
+	n = 0
+	r.db.AscendGreaterOrEqual(KVItem{r.lastKey, nil}, func(i btree.Item) bool {
+		if n >= r.batchSize {
+			return false
+		}
+		key := i.(KVItem).Key
+		if bytes.Compare(key, r.lastKey) != 0 {
+			buffer = append(buffer, db.KVPair{key[1:], i.(KVItem).Value})
+			n++
+		}
+		r.lastKey = key
+		return true
+	})
+	fmt.Println(n)
+	return n, nil
+}
+
+func (r *BPlusKVPairReader) Close() {
+	r.db = nil
+}
+
+func (s BPlusTreeStore) GetAll(prefix byte, batchSize int) db.KVPairReader {
+	return NewBPlusKVPairReader(prefix, batchSize, s.db)
 }
 
 func (s BPlusTreeStore) Close() error {
