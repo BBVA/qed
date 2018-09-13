@@ -55,8 +55,8 @@ func (c *SimpleCache) Put(pos Position, value Digest) {
 
 func (c *SimpleCache) Fill(r db.KVPairReader) (err error) {
 	defer r.Close()
-	entries := make([]db.KVPair, 0)
 	for {
+		entries := make([]*db.KVPair, 100)
 		n, err := r.Read(entries)
 		if err != nil || n == 0 {
 			break

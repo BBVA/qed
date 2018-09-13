@@ -4,8 +4,10 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/db"
+	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 
+	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/testutils/storage"
 )
 
@@ -72,4 +74,44 @@ func TestSimpleCache(t *testing.T) {
 			require.Falsef(t, ok, "The key should not exist in cache in test case %d", i)
 		}
 	}
+}
+
+func TestFillSimpleCache(t *testing.T) {
+
+	numElems := uint64(10000)
+	cache := NewSimpleCache(0)
+	reader := NewFakeKVPairReader(numElems)
+
+	err := cache.Fill(reader)
+
+	require.NoError(t, err)
+	require.Truef(t, reader.Remaining == 0, "All elements should be cached. Remaining: %d", reader.Remaining)
+
+	for i := uint64(0); i < numElems; i++ {
+		pos := &FakePosition{util.Uint64AsBytes(i), 0}
+		_, ok := cache.Get(pos)
+		require.Truef(t, ok, "The element in position %v should be in cache", pos)
+	}
+}
+
+type FakeKVPairReader struct {
+	Remaining uint64
+	index     uint64
+}
+
+func NewFakeKVPairReader(numElems uint64) *FakeKVPairReader {
+	return &FakeKVPairReader{numElems, 0}
+}
+
+func (r *FakeKVPairReader) Read(buffer []*db.KVPair) (n int, err error) {
+	for n = 0; r.Remaining > 0 && n < len(buffer); n++ {
+		pos := &FakePosition{util.Uint64AsBytes(r.index), 0}
+		buffer[n] = &db.KVPair{pos.Bytes(), rand.Bytes(8)}
+		r.Remaining--
+		r.index++
+	}
+	return n, nil
+}
+func (r *FakeKVPairReader) Close() {
+	r.Remaining = 0
 }

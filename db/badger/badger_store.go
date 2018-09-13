@@ -100,22 +100,21 @@ func (s BadgerStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 }
 
 type BadgerKVPairReader struct {
-	prefix    byte
-	txn       *b.Txn
-	it        *b.Iterator
-	batchSize int
+	prefix byte
+	txn    *b.Txn
+	it     *b.Iterator
 }
 
-func NewBadgerKVPairReader(prefix byte, batchSize int, txn *b.Txn) *BadgerKVPairReader {
+func NewBadgerKVPairReader(prefix byte, txn *b.Txn) *BadgerKVPairReader {
 	opts := b.DefaultIteratorOptions
-	opts.PrefetchSize = batchSize
+	opts.PrefetchSize = 10
 	it := txn.NewIterator(opts)
 	it.Seek([]byte{prefix})
-	return &BadgerKVPairReader{prefix, txn, it, batchSize}
+	return &BadgerKVPairReader{prefix, txn, it}
 }
 
-func (r *BadgerKVPairReader) Read(buffer []db.KVPair) (n int, err error) {
-	for n = 0; r.it.ValidForPrefix([]byte{r.prefix}) && n < r.batchSize; r.it.Next() {
+func (r *BadgerKVPairReader) Read(buffer []*db.KVPair) (n int, err error) {
+	for n = 0; r.it.ValidForPrefix([]byte{r.prefix}) && n < len(buffer); r.it.Next() {
 		item := r.it.Item()
 		var key, value []byte
 		key = item.KeyCopy(key)
@@ -123,7 +122,7 @@ func (r *BadgerKVPairReader) Read(buffer []db.KVPair) (n int, err error) {
 		if err != nil {
 			break
 		}
-		buffer = append(buffer, db.KVPair{key, value})
+		buffer[n] = &db.KVPair{key, value}
 		n++
 	}
 
@@ -136,8 +135,8 @@ func (r *BadgerKVPairReader) Close() {
 	r.txn.Discard()
 }
 
-func (s BadgerStore) GetAll(prefix byte, batchSize int) db.KVPairReader {
-	return NewBadgerKVPairReader(prefix, batchSize, s.db.NewTransaction(false))
+func (s BadgerStore) GetAll(prefix byte) db.KVPairReader {
+	return NewBadgerKVPairReader(prefix, s.db.NewTransaction(false))
 }
 
 func (s BadgerStore) Close() error {
