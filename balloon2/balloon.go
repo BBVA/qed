@@ -22,6 +22,7 @@ type Balloon struct {
 
 	historyTree *history.HistoryTree
 	hyperTree   *hyper.HyperTree
+	hasherF     func() common.Hasher
 }
 
 func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Hasher) *Balloon {
@@ -29,7 +30,8 @@ func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Has
 	historyCache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
 	hyperCache := common.NewSimpleCache(1 << 2)
 
-	// TODO warm up hyper cache
+	// warm up hyper cache
+	hyperCache.Fill(store.GetAll(db.HyperCachePrefix))
 
 	historyTree := history.NewHistoryTree(hasherF(), historyCache)
 	hyperTree := hyper.NewHyperTree(hasherF(), store, hyperCache)
@@ -40,6 +42,7 @@ func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Has
 		store:       store,
 		historyTree: historyTree,
 		hyperTree:   hyperTree,
+		hasherF:     hasherF,
 	}
 }
 
@@ -134,6 +137,9 @@ func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
 	version := b.version
 	b.version++
 
+	// Hash event
+	eventDigest := b.hasher.Do(event)
+
 	// Update trees
 	var historyDigest, hyperDigest common.Digest
 	var historyMutations, hyperMutations []db.Mutation
@@ -142,11 +148,11 @@ func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
 	wg.Add(2)
 
 	go func() {
-		historyDigest, historyMutations, historyErr = b.historyTree.Add(event, version)
+		historyDigest, historyMutations, historyErr = b.historyTree.Add(eventDigest, version)
 		wg.Done()
 	}()
 	go func() {
-		hyperDigest, hyperMutations, hyperErr = b.hyperTree.Add(event, version)
+		hyperDigest, hyperMutations, hyperErr = b.hyperTree.Add(eventDigest, version)
 		wg.Done()
 	}()
 
@@ -179,6 +185,7 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 
 	var proof MembershipProof
 
+	proof.hasher = b.hasherF()
 	proof.KeyDigest = b.hasher.Do(event)
 	proof.QueryVersion = version
 	proof.CurrentVersion = b.version - 1
@@ -213,7 +220,7 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 
 	proof.Start = start
 	proof.End = end
-	proof.Hasher = b.hasher
+	proof.Hasher = b.hasherF()
 
 	historyProof, err := b.historyTree.ProveConsistency(start, end)
 	if err != nil {
@@ -225,5 +232,9 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 }
 
 func (b *Balloon) Close() {
-
+	b.historyTree.Close()
+	b.hyperTree.Close()
+	b.historyTree = nil
+	b.hyperTree = nil
+	b.version = 0
 }

@@ -122,7 +122,7 @@ func (r *BadgerKVPairReader) Read(buffer []*db.KVPair) (n int, err error) {
 		if err != nil {
 			break
 		}
-		buffer[n] = &db.KVPair{key, value}
+		buffer[n] = &db.KVPair{key[1:], value}
 		n++
 	}
 
