@@ -127,3 +127,8 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 
 	return proof, nil
 }
+
+func (t *HistoryTree) Close() {
+	t.cache = nil
+	t.hasher = nil
+}

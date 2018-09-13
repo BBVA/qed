@@ -153,3 +153,10 @@ func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDig
 	recomputed := pruned.PostOrder(computeHash).(common.Digest)
 	return bytes.Equal(recomputed, expectedDigest)
 }
+
+func (t *HyperTree) Close() {
+	t.cache = nil
+	t.hasher = nil
+	t.defaultHashes = nil
+	t.store = nil
+}
