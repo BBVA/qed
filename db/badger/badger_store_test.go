@@ -152,11 +152,10 @@ func TestGetAll(t *testing.T) {
 
 	for i, c := range testCases {
 		reader := store.GetAll(db.HyperCachePrefix, c.batchSize)
-		entries := make([]db.KVPair, c.batchSize)
-
 		numBatches := 0
 
 		for {
+			entries := make([]db.KVPair, c.batchSize)
 			n, _ := reader.Read(entries)
 			if n == 0 {
 				break
