@@ -117,19 +117,21 @@ func TestGetAll(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		reader := store.GetAll(db.HyperCachePrefix, c.batchSize)
+		reader := store.GetAll(db.HyperCachePrefix)
 		numBatches := 0
-
+		var lastBatchLen int
 		for {
-			entries := make([]db.KVPair, c.batchSize)
+			entries := make([]*db.KVPair, c.batchSize)
 			n, _ := reader.Read(entries)
 			if n == 0 {
 				break
 			}
 			numBatches++
+			lastBatchLen = n
 		}
 		reader.Close()
 		assert.Equalf(t, c.numBatches, numBatches, "The number of batches should match for test case %d", i)
+		assert.Equal(t, c.lastBatchLen, lastBatchLen, "The size of the last batch len should match for test case %d", i)
 	}
 
 }
