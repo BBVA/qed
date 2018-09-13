@@ -8,6 +8,7 @@ import (
 
 	"github.com/bbva/qed/balloon2/common"
 	"github.com/bbva/qed/db/bplus"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/util"
 )
@@ -145,6 +146,69 @@ func TestQueryConsistencyProof(t *testing.T) {
 
 func TestConsistencyProofVerify(t *testing.T) {
 	// Tests already done in history>proof_test.go
+}
+
+// TODO move this to integration
+func TestAddQueryAndVerify(t *testing.T) {
+
+	log.SetLogger("TestCacheWarmingUp", log.INFO)
+
+	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_test.db")
+	defer closeF()
+
+	// start balloon
+	balloon := NewBalloon(0, store, common.NewSha256Hasher)
+
+	event := []byte("Never knows best")
+
+	// Add event
+	commitment, mutations, err := balloon.Add(event)
+	require.NoError(t, err)
+	store.Mutate(mutations...)
+
+	// Query event
+	proof, err := balloon.QueryMembership(event, commitment.Version)
+	require.NoError(t, err)
+
+	// Verify
+	correct := proof.Verify(event, commitment)
+	require.True(t, correct, "The proof should verify correctly")
+
+}
+
+func TestCacheWarmingUp(t *testing.T) {
+
+	log.SetLogger("TestCacheWarmingUp", log.INFO)
+
+	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_test.db")
+	defer closeF()
+
+	// start balloon
+	balloon := NewBalloon(0, store, common.NewSha256Hasher)
+
+	// add 100 elements
+	var lastCommitment *Commitment
+	for i := uint64(0); i < 100; i++ {
+		commitment, mutations, err := balloon.Add(util.Uint64AsBytes(i))
+		require.NoError(t, err)
+		lastCommitment = commitment
+		store.Mutate(mutations...)
+	}
+
+	// close balloon
+	balloon.Close()
+	balloon = nil
+
+	// open balloon again
+	balloon = NewBalloon(100, store, common.NewSha256Hasher)
+
+	// query for all elements
+	for i := uint64(0); i < 100; i++ {
+		key := util.Uint64AsBytes(i)
+		proof, err := balloon.QueryMembership(key, lastCommitment.Version)
+		require.NoError(t, err)
+		require.Truef(t, proof.Verify(key, lastCommitment), "The proof should verify correctly for element %d", i)
+	}
 }
 
 func BenchmarkAddBadger(b *testing.B) {

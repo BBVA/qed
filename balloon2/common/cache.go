@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/bbva/qed/db"
+	"github.com/bbva/qed/log"
 )
 
 type Cache interface {
@@ -55,6 +56,8 @@ func (c *SimpleCache) Put(pos Position, value Digest) {
 
 func (c *SimpleCache) Fill(r db.KVPairReader) (err error) {
 	defer r.Close()
+	log.Info("Warming up hyper cache...")
+	cached := 0
 	for {
 		entries := make([]*db.KVPair, 100)
 		n, err := r.Read(entries)
@@ -62,10 +65,14 @@ func (c *SimpleCache) Fill(r db.KVPairReader) (err error) {
 			break
 		}
 		for _, entry := range entries {
-			var key [keySize]byte
-			copy(key[:], entry.Key)
-			c.cached[key] = entry.Value
+			if entry != nil {
+				var key [keySize]byte
+				copy(key[:], entry.Key)
+				c.cached[key] = entry.Value
+				cached++
+			}
 		}
 	}
+	log.Infof("Warming up done, elements cached: %d", cached)
 	return nil
 }
