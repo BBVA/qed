@@ -25,22 +25,35 @@ type Balloon struct {
 	hasher      common.Hasher
 }
 
-func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Hasher) (*Balloon, error) {
+func NewBalloon(store db.Store, hasherF func() common.Hasher) (*Balloon, error) {
 
+	// get last stored version
+	version := uint64(0)
+	kv, err := store.Get(db.VersionPrefix, BalloonVersionKey)
+	if err != nil {
+		if err != db.ErrKeyNotFound {
+			return nil, err
+		}
+	} else {
+		version = util.BytesAsUint64(kv.Value) + 1
+	}
+
+	// create caches
 	historyCache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
 	hyperCache := common.NewSimpleCache(1 << 2)
 
 	// warm up hyper cache
-	err := hyperCache.Fill(store.GetAll(db.HyperCachePrefix))
+	err = hyperCache.Fill(store.GetAll(db.HyperCachePrefix))
 	if err != nil {
 		return nil, err
 	}
 
+	// create trees
 	historyTree := history.NewHistoryTree(hasherF, historyCache)
 	hyperTree := hyper.NewHyperTree(hasherF, store, hyperCache)
 
 	return &Balloon{
-		version:     initialVersion,
+		version:     version,
 		hasherF:     hasherF,
 		store:       store,
 		historyTree: historyTree,
