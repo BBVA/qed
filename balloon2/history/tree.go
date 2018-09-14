@@ -10,14 +10,15 @@ import (
 )
 
 type HistoryTree struct {
-	lock   sync.RWMutex
-	hasher common.Hasher
-	cache  common.Cache
+	lock    sync.RWMutex
+	hasherF func() common.Hasher
+	cache   common.Cache
+	hasher  common.Hasher
 }
 
-func NewHistoryTree(hasher common.Hasher, cache common.Cache) *HistoryTree {
+func NewHistoryTree(hasherF func() common.Hasher, cache common.Cache) *HistoryTree {
 	var lock sync.RWMutex
-	return &HistoryTree{lock, hasher, cache}
+	return &HistoryTree{lock, hasherF, cache, hasherF()}
 }
 
 func (t *HistoryTree) getDepth(version uint64) uint16 {
@@ -96,7 +97,7 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)
 
-	proof := NewMembershipProof(index, version, calcAuditPath.Result(), t.hasher)
+	proof := NewMembershipProof(index, version, calcAuditPath.Result(), t.hasherF())
 
 	return proof, nil
 }
@@ -123,7 +124,7 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)
-	proof := NewIncrementalProof(start, end, calcAuditPath.Result(), t.hasher)
+	proof := NewIncrementalProof(start, end, calcAuditPath.Result(), t.hasherF())
 
 	return proof, nil
 }

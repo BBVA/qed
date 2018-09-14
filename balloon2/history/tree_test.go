@@ -75,7 +75,7 @@ func TestAdd(t *testing.T) {
 
 	store := bplus.NewBPlusTreeStore()
 	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
-	tree := NewHistoryTree(common.NewFakeXorHasher(), cache)
+	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
 		index := uint64(i)
@@ -211,7 +211,7 @@ func TestProveMembership(t *testing.T) {
 
 	store := bplus.NewBPlusTreeStore()
 	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
-	tree := NewHistoryTree(common.NewFakeXorHasher(), cache)
+	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
 		_, mutations, _ := tree.Add(c.eventDigest, c.index)
@@ -278,7 +278,7 @@ func TestProveConsistency(t *testing.T) {
 
 	store := bplus.NewBPlusTreeStore()
 	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
-	tree := NewHistoryTree(common.NewFakeXorHasher(), cache)
+	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
 		index := uint64(i)
@@ -335,7 +335,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 
 	store := bplus.NewBPlusTreeStore()
 	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
-	tree := NewHistoryTree(common.NewFakeXorHasher(), cache)
+	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
 		_, mutations, err := tree.Add(c.eventDigest, c.index)
@@ -365,7 +365,7 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 
 	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
-	tree := NewHistoryTree(common.NewSha256Hasher(), cache)
+	tree := NewHistoryTree(common.NewSha256Hasher, cache)
 
 	b.N = 100000
 	b.ResetTimer()

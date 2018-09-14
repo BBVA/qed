@@ -34,7 +34,7 @@ func TestAdd(t *testing.T) {
 
 	store := bplus.NewBPlusTreeStore()
 	simpleCache := common.NewSimpleCache(10)
-	tree := NewHyperTree(common.NewFakeXorHasher(), store, simpleCache)
+	tree := NewHyperTree(common.NewFakeXorHasher, store, simpleCache)
 
 	for i, c := range testCases {
 		index := uint64(i)
@@ -94,7 +94,7 @@ func TestProveMembership(t *testing.T) {
 	for i, c := range testCases {
 		store := bplus.NewBPlusTreeStore()
 		simpleCache := common.NewSimpleCache(10)
-		tree := NewHyperTree(hasher, store, simpleCache)
+		tree := NewHyperTree(common.NewFakeXorHasher, store, simpleCache)
 
 		for index, digest := range c.addOps {
 			_, mutations, err := tree.Add(digest, index)
@@ -115,19 +115,20 @@ func TestAddAndVerify(t *testing.T) {
 	value := uint64(0)
 
 	testCases := []struct {
-		hasher common.Hasher
+		hasherF func() common.Hasher
 	}{
-		{hasher: common.NewXorHasher()},
-		{hasher: common.NewSha256Hasher()},
-		{hasher: common.NewPearsonHasher()},
+		{hasherF: common.NewXorHasher},
+		{hasherF: common.NewSha256Hasher},
+		{hasherF: common.NewPearsonHasher},
 	}
 
 	for i, c := range testCases {
+		hasher := c.hasherF()
 		store := bplus.NewBPlusTreeStore()
 		simpleCache := common.NewSimpleCache(10)
-		tree := NewHyperTree(c.hasher, store, simpleCache)
+		tree := NewHyperTree(c.hasherF, store, simpleCache)
 
-		key := c.hasher.Do(common.Digest("a test event"))
+		key := hasher.Do(common.Digest("a test event"))
 		commitment, mutations, err := tree.Add(key, value)
 		tree.store.Mutate(mutations...)
 		assert.NoErrorf(t, err, "This should not fail for index %d", i)
@@ -150,7 +151,7 @@ func BenchmarkAdd(b *testing.B) {
 
 	hasher := common.NewSha256Hasher()
 	simpleCache := common.NewSimpleCache(0)
-	tree := NewHyperTree(common.NewSha256Hasher(), store, simpleCache)
+	tree := NewHyperTree(common.NewSha256Hasher, store, simpleCache)
 
 	b.ResetTimer()
 	b.N = 100000

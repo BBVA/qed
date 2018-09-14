@@ -15,21 +15,24 @@ type HyperTree struct {
 	lock          sync.RWMutex
 	store         db.Store
 	cache         common.ModifiableCache
-	hasher        common.Hasher
+	hasherF       func() common.Hasher
 	cacheLevel    uint16
 	defaultHashes []common.Digest
+	hasher        common.Hasher
 }
 
-func NewHyperTree(hasher common.Hasher, store db.Store, cache common.ModifiableCache) *HyperTree {
+func NewHyperTree(hasherF func() common.Hasher, store db.Store, cache common.ModifiableCache) *HyperTree {
 	var lock sync.RWMutex
+	hasher := hasherF()
 	cacheLevel := hasher.Len() - uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
 	tree := &HyperTree{
 		lock:          lock,
 		store:         store,
 		cache:         cache,
-		hasher:        hasher,
+		hasherF:       hasherF,
 		cacheLevel:    cacheLevel,
 		defaultHashes: make([]common.Digest, hasher.Len()),
+		hasher:        hasher,
 	}
 
 	tree.defaultHashes[0] = tree.hasher.Do([]byte{0x0}, []byte{0x0})
@@ -120,7 +123,7 @@ func (t *HyperTree) QueryMembership(eventDigest common.Digest) (proof *QueryProo
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)
 
-	return NewQueryProof(pair.Key, pair.Value, calcAuditPath.Result(), t.hasher), nil // include version in audit path visitor
+	return NewQueryProof(pair.Key, pair.Value, calcAuditPath.Result(), t.hasherF()), nil // TODO include version in audit path visitor
 }
 
 func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDigest, expectedDigest common.Digest) bool {
