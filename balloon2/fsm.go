@@ -9,7 +9,6 @@ import (
 	"github.com/bbva/qed/balloon2/common"
 	"github.com/bbva/qed/db"
 	bdb "github.com/bbva/qed/db/badger"
-	"github.com/bbva/qed/util"
 	"github.com/hashicorp/raft"
 )
 
@@ -80,20 +79,13 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 
 // Restore restores the node to a previous state.
 func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
+	var err error
 	// Set the state from the snapshot, no lock required according to
 	// Hashicorp docs.
-	if err := fsm.store.Load(rc); err != nil {
+	if err = fsm.store.Load(rc); err != nil {
 		return err
 	}
-
-	// get stored last version
-	kv, err := fsm.store.Get(db.VersionPrefix, BalloonVersionKey)
-	if err != nil {
-		return err
-	}
-	fsm.version = util.BytesAsUint64(kv.Value) + 1
-
-	fsm.balloon, err = NewBalloon(fsm.version, fsm.store, fsm.hasherF)
+	fsm.balloon, err = NewBalloon(fsm.store, fsm.hasherF)
 	return err
 }
 
