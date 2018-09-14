@@ -17,33 +17,36 @@ var (
 
 type Balloon struct {
 	version uint64
-	hasher  common.Hasher
+	hasherF func() common.Hasher
 	store   db.Store
 
 	historyTree *history.HistoryTree
 	hyperTree   *hyper.HyperTree
-	hasherF     func() common.Hasher
+	hasher      common.Hasher
 }
 
-func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Hasher) *Balloon {
+func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Hasher) (*Balloon, error) {
 
 	historyCache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
 	hyperCache := common.NewSimpleCache(1 << 2)
 
 	// warm up hyper cache
-	hyperCache.Fill(store.GetAll(db.HyperCachePrefix))
+	err := hyperCache.Fill(store.GetAll(db.HyperCachePrefix))
+	if err != nil {
+		return nil, err
+	}
 
 	historyTree := history.NewHistoryTree(hasherF, historyCache)
 	hyperTree := hyper.NewHyperTree(hasherF, store, hyperCache)
 
 	return &Balloon{
 		version:     initialVersion,
-		hasher:      hasherF(),
+		hasherF:     hasherF,
 		store:       store,
 		historyTree: historyTree,
 		hyperTree:   hyperTree,
-		hasherF:     hasherF,
-	}
+		hasher:      hasherF(),
+	}, nil
 }
 
 // Commitment is the struct that has both history and hyper digest and the
