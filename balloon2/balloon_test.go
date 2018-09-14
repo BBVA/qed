@@ -20,7 +20,7 @@ func TestAdd(t *testing.T) {
 	store := bplus.NewBPlusTreeStore()
 	defer store.Close()
 
-	balloon, err := NewBalloon(0, store, common.NewSha256Hasher)
+	balloon, err := NewBalloon(store, common.NewSha256Hasher)
 	require.NoError(t, err)
 
 	for i := uint64(0); i < 9; i++ {
@@ -43,7 +43,7 @@ func TestQueryMembership(t *testing.T) {
 	store := bplus.NewBPlusTreeStore()
 	defer store.Close()
 
-	balloon, err := NewBalloon(0, store, common.NewFakeXorHasher)
+	balloon, err := NewBalloon(store, common.NewFakeXorHasher)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -138,7 +138,7 @@ func TestQueryConsistencyProof(t *testing.T) {
 	for i, c := range testCases {
 		store := bplus.NewBPlusTreeStore()
 		defer store.Close()
-		balloon, err := NewBalloon(0, store, common.NewFakeXorHasher)
+		balloon, err := NewBalloon(store, common.NewFakeXorHasher)
 		require.NoError(t, err)
 
 		for j := 0; j <= int(c.end); j++ {
@@ -169,7 +169,7 @@ func TestAddQueryAndVerify(t *testing.T) {
 	defer closeF()
 
 	// start balloon
-	balloon, err := NewBalloon(0, store, common.NewSha256Hasher)
+	balloon, err := NewBalloon(store, common.NewSha256Hasher)
 	require.NoError(t, err)
 
 	event := []byte("Never knows best")
@@ -197,7 +197,7 @@ func TestCacheWarmingUp(t *testing.T) {
 	defer closeF()
 
 	// start balloon
-	balloon, err := NewBalloon(0, store, common.NewSha256Hasher)
+	balloon, err := NewBalloon(store, common.NewSha256Hasher)
 	require.NoError(t, err)
 
 	// add 100 elements
@@ -214,7 +214,7 @@ func TestCacheWarmingUp(t *testing.T) {
 	balloon = nil
 
 	// open balloon again
-	balloon, err = NewBalloon(100, store, common.NewSha256Hasher)
+	balloon, err = NewBalloon(store, common.NewSha256Hasher)
 	require.NoError(t, err)
 
 	// query for all elements
@@ -230,7 +230,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_bench.db")
 	defer closeF()
 
-	balloon, err := NewBalloon(0, store, common.NewSha256Hasher)
+	balloon, err := NewBalloon(store, common.NewSha256Hasher)
 	require.NoError(b, err)
 
 	b.ResetTimer()
