@@ -33,8 +33,8 @@ func NewBalloon(initialVersion uint64, store db.Store, hasherF func() common.Has
 	// warm up hyper cache
 	hyperCache.Fill(store.GetAll(db.HyperCachePrefix))
 
-	historyTree := history.NewHistoryTree(hasherF(), historyCache)
-	hyperTree := hyper.NewHyperTree(hasherF(), store, hyperCache)
+	historyTree := history.NewHistoryTree(hasherF, historyCache)
+	hyperTree := hyper.NewHyperTree(hasherF, store, hyperCache)
 
 	return &Balloon{
 		version:     initialVersion,
