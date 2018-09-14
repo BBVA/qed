@@ -78,7 +78,7 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 	return &fsmSnapshot{store: fsm.store}, nil
 }
 
-// Restore stores the key-value store to a previous state.
+// Restore restores the node to a previous state.
 func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	// Set the state from the snapshot, no lock required according to
 	// Hashicorp docs.
@@ -93,9 +93,8 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	}
 	fsm.version = util.BytesAsUint64(kv.Value) + 1
 
-	fsm.balloon = NewBalloon(fsm.version, fsm.store, fsm.hasherF)
-
-	return nil
+	fsm.balloon, err = NewBalloon(fsm.version, fsm.store, fsm.hasherF)
+	return err
 }
 
 func (fsm *BalloonFSM) Close() error {

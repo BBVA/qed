@@ -15,10 +15,13 @@ import (
 
 func TestAdd(t *testing.T) {
 
+	log.SetLogger("TestAdd", log.SILENT)
+
 	store := bplus.NewBPlusTreeStore()
 	defer store.Close()
 
-	balloon := NewBalloon(0, store, common.NewSha256Hasher)
+	balloon, err := NewBalloon(0, store, common.NewSha256Hasher)
+	require.NoError(t, err)
 
 	for i := uint64(0); i < 9; i++ {
 		commitment, mutations, err := balloon.Add(rand.Bytes(128))
@@ -35,10 +38,13 @@ func TestAdd(t *testing.T) {
 
 func TestQueryMembership(t *testing.T) {
 
+	log.SetLogger("TestQueryMembership", log.SILENT)
+
 	store := bplus.NewBPlusTreeStore()
 	defer store.Close()
 
-	balloon := NewBalloon(0, store, common.NewFakeXorHasher)
+	balloon, err := NewBalloon(0, store, common.NewFakeXorHasher)
+	require.NoError(t, err)
 
 	testCases := []struct {
 		key     []byte
@@ -65,6 +71,9 @@ func TestQueryMembership(t *testing.T) {
 }
 
 func TestMembershipProofVerify(t *testing.T) {
+
+	log.SetLogger("TestMembershipProofVerify", log.SILENT)
+
 	testCases := []struct {
 		exists         bool
 		hyperOK        bool
@@ -118,6 +127,8 @@ func TestMembershipProofVerify(t *testing.T) {
 
 func TestQueryConsistencyProof(t *testing.T) {
 
+	log.SetLogger("TestQueryConsistencyProof", log.SILENT)
+
 	testCases := []struct {
 		start, end uint64
 	}{
@@ -127,7 +138,8 @@ func TestQueryConsistencyProof(t *testing.T) {
 	for i, c := range testCases {
 		store := bplus.NewBPlusTreeStore()
 		defer store.Close()
-		balloon := NewBalloon(0, store, common.NewFakeXorHasher)
+		balloon, err := NewBalloon(0, store, common.NewFakeXorHasher)
+		require.NoError(t, err)
 
 		for j := 0; j <= int(c.end); j++ {
 			_, mutations, err := balloon.Add(util.Uint64AsBytes(uint64(j)))
@@ -151,13 +163,14 @@ func TestConsistencyProofVerify(t *testing.T) {
 // TODO move this to integration
 func TestAddQueryAndVerify(t *testing.T) {
 
-	log.SetLogger("TestCacheWarmingUp", log.INFO)
+	log.SetLogger("TestCacheWarmingUp", log.SILENT)
 
 	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_test.db")
 	defer closeF()
 
 	// start balloon
-	balloon := NewBalloon(0, store, common.NewSha256Hasher)
+	balloon, err := NewBalloon(0, store, common.NewSha256Hasher)
+	require.NoError(t, err)
 
 	event := []byte("Never knows best")
 
@@ -178,13 +191,14 @@ func TestAddQueryAndVerify(t *testing.T) {
 
 func TestCacheWarmingUp(t *testing.T) {
 
-	log.SetLogger("TestCacheWarmingUp", log.INFO)
+	log.SetLogger("TestCacheWarmingUp", log.SILENT)
 
 	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_test.db")
 	defer closeF()
 
 	// start balloon
-	balloon := NewBalloon(0, store, common.NewSha256Hasher)
+	balloon, err := NewBalloon(0, store, common.NewSha256Hasher)
+	require.NoError(t, err)
 
 	// add 100 elements
 	var lastCommitment *Commitment
@@ -200,7 +214,8 @@ func TestCacheWarmingUp(t *testing.T) {
 	balloon = nil
 
 	// open balloon again
-	balloon = NewBalloon(100, store, common.NewSha256Hasher)
+	balloon, err = NewBalloon(100, store, common.NewSha256Hasher)
+	require.NoError(t, err)
 
 	// query for all elements
 	for i := uint64(0); i < 100; i++ {
@@ -215,7 +230,8 @@ func BenchmarkAddBadger(b *testing.B) {
 	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_bench.db")
 	defer closeF()
 
-	balloon := NewBalloon(0, store, common.NewSha256Hasher)
+	balloon, err := NewBalloon(0, store, common.NewSha256Hasher)
+	require.NoError(b, err)
 
 	b.ResetTimer()
 	b.N = 10000
