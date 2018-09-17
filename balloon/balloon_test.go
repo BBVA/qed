@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/db/bplus"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/util"
 )

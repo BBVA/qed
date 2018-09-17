@@ -6,14 +6,14 @@ import (
 	"sync"
 
 	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
 
 type HyperTree struct {
 	lock          sync.RWMutex
-	store         db.Store
+	store         storage.Store
 	cache         common.ModifiableCache
 	hasherF       func() common.Hasher
 	cacheLevel    uint16
@@ -21,7 +21,7 @@ type HyperTree struct {
 	hasher        common.Hasher
 }
 
-func NewHyperTree(hasherF func() common.Hasher, store db.Store, cache common.ModifiableCache) *HyperTree {
+func NewHyperTree(hasherF func() common.Hasher, store storage.Store, cache common.ModifiableCache) *HyperTree {
 	var lock sync.RWMutex
 	hasher := hasherF()
 	cacheLevel := hasher.Len() - uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
@@ -42,7 +42,7 @@ func NewHyperTree(hasherF func() common.Hasher, store db.Store, cache common.Mod
 	return tree
 }
 
-func (t *HyperTree) Add(eventDigest common.Digest, version uint64) (common.Digest, []db.Mutation, error) {
+func (t *HyperTree) Add(eventDigest common.Digest, version uint64) (common.Digest, []storage.Mutation, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -74,14 +74,14 @@ func (t *HyperTree) Add(eventDigest common.Digest, version uint64) (common.Diges
 
 	// persist mutations
 	cachedElements := caching.Result()
-	mutations := make([]db.Mutation, len(cachedElements))
+	mutations := make([]storage.Mutation, len(cachedElements))
 	for i, e := range cachedElements {
-		mutations[i] = *db.NewMutation(db.HyperCachePrefix, e.Pos.Bytes(), e.Digest)
+		mutations[i] = *storage.NewMutation(storage.HyperCachePrefix, e.Pos.Bytes(), e.Digest)
 		// update cache
 		t.cache.Put(e.Pos, e.Digest)
 	}
 	// create a mutation for the new leaf
-	leafMutation := db.NewMutation(db.IndexPrefix, eventDigest, versionAsBytes)
+	leafMutation := storage.NewMutation(storage.IndexPrefix, eventDigest, versionAsBytes)
 	mutations = append(mutations, *leafMutation)
 
 	log.Debugf("Mutations: %v", mutations)
@@ -95,7 +95,7 @@ func (t *HyperTree) QueryMembership(eventDigest common.Digest) (proof *QueryProo
 
 	log.Debugf("Getting version for event %b\n", eventDigest)
 
-	pair, err := t.store.Get(db.IndexPrefix, eventDigest) // TODO check existence
+	pair, err := t.store.Get(storage.IndexPrefix, eventDigest) // TODO check existence
 	if err != nil {
 		return nil, err
 	}

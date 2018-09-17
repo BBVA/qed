@@ -1,13 +1,13 @@
 package balloon
 
 import (
-	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 	"github.com/hashicorp/raft"
 )
 
 type fsmSnapshot struct {
-	store db.ManagedStore
+	store storage.ManagedStore
 }
 
 // Persist writes the snapshot to the given sink.
