@@ -2,7 +2,6 @@ package common
 
 import (
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
 )
 
 type CachedElement struct {
@@ -56,7 +55,6 @@ func (v *CachingVisitor) VisitCached(pos Position, cachedDigest hashing.Digest) 
 }
 
 func (v *CachingVisitor) VisitCollectable(pos Position, result interface{}) interface{} {
-	log.Debugf("Caching digest with position: %v", pos)
 	element := NewCachedElement(pos, result.(hashing.Digest))
 	v.elements = append(v.elements, *element)
 	return result

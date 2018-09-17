@@ -2,7 +2,6 @@ package common
 
 import (
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
 )
 
 type AuditPath map[string]hashing.Digest
@@ -73,7 +72,6 @@ func (v *AuditPathVisitor) VisitCached(pos Position, cachedDigest hashing.Digest
 
 func (v *AuditPathVisitor) VisitCollectable(pos Position, result interface{}) interface{} {
 	digest := v.decorated.VisitCollectable(pos, result)
-	log.Debugf("Adding collectable to path in position: %v", pos)
 	v.auditPath[pos.StringId()] = digest.(hashing.Digest)
 	return digest
 }

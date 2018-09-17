@@ -47,8 +47,6 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	log.Debugf("Adding event %b with version %d\n", eventDigest, version)
-
 	// visitors
 	computeHash := common.NewComputeHashVisitor(t.hasher)
 	caching := common.NewCachingVisitor(computeHash)
@@ -66,10 +64,6 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	// traverse from root and generate a visitable pruned tree
 	pruned := NewInsertPruner(eventDigest, versionAsBytes, context).Prune()
 
-	// print := common.NewPrintVisitor(t.hasher.Len())
-	// pruned.PreOrder(print)
-	// log.Debugf("Pruned tree: %s", print.Result())
-
 	// visit the pruned tree
 	rootHash := pruned.PostOrder(caching).(hashing.Digest)
 
@@ -81,11 +75,10 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 		// update cache
 		t.cache.Put(e.Pos, e.Digest)
 	}
+
 	// create a mutation for the new leaf
 	leafMutation := storage.NewMutation(storage.IndexPrefix, eventDigest, versionAsBytes)
 	mutations = append(mutations, *leafMutation)
-
-	log.Debugf("Mutations: %v", mutations)
 
 	return rootHash, mutations, nil
 }
@@ -93,8 +86,6 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryProof, err error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-
-	log.Debugf("Getting version for event %b\n", eventDigest)
 
 	pair, err := t.store.Get(storage.IndexPrefix, eventDigest) // TODO check existence
 	if err != nil {
@@ -116,10 +107,6 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 
 	// traverse from root and generate a visitable pruned tree
 	pruned := NewSearchPruner(eventDigest, context).Prune()
-
-	print := common.NewPrintVisitor(t.hasher.Len())
-	pruned.PreOrder(print)
-	log.Debugf("Pruned tree: %s", print.Result())
 
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)
@@ -148,10 +135,6 @@ func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDig
 
 	// traverse from root and generate a visitable pruned tree
 	pruned := NewVerifyPruner(eventDigest, versionAsBytes, context).Prune()
-
-	print := common.NewPrintVisitor(t.hasher.Len())
-	pruned.PreOrder(print)
-	log.Debugf("Pruned tree: %s", print.Result())
 
 	// visit the pruned tree
 	recomputed := pruned.PostOrder(computeHash).(hashing.Digest)
