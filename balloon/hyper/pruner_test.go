@@ -5,7 +5,7 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/db/bplus"
 )

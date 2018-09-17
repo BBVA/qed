@@ -1,4 +1,4 @@
-package balloon2
+package balloon
 
 import (
 	"github.com/bbva/qed/db"

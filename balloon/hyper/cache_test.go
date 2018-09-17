@@ -3,7 +3,7 @@ package hyper
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/stretchr/testify/require"
 )
 

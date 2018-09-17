@@ -1,349 +1,377 @@
-/*
-   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
 package history
 
 import (
-	"encoding/binary"
-	"fmt"
-	"os"
 	"testing"
 
-	"github.com/bbva/qed/balloon/proof"
-
-	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/metrics"
-	"github.com/bbva/qed/storage/badger"
-	"github.com/bbva/qed/storage/bplus"
+	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/db"
+	"github.com/bbva/qed/db/bplus"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/rand"
-	assert "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAdd(t *testing.T) {
 
+	log.SetLogger("TestAdd", log.INFO)
+
 	testCases := []struct {
-		eventDigest      []byte
-		expectedRootHash []byte
+		eventDigest          common.Digest
+		expectedRootHash     common.Digest
+		expectedMutationsLen int
 	}{
-		{[]byte{0x0}, []byte{0x0}},
-		{[]byte{0x1}, []byte{0x1}},
-		{[]byte{0x2}, []byte{0x3}},
-		{[]byte{0x3}, []byte{0x0}},
-		{[]byte{0x4}, []byte{0x4}},
-		{[]byte{0x5}, []byte{0x1}},
-		{[]byte{0x6}, []byte{0x7}},
-		{[]byte{0x7}, []byte{0x0}},
-		{[]byte{0x8}, []byte{0x8}},
-		{[]byte{0x9}, []byte{0x1}},
+		{
+			eventDigest:          common.Digest{0x0},
+			expectedRootHash:     common.Digest{0x0},
+			expectedMutationsLen: 1,
+		},
+		{
+			eventDigest:          common.Digest{0x1},
+			expectedRootHash:     common.Digest{0x1},
+			expectedMutationsLen: 2,
+		},
+		{
+			eventDigest:          common.Digest{0x2},
+			expectedRootHash:     common.Digest{0x3},
+			expectedMutationsLen: 1,
+		},
+		{
+			eventDigest:          common.Digest{0x3},
+			expectedRootHash:     common.Digest{0x0},
+			expectedMutationsLen: 3,
+		},
+		{
+			eventDigest:          common.Digest{0x4},
+			expectedRootHash:     common.Digest{0x4},
+			expectedMutationsLen: 1,
+		},
+		{
+			eventDigest:          common.Digest{0x5},
+			expectedRootHash:     common.Digest{0x1},
+			expectedMutationsLen: 2,
+		},
+		{
+			eventDigest:          common.Digest{0x6},
+			expectedRootHash:     common.Digest{0x7},
+			expectedMutationsLen: 1,
+		},
+		{
+			eventDigest:          common.Digest{0x7},
+			expectedRootHash:     common.Digest{0x0},
+			expectedMutationsLen: 4,
+		},
+		{
+			eventDigest:          common.Digest{0x8},
+			expectedRootHash:     common.Digest{0x8},
+			expectedMutationsLen: 1,
+		},
+		{
+			eventDigest:          common.Digest{0x9},
+			expectedRootHash:     common.Digest{0x1},
+			expectedMutationsLen: 2,
+		},
 	}
 
-	frozen, close := openBPlusStorage()
-	defer close()
-
-	hasher := new(hashing.XorHasher)
-	tree := NewTree("treeId", frozen, hasher)
-	tree.leafHash = fakeLeafHasherCleanF(hasher)
-	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
-	// Note that we are using fake hashing functions and the index
-	// as the value of the event's digest to make predictable hashes
+	store := bplus.NewBPlusTreeStore()
+	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
 		index := uint64(i)
-		rh, err := tree.Add(c.eventDigest, uint64AsBytes(index))
-		assert.NoError(t, err, "Error while adding to the tree")
-		assert.Equalf(t, c.expectedRootHash, rh, "Incorrect root hash for index %d", i)
+		rootHash, mutations, err := tree.Add(c.eventDigest, index)
+
+		require.NoError(t, err)
+		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for test case %d", i)
+		assert.Equalf(t, c.expectedMutationsLen, len(mutations), "The mutations should match for test case %d", i)
+
+		store.Mutate(mutations...)
 	}
 
 }
 
 func TestProveMembership(t *testing.T) {
 
+	log.SetLogger("TestProveMembership", log.INFO)
+
 	testCases := []struct {
-		eventDigest []byte
-		auditPath   proof.AuditPath
+		index, version    uint64
+		eventDigest       common.Digest
+		expectedAuditPath common.AuditPath
 	}{
 		{
-			[]byte{0x0},
-			proof.AuditPath{"0|0": []uint8{0x0}}, // TODO this should be empty!!!
+			index:             0,
+			version:           0,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{},
 		},
 		{
-			[]byte{0x1},
-			proof.AuditPath{"0|0": []uint8{0x0}, "1|0": []uint8{0x1}},
+			index:             1,
+			version:           1,
+			eventDigest:       common.Digest{0x1},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}},
 		},
 		{
-			[]byte{0x2},
-			proof.AuditPath{"0|1": []uint8{0x1}, "2|0": []uint8{0x2}},
+			index:             2,
+			version:           2,
+			eventDigest:       common.Digest{0x2},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}},
 		},
 		{
-			[]byte{0x3},
-			proof.AuditPath{"0|1": []uint8{0x1}, "2|0": []uint8{0x2}, "3|0": []uint8{0x3}},
+			index:             3,
+			version:           3,
+			eventDigest:       common.Digest{0x3},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}},
 		},
 		{
-			[]byte{0x4},
-			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}},
+			index:             4,
+			version:           4,
+			eventDigest:       common.Digest{0x4},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}},
 		},
 		{
-			[]byte{0x5},
-			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}, "5|0": []uint8{0x5}},
+			index:             5,
+			version:           5,
+			eventDigest:       common.Digest{0x5},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|0": common.Digest{0x4}},
 		},
 		{
-			[]byte{0x6},
-			proof.AuditPath{"0|2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}},
+			index:             6,
+			version:           6,
+			eventDigest:       common.Digest{0x6},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|1": common.Digest{0x1}},
 		},
 		{
-			[]byte{0x7},
-			proof.AuditPath{"0|2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}, "7|0": []uint8{0x7}},
+			index:             7,
+			version:           7,
+			eventDigest:       common.Digest{0x7},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|1": common.Digest{0x1}, "6|0": common.Digest{0x6}},
 		},
 		{
-			[]byte{0x8},
-			proof.AuditPath{"0|3": []uint8{0x0}, "8|0": []uint8{0x8}},
+			index:             8,
+			version:           8,
+			eventDigest:       common.Digest{0x8},
+			expectedAuditPath: common.AuditPath{"0|3": common.Digest{0x0}},
 		},
 		{
-			[]byte{0x9},
-			proof.AuditPath{"0|3": []uint8{0x0}, "8|0": []uint8{0x8}, "9|0": []uint8{0x9}},
+			index:             9,
+			version:           9,
+			eventDigest:       common.Digest{0x9},
+			expectedAuditPath: common.AuditPath{"0|3": common.Digest{0x0}, "8|0": common.Digest{0x8}},
+		},
+		{
+			index:             0,
+			version:           1,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"1|0": common.Digest{0x1}},
+		},
+		{
+			index:             0,
+			version:           1,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"1|0": common.Digest{0x1}},
+		},
+		{
+			index:             0,
+			version:           2,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"1|0": common.Digest{0x1}, "2|0": common.Digest{0x2}},
+		},
+		{
+			index:             0,
+			version:           3,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"1|0": common.Digest{0x1}, "2|1": common.Digest{0x1}},
+		},
+		{
+			index:             0,
+			version:           4,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"1|0": common.Digest{0x1}, "2|1": common.Digest{0x1}, "4|0": common.Digest{0x4}},
+		},
+		{
+			index:             0,
+			version:           5,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"1|0": common.Digest{0x1}, "2|1": common.Digest{0x1}, "4|1": common.Digest{0x1}},
+		},
+		{
+			index:             0,
+			version:           6,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"1|0": common.Digest{0x1}, "2|1": common.Digest{0x1}, "4|1": common.Digest{0x1}, "6|0": common.Digest{0x6}},
+		},
+		{
+			index:             0,
+			version:           7,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"1|0": common.Digest{0x1}, "2|1": common.Digest{0x1}, "4|2": common.Digest{0x0}},
 		},
 	}
 
-	frozen, close := openBPlusStorage()
-	defer close()
+	store := bplus.NewBPlusTreeStore()
+	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
-	hasher := new(hashing.XorHasher)
-	tree := NewTree("treeId", frozen, hasher)
-	tree.leafHash = fakeLeafHasherCleanF(hasher)
-	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
-	// Note that we are using fake hashing functions and the index
-	// as the value of the event's digest to make predictable hashes
+	for i, c := range testCases {
+		_, mutations, _ := tree.Add(c.eventDigest, c.index)
+		store.Mutate(mutations...)
+
+		mp, err := tree.ProveMembership(c.index, c.version)
+		require.NoError(t, err)
+		assert.Equalf(t, c.expectedAuditPath, mp.AuditPath(), "Incorrect audit path for index %d", i)
+		assert.Equal(t, c.index, mp.Index, "The index should math")
+		assert.Equal(t, c.version, mp.Version, "The version should match")
+	}
+
+}
+
+func TestProveConsistency(t *testing.T) {
+
+	log.SetLogger("TestProveConsistency", log.INFO)
+
+	testCases := []struct {
+		eventDigest       common.Digest
+		expectedAuditPath common.AuditPath
+	}{
+		{
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}},
+		},
+		{
+			eventDigest:       common.Digest{0x1},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}, "1|0": common.Digest{0x1}},
+		},
+		{
+			eventDigest:       common.Digest{0x2},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}, "1|0": common.Digest{0x1}, "2|0": common.Digest{0x2}},
+		},
+		{
+			eventDigest:       common.Digest{0x3},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}, "3|0": common.Digest{0x3}},
+		},
+		{
+			eventDigest:       common.Digest{0x4},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}, "3|0": common.Digest{0x3}, "4|0": common.Digest{0x4}},
+		},
+		{
+			eventDigest:       common.Digest{0x5},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|0": common.Digest{0x4}, "5|0": common.Digest{0x5}},
+		},
+		{
+			eventDigest:       common.Digest{0x6},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|0": common.Digest{0x4}, "5|0": common.Digest{0x5}, "6|0": common.Digest{0x6}},
+		},
+		{
+			eventDigest:       common.Digest{0x7},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|1": common.Digest{0x1}, "6|0": common.Digest{0x6}, "7|0": common.Digest{0x7}},
+		},
+		{
+			eventDigest:       common.Digest{0x8},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|1": common.Digest{0x1}, "6|0": common.Digest{0x6}, "7|0": common.Digest{0x7}, "8|0": common.Digest{0x8}},
+		},
+		{
+			eventDigest:       common.Digest{0x9},
+			expectedAuditPath: common.AuditPath{"0|3": common.Digest{0x0}, "8|0": common.Digest{0x8}, "9|0": common.Digest{0x9}},
+		},
+	}
+
+	store := bplus.NewBPlusTreeStore()
+	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
 		index := uint64(i)
-		_, err := tree.Add(c.eventDigest, uint64AsBytes(index))
-		assert.NoError(t, err, "Error while adding to the tree")
+		_, mutations, err := tree.Add(c.eventDigest, index)
+		require.NoError(t, err)
+		store.Mutate(mutations...)
 
-		pf, err := tree.ProveMembership(c.eventDigest, index, index)
-		assert.NoError(t, err, "Error proving membership")
-		assert.Equalf(t, c.auditPath, pf.AuditPath(), "Incorrect audit path for index %d", i)
-	}
-}
-
-func TestProveMembershipWithInvalidTargetVersion(t *testing.T) {
-	frozen, close := openBPlusStorage()
-	defer close()
-
-	hasher := new(hashing.XorHasher)
-	tree := NewTree("treeId", frozen, hasher)
-
-	_, err := tree.ProveMembership([]byte{0x0}, 1, 0)
-	assert.Error(t, err, "An error should occur")
-}
-
-func TestProveMembershipNonConsecutive(t *testing.T) {
-	frozen, close := openBPlusStorage()
-	defer close()
-
-	hasher := new(hashing.XorHasher)
-	tree := NewTree("treeId", frozen, hasher)
-	tree.leafHash = fakeLeafHasherCleanF(hasher)
-	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
-	// Note that we are using fake hashing functions and the index
-	// as the value of the event's digest to make predictable hashes
-
-	// add nine events
-	for i := uint64(0); i < 9; i++ {
-		eventDigest := uint64AsBytes(i)
-		index := uint64AsBytes(i)
-		_, err := tree.Add(eventDigest, index)
-		assert.NoError(t, err, "Error while adding to the tree")
+		start := uint64(max(0, i-1))
+		end := index
+		proof, err := tree.ProveConsistency(start, end)
+		require.NoError(t, err)
+		assert.Equalf(t, start, proof.StartVersion, "The start version should match for test case %d", i)
+		assert.Equalf(t, end, proof.EndVersion, "The start version should match for test case %d", i)
+		assert.Equal(t, c.expectedAuditPath, proof.AuditPath, "Invalid audit path in test case: %d", i)
 	}
 
-	// query for membership with event 0 and version 8
-	pf, err := tree.ProveMembership([]byte{0x0}, 0, 8)
-	assert.NoError(t, err, "Error proving membership")
-	expectedAuditPath := proof.AuditPath{"0|0": []uint8{0x0}, "1|0": []uint8{0x1}, "2|1": []uint8{0x1}, "4|2": []uint8{0x0}, "8|3": []uint8{0x8}}
-	assert.Equal(t, expectedAuditPath, pf.AuditPath(), "Invalid audit path")
 }
 
-func TestProveIncremental(t *testing.T) {
+func TestProveConsistencySameVersions(t *testing.T) {
+
+	log.SetLogger("TestProveConsistencySameVersions", log.INFO)
 
 	testCases := []struct {
-		eventDigest []byte
-		auditPath   proof.AuditPath
+		index             uint64
+		eventDigest       common.Digest
+		expectedAuditPath common.AuditPath
 	}{
 		{
-			[]byte{0x0},
-			proof.AuditPath{"0|0": []uint8{0x0}}, // TODO this should be empty!!!
+			index:             0,
+			eventDigest:       common.Digest{0x0},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}},
 		},
 		{
-			[]byte{0x1},
-			proof.AuditPath{"0|0": []uint8{0x0}, "1|0": []uint8{0x1}},
+			index:             1,
+			eventDigest:       common.Digest{0x1},
+			expectedAuditPath: common.AuditPath{"0|0": common.Digest{0x0}, "1|0": common.Digest{0x1}},
 		},
 		{
-			[]byte{0x2},
-			proof.AuditPath{"0|0": []uint8{0x0}, "1|0": []uint8{0x1}, "2|0": []uint8{0x2}},
+			index:             2,
+			eventDigest:       common.Digest{0x2},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}},
 		},
 		{
-			[]byte{0x3},
-			proof.AuditPath{"0|1": []uint8{0x1}, "2|0": []uint8{0x2}, "3|0": []uint8{0x3}},
+			index:             3,
+			eventDigest:       common.Digest{0x3},
+			expectedAuditPath: common.AuditPath{"0|1": common.Digest{0x1}, "2|0": common.Digest{0x2}, "3|0": common.Digest{0x3}},
 		},
 		{
-			[]byte{0x4},
-			proof.AuditPath{"0|1": []uint8{0x1}, "2|0": []uint8{0x2}, "3|0": []uint8{0x3}, "4|0": []uint8{0x4}},
-		},
-		{
-			[]byte{0x5},
-			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}, "5|0": []uint8{0x5}},
-		},
-		{
-			[]byte{0x6},
-			proof.AuditPath{"0|2": []uint8{0x0}, "4|0": []uint8{0x4}, "5|0": []uint8{0x5}, "6|0": []uint8{0x6}},
-		},
-		{
-			[]byte{0x7},
-			proof.AuditPath{"0|2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}, "7|0": []uint8{0x7}},
-		},
-		{
-			[]byte{0x8},
-			proof.AuditPath{"0|2": []uint8{0x0}, "4|1": []uint8{0x1}, "6|0": []uint8{0x6}, "7|0": []uint8{0x7}, "8|0": []uint8{0x8}},
-		},
-		{
-			[]byte{0x9},
-			proof.AuditPath{"0|3": []uint8{0x0}, "8|0": []uint8{0x8}, "9|0": []uint8{0x9}},
+			index:             4,
+			eventDigest:       common.Digest{0x4},
+			expectedAuditPath: common.AuditPath{"0|2": common.Digest{0x0}, "4|0": common.Digest{0x4}},
 		},
 	}
 
-	frozen, close := openBPlusStorage()
-	defer close()
-
-	hasher := new(hashing.XorHasher)
-	tree := NewTree("treeId", frozen, hasher)
-	tree.leafHash = fakeLeafHasherCleanF(hasher)
-	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
-	// Note that we are using fake hashing functions and the index
-	// as the value of the event's digest to make predictable hashes
+	store := bplus.NewBPlusTreeStore()
+	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
-		index := uint64(i)
-		_, err := tree.Add(c.eventDigest, uint64AsBytes(index))
-		assert.NoError(t, err, "Error while adding to the tree")
+		_, mutations, err := tree.Add(c.eventDigest, c.index)
+		require.NoError(t, err)
+		store.Mutate(mutations...)
 
-		pf, err := tree.ProveIncremental(testCases[max(0, i-1)].eventDigest, c.eventDigest, uint64(max(0, i-1)), index)
-		assert.NoError(t, err, "Error while querying for incremental proof in test case: %d", i)
-		assert.Equal(t, c.auditPath, pf.AuditPath(), "Invalid audit path in test case: %d", i)
+		proof, err := tree.ProveConsistency(c.index, c.index)
+		require.NoError(t, err)
+		assert.Equalf(t, c.index, proof.StartVersion, "The start version should match for test case %d", i)
+		assert.Equalf(t, c.index, proof.EndVersion, "The start version should match for test case %d", i)
+		assert.Equal(t, c.expectedAuditPath, proof.AuditPath, "Invalid audit path in test case: %d", i)
 	}
-
 }
 
-func TestProveIncrementalWithInvalidTargetVersion(t *testing.T) {
-	frozen, close := openBPlusStorage()
-	defer close()
-
-	hasher := new(hashing.XorHasher)
-	tree := NewTree("treeId", frozen, hasher)
-
-	_, err := tree.ProveIncremental([]byte{0x1}, []byte{0x0}, 1, 0)
-	assert.Error(t, err, "An error should occur")
-}
-
-func TestProveIncrementalNonConsecutive(t *testing.T) { // TODO add more test cases!!
-	frozen, close := openBPlusStorage()
-	defer close()
-
-	hasher := new(hashing.XorHasher)
-	tree := NewTree("treeId", frozen, hasher)
-	tree.leafHash = fakeLeafHasherCleanF(hasher)
-	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
-	// Note that we are using fake hashing functions and the index
-	// as the value of the event's digest to make predictable hashes
-
-	// add nine events
-	for i := uint64(0); i < 9; i++ {
-		eventDigest := uint64AsBytes(i)
-		index := uint64AsBytes(i)
-		_, err := tree.Add(eventDigest, index)
-		assert.NoError(t, err, "Error while adding to the tree")
+func max(x, y int) int {
+	if x > y {
+		return x
 	}
-
-	// query for consistency with event 2 and version 8
-	pf, err := tree.ProveIncremental(uint64AsBytes(2), uint64AsBytes(8), 2, 8)
-	assert.NoError(t, err, "Error while querying for incremental proof")
-	expectedAuditPath := proof.AuditPath{
-		"0|1": []uint8{0x1}, "2|0": []uint8{0x2}, "3|0": []uint8{0x3},
-		"4|2": []uint8{0x0}, "8|0": []uint8{0x8},
-	}
-	assert.Equal(t, expectedAuditPath, pf.AuditPath(), "Invalid audit path")
-}
-
-func TestProveIncrementalSameVersions(t *testing.T) {
-	frozen, close := openBPlusStorage()
-	defer close()
-
-	hasher := new(hashing.XorHasher)
-	tree := NewTree("treeId", frozen, hasher)
-	tree.leafHash = fakeLeafHasherCleanF(hasher)
-	tree.interiorHash = fakeInteriorHasherCleanF(hasher)
-	// Note that we are using fake hashing functions and the index
-	// as the value of the event's digest to make predictable hashes
-
-	// add nine events
-	for i := uint64(0); i < 9; i++ {
-		eventDigest := uint64AsBytes(i)
-		index := uint64AsBytes(i)
-		_, err := tree.Add(eventDigest, index)
-		assert.NoError(t, err, "Error while adding to the tree")
-	}
-
-	// query for consistency with event 8 and version 8
-	pf, err := tree.ProveIncremental(uint64AsBytes(8), uint64AsBytes(8), 8, 8)
-	assert.NoError(t, err, "Error while querying for incremental proof")
-	expectedAuditPath := proof.AuditPath{"0|3": []uint8{0x0}, "8|0": []uint8{0x8}}
-	assert.Equal(t, expectedAuditPath, pf.AuditPath(), "Invalid audit path")
+	return y
 }
 
 func BenchmarkAdd(b *testing.B) {
-	store, closeF := openBadgerStorage()
+
+	log.SetLogger("BenchmarkAdd", log.SILENT)
+
+	store, closeF := common.OpenBadgerStore("/var/tmp/history_tree_test.db")
 	defer closeF()
-	ht := NewTree("treeId", store, hashing.NewSha256Hasher())
+
+	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	tree := NewHistoryTree(common.NewSha256Hasher, cache)
+
 	b.N = 100000
-	for i := 0; i < b.N; i++ {
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
 		key := rand.Bytes(64)
-		index := make([]byte, 8)
-		binary.LittleEndian.PutUint64(index, uint64(i))
-		ht.Add(key, index)
-	}
-	b.Logf("stats = %+v\n", metrics.History)
-}
-
-func openBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
-	store := bplus.NewBPlusTreeStorage()
-	return store, func() {
-		store.Close()
-	}
-}
-
-func openBadgerStorage() (*badger.BadgerStorage, func()) {
-	store := badger.NewBadgerStorage("/var/tmp/history_store_test.db")
-	return store, func() {
-		fmt.Println("Cleaning...")
-		store.Close()
-		deleteFile("/var/tmp/history_store_test.db")
-	}
-}
-
-func deleteFile(path string) {
-	err := os.RemoveAll(path)
-	if err != nil {
-		fmt.Printf("Unable to remove db file %s", err)
+		_, mutations, _ := tree.Add(key, i)
+		store.Mutate(mutations...)
 	}
 }

@@ -1,245 +1,165 @@
-/*
-   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
 package hyper
 
 import (
+	"bytes"
 	"math"
 	"sync"
 
-	"github.com/bbva/qed/balloon/position"
-	"github.com/bbva/qed/balloon/proof"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/metrics"
+	"github.com/bbva/qed/util"
 )
 
-type Tree struct {
-	id            []byte
-	cache         Cache
-	leaves        Store
-	cacheLevel    uint64
-	numBits       uint64
-	hasher        hashing.Hasher
-	interiorHash  hashing.InteriorHasher
-	leafHash      hashing.LeafHasher
-	defaultHashes [][]byte
-	sync.RWMutex
+type HyperTree struct {
+	lock          sync.RWMutex
+	store         db.Store
+	cache         common.ModifiableCache
+	hasherF       func() common.Hasher
+	cacheLevel    uint16
+	defaultHashes []common.Digest
+	hasher        common.Hasher
 }
 
-// NewTree returns  a new Hyper Tree given all its dependencies
-func NewTree(id string, cache Cache, leaves Store, hasher hashing.Hasher) *Tree {
-	var m sync.RWMutex
-
-	cacheLevels := uint64(math.Max(0.0, math.Floor(math.Log(float64(cache.Size()))/math.Log(2.0))))
-	numBits := hasher.Len()
-
-	tree := &Tree{
-		[]byte(id),
-		cache,
-		leaves,
-		numBits - cacheLevels,
-		numBits,
-		hasher,
-		hashing.InteriorHasherF(hasher),
-		hashing.LeafHasherF(hasher),
-		make([][]byte, numBits),
-		m,
+func NewHyperTree(hasherF func() common.Hasher, store db.Store, cache common.ModifiableCache) *HyperTree {
+	var lock sync.RWMutex
+	hasher := hasherF()
+	cacheLevel := hasher.Len() - uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
+	tree := &HyperTree{
+		lock:          lock,
+		store:         store,
+		cache:         cache,
+		hasherF:       hasherF,
+		cacheLevel:    cacheLevel,
+		defaultHashes: make([]common.Digest, hasher.Len()),
+		hasher:        hasher,
 	}
 
-	// init default hashes cache
-	tree.defaultHashes[0] = hasher.Do(tree.id, []byte{0x0})
-	for i := uint64(1); i < numBits; i++ {
-		tree.defaultHashes[i] = hasher.Do(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
+	tree.defaultHashes[0] = tree.hasher.Do([]byte{0x0}, []byte{0x0})
+	for i := uint16(1); i < hasher.Len(); i++ {
+		tree.defaultHashes[i] = tree.hasher.Do(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
-
 	return tree
 }
 
-func (t Tree) Close() {
-	t.Lock()
-	defer t.Unlock()
-	// t.cache.Close()
-	t.leaves.Close()
+func (t *HyperTree) Add(eventDigest common.Digest, version uint64) (common.Digest, []db.Mutation, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+
+	log.Debugf("Adding event %b with version %d\n", eventDigest, version)
+
+	// visitors
+	computeHash := common.NewComputeHashVisitor(t.hasher)
+	caching := common.NewCachingVisitor(computeHash)
+
+	// build pruning context
+	versionAsBytes := util.Uint64AsBytes(version)
+	context := PruningContext{
+		navigator:     NewHyperTreeNavigator(t.hasher.Len()),
+		cacheResolver: NewSingleTargetedCacheResolver(t.hasher.Len(), t.cacheLevel, eventDigest),
+		cache:         t.cache,
+		store:         t.store,
+		defaultHashes: t.defaultHashes,
+	}
+
+	// traverse from root and generate a visitable pruned tree
+	pruned := NewInsertPruner(eventDigest, versionAsBytes, context).Prune()
+
+	// print := common.NewPrintVisitor(t.hasher.Len())
+	// pruned.PreOrder(print)
+	// log.Debugf("Pruned tree: %s", print.Result())
+
+	// visit the pruned tree
+	rootHash := pruned.PostOrder(caching).(common.Digest)
+
+	// persist mutations
+	cachedElements := caching.Result()
+	mutations := make([]db.Mutation, len(cachedElements))
+	for i, e := range cachedElements {
+		mutations[i] = *db.NewMutation(db.HyperCachePrefix, e.Pos.Bytes(), e.Digest)
+		// update cache
+		t.cache.Put(e.Pos, e.Digest)
+	}
+	// create a mutation for the new leaf
+	leafMutation := db.NewMutation(db.IndexPrefix, eventDigest, versionAsBytes)
+	mutations = append(mutations, *leafMutation)
+
+	log.Debugf("Mutations: %v", mutations)
+
+	return rootHash, mutations, nil
 }
 
-func (t *Tree) Add(key []byte, value []byte) ([]byte, error) {
-	t.Lock()
-	defer t.Unlock()
+func (t *HyperTree) QueryMembership(eventDigest common.Digest) (proof *QueryProof, err error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
 
-	err := t.leaves.Add(key, value)
+	log.Debugf("Getting version for event %b\n", eventDigest)
+
+	pair, err := t.store.Get(db.IndexPrefix, eventDigest) // TODO check existence
 	if err != nil {
 		return nil, err
 	}
-	return t.toCache(key, value, NewRootPosition(t.numBits, t.cacheLevel)), nil
+
+	// visitors
+	computeHash := common.NewComputeHashVisitor(t.hasher)
+	calcAuditPath := common.NewAuditPathVisitor(computeHash)
+
+	// build pruning context
+	context := PruningContext{
+		navigator:     NewHyperTreeNavigator(t.hasher.Len()),
+		cacheResolver: NewSingleTargetedCacheResolver(t.hasher.Len(), t.cacheLevel, eventDigest),
+		cache:         t.cache,
+		store:         t.store,
+		defaultHashes: t.defaultHashes,
+	}
+
+	// traverse from root and generate a visitable pruned tree
+	pruned := NewSearchPruner(eventDigest, context).Prune()
+
+	print := common.NewPrintVisitor(t.hasher.Len())
+	pruned.PreOrder(print)
+	log.Debugf("Pruned tree: %s", print.Result())
+
+	// visit the pruned tree
+	pruned.PostOrder(calcAuditPath)
+
+	return NewQueryProof(pair.Key, pair.Value, calcAuditPath.Result(), t.hasherF()), nil // TODO include version in audit path visitor
 }
 
-func (t Tree) ProveMembership(key []byte, value []byte) (*proof.Proof, []byte, error) {
-	t.Lock()
-	defer t.Unlock()
+func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDigest, expectedDigest common.Digest) bool {
+	t.lock.Lock()
+	defer t.lock.Unlock()
 
-	value, err := t.leaves.Get(key) // TODO check existence
-	if err != nil {
-		log.Debug(t.leaves)
-		return nil, nil, err
+	log.Debugf("Verifying membership for eventDigest %x", eventDigest)
+
+	// visitors
+	computeHash := common.NewComputeHashVisitor(t.hasher)
+
+	// build pruning context
+	versionAsBytes := util.Uint64AsBytes(version)
+	context := PruningContext{
+		navigator:     NewHyperTreeNavigator(t.hasher.Len()),
+		cacheResolver: NewSingleTargetedCacheResolver(t.hasher.Len(), t.cacheLevel, eventDigest),
+		cache:         proof.AuditPath(),
+		store:         t.store,
+		defaultHashes: t.defaultHashes,
 	}
 
-	ap := make(proof.AuditPath)
-	rootPos := NewRootPosition(t.numBits, t.cacheLevel)
-	t.auditPathFromCache(key, value, rootPos, ap)
+	// traverse from root and generate a visitable pruned tree
+	pruned := NewVerifyPruner(eventDigest, versionAsBytes, context).Prune()
 
-	return proof.NewProof(rootPos, ap, t.hasher), value, nil
+	print := common.NewPrintVisitor(t.hasher.Len())
+	pruned.PreOrder(print)
+	log.Debugf("Pruned tree: %s", print.Result())
+
+	// visit the pruned tree
+	recomputed := pruned.PostOrder(computeHash).(common.Digest)
+	return bytes.Equal(recomputed, expectedDigest)
 }
 
-func (t *Tree) toCache(key, value []byte, pos position.Position) []byte {
-
-	// if we are beyond the cache zone
-	// we need to go to database to get
-	// nodes
-	if !pos.ShouldBeCached() {
-		metrics.Hyper.Add("storage_reads", 1)
-		first := pos.FirstLeaf()
-		last := pos.LastLeaf()
-		d := t.leaves.GetRange(first.Key(), last.Key())
-		return t.fromStorage(d, value, pos)
-	}
-
-	// if not, the node hash is the hash of our left and right child
-	direction := pos.Direction(key)
-	var left, right, digest []byte
-
-	switch {
-	case direction == position.Left:
-		left = t.toCache(key, value, pos.Left())
-		right = t.fromCache(pos.Right())
-	case direction == position.Right:
-		left = t.fromCache(pos.Left())
-		right = t.toCache(key, value, pos.Right())
-	case direction == position.Halt:
-		//this should never happen => TODO should return an error
-		return nil
-	}
-
-	metrics.Hyper.Add("interior_hash", 1)
-	posId := pos.Id()
-	digest = t.interiorHash(posId, left, right)
-
-	// we re-cache all the nodes on each update
-	// if the node is whithin the cache area
-	if pos.ShouldBeCached() {
-		metrics.Hyper.Add("update", 1)
-		t.cache.Put(posId, digest)
-	}
-
-	return digest
-}
-
-func (t *Tree) fromCache(pos position.Position) []byte {
-
-	// get the value from the cache
-	cachedHash, cached := t.cache.Get(pos.Id())
-	if cached {
-		metrics.Hyper.Add("cached_hash", 1)
-		return cachedHash
-	}
-
-	// if there is no value in the cache,return a default hash
-	metrics.Hyper.Add("default_hash", 1)
-	return t.defaultHashes[pos.Height()]
-
-}
-
-func (t *Tree) fromStorage(d [][]byte, value []byte, pos position.Position) []byte {
-
-	// if we are a leaf, return our hash
-	if len(d) == 1 && pos.IsLeaf() {
-		metrics.Hyper.Add("leaf", 1)
-		metrics.Hyper.Add("leaf_hash", 1)
-		return t.leafHash(d[0], value)
-	}
-
-	// if there are no more childs,
-	// return a default hash if i'm not in root node
-	if len(d) == 0 && pos.Height() != t.numBits {
-		metrics.Hyper.Add("default_hash", 1)
-		return t.defaultHashes[pos.Height()]
-	}
-
-	if len(d) > 0 && pos.IsLeaf() {
-		panic("this should never happen (unsorted LeavesSlice or broken split?)")
-	}
-
-	rightChild := pos.Right()
-	leftSlice, rightSlice := Split(d, rightChild.Key())
-
-	left := t.fromStorage(leftSlice, value, pos.Left())
-	right := t.fromStorage(rightSlice, value, rightChild)
-	metrics.Hyper.Add("interior_hash", 1)
-	return t.interiorHash(pos.Id(), left, right)
-}
-
-func (t *Tree) auditPathFromCache(key, value []byte, pos position.Position, ap proof.AuditPath) (err error) {
-	// if we are beyond the cache zone
-	// we need to go to database to get
-	// nodes
-	if !pos.ShouldBeCached() {
-		first := pos.FirstLeaf()
-		last := pos.LastLeaf()
-		leaves := t.leaves.GetRange(first.Key(), last.Key())
-		return t.auditPathFromStorage(leaves, key, value, pos, ap)
-	}
-
-	direction := pos.Direction(key)
-
-	switch {
-	case direction == position.Left:
-		right := pos.Right()
-		ap[right.StringId()] = t.fromCache(right)
-		t.auditPathFromCache(key, value, pos.Left(), ap)
-	case direction == position.Right:
-		left := pos.Left()
-		ap[left.StringId()] = t.fromCache(left)
-		t.auditPathFromCache(key, value, pos.Right(), ap)
-	case direction == position.Halt:
-		panic("this should never happen")
-	}
-
-	return
-}
-
-func (t *Tree) auditPathFromStorage(d [][]byte, key, value []byte, pos position.Position, ap proof.AuditPath) (err error) {
-
-	direction := pos.Direction(key)
-
-	rightChild := pos.Right()
-	leftSlice, rightSlice := Split(d, rightChild.Key())
-
-	switch {
-	case direction == position.Halt && pos.IsLeaf():
-		ap[pos.StringId()] = t.fromStorage(d, value, pos)
-	case direction == position.Left:
-		right := pos.Right()
-		ap[right.StringId()] = t.fromStorage(rightSlice, value, right)
-		t.auditPathFromStorage(leftSlice, key, value, pos.Left(), ap)
-	case direction == position.Right:
-		left := pos.Left()
-		ap[left.StringId()] = t.fromStorage(leftSlice, value, left)
-		t.auditPathFromStorage(rightSlice, key, value, pos.Right(), ap)
-	}
-
-	return
-
+func (t *HyperTree) Close() {
+	t.cache = nil
+	t.hasher = nil
+	t.defaultHashes = nil
+	t.store = nil
 }

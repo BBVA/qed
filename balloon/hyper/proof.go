@@ -3,7 +3,7 @@ package hyper
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/log"
 )
 

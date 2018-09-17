@@ -1,4 +1,4 @@
-package balloon2
+package balloon
 
 import (
 	"encoding/json"

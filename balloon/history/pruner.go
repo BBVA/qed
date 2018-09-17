@@ -1,7 +1,7 @@
 package history
 
 import (
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 )
 
 type PruningContext struct {
