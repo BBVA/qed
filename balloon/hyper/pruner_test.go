@@ -130,7 +130,7 @@ func TestInsertPruner(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		store, closeF := storage_utils.NewBPlusTreeStore()
+		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
 		store.Mutate(c.storeMutations)
 
@@ -217,7 +217,7 @@ func TestSearchPruner(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		store, closeF := storage_utils.NewBPlusTreeStore()
+		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
 		store.Mutate(c.storeMutations)
 
@@ -245,7 +245,7 @@ func TestVerifyPruner(t *testing.T) {
 
 	fakeCache := common.NewFakeCache(hashing.Digest{0}) // Always return hashing.Digest{0}
 	// Add element before verifying.
-	store, closeF := storage_utils.NewBPlusTreeStore()
+	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 	mutations := []storage.Mutation{
 		{storage.IndexPrefix, []byte{0}, []byte{0}},

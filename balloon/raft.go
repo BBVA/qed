@@ -66,7 +66,7 @@ type RaftBalloon struct {
 }
 
 // New returns a new RaftBalloon.
-func New(dbPath, raftDir, raftBindAddr, raftID string) *RaftBalloon {
+func NewRaftBalloon(dbPath, raftDir, raftBindAddr, raftID string) *RaftBalloon {
 	return &RaftBalloon{
 		dbPath:       dbPath,
 		raftDir:      raftDir,
@@ -128,7 +128,10 @@ func (b *RaftBalloon) Open(enableSingle bool) error {
 	}
 
 	// Instantiate balloon FSM
-	b.fsm = NewBalloonFSM(b.dbPath, hashing.NewSha256Hasher)
+	b.fsm, err = NewBalloonFSM(b.dbPath, hashing.NewSha256Hasher)
+	if err != nil {
+		return fmt.Errorf("new balloon fsm: %s", err)
+	}
 
 	// Instantiate the Raft system
 	ra, err := raft.NewRaft(config, b.fsm, logStore, stableStore, snapshots, transport)
