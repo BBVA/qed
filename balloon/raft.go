@@ -1,4 +1,4 @@
-package balloon2
+package balloon
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/log"
 	raftbadger "github.com/bbva/raft-badger"
 	"github.com/dgraph-io/badger"

@@ -3,7 +3,7 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/stretchr/testify/assert"
 )
 
