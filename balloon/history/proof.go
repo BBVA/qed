@@ -30,7 +30,6 @@ func (p MembershipProof) AuditPath() common.AuditPath {
 
 // Verify verifies a membership proof
 func (p MembershipProof) Verify(eventDigest []byte, expectedDigest hashing.Digest) (correct bool) {
-	log.Debugf("Verifying membership for version %d", p.Version)
 
 	// visitors
 	computeHash := common.NewComputeHashVisitor(p.hasher)
