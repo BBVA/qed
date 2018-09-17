@@ -2,6 +2,7 @@ package hyper
 
 import (
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 )
 
@@ -10,7 +11,7 @@ type PruningContext struct {
 	cacheResolver CacheResolver
 	cache         common.Cache
 	store         storage.Store
-	defaultHashes []common.Digest
+	defaultHashes []hashing.Digest
 }
 
 type Pruner interface {
@@ -18,7 +19,7 @@ type Pruner interface {
 }
 
 type InsertPruner struct {
-	key   common.Digest
+	key   hashing.Digest
 	value []byte
 	PruningContext
 }
@@ -202,7 +203,7 @@ func (p *SearchPruner) traverseWithoutCaching(pos common.Position, leaves storag
 }
 
 type VerifyPruner struct {
-	key   common.Digest
+	key   hashing.Digest
 	value []byte
 	PruningContext
 }
