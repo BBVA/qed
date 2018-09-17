@@ -5,18 +5,19 @@ import (
 	"sync"
 
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
 type HistoryTree struct {
 	lock    sync.RWMutex
-	hasherF func() common.Hasher
+	hasherF func() hashing.Hasher
 	cache   common.Cache
-	hasher  common.Hasher
+	hasher  hashing.Hasher
 }
 
-func NewHistoryTree(hasherF func() common.Hasher, cache common.Cache) *HistoryTree {
+func NewHistoryTree(hasherF func() hashing.Hasher, cache common.Cache) *HistoryTree {
 	var lock sync.RWMutex
 	return &HistoryTree{lock, hasherF, cache, hasherF()}
 }
@@ -25,7 +26,7 @@ func (t *HistoryTree) getDepth(version uint64) uint16 {
 	return uint16(uint64(math.Ceil(math.Log2(float64(version + 1)))))
 }
 
-func (t *HistoryTree) Add(eventDigest common.Digest, version uint64) (common.Digest, []storage.Mutation, error) {
+func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []storage.Mutation, error) {
 	t.lock.Lock() // TODO REMOVE THIS!!!
 	defer t.lock.Unlock()
 
@@ -50,7 +51,7 @@ func (t *HistoryTree) Add(eventDigest common.Digest, version uint64) (common.Dig
 	// log.Debugf("Pruned tree: %s", print.Result())
 
 	// visit the pruned tree
-	rh := pruned.PostOrder(caching).(common.Digest)
+	rh := pruned.PostOrder(caching).(hashing.Digest)
 
 	// collect mutations
 	cachedElements := caching.Result()

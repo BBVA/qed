@@ -2,6 +2,7 @@ package history
 
 import (
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 )
 
 type PruningContext struct {
@@ -16,11 +17,11 @@ type Pruner interface {
 
 type InsertPruner struct {
 	version     uint64
-	eventDigest common.Digest
+	eventDigest hashing.Digest
 	PruningContext
 }
 
-func NewInsertPruner(version uint64, eventDigest common.Digest, context PruningContext) *InsertPruner {
+func NewInsertPruner(version uint64, eventDigest hashing.Digest, context PruningContext) *InsertPruner {
 	return &InsertPruner{version, eventDigest, context}
 }
 
@@ -28,7 +29,7 @@ func (p *InsertPruner) Prune() common.Visitable {
 	return p.traverse(p.navigator.Root(), p.eventDigest)
 }
 
-func (p *InsertPruner) traverse(pos common.Position, eventDigest common.Digest) common.Visitable {
+func (p *InsertPruner) traverse(pos common.Position, eventDigest hashing.Digest) common.Visitable {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
@@ -99,11 +100,11 @@ func (p *SearchPruner) traverse(pos common.Position) common.Visitable {
 }
 
 type VerifyPruner struct {
-	eventDigest common.Digest
+	eventDigest hashing.Digest
 	PruningContext
 }
 
-func NewVerifyPruner(eventDigest common.Digest, context PruningContext) *VerifyPruner {
+func NewVerifyPruner(eventDigest hashing.Digest, context PruningContext) *VerifyPruner {
 	return &VerifyPruner{eventDigest, context}
 }
 
@@ -111,7 +112,7 @@ func (p *VerifyPruner) Prune() common.Visitable {
 	return p.traverse(p.navigator.Root(), p.eventDigest)
 }
 
-func (p *VerifyPruner) traverse(pos common.Position, eventDigest common.Digest) common.Visitable {
+func (p *VerifyPruner) traverse(pos common.Position, eventDigest hashing.Digest) common.Visitable {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {

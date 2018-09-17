@@ -6,6 +6,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 )
@@ -31,7 +32,7 @@ func leaf(pos common.Position, value byte) *common.Leaf {
 }
 
 func cached(pos common.Position) *common.Cached {
-	return common.NewCached(pos, common.Digest{0})
+	return common.NewCached(pos, hashing.Digest{0})
 }
 
 func collectable(underlying common.Visitable) *common.Collectable {
@@ -140,9 +141,9 @@ func TestInsertPruner(t *testing.T) {
 			cacheResolver: NewSingleTargetedCacheResolver(numBits, cacheLevel, c.key),
 			cache:         cache,
 			store:         store,
-			defaultHashes: []common.Digest{
-				common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0},
-				common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0},
+			defaultHashes: []hashing.Digest{
+				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
+				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
 			},
 		}
 
@@ -227,9 +228,9 @@ func TestSearchPruner(t *testing.T) {
 			cacheResolver: NewSingleTargetedCacheResolver(numBits, cacheLevel, c.key),
 			cache:         cache,
 			store:         store,
-			defaultHashes: []common.Digest{
-				common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0},
-				common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0},
+			defaultHashes: []hashing.Digest{
+				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
+				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
 			},
 		}
 
@@ -242,7 +243,7 @@ func TestVerifyPruner(t *testing.T) {
 	numBits := uint16(8)
 	cacheLevel := uint16(4)
 
-	fakeCache := common.NewFakeCache(common.Digest{0}) // Always return common.Digest{0}
+	fakeCache := common.NewFakeCache(hashing.Digest{0}) // Always return hashing.Digest{0}
 	// Add element before verifying.
 	store, closeF := storage_utils.NewBPlusTreeStore()
 	defer closeF()
@@ -282,9 +283,9 @@ func TestVerifyPruner(t *testing.T) {
 			cacheResolver: NewSingleTargetedCacheResolver(numBits, cacheLevel, c.key),
 			cache:         fakeCache,
 			store:         store,
-			defaultHashes: []common.Digest{
-				common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0},
-				common.Digest{0}, common.Digest{0}, common.Digest{0}, common.Digest{0},
+			defaultHashes: []hashing.Digest{
+				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
+				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
 			},
 		}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage/badger"
 )
 
@@ -23,13 +24,13 @@ func deleteFile(path string) {
 }
 
 type FakeCache struct {
-	FixedDigest Digest
+	FixedDigest hashing.Digest
 }
 
-func NewFakeCache(fixedDigest Digest) *FakeCache {
+func NewFakeCache(fixedDigest hashing.Digest) *FakeCache {
 	return &FakeCache{fixedDigest}
 }
 
-func (c FakeCache) Get(Position) (Digest, bool) {
-	return Digest{0x0}, true
+func (c FakeCache) Get(Position) (hashing.Digest, bool) {
+	return hashing.Digest{0x0}, true
 }

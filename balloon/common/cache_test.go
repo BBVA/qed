@@ -3,6 +3,7 @@ package common
 import (
 	"testing"
 
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 
@@ -15,12 +16,12 @@ func TestPassThroughCache(t *testing.T) {
 
 	testCases := []struct {
 		pos    Position
-		value  Digest
+		value  hashing.Digest
 		cached bool
 	}{
-		{&FakePosition{[]byte{0x0}, 0}, Digest{0x1}, true},
-		{&FakePosition{[]byte{0x1}, 0}, Digest{0x2}, true},
-		{&FakePosition{[]byte{0x2}, 0}, Digest{0x3}, false},
+		{&FakePosition{[]byte{0x0}, 0}, hashing.Digest{0x1}, true},
+		{&FakePosition{[]byte{0x1}, 0}, hashing.Digest{0x2}, true},
+		{&FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x3}, false},
 	}
 
 	store, closeF := storage_utils.NewBPlusTreeStore()
@@ -50,12 +51,12 @@ func TestSimpleCache(t *testing.T) {
 
 	testCases := []struct {
 		pos    Position
-		value  Digest
+		value  hashing.Digest
 		cached bool
 	}{
-		{&FakePosition{[]byte{0x0}, 0}, Digest{0x1}, true},
-		{&FakePosition{[]byte{0x1}, 0}, Digest{0x2}, true},
-		{&FakePosition{[]byte{0x2}, 0}, Digest{0x3}, false},
+		{&FakePosition{[]byte{0x0}, 0}, hashing.Digest{0x1}, true},
+		{&FakePosition{[]byte{0x1}, 0}, hashing.Digest{0x2}, true},
+		{&FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x3}, false},
 	}
 
 	cache := NewSimpleCache(0)
