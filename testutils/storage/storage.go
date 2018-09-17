@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	bd "github.com/bbva/qed/db/badger"
-	bp "github.com/bbva/qed/db/bplus"
 	"github.com/bbva/qed/storage/badger"
-	"github.com/bbva/qed/storage/bolt"
+	bd "github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/storage/bplus"
+	bp "github.com/bbva/qed/storage/bplus"
 )
 
 func NewBPlusTreeStore() (*bp.BPlusTreeStore, func()) {
@@ -26,23 +25,15 @@ func NewBadgerStore(path string) (*bd.BadgerStore, func()) {
 	}
 }
 
-func NewBPlusStorage() (*bplus.BPlusTreeStorage, func()) {
-	store := bplus.NewBPlusTreeStorage()
+func NewBPlusStorage() (*bplus.BPlusTreeStore, func()) {
+	store := bplus.NewBPlusTreeStore()
 	return store, func() {
 		store.Close()
 	}
 }
 
-func NewBoltStorage(path string) (*bolt.BoltStorage, func()) {
-	store := bolt.NewBoltStorage(path, "test")
-	return store, func() {
-		store.Close()
-		deleteFile(path)
-	}
-}
-
-func NewBadgerStorage(path string) (*badger.BadgerStorage, func()) {
-	store := badger.NewBadgerStorage(path)
+func NewBadgerStorage(path string) (*badger.BadgerStore, func()) {
+	store := badger.NewBadgerStore(path)
 	return store, func() {
 		store.Close()
 		deleteFile(path)
