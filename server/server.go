@@ -30,14 +30,13 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/tampering"
 	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/badger"
-	"github.com/bbva/qed/storage/bolt"
-	"github.com/bbva/qed/storage/cache"
 )
 
 type Store interface {
@@ -61,7 +60,7 @@ type Server struct {
 }
 
 // NewServer synthesizes a new Server based on the parameters it receives.
-// Note that storageName must be one of 'badger', 'bolt'.
+// Note that storageName must be one of 'badger'.
 func NewServer(
 	httpEndpoint string,
 	dbPath string,
@@ -181,9 +180,6 @@ func buildStorageEngine(storageName, dbPath string) (Store, Store, error) {
 	case "badger":
 		frozen = badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
 		leaves = badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", dbPath))
-	case "bolt":
-		frozen = bolt.NewBoltStorage(fmt.Sprintf("%s/frozen.db", dbPath), "frozen")
-		leaves = bolt.NewBoltStorage(fmt.Sprintf("%s/leaves.db", dbPath), "leaves")
 	default:
 		log.Error("Please select a valid storage backend")
 		return nil, nil, fmt.Errorf("Invalid storage name")
@@ -193,7 +189,7 @@ func buildStorageEngine(storageName, dbPath string) (Store, Store, error) {
 }
 
 func buildBalloon(frozen, leaves Store, apiKey string, cacheSize uint64) (*balloon.HyperBalloon, error) {
-	cache := cache.NewSimpleCache(cacheSize)
+	cache := common.NewSimpleCache(cacheSize)
 	history := history.NewTree(apiKey, frozen, hashing.NewSha256Hasher())
 	hyper := hyper.NewTree(apiKey, cache, leaves, hashing.NewSha256Hasher())
 	return balloon.NewHyperBalloon(hashing.NewSha256Hasher(), history, hyper), nil
