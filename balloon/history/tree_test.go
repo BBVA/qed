@@ -86,7 +86,7 @@ func TestAdd(t *testing.T) {
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for test case %d", i)
 		assert.Equalf(t, c.expectedMutationsLen, len(mutations), "The mutations should match for test case %d", i)
 
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 	}
 
 }
@@ -216,7 +216,7 @@ func TestProveMembership(t *testing.T) {
 
 	for i, c := range testCases {
 		_, mutations, _ := tree.Add(c.eventDigest, c.index)
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 
 		mp, err := tree.ProveMembership(c.index, c.version)
 		require.NoError(t, err)
@@ -285,7 +285,7 @@ func TestProveConsistency(t *testing.T) {
 		index := uint64(i)
 		_, mutations, err := tree.Add(c.eventDigest, index)
 		require.NoError(t, err)
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 
 		start := uint64(max(0, i-1))
 		end := index
@@ -341,7 +341,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	for i, c := range testCases {
 		_, mutations, err := tree.Add(c.eventDigest, c.index)
 		require.NoError(t, err)
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 
 		proof, err := tree.ProveConsistency(c.index, c.index)
 		require.NoError(t, err)
@@ -373,6 +373,6 @@ func BenchmarkAdd(b *testing.B) {
 	for i := uint64(0); i < uint64(b.N); i++ {
 		key := rand.Bytes(64)
 		_, mutations, _ := tree.Add(key, i)
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 	}
 }

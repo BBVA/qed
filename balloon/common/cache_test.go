@@ -31,7 +31,9 @@ func TestPassThroughCache(t *testing.T) {
 
 	for i, c := range testCases {
 		if c.cached {
-			err := store.Mutate(*storage.NewMutation(prefix, c.pos.Bytes(), c.value))
+			err := store.Mutate([]storage.Mutation{
+				{prefix, c.pos.Bytes(), c.value},
+			})
 			require.NoError(t, err)
 		}
 

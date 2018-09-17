@@ -41,7 +41,7 @@ func TestAdd(t *testing.T) {
 	for i, c := range testCases {
 		index := uint64(i)
 		commitment, mutations, err := tree.Add(c.eventDigest, index)
-		tree.store.Mutate(mutations...)
+		tree.store.Mutate(mutations)
 		assert.NoErrorf(t, err, "This should not fail for index %d", i)
 		assert.Equalf(t, c.expectedRootHash, commitment, "Incorrect root hash for index %d", i)
 
@@ -101,7 +101,7 @@ func TestProveMembership(t *testing.T) {
 
 		for index, digest := range c.addOps {
 			_, mutations, err := tree.Add(digest, index)
-			tree.store.Mutate(mutations...)
+			tree.store.Mutate(mutations)
 			assert.NoErrorf(t, err, "This should not fail for index %d", i)
 		}
 
@@ -134,7 +134,7 @@ func TestAddAndVerify(t *testing.T) {
 
 		key := hasher.Do(hashing.Digest("a test event"))
 		commitment, mutations, err := tree.Add(key, value)
-		tree.store.Mutate(mutations...)
+		tree.store.Mutate(mutations)
 		assert.NoErrorf(t, err, "This should not fail for index %d", i)
 
 		proof, err := tree.QueryMembership(key)
@@ -160,7 +160,8 @@ func BenchmarkAdd(b *testing.B) {
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := hasher.Do(rand.Bytes(32))
+		// tree.Add(key, uint64(i))
 		_, mutations, _ := tree.Add(key, uint64(i))
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 	}
 }
