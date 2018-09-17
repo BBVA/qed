@@ -1,27 +1,6 @@
 package common
 
-import (
-	"fmt"
-	"os"
-
-	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/storage/badger"
-)
-
-func OpenBadgerStore(path string) (*badger.BadgerStore, func()) {
-	store := badger.NewBadgerStore(path)
-	return store, func() {
-		store.Close()
-		deleteFile(path)
-	}
-}
-
-func deleteFile(path string) {
-	err := os.RemoveAll(path)
-	if err != nil {
-		fmt.Printf("Unable to remove db file %s", err)
-	}
-}
+import "github.com/bbva/qed/hashing"
 
 type FakeCache struct {
 	FixedDigest hashing.Digest

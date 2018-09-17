@@ -13,7 +13,7 @@ import (
 )
 
 func TestMutate(t *testing.T) {
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(t)
 	defer closeF()
 	prefix := byte(0x0)
 
@@ -37,7 +37,7 @@ func TestMutate(t *testing.T) {
 
 func TestGetExistentKey(t *testing.T) {
 
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(t)
 	defer closeF()
 
 	testCases := []struct {
@@ -73,7 +73,7 @@ func TestGetExistentKey(t *testing.T) {
 }
 
 func TestGetRange(t *testing.T) {
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(t)
 	defer closeF()
 
 	var testCases = []struct {
@@ -104,7 +104,7 @@ func TestGetRange(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(t)
 	defer closeF()
 
 	prefix := byte(0x0)
@@ -150,7 +150,7 @@ func TestGetAll(t *testing.T) {
 		{17, 59, 14},
 	}
 
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(t)
 	defer closeF()
 
 	// insert
@@ -182,7 +182,7 @@ func TestGetAll(t *testing.T) {
 }
 
 func TestGetLast(t *testing.T) {
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(t)
 	defer closeF()
 
 	// insert
@@ -205,7 +205,7 @@ func TestGetLast(t *testing.T) {
 }
 
 func BenchmarkMutate(b *testing.B) {
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(b)
 	defer closeF()
 	prefix := byte(0x0)
 	b.N = 10000
@@ -219,7 +219,7 @@ func BenchmarkMutate(b *testing.B) {
 }
 
 func BenchmarkGet(b *testing.B) {
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(b)
 	defer closeF()
 	prefix := byte(0x0)
 	N := 10000
@@ -249,7 +249,7 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkGetRangeInLargeTree(b *testing.B) {
-	store, closeF := openBadgerStore()
+	store, closeF := openBadgerStore(b)
 	defer closeF()
 	prefix := byte(0x0)
 	N := 1000000
@@ -279,8 +279,12 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 
 }
 
-func openBadgerStore() (*BadgerStore, func()) {
-	store := NewBadgerStore("/var/tmp/badger_store_test.db")
+func openBadgerStore(t require.TestingT) (*BadgerStore, func()) {
+	store, err := NewBadgerStore("/var/tmp/badger_store_test.db")
+	if err != nil {
+		t.Errorf("Error opening badger store: %v", err)
+		t.FailNow()
+	}
 	return store, func() {
 		store.Close()
 		deleteFile("/var/tmp/badger_store_test.db")

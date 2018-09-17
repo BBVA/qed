@@ -24,7 +24,7 @@ func TestPassThroughCache(t *testing.T) {
 		{&FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x3}, false},
 	}
 
-	store, closeF := storage_utils.NewBPlusTreeStore()
+	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 	prefix := byte(0x0)
 	cache := NewPassThroughCache(prefix, store)
