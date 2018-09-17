@@ -6,8 +6,8 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/db"
-	"github.com/bbva/qed/db/bplus"
+	"github.com/bbva/qed/storage"
+	storage_utils "github.com/bbva/qed/testutils/storage"
 )
 
 var (
@@ -45,13 +45,13 @@ func TestInsertPruner(t *testing.T) {
 
 	testCases := []struct {
 		key, value     []byte
-		storeMutations []db.Mutation
+		storeMutations []storage.Mutation
 		expectedPruned common.Visitable
 	}{
 		{
 			key:            []byte{0},
 			value:          []byte{0},
-			storeMutations: []db.Mutation{},
+			storeMutations: []storage.Mutation{},
 			expectedPruned: root(pos(0, 8),
 				collectable(node(pos(0, 7),
 					collectable(node(pos(0, 6),
@@ -74,8 +74,8 @@ func TestInsertPruner(t *testing.T) {
 		{
 			key:   []byte{2},
 			value: []byte{1},
-			storeMutations: []db.Mutation{
-				*db.NewMutation(db.IndexPrefix, []byte{0}, []byte{0}),
+			storeMutations: []storage.Mutation{
+				*storage.NewMutation(storage.IndexPrefix, []byte{0}, []byte{0}),
 			},
 			expectedPruned: root(pos(0, 8),
 				collectable(node(pos(0, 7),
@@ -101,9 +101,9 @@ func TestInsertPruner(t *testing.T) {
 		{
 			key:   []byte{255},
 			value: []byte{2},
-			storeMutations: []db.Mutation{
-				*db.NewMutation(db.IndexPrefix, []byte{0}, []byte{0}),
-				*db.NewMutation(db.IndexPrefix, []byte{2}, []byte{1}),
+			storeMutations: []storage.Mutation{
+				*storage.NewMutation(storage.IndexPrefix, []byte{0}, []byte{0}),
+				*storage.NewMutation(storage.IndexPrefix, []byte{2}, []byte{1}),
 			},
 			expectedPruned: root(pos(0, 8),
 				cached(pos(0, 7)),
@@ -129,7 +129,8 @@ func TestInsertPruner(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		store := bplus.NewBPlusTreeStore()
+		store, closeF := storage_utils.NewBPlusTreeStore()
+		defer closeF()
 		store.Mutate(c.storeMutations...)
 
 		cache := common.NewSimpleCache(4)
@@ -157,13 +158,13 @@ func TestSearchPruner(t *testing.T) {
 
 	testCases := []struct {
 		key            []byte
-		storeMutations []db.Mutation
+		storeMutations []storage.Mutation
 		expectedPruned common.Visitable
 	}{
 		{
 			key: []byte{0},
-			storeMutations: []db.Mutation{
-				*db.NewMutation(db.IndexPrefix, []byte{0}, []byte{0}),
+			storeMutations: []storage.Mutation{
+				*storage.NewMutation(storage.IndexPrefix, []byte{0}, []byte{0}),
 			},
 			expectedPruned: root(pos(0, 8),
 				node(pos(0, 7),
@@ -186,9 +187,9 @@ func TestSearchPruner(t *testing.T) {
 		},
 		{
 			key: []byte{6},
-			storeMutations: []db.Mutation{
-				*db.NewMutation(db.IndexPrefix, []byte{1}, []byte{1}),
-				*db.NewMutation(db.IndexPrefix, []byte{6}, []byte{6}),
+			storeMutations: []storage.Mutation{
+				*storage.NewMutation(storage.IndexPrefix, []byte{1}, []byte{1}),
+				*storage.NewMutation(storage.IndexPrefix, []byte{6}, []byte{6}),
 			},
 			expectedPruned: root(pos(0, 8),
 				node(pos(0, 7),
@@ -215,7 +216,8 @@ func TestSearchPruner(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		store := bplus.NewBPlusTreeStore()
+		store, closeF := storage_utils.NewBPlusTreeStore()
+		defer closeF()
 		store.Mutate(c.storeMutations...)
 
 		cache := common.NewSimpleCache(4)
@@ -242,8 +244,9 @@ func TestVerifyPruner(t *testing.T) {
 
 	fakeCache := common.NewFakeCache(common.Digest{0}) // Always return common.Digest{0}
 	// Add element before verifying.
-	store := bplus.NewBPlusTreeStore()
-	mutations := db.Mutation{db.IndexPrefix, []byte{0}, []byte{0}}
+	store, closeF := storage_utils.NewBPlusTreeStore()
+	defer closeF()
+	mutations := storage.Mutation{storage.IndexPrefix, []byte{0}, []byte{0}}
 	store.Mutate(mutations)
 
 	testCases := []struct {

@@ -3,12 +3,12 @@ package common
 import (
 	"testing"
 
-	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 
+	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
-	"github.com/bbva/qed/testutils/storage"
+	storage_utils "github.com/bbva/qed/testutils/storage"
 )
 
 func TestPassThroughCache(t *testing.T) {
@@ -23,14 +23,14 @@ func TestPassThroughCache(t *testing.T) {
 		{&FakePosition{[]byte{0x2}, 0}, Digest{0x3}, false},
 	}
 
-	store, closeF := storage.NewBPlusTreeStore()
+	store, closeF := storage_utils.NewBPlusTreeStore()
 	defer closeF()
 	prefix := byte(0x0)
 	cache := NewPassThroughCache(prefix, store)
 
 	for i, c := range testCases {
 		if c.cached {
-			err := store.Mutate(*db.NewMutation(prefix, c.pos.Bytes(), c.value))
+			err := store.Mutate(*storage.NewMutation(prefix, c.pos.Bytes(), c.value))
 			require.NoError(t, err)
 		}
 
@@ -103,10 +103,10 @@ func NewFakeKVPairReader(numElems uint64) *FakeKVPairReader {
 	return &FakeKVPairReader{numElems, 0}
 }
 
-func (r *FakeKVPairReader) Read(buffer []*db.KVPair) (n int, err error) {
+func (r *FakeKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
 	for n = 0; r.Remaining > 0 && n < len(buffer); n++ {
 		pos := &FakePosition{util.Uint64AsBytes(r.index), 0}
-		buffer[n] = &db.KVPair{pos.Bytes(), rand.Bytes(8)}
+		buffer[n] = &storage.KVPair{pos.Bytes(), rand.Bytes(8)}
 		r.Remaining--
 		r.index++
 	}

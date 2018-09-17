@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bbva/qed/db/badger"
+	"github.com/bbva/qed/storage/badger"
 )
 
 func OpenBadgerStore(path string) (*badger.BadgerStore, func()) {

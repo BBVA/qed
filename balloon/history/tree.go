@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 )
 
 type HistoryTree struct {
@@ -25,7 +25,7 @@ func (t *HistoryTree) getDepth(version uint64) uint16 {
 	return uint16(uint64(math.Ceil(math.Log2(float64(version + 1)))))
 }
 
-func (t *HistoryTree) Add(eventDigest common.Digest, version uint64) (common.Digest, []db.Mutation, error) {
+func (t *HistoryTree) Add(eventDigest common.Digest, version uint64) (common.Digest, []storage.Mutation, error) {
 	t.lock.Lock() // TODO REMOVE THIS!!!
 	defer t.lock.Unlock()
 
@@ -54,9 +54,9 @@ func (t *HistoryTree) Add(eventDigest common.Digest, version uint64) (common.Dig
 
 	// collect mutations
 	cachedElements := caching.Result()
-	mutations := make([]db.Mutation, 0)
+	mutations := make([]storage.Mutation, 0)
 	for _, e := range cachedElements {
-		mutation := db.NewMutation(db.HistoryCachePrefix, e.Pos.Bytes(), e.Digest)
+		mutation := storage.NewMutation(storage.HistoryCachePrefix, e.Pos.Bytes(), e.Digest)
 		mutations = append(mutations, *mutation)
 	}
 

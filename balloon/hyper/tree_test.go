@@ -6,9 +6,9 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/db/bplus"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/rand"
+	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
 )
 
@@ -32,7 +32,8 @@ func TestAdd(t *testing.T) {
 		{common.Digest{0x9}, common.Digest{0x1}},
 	}
 
-	store := bplus.NewBPlusTreeStore()
+	store, closeF := storage_utils.NewBPlusTreeStore()
+	defer closeF()
 	simpleCache := common.NewSimpleCache(10)
 	tree := NewHyperTree(common.NewFakeXorHasher, store, simpleCache)
 
@@ -92,7 +93,8 @@ func TestProveMembership(t *testing.T) {
 	log.SetLogger("TestProveMembership", log.INFO)
 
 	for i, c := range testCases {
-		store := bplus.NewBPlusTreeStore()
+		store, closeF := storage_utils.NewBPlusTreeStore()
+		defer closeF()
 		simpleCache := common.NewSimpleCache(10)
 		tree := NewHyperTree(common.NewFakeXorHasher, store, simpleCache)
 
@@ -124,7 +126,8 @@ func TestAddAndVerify(t *testing.T) {
 
 	for i, c := range testCases {
 		hasher := c.hasherF()
-		store := bplus.NewBPlusTreeStore()
+		store, closeF := storage_utils.NewBPlusTreeStore()
+		defer closeF()
 		simpleCache := common.NewSimpleCache(10)
 		tree := NewHyperTree(c.hasherF, store, simpleCache)
 

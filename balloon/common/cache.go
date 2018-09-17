@@ -1,8 +1,8 @@
 package common
 
 import (
-	"github.com/bbva/qed/db"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 )
 
 type Cache interface {
@@ -11,15 +11,15 @@ type Cache interface {
 
 type ModifiableCache interface {
 	Put(pos Position, value Digest)
-	Fill(r db.KVPairReader) error
+	Fill(r storage.KVPairReader) error
 	Cache
 }
 type PassThroughCache struct {
 	prefix byte
-	store  db.Store
+	store  storage.Store
 }
 
-func NewPassThroughCache(prefix byte, store db.Store) *PassThroughCache {
+func NewPassThroughCache(prefix byte, store storage.Store) *PassThroughCache {
 	return &PassThroughCache{prefix, store}
 }
 
@@ -54,12 +54,12 @@ func (c *SimpleCache) Put(pos Position, value Digest) {
 	c.cached[key] = value
 }
 
-func (c *SimpleCache) Fill(r db.KVPairReader) (err error) {
+func (c *SimpleCache) Fill(r storage.KVPairReader) (err error) {
 	defer r.Close()
 	log.Info("Warming up hyper cache...")
 	cached := 0
 	for {
-		entries := make([]*db.KVPair, 100)
+		entries := make([]*storage.KVPair, 100)
 		n, err := r.Read(entries)
 		if err != nil || n == 0 {
 			break

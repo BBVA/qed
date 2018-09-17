@@ -2,14 +2,14 @@ package hyper
 
 import (
 	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/db"
+	"github.com/bbva/qed/storage"
 )
 
 type PruningContext struct {
 	navigator     common.TreeNavigator
 	cacheResolver CacheResolver
 	cache         common.Cache
-	store         db.Store
+	store         storage.Store
 	defaultHashes []common.Digest
 }
 
@@ -28,11 +28,11 @@ func NewInsertPruner(key, value []byte, context PruningContext) *InsertPruner {
 }
 
 func (p *InsertPruner) Prune() common.Visitable {
-	leaves := db.KVRange{db.NewKVPair(p.key, p.value)}
+	leaves := storage.KVRange{storage.NewKVPair(p.key, p.value)}
 	return p.traverse(p.navigator.Root(), leaves)
 }
 
-func (p *InsertPruner) traverse(pos common.Position, leaves db.KVRange) common.Visitable {
+func (p *InsertPruner) traverse(pos common.Position, leaves storage.KVRange) common.Visitable {
 	if p.cacheResolver.ShouldBeInCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
@@ -46,7 +46,7 @@ func (p *InsertPruner) traverse(pos common.Position, leaves db.KVRange) common.V
 		first := p.navigator.DescendToFirst(pos)
 		last := p.navigator.DescendToLast(pos)
 
-		kvRange, _ := p.store.GetRange(db.IndexPrefix, first.Index(), last.Index())
+		kvRange, _ := p.store.GetRange(storage.IndexPrefix, first.Index(), last.Index())
 
 		// replace leaves with new slice and append the previous to the new one
 		for _, l := range leaves {
@@ -67,7 +67,7 @@ func (p *InsertPruner) traverse(pos common.Position, leaves db.KVRange) common.V
 	return common.NewCollectable(common.NewNode(pos, left, right))
 }
 
-func (p *InsertPruner) traverseWithoutCache(pos common.Position, leaves db.KVRange) common.Visitable {
+func (p *InsertPruner) traverseWithoutCache(pos common.Position, leaves storage.KVRange) common.Visitable {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
 		return common.NewLeaf(pos, leaves[0].Value)
 	}
@@ -101,10 +101,10 @@ func NewSearchPruner(key []byte, context PruningContext) *SearchPruner {
 }
 
 func (p *SearchPruner) Prune() common.Visitable {
-	return p.traverseCache(p.navigator.Root(), db.NewKVRange())
+	return p.traverseCache(p.navigator.Root(), storage.NewKVRange())
 }
 
-func (p *SearchPruner) traverseCache(pos common.Position, leaves db.KVRange) common.Visitable {
+func (p *SearchPruner) traverseCache(pos common.Position, leaves storage.KVRange) common.Visitable {
 	if p.cacheResolver.ShouldBeInCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
@@ -118,7 +118,7 @@ func (p *SearchPruner) traverseCache(pos common.Position, leaves db.KVRange) com
 	if !p.cacheResolver.ShouldCache(pos) {
 		first := p.navigator.DescendToFirst(pos)
 		last := p.navigator.DescendToLast(pos)
-		kvRange, _ := p.store.GetRange(db.IndexPrefix, first.Index(), last.Index())
+		kvRange, _ := p.store.GetRange(storage.IndexPrefix, first.Index(), last.Index())
 
 		// replace leaves with new slice and append the previous to the new one
 		for _, l := range leaves {
@@ -138,7 +138,7 @@ func (p *SearchPruner) traverseCache(pos common.Position, leaves db.KVRange) com
 	return common.NewNode(pos, left, right)
 }
 
-func (p *SearchPruner) traverse(pos common.Position, leaves db.KVRange) common.Visitable {
+func (p *SearchPruner) traverse(pos common.Position, leaves storage.KVRange) common.Visitable {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
 		leaf := common.NewLeaf(pos, leaves[0].Value)
 		if !p.cacheResolver.IsOnPath(pos) {
@@ -177,7 +177,7 @@ func (p *SearchPruner) traverse(pos common.Position, leaves db.KVRange) common.V
 	return common.NewNode(pos, left, right)
 }
 
-func (p *SearchPruner) traverseWithoutCaching(pos common.Position, leaves db.KVRange) common.Visitable {
+func (p *SearchPruner) traverseWithoutCaching(pos common.Position, leaves storage.KVRange) common.Visitable {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
 		return common.NewLeaf(pos, leaves[0].Value)
 	}
@@ -212,11 +212,11 @@ func NewVerifyPruner(key, value []byte, context PruningContext) *VerifyPruner {
 }
 
 func (p *VerifyPruner) Prune() common.Visitable {
-	leaves := db.KVRange{db.NewKVPair(p.key, p.value)}
+	leaves := storage.KVRange{storage.NewKVPair(p.key, p.value)}
 	return p.traverse(p.navigator.Root(), leaves)
 }
 
-func (p *VerifyPruner) traverse(pos common.Position, leaves db.KVRange) common.Visitable {
+func (p *VerifyPruner) traverse(pos common.Position, leaves storage.KVRange) common.Visitable {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
 		return common.NewLeaf(pos, leaves[0].Value)
 	}
