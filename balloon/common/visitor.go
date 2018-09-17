@@ -2,6 +2,8 @@ package common
 
 import (
 	"fmt"
+
+	"github.com/bbva/qed/hashing"
 )
 
 type PostOrderVisitor interface {
@@ -9,7 +11,7 @@ type PostOrderVisitor interface {
 	VisitNode(pos Position, leftResult, rightResult interface{}) interface{}
 	VisitPartialNode(pos Position, leftResult interface{}) interface{}
 	VisitLeaf(pos Position, value []byte) interface{}
-	VisitCached(pos Position, cachedDigest Digest) interface{}
+	VisitCached(pos Position, cachedDigest hashing.Digest) interface{}
 	VisitCollectable(pos Position, result interface{}) interface{}
 }
 
@@ -18,7 +20,7 @@ type PreOrderVisitor interface {
 	VisitNode(pos Position)
 	VisitPartialNode(pos Position)
 	VisitLeaf(pos Position, value []byte)
-	VisitCached(pos Position, cachedDigest Digest)
+	VisitCached(pos Position, cachedDigest hashing.Digest)
 	VisitCollectable(pos Position)
 }
 
@@ -51,7 +53,7 @@ type Leaf struct {
 
 type Cached struct {
 	pos    Position
-	digest Digest
+	digest hashing.Digest
 }
 
 type Collectable struct {
@@ -148,7 +150,7 @@ func (l Leaf) String() string {
 	return fmt.Sprintf("Leaf(%v)[ %x ]", l.pos, l.value)
 }
 
-func NewCached(pos Position, digest Digest) *Cached {
+func NewCached(pos Position, digest hashing.Digest) *Cached {
 	return &Cached{pos, digest}
 }
 

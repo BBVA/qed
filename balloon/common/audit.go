@@ -1,16 +1,19 @@
 package common
 
-import "github.com/bbva/qed/log"
+import (
+	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
+)
 
-type AuditPath map[string]Digest
+type AuditPath map[string]hashing.Digest
 
-func (p AuditPath) Get(pos Position) (Digest, bool) {
+func (p AuditPath) Get(pos Position) (hashing.Digest, bool) {
 	digest, ok := p[pos.StringId()]
 	return digest, ok
 }
 
 type Verifiable interface {
-	Verify(key []byte, expectedDigest Digest) bool
+	Verify(key []byte, expectedDigest hashing.Digest) bool
 	AuditPath() AuditPath
 }
 
@@ -22,7 +25,7 @@ func NewFakeVerifiable(result bool) *FakeVerifiable {
 	return &FakeVerifiable{result}
 }
 
-func (f FakeVerifiable) Verify(key []byte, commitment Digest) bool {
+func (f FakeVerifiable) Verify(key []byte, commitment hashing.Digest) bool {
 	return f.result
 }
 
@@ -63,7 +66,7 @@ func (v *AuditPathVisitor) VisitLeaf(pos Position, eventDigest []byte) interface
 	return v.decorated.VisitLeaf(pos, eventDigest)
 }
 
-func (v *AuditPathVisitor) VisitCached(pos Position, cachedDigest Digest) interface{} {
+func (v *AuditPathVisitor) VisitCached(pos Position, cachedDigest hashing.Digest) interface{} {
 	// by-pass
 	return v.decorated.VisitCached(pos, cachedDigest)
 }
@@ -71,6 +74,6 @@ func (v *AuditPathVisitor) VisitCached(pos Position, cachedDigest Digest) interf
 func (v *AuditPathVisitor) VisitCollectable(pos Position, result interface{}) interface{} {
 	digest := v.decorated.VisitCollectable(pos, result)
 	log.Debugf("Adding collectable to path in position: %v", pos)
-	v.auditPath[pos.StringId()] = digest.(Digest)
+	v.auditPath[pos.StringId()] = digest.(hashing.Digest)
 	return digest
 }

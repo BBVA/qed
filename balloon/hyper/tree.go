@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
@@ -15,13 +16,13 @@ type HyperTree struct {
 	lock          sync.RWMutex
 	store         storage.Store
 	cache         common.ModifiableCache
-	hasherF       func() common.Hasher
+	hasherF       func() hashing.Hasher
 	cacheLevel    uint16
-	defaultHashes []common.Digest
-	hasher        common.Hasher
+	defaultHashes []hashing.Digest
+	hasher        hashing.Hasher
 }
 
-func NewHyperTree(hasherF func() common.Hasher, store storage.Store, cache common.ModifiableCache) *HyperTree {
+func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache common.ModifiableCache) *HyperTree {
 	var lock sync.RWMutex
 	hasher := hasherF()
 	cacheLevel := hasher.Len() - uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
@@ -31,7 +32,7 @@ func NewHyperTree(hasherF func() common.Hasher, store storage.Store, cache commo
 		cache:         cache,
 		hasherF:       hasherF,
 		cacheLevel:    cacheLevel,
-		defaultHashes: make([]common.Digest, hasher.Len()),
+		defaultHashes: make([]hashing.Digest, hasher.Len()),
 		hasher:        hasher,
 	}
 
@@ -42,7 +43,7 @@ func NewHyperTree(hasherF func() common.Hasher, store storage.Store, cache commo
 	return tree
 }
 
-func (t *HyperTree) Add(eventDigest common.Digest, version uint64) (common.Digest, []storage.Mutation, error) {
+func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []storage.Mutation, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -70,7 +71,7 @@ func (t *HyperTree) Add(eventDigest common.Digest, version uint64) (common.Diges
 	// log.Debugf("Pruned tree: %s", print.Result())
 
 	// visit the pruned tree
-	rootHash := pruned.PostOrder(caching).(common.Digest)
+	rootHash := pruned.PostOrder(caching).(hashing.Digest)
 
 	// persist mutations
 	cachedElements := caching.Result()
@@ -89,7 +90,7 @@ func (t *HyperTree) Add(eventDigest common.Digest, version uint64) (common.Diges
 	return rootHash, mutations, nil
 }
 
-func (t *HyperTree) QueryMembership(eventDigest common.Digest) (proof *QueryProof, err error) {
+func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryProof, err error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -126,7 +127,7 @@ func (t *HyperTree) QueryMembership(eventDigest common.Digest) (proof *QueryProo
 	return NewQueryProof(pair.Key, pair.Value, calcAuditPath.Result(), t.hasherF()), nil // TODO include version in audit path visitor
 }
 
-func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDigest, expectedDigest common.Digest) bool {
+func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDigest, expectedDigest hashing.Digest) bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -153,7 +154,7 @@ func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDig
 	log.Debugf("Pruned tree: %s", print.Result())
 
 	// visit the pruned tree
-	recomputed := pruned.PostOrder(computeHash).(common.Digest)
+	recomputed := pruned.PostOrder(computeHash).(hashing.Digest)
 	return bytes.Equal(recomputed, expectedDigest)
 }
 

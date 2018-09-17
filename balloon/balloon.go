@@ -7,6 +7,7 @@ import (
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
@@ -17,15 +18,15 @@ var (
 
 type Balloon struct {
 	version uint64
-	hasherF func() common.Hasher
+	hasherF func() hashing.Hasher
 	store   storage.Store
 
 	historyTree *history.HistoryTree
 	hyperTree   *hyper.HyperTree
-	hasher      common.Hasher
+	hasher      hashing.Hasher
 }
 
-func NewBalloon(store storage.Store, hasherF func() common.Hasher) (*Balloon, error) {
+func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// get last stored version
 	version := uint64(0)
@@ -65,8 +66,8 @@ func NewBalloon(store storage.Store, hasherF func() common.Hasher) (*Balloon, er
 // Commitment is the struct that has both history and hyper digest and the
 // current version for that rootNode digests.
 type Commitment struct {
-	HistoryDigest common.Digest
-	HyperDigest   common.Digest
+	HistoryDigest hashing.Digest
+	HyperDigest   hashing.Digest
 	Version       uint64
 }
 
@@ -80,16 +81,16 @@ type MembershipProof struct {
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64 //required for consistency proof
-	KeyDigest      common.Digest
-	hasher         common.Hasher
+	KeyDigest      hashing.Digest
+	hasher         hashing.Hasher
 }
 
 func NewMembershipProof(
 	exists bool,
 	hyperProof, historyProof common.Verifiable,
 	currentVersion, queryVersion, actualVersion uint64,
-	keyDigest common.Digest,
-	hasher common.Hasher) *MembershipProof {
+	keyDigest hashing.Digest,
+	hasher hashing.Hasher) *MembershipProof {
 	return &MembershipProof{
 		exists,
 		hyperProof,
@@ -126,13 +127,13 @@ func (p MembershipProof) Verify(event []byte, commitment *Commitment) bool {
 type IncrementalProof struct {
 	Start, End uint64
 	AuditPath  common.AuditPath
-	Hasher     common.Hasher
+	Hasher     hashing.Hasher
 }
 
 func NewIncrementalProof(
 	start, end uint64,
 	auditPath common.AuditPath,
-	hasher common.Hasher,
+	hasher hashing.Hasher,
 ) *IncrementalProof {
 	return &IncrementalProof{
 		start,
@@ -157,7 +158,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []storage.Mutation, error) {
 	eventDigest := b.hasher.Do(event)
 
 	// Update trees
-	var historyDigest, hyperDigest common.Digest
+	var historyDigest, hyperDigest hashing.Digest
 	var historyMutations, hyperMutations []storage.Mutation
 	var historyErr, hyperErr error
 	var wg sync.WaitGroup

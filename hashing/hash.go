@@ -1,21 +1,3 @@
-/*
-   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
-// Package hashing implements the Hasher public interface and the concrete
-// implementations.
 package hashing
 
 import (
@@ -23,41 +5,26 @@ import (
 	"hash"
 )
 
-// Hasher is the public interface to be used as placeholder for the concrete
-// implementations.
+type Digest []byte
+
 type Hasher interface {
-	Do(...[]byte) []byte
-	Len() uint64
+	Salted([]byte, ...[]byte) Digest
+	Do(...[]byte) Digest
+	Len() uint16
 }
 
-// Sha256Hasher implements the Hasher interface and computes the crypto/sha256
-// internal function.
-type Sha256Hasher struct {
-	underlying hash.Hash
-}
-
-func NewSha256Hasher() *Sha256Hasher {
-	return &Sha256Hasher{underlying: sha256.New()}
-}
-
-func (s Sha256Hasher) Do(data ...[]byte) []byte {
-
-	s.underlying.Reset()
-
-	for i := 0; i < len(data); i++ {
-		s.underlying.Write(data[i])
-	}
-
-	return s.underlying.Sum(nil)[:]
-}
-
-func (s Sha256Hasher) Len() uint64 { return uint64(256) }
-
-// XorHasher implements the Hasher interface and computes a xor function.
-// Handy for testing hash tree implementations.
 type XorHasher struct{}
 
-func (x XorHasher) Do(data ...[]byte) []byte {
+func NewXorHasher() Hasher {
+	return new(XorHasher)
+}
+
+func (x XorHasher) Salted(salt []byte, data ...[]byte) Digest {
+	data = append(data, salt)
+	return x.Do(data...)
+}
+
+func (x XorHasher) Do(data ...[]byte) Digest {
 	var result byte
 	for _, elem := range data {
 		var sum byte
@@ -68,13 +35,45 @@ func (x XorHasher) Do(data ...[]byte) []byte {
 	}
 	return []byte{result}
 }
-func (s XorHasher) Len() uint64 { return uint64(8) }
+func (s XorHasher) Len() uint16 { return uint16(8) }
+
+type Sha256Hasher struct {
+	underlying hash.Hash
+}
+
+func NewSha256Hasher() Hasher {
+	return &Sha256Hasher{underlying: sha256.New()}
+}
+
+func (s *Sha256Hasher) Salted(salt []byte, data ...[]byte) Digest {
+	data = append(data, salt)
+	return s.Do(data...)
+}
+
+func (s *Sha256Hasher) Do(data ...[]byte) Digest {
+	s.underlying.Reset()
+	for i := 0; i < len(data); i++ {
+		s.underlying.Write(data[i])
+	}
+	return s.underlying.Sum(nil)[:]
+}
+
+func (s Sha256Hasher) Len() uint16 { return uint16(256) }
 
 // PearsonHasher implements the Hasher interface and computes a 8 bit hash
 // function. Handy for testing hash tree implementations.
 type PearsonHasher struct{}
 
-func (p PearsonHasher) Do(data ...[]byte) []byte {
+func NewPearsonHasher() Hasher {
+	return new(PearsonHasher)
+}
+
+func (h *PearsonHasher) Salted(salt []byte, data ...[]byte) Digest {
+	data = append(data, salt)
+	return h.Do(data...)
+}
+
+func (p *PearsonHasher) Do(data ...[]byte) Digest {
 	lookupTable := [...]uint8{
 		// 0-255 shuffled in any (random) order suffices
 		0x62, 0x06, 0x55, 0x96, 0x24, 0x17, 0x70, 0xa4, 0x87, 0xcf, 0xa9, 0x05, 0x1a, 0x40, 0xa5, 0xdb, //  1
@@ -108,29 +107,35 @@ func (p PearsonHasher) Do(data ...[]byte) []byte {
 	for _, v := range ih {
 		r = lookupTable[r^v]
 	}
-	return []byte{r}
+	return Digest{r}
 
 }
-func (p PearsonHasher) Len() uint64 { return uint64(8) }
+func (p PearsonHasher) Len() uint16 { return uint16(8) }
 
-// LeafHasher is the internal function interface to be used in the tree.
-type LeafHasher func([]byte, []byte) []byte
-
-// InteriorHasher is the internal function interface to be used in the tree.
-type InteriorHasher func([]byte, []byte, []byte) []byte
-
-// LeafHasherF is a closure to create a leafHasher function with a
-// switchable hasher.
-func LeafHasherF(hasher Hasher) LeafHasher {
-	return func(id, key []byte) []byte {
-		return hasher.Do(id, key)
-	}
+type FakeHasher struct {
+	underlying Hasher
 }
 
-// InteriorHasherF is a closure to create a interiorHasher function with a
-// switchable hasher.
-func InteriorHasherF(hasher Hasher) InteriorHasher {
-	return func(id, left, right []byte) []byte {
-		return hasher.Do(id, left, right)
-	}
+func (h *FakeHasher) Salted(salt []byte, data ...[]byte) Digest {
+	return h.underlying.Do(data...)
+}
+
+func (h *FakeHasher) Do(data ...[]byte) Digest {
+	return h.underlying.Do(data...)
+}
+
+func (h FakeHasher) Len() uint16 {
+	return h.underlying.Len()
+}
+
+func NewFakeXorHasher() Hasher {
+	return &FakeHasher{NewXorHasher()}
+}
+
+func NewFakeSha256Hasher() Hasher {
+	return &FakeHasher{NewSha256Hasher()}
+}
+
+func NewFakePearsonHasher() Hasher {
+	return &FakeHasher{NewPearsonHasher()}
 }

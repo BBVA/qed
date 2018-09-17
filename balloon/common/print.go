@@ -3,6 +3,8 @@ package common
 import (
 	"fmt"
 	"strings"
+
+	"github.com/bbva/qed/hashing"
 )
 
 type PrintVisitor struct {
@@ -32,7 +34,7 @@ func (v *PrintVisitor) VisitPartialNode(pos Position) {
 func (v *PrintVisitor) VisitLeaf(pos Position, value []byte) {
 	v.tokens = append(v.tokens, fmt.Sprintf("%sLeaf(%v)[%x]", v.indent(pos.Height()), pos, value))
 }
-func (v *PrintVisitor) VisitCached(pos Position, cachedDigest Digest) {
+func (v *PrintVisitor) VisitCached(pos Position, cachedDigest hashing.Digest) {
 	v.tokens = append(v.tokens, fmt.Sprintf("%sCached(%v)[%x]", v.indent(pos.Height()), pos, cachedDigest))
 }
 func (v *PrintVisitor) VisitCollectable(pos Position) {

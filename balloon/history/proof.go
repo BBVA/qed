@@ -4,17 +4,18 @@ import (
 	"bytes"
 
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
 
 type MembershipProof struct {
 	auditPath      common.AuditPath
 	Index, Version uint64
-	hasher         common.Hasher // TODO should we remove this and pass as an argument when verifying?
+	hasher         hashing.Hasher // TODO should we remove this and pass as an argument when verifying?
 	// TODO should we include the eventDigest?
 }
 
-func NewMembershipProof(index, version uint64, auditPath common.AuditPath, hasher common.Hasher) *MembershipProof {
+func NewMembershipProof(index, version uint64, auditPath common.AuditPath, hasher hashing.Hasher) *MembershipProof {
 	return &MembershipProof{
 		auditPath: auditPath,
 		Index:     index,
@@ -28,7 +29,7 @@ func (p MembershipProof) AuditPath() common.AuditPath {
 }
 
 // Verify verifies a membership proof
-func (p MembershipProof) Verify(eventDigest []byte, expectedDigest common.Digest) (correct bool) {
+func (p MembershipProof) Verify(eventDigest []byte, expectedDigest hashing.Digest) (correct bool) {
 	log.Debugf("Verifying membership for version %d", p.Version)
 
 	// visitors
@@ -51,7 +52,7 @@ func (p MembershipProof) Verify(eventDigest []byte, expectedDigest common.Digest
 	pruned := NewVerifyPruner(eventDigest, context).Prune()
 
 	// visit the pruned tree
-	recomputed := pruned.PostOrder(computeHash).(common.Digest)
+	recomputed := pruned.PostOrder(computeHash).(hashing.Digest)
 
 	return bytes.Equal(recomputed, expectedDigest)
 }
@@ -59,10 +60,10 @@ func (p MembershipProof) Verify(eventDigest []byte, expectedDigest common.Digest
 type IncrementalProof struct {
 	AuditPath                common.AuditPath
 	StartVersion, EndVersion uint64
-	hasher                   common.Hasher
+	hasher                   hashing.Hasher
 }
 
-func NewIncrementalProof(start, end uint64, auditPath common.AuditPath, hasher common.Hasher) *IncrementalProof {
+func NewIncrementalProof(start, end uint64, auditPath common.AuditPath, hasher hashing.Hasher) *IncrementalProof {
 	return &IncrementalProof{
 		AuditPath:    auditPath,
 		StartVersion: start,
@@ -71,7 +72,7 @@ func NewIncrementalProof(start, end uint64, auditPath common.AuditPath, hasher c
 	}
 }
 
-func (p IncrementalProof) Verify(startDigest, endDigest common.Digest) (correct bool) {
+func (p IncrementalProof) Verify(startDigest, endDigest hashing.Digest) (correct bool) {
 
 	log.Debugf("Verifying incremental between versions %d and %d", p.StartVersion, p.EndVersion)
 
@@ -95,8 +96,8 @@ func (p IncrementalProof) Verify(startDigest, endDigest common.Digest) (correct 
 	endPruned := NewVerifyPruner(endDigest, endContext).Prune()
 
 	// visit the pruned trees
-	startRecomputed := startPruned.PostOrder(computeHash).(common.Digest)
-	endRecomputed := endPruned.PostOrder(computeHash).(common.Digest)
+	startRecomputed := startPruned.PostOrder(computeHash).(hashing.Digest)
+	endRecomputed := endPruned.PostOrder(computeHash).(hashing.Digest)
 
 	return bytes.Equal(startRecomputed, startDigest) && bytes.Equal(endRecomputed, endDigest)
 
