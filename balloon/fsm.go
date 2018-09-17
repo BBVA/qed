@@ -30,11 +30,15 @@ type BalloonFSM struct {
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
 
-func NewBalloonFSM(dbPath string, hasherF func() hashing.Hasher) *BalloonFSM {
+func NewBalloonFSM(dbPath string, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
+	store, err := bdb.NewBadgerStore(dbPath)
+	if err != nil {
+		return nil, err
+	}
 	return &BalloonFSM{
 		hasherF: hasherF,
-		store:   bdb.NewBadgerStore(dbPath),
-	}
+		store:   store,
+	}, nil
 }
 
 func (fsm BalloonFSM) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {

@@ -9,6 +9,7 @@ import (
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/testutils/rand"
+	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -362,7 +363,7 @@ func BenchmarkAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkAdd", log.SILENT)
 
-	store, closeF := common.OpenBadgerStore("/var/tmp/history_tree_test.db")
+	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/history_tree_test.db")
 	defer closeF()
 
 	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)

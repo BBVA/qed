@@ -4,36 +4,25 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bbva/qed/storage/badger"
+	"github.com/stretchr/testify/require"
+
 	bd "github.com/bbva/qed/storage/badger"
-	"github.com/bbva/qed/storage/bplus"
 	bp "github.com/bbva/qed/storage/bplus"
 )
 
-func NewBPlusTreeStore() (*bp.BPlusTreeStore, func()) {
+func OpenBPlusTreeStore() (*bp.BPlusTreeStore, func()) {
 	store := bp.NewBPlusTreeStore()
 	return store, func() {
 		store.Close()
 	}
 }
 
-func NewBadgerStore(path string) (*bd.BadgerStore, func()) {
-	store := bd.NewBadgerStore(path)
-	return store, func() {
-		store.Close()
-		deleteFile(path)
+func OpenBadgerStore(t require.TestingT, path string) (*bd.BadgerStore, func()) {
+	store, err := bd.NewBadgerStore(path)
+	if err != nil {
+		t.Errorf("Error opening badger store: %v", err)
+		t.FailNow()
 	}
-}
-
-func NewBPlusStorage() (*bplus.BPlusTreeStore, func()) {
-	store := bplus.NewBPlusTreeStore()
-	return store, func() {
-		store.Close()
-	}
-}
-
-func NewBadgerStorage(path string) (*badger.BadgerStore, func()) {
-	store := badger.NewBadgerStore(path)
 	return store, func() {
 		store.Close()
 		deleteFile(path)
