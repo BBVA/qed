@@ -3,7 +3,7 @@ package history
 import (
 	"math"
 
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 )
 
 type HistoryTreeNavigator struct {

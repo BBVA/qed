@@ -1,4 +1,4 @@
-package balloon2
+package balloon
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/db"
 	bdb "github.com/bbva/qed/db/badger"
 	"github.com/hashicorp/raft"

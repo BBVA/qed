@@ -1,7 +1,7 @@
 package hyper
 
 import (
-	"github.com/bbva/qed/balloon2/common"
+	"github.com/bbva/qed/balloon/common"
 )
 
 type HyperTreeNavigator struct {

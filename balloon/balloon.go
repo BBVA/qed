@@ -1,59 +1,72 @@
-/*
-   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
-// Package balloon implements the tree interface to interact with both hyper
-// and history trees.
 package balloon
 
 import (
-	"encoding/binary"
 	"fmt"
+	"sync"
 
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/balloon/proof"
-	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/db"
+	"github.com/bbva/qed/util"
 )
 
-// Balloon is the public set of operations that can be done to a
-// HyperBalloon struct.
-type Balloon interface {
-	Add(event []byte) chan *Commitment
-	GenMembershipProof(event []byte, version uint64) chan *MembershipProof
-	GenIncrementalProof(start, end uint64) chan *IncrementalProof
-	Close() chan bool
+var (
+	BalloonVersionKey = []byte("version")
+)
+
+type Balloon struct {
+	version uint64
+	hasherF func() common.Hasher
+	store   db.Store
+
+	historyTree *history.HistoryTree
+	hyperTree   *hyper.HyperTree
+	hasher      common.Hasher
 }
 
-// HyperBalloon is the struct that links together both hyper and history trees
-// the balloon version and the ops channel for the balloon operations
-// serializer.
-type HyperBalloon struct {
-	history *history.Tree
-	hyper   *hyper.Tree
-	hasher  hashing.Hasher
-	version uint64
-	ops     chan interface{} // serialize operations
+func NewBalloon(store db.Store, hasherF func() common.Hasher) (*Balloon, error) {
+
+	// get last stored version
+	version := uint64(0)
+	kv, err := store.GetLast(db.HistoryCachePrefix)
+	if err != nil {
+		if err != db.ErrKeyNotFound {
+			return nil, err
+		}
+	} else {
+		version = util.BytesAsUint64(kv.Key[:8]) + 1
+	}
+
+	// create caches
+	historyCache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	hyperCache := common.NewSimpleCache(1 << 2)
+
+	// warm up hyper cache
+	err = hyperCache.Fill(store.GetAll(db.HyperCachePrefix))
+	if err != nil {
+		return nil, err
+	}
+
+	// create trees
+	historyTree := history.NewHistoryTree(hasherF, historyCache)
+	hyperTree := hyper.NewHyperTree(hasherF, store, hyperCache)
+
+	return &Balloon{
+		version:     version,
+		hasherF:     hasherF,
+		store:       store,
+		historyTree: historyTree,
+		hyperTree:   hyperTree,
+		hasher:      hasherF(),
+	}, nil
 }
 
 // Commitment is the struct that has both history and hyper digest and the
 // current version for that rootNode digests.
 type Commitment struct {
-	HistoryDigest []byte
-	HyperDigest   []byte
+	HistoryDigest common.Digest
+	HyperDigest   common.Digest
 	Version       uint64
 }
 
@@ -62,25 +75,21 @@ type Commitment struct {
 // Current, Actual and Query Versions.
 type MembershipProof struct {
 	Exists         bool
-	HyperProof     proof.Verifiable
-	HistoryProof   proof.Verifiable
+	HyperProof     common.Verifiable
+	HistoryProof   common.Verifiable
 	CurrentVersion uint64
 	QueryVersion   uint64
-	ActualVersion  uint64
-	KeyDigest      []byte
-	hasher         hashing.Hasher
+	ActualVersion  uint64 //required for consistency proof
+	KeyDigest      common.Digest
+	hasher         common.Hasher
 }
 
 func NewMembershipProof(
 	exists bool,
-	hyperProof proof.Verifiable,
-	historyProof proof.Verifiable,
-	currentVersion uint64,
-	queryVersion uint64,
-	actualVersion uint64,
-	keyDigest []byte,
-	hasher hashing.Hasher,
-) *MembershipProof {
+	hyperProof, historyProof common.Verifiable,
+	currentVersion, queryVersion, actualVersion uint64,
+	keyDigest common.Digest,
+	hasher common.Hasher) *MembershipProof {
 	return &MembershipProof{
 		exists,
 		hyperProof,
@@ -93,25 +102,20 @@ func NewMembershipProof(
 	}
 }
 
-func (p MembershipProof) Verify(commitment *Commitment, event []byte) bool {
+// Verify verifies a proof and answer from QueryMembership. Returns true if the
+// answer and proof are correct and consistent, otherwise false.
+// Run by a client on input that should be verified.
+func (p MembershipProof) Verify(event []byte, commitment *Commitment) bool {
 	if p.HyperProof == nil || p.HistoryProof == nil {
 		return false
 	}
 
 	digest := p.hasher.Do(event)
-	hyperCorrect := p.HyperProof.Verify(
-		commitment.HyperDigest,
-		digest,
-		uint2bytes(p.QueryVersion),
-	)
+	hyperCorrect := p.HyperProof.Verify(digest, commitment.HyperDigest)
 
 	if p.Exists {
 		if p.QueryVersion <= p.ActualVersion {
-			historyCorrect := p.HistoryProof.Verify(
-				commitment.HistoryDigest,
-				uint2bytes(p.QueryVersion),
-				digest,
-			)
+			historyCorrect := p.HistoryProof.Verify(digest, commitment.HistoryDigest)
 			return hyperCorrect && historyCorrect
 		}
 	}
@@ -121,216 +125,129 @@ func (p MembershipProof) Verify(commitment *Commitment, event []byte) bool {
 
 type IncrementalProof struct {
 	Start, End uint64
-	AuditPath  proof.AuditPath
-	hasher     hashing.Hasher
+	AuditPath  common.AuditPath
+	Hasher     common.Hasher
 }
 
-func NewIncrementalProof(start, end uint64, auditPath proof.AuditPath, hasher hashing.Hasher) *IncrementalProof {
-	return &IncrementalProof{start, end, auditPath, hasher}
-}
-
-func (p IncrementalProof) Verify(start, end *Commitment) bool {
-	proof := history.NewIncrementalProof(p.Start, p.End, p.AuditPath, hashing.InteriorHasherF(p.hasher), hashing.LeafHasherF(p.hasher))
-	return proof.Verify(start.HistoryDigest, end.HistoryDigest)
-}
-
-func uint2bytes(i uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, i)
-	return bytes
-}
-
-// NewHyperBalloon returns a HyperBalloon struct.
-func NewHyperBalloon(hasher hashing.Hasher, history *history.Tree, hyper *hyper.Tree) *HyperBalloon {
-
-	b := HyperBalloon{
-		history,
-		hyper,
-		hasher,
-		0,
-		nil,
-	}
-	b.ops = b.operations()
-	return &b
-
-}
-
-// Add is the public balloon interface to add a event in the balloon tree.
-func (b HyperBalloon) Add(event []byte) chan *Commitment {
-	result := make(chan *Commitment)
-	b.ops <- &add{
-		event,
-		result,
-	}
-	return result
-}
-
-// GenMembership is the public balloon interface to get a MembershipProof to
-// do a Existence Proof.
-func (b HyperBalloon) GenMembershipProof(event []byte, version uint64) chan *MembershipProof {
-	result := make(chan *MembershipProof)
-	b.ops <- &membership{
-		event,
-		version,
-		result,
-	}
-	return result
-}
-
-// GenIncrementalProof is the public balloon interface to get an IncrementalProof to
-// generate a consistency proof
-func (b HyperBalloon) GenIncrementalProof(start, end uint64) chan *IncrementalProof {
-	result := make(chan *IncrementalProof)
-	b.ops <- &incremental{
+func NewIncrementalProof(
+	start, end uint64,
+	auditPath common.AuditPath,
+	hasher common.Hasher,
+) *IncrementalProof {
+	return &IncrementalProof{
 		start,
 		end,
-		result,
+		auditPath,
+		hasher,
 	}
-	return result
 }
 
-// Close will close the balloon operations serializer channel.
-func (b HyperBalloon) Close() chan bool {
-	result := make(chan bool)
-
-	b.history.Close()
-	b.hyper.Close()
-
-	b.ops <- &close{true, result}
-	return result
+func (p IncrementalProof) Verify(commitmentStart, commitmentEnd *Commitment) bool {
+	ip := history.NewIncrementalProof(p.Start, p.End, p.AuditPath, p.Hasher)
+	return ip.Verify(commitmentStart.HistoryDigest, commitmentEnd.HistoryDigest)
 }
 
-// INTERNALS
+func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
 
-type add struct {
-	event  []byte
-	result chan *Commitment
-}
-
-type membership struct {
-	event   []byte
-	version uint64
-	result  chan *MembershipProof
-}
-
-type incremental struct {
-	start  uint64
-	end    uint64
-	result chan *IncrementalProof
-}
-
-type close struct {
-	stop   bool
-	result chan bool
-}
-
-// Run listens in channel operations to execute in the tree
-func (b *HyperBalloon) operations() chan interface{} {
-	operations := make(chan interface{}, 1000)
-	go func() {
-		for {
-			select {
-			case op := <-operations:
-				switch msg := op.(type) {
-
-				case *close:
-					msg.result <- true
-					return
-
-				case *add:
-					digest, err := b.add(msg.event)
-					if err != nil {
-						log.Error("Operations error: ", err)
-					}
-					msg.result <- digest
-
-				case *membership:
-					proof, err := b.genMembershipProof(msg.event, msg.version)
-					if err != nil {
-						log.Debug("Operations error: ", err)
-					}
-					msg.result <- proof
-
-				case *incremental:
-					proof, err := b.genIncrementalProof(msg.start, msg.end)
-					if err != nil {
-						log.Debug("Operations error: ", err)
-					}
-					msg.result <- proof
-
-				default:
-					log.Error("Hyper tree Run() message not implemented!!")
-				}
-
-			}
-		}
-	}()
-	return operations
-}
-
-func (b *HyperBalloon) add(event []byte) (*Commitment, error) {
-	digest := b.hasher.Do(event)
+	// Get version
 	version := b.version
-	index := make([]byte, 8)
-	binary.LittleEndian.PutUint64(index, version)
 	b.version++
 
-	history, err := b.history.Add(digest, index)
-	if err != nil {
-		return nil, err
+	// Hash event
+	eventDigest := b.hasher.Do(event)
+
+	// Update trees
+	var historyDigest, hyperDigest common.Digest
+	var historyMutations, hyperMutations []db.Mutation
+	var historyErr, hyperErr error
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		historyDigest, historyMutations, historyErr = b.historyTree.Add(eventDigest, version)
+		wg.Done()
+	}()
+	go func() {
+		hyperDigest, hyperMutations, hyperErr = b.hyperTree.Add(eventDigest, version)
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	if historyErr != nil {
+		return nil, nil, historyErr
 	}
-	hyper, err := b.hyper.Add(digest, index)
-	if err != nil {
-		return nil, err
+	if hyperErr != nil {
+		return nil, nil, hyperErr
 	}
-	return &Commitment{
-		history,
-		hyper,
-		version,
-	}, nil
+
+	// Append trees mutations
+	mutations := make([]db.Mutation, 0)
+	mutations = append(mutations, append(historyMutations, hyperMutations...)...)
+
+	commitment := &Commitment{
+		HistoryDigest: historyDigest,
+		HyperDigest:   hyperDigest,
+		Version:       version,
+	}
+
+	return commitment, mutations, nil
 }
 
-func (b HyperBalloon) genMembershipProof(event []byte, version uint64) (*MembershipProof, error) {
-	var err error
-	var mp MembershipProof
-	var actualValue []byte
-	mp.KeyDigest = b.hasher.Do(event)
-	mp.QueryVersion = version
-	mp.CurrentVersion = b.version - 1
+func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
 
-	versionBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(versionBytes, version)
+	var proof MembershipProof
 
-	mp.HyperProof, actualValue, err = b.hyper.ProveMembership(mp.KeyDigest, versionBytes)
+	proof.hasher = b.hasherF()
+	proof.KeyDigest = b.hasher.Do(event)
+	proof.QueryVersion = version
+	proof.CurrentVersion = b.version - 1
+
+	hyperProof, err := b.hyperTree.QueryMembership(proof.KeyDigest)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
 	}
+	proof.HyperProof = hyperProof
 
-	if len(actualValue) > 0 {
-		mp.Exists = true
-		mp.ActualVersion = binary.LittleEndian.Uint64(actualValue)
+	if len(hyperProof.Value) > 0 {
+		proof.Exists = true
+		proof.ActualVersion = util.BytesAsUint64(hyperProof.Value)
 	}
 
-	if mp.Exists && mp.ActualVersion <= mp.QueryVersion {
-		mp.HistoryProof, err = b.history.ProveMembership(actualValue, mp.ActualVersion, mp.QueryVersion)
+	if proof.Exists && proof.ActualVersion <= proof.QueryVersion {
+		historyProof, err := b.historyTree.ProveMembership(proof.ActualVersion, proof.QueryVersion)
+		if err != nil {
+			return nil, fmt.Errorf("Unable to get proof from history tree: %v", err)
+		}
+		proof.HistoryProof = historyProof
 	} else {
-		mp.Exists = false
-		return &mp, fmt.Errorf("Unable to get proof from history tree: %v", err)
+		proof.Exists = false
 	}
 
-	return &mp, nil
-
+	return &proof, nil
 }
 
-func (b HyperBalloon) genIncrementalProof(start, end uint64) (*IncrementalProof, error) {
+func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
 
-	startKey := uint2bytes(start)
-	endKey := uint2bytes(end)
+	var proof IncrementalProof
 
-	proof, err := b.history.ProveIncremental(startKey, endKey, start, end)
+	proof.Start = start
+	proof.End = end
+	proof.Hasher = b.hasherF()
+
+	historyProof, err := b.historyTree.ProveConsistency(start, end)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to get proof from history tree: %v", err)
 	}
+	proof.AuditPath = historyProof.AuditPath
 
-	return NewIncrementalProof(start, end, proof.AuditPath(), b.hasher), nil
+	return &proof, nil
+}
+
+func (b *Balloon) Close() {
+	b.historyTree.Close()
+	b.hyperTree.Close()
+	b.historyTree = nil
+	b.hyperTree = nil
+	b.version = 0
 }
