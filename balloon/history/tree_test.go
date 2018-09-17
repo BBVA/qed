@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/db"
-	"github.com/bbva/qed/db/bplus"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
+	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -74,7 +74,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
 	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -210,7 +210,7 @@ func TestProveMembership(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
 	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -277,7 +277,7 @@ func TestProveConsistency(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
 	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -334,7 +334,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
 	tree := NewHistoryTree(common.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -364,7 +364,7 @@ func BenchmarkAdd(b *testing.B) {
 	store, closeF := common.OpenBadgerStore("/var/tmp/history_tree_test.db")
 	defer closeF()
 
-	cache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
 	tree := NewHistoryTree(common.NewSha256Hasher, cache)
 
 	b.N = 100000

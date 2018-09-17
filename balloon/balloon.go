@@ -7,7 +7,7 @@ import (
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/db"
+	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
 
@@ -18,20 +18,20 @@ var (
 type Balloon struct {
 	version uint64
 	hasherF func() common.Hasher
-	store   db.Store
+	store   storage.Store
 
 	historyTree *history.HistoryTree
 	hyperTree   *hyper.HyperTree
 	hasher      common.Hasher
 }
 
-func NewBalloon(store db.Store, hasherF func() common.Hasher) (*Balloon, error) {
+func NewBalloon(store storage.Store, hasherF func() common.Hasher) (*Balloon, error) {
 
 	// get last stored version
 	version := uint64(0)
-	kv, err := store.GetLast(db.HistoryCachePrefix)
+	kv, err := store.GetLast(storage.HistoryCachePrefix)
 	if err != nil {
-		if err != db.ErrKeyNotFound {
+		if err != storage.ErrKeyNotFound {
 			return nil, err
 		}
 	} else {
@@ -39,11 +39,11 @@ func NewBalloon(store db.Store, hasherF func() common.Hasher) (*Balloon, error) 
 	}
 
 	// create caches
-	historyCache := common.NewPassThroughCache(db.HistoryCachePrefix, store)
+	historyCache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
 	hyperCache := common.NewSimpleCache(1 << 2)
 
 	// warm up hyper cache
-	err = hyperCache.Fill(store.GetAll(db.HyperCachePrefix))
+	err = hyperCache.Fill(store.GetAll(storage.HyperCachePrefix))
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (p IncrementalProof) Verify(commitmentStart, commitmentEnd *Commitment) boo
 	return ip.Verify(commitmentStart.HistoryDigest, commitmentEnd.HistoryDigest)
 }
 
-func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
+func (b *Balloon) Add(event []byte) (*Commitment, []storage.Mutation, error) {
 
 	// Get version
 	version := b.version
@@ -158,7 +158,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
 
 	// Update trees
 	var historyDigest, hyperDigest common.Digest
-	var historyMutations, hyperMutations []db.Mutation
+	var historyMutations, hyperMutations []storage.Mutation
 	var historyErr, hyperErr error
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -182,7 +182,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
 	}
 
 	// Append trees mutations
-	mutations := make([]db.Mutation, 0)
+	mutations := make([]storage.Mutation, 0)
 	mutations = append(mutations, append(historyMutations, hyperMutations...)...)
 
 	commitment := &Commitment{

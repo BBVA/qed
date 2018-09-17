@@ -3,7 +3,7 @@ package bplus
 import (
 	"bytes"
 
-	"github.com/bbva/qed/db"
+	"github.com/bbva/qed/storage"
 	"github.com/google/btree"
 )
 
@@ -23,7 +23,7 @@ func (p KVItem) Less(b btree.Item) bool {
 	return bytes.Compare(p.Key, b.(KVItem).Key) < 0
 }
 
-func (s *BPlusTreeStore) Mutate(mutations ...db.Mutation) error {
+func (s *BPlusTreeStore) Mutate(mutations ...storage.Mutation) error {
 	for _, m := range mutations {
 		key := append([]byte{m.Prefix}, m.Key...)
 		s.db.ReplaceOrInsert(KVItem{key, m.Value})
@@ -31,8 +31,8 @@ func (s *BPlusTreeStore) Mutate(mutations ...db.Mutation) error {
 	return nil
 }
 
-func (s BPlusTreeStore) GetRange(prefix byte, start, end []byte) (db.KVRange, error) {
-	result := make(db.KVRange, 0)
+func (s BPlusTreeStore) GetRange(prefix byte, start, end []byte) (storage.KVRange, error) {
+	result := make(storage.KVRange, 0)
 	startKey := append([]byte{prefix}, start...)
 	endKey := append([]byte{prefix}, end...)
 	s.db.AscendGreaterOrEqual(KVItem{startKey, nil}, func(i btree.Item) bool {
@@ -40,14 +40,14 @@ func (s BPlusTreeStore) GetRange(prefix byte, start, end []byte) (db.KVRange, er
 		if bytes.Compare(key, endKey) > 0 {
 			return false
 		}
-		result = append(result, db.KVPair{key[1:], i.(KVItem).Value})
+		result = append(result, storage.KVPair{key[1:], i.(KVItem).Value})
 		return true
 	})
 	return result, nil
 }
 
-func (s BPlusTreeStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
-	result := new(db.KVPair)
+func (s BPlusTreeStore) Get(prefix byte, key []byte) (*storage.KVPair, error) {
+	result := new(storage.KVPair)
 	result.Key = key
 	k := append([]byte{prefix}, key...)
 	item := s.db.Get(KVItem{k, nil})
@@ -55,12 +55,12 @@ func (s BPlusTreeStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 		result.Value = item.(KVItem).Value
 		return result, nil
 	} else {
-		return nil, db.ErrKeyNotFound
+		return nil, storage.ErrKeyNotFound
 	}
 }
 
-func (s BPlusTreeStore) GetLast(prefix byte) (*db.KVPair, error) {
-	result := new(db.KVPair)
+func (s BPlusTreeStore) GetLast(prefix byte) (*storage.KVPair, error) {
+	result := new(storage.KVPair)
 	s.db.DescendGreaterThan(KVItem{[]byte{prefix}, nil}, func(i btree.Item) bool {
 		item := i.(KVItem)
 		result.Key = item.Key[1:]
@@ -68,12 +68,12 @@ func (s BPlusTreeStore) GetLast(prefix byte) (*db.KVPair, error) {
 		return false
 	})
 	if result.Key == nil {
-		return nil, db.ErrKeyNotFound
+		return nil, storage.ErrKeyNotFound
 	}
 	return result, nil
 }
 
-func (s BPlusTreeStore) GetAll(prefix byte) db.KVPairReader {
+func (s BPlusTreeStore) GetAll(prefix byte) storage.KVPairReader {
 	return NewBPlusKVPairReader(prefix, s.db)
 }
 
@@ -91,7 +91,7 @@ func NewBPlusKVPairReader(prefix byte, db *btree.BTree) *BPlusKVPairReader {
 	}
 }
 
-func (r *BPlusKVPairReader) Read(buffer []*db.KVPair) (n int, err error) {
+func (r *BPlusKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
 	n = 0
 	r.db.AscendGreaterOrEqual(KVItem{r.lastKey, nil}, func(i btree.Item) bool {
 		if n >= len(buffer) {
@@ -99,7 +99,7 @@ func (r *BPlusKVPairReader) Read(buffer []*db.KVPair) (n int, err error) {
 		}
 		key := i.(KVItem).Key
 		if bytes.Compare(key, r.lastKey) != 0 {
-			buffer[n] = &db.KVPair{key[1:], i.(KVItem).Value}
+			buffer[n] = &storage.KVPair{key[1:], i.(KVItem).Value}
 			n++
 		}
 		r.lastKey = key
