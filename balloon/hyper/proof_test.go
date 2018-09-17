@@ -1,123 +1,38 @@
-/*
-   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
-/* +build !release */
-
 package hyper
 
 import (
-	"encoding/binary"
 	"testing"
 
-	"github.com/bbva/qed/balloon/proof"
-	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/storage/cache"
-	assert "github.com/stretchr/testify/require"
+	"github.com/bbva/qed/balloon/common"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestAddAndVerifyXor(t *testing.T) {
-
-	leaves, closeF := openBPlusStorage()
-	defer closeF()
-
-	hasher := new(hashing.XorHasher)
-	ht := NewTree(string(0x0), cache.NewSimpleCache(0), leaves, hasher)
-
-	key := hasher.Do([]byte("a test event"))
-	value := uint64(0)
-
-	valueBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valueBytes, value)
-
-	commitment, err := ht.Add(key, valueBytes)
-	assert.Nil(t, err, "Error must be nil")
-
-	membershipProof, actualValue, err := ht.ProveMembership(key, valueBytes)
-	assert.Nil(t, err, "Error must be nil")
-
-	assert.Equal(t, valueBytes, actualValue, "Incorrect actual value")
-
-	rootPos := NewRootPosition(hasher.Len(), 0)
-	proof := proof.NewProof(rootPos, membershipProof.AuditPath(), hasher)
-
-	correct := proof.Verify(commitment, key, valueBytes)
-
-	if !correct {
-		t.Errorf("Key %x should be a member", key)
+func TestQueryProofVerify(t *testing.T) {
+	testCases := []struct {
+		key, value     []byte
+		auditPath      common.AuditPath
+		expectedDigest common.Digest
+	}{
+		{
+			key:   []byte{0},
+			value: []byte{0},
+			auditPath: common.AuditPath{
+				"01|0": common.Digest{0x0},
+				"02|1": common.Digest{0x0},
+				"04|2": common.Digest{0x0},
+				"08|3": common.Digest{0x0},
+				"10|4": common.Digest{0x0},
+				"20|5": common.Digest{0x0},
+				"40|6": common.Digest{0x0},
+				"80|7": common.Digest{0x0},
+			},
+			expectedDigest: common.Digest{0},
+		},
 	}
-}
 
-func TestAddAndVerifyPearson(t *testing.T) {
-
-	leaves, closeF := openBPlusStorage()
-	defer closeF()
-
-	hasher := new(hashing.PearsonHasher)
-	ht := NewTree(string(0x0), cache.NewSimpleCache(0), leaves, hasher)
-
-	key := hasher.Do([]byte("a test event"))
-	value := uint64(0)
-
-	valueBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valueBytes, value)
-
-	commitment, err := ht.Add(key, valueBytes)
-	assert.Nil(t, err, "Error must be nil")
-	membershipProof, actualValue, err := ht.ProveMembership(key, valueBytes)
-	assert.Nil(t, err, "Error must be nil")
-
-	assert.Equal(t, valueBytes, actualValue, "Incorrect actual value")
-
-	rootPos := NewRootPosition(hasher.Len(), 0)
-	proof := proof.NewProof(rootPos, membershipProof.AuditPath(), hasher)
-
-	correct := proof.Verify(commitment, key, valueBytes)
-
-	if !correct {
-		t.Errorf("Key %x should be a member", key)
-	}
-}
-
-func TestAddAndVerifySha256(t *testing.T) {
-
-	leaves, closeF := openBPlusStorage()
-	defer closeF()
-
-	hasher := hashing.NewSha256Hasher()
-	ht := NewTree(string(0x0), cache.NewSimpleCache(0), leaves, hasher)
-
-	key := hasher.Do([]byte("a test event"))
-	value := uint64(0)
-
-	valueBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(valueBytes, value)
-
-	commitment, err := ht.Add(key, valueBytes)
-	assert.Nil(t, err, "Error must be nil")
-	membershipProof, actualValue, err := ht.ProveMembership(key, valueBytes)
-	assert.Nil(t, err, "Error must be nil")
-
-	assert.Equal(t, valueBytes, actualValue, "Incorrect actual value")
-
-	rootPos := NewRootPosition(hasher.Len(), 0)
-	proof := proof.NewProof(rootPos, membershipProof.AuditPath(), hasher)
-
-	correct := proof.Verify(commitment, key, valueBytes)
-
-	if !correct {
-		t.Errorf("Key %x should be a member", key)
+	for i, c := range testCases {
+		proof := NewQueryProof(c.key, c.value, c.auditPath, common.NewFakeXorHasher())
+		correct := proof.Verify(c.key, c.expectedDigest)
+		assert.Truef(t, correct, "Event should be a member for test case %d", i)
 	}
 }
