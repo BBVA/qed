@@ -37,7 +37,7 @@ func (p *InsertPruner) traverse(pos common.Position, eventDigest common.Digest) 
 		return common.NewCached(pos, digest)
 	}
 	if p.navigator.IsLeaf(pos) {
-		return common.NewCollectable(pos, common.NewLeaf(pos, eventDigest))
+		return common.NewCollectable(common.NewLeaf(pos, eventDigest))
 	}
 	// we do a post-order traversal
 	left := p.traverse(p.navigator.GoToLeft(pos), eventDigest)
@@ -53,7 +53,7 @@ func (p *InsertPruner) traverse(pos common.Position, eventDigest common.Digest) 
 		result = common.NewNode(pos, left, right)
 	}
 	if p.shouldCollect(pos) {
-		return common.NewCollectable(pos, result)
+		return common.NewCollectable(result)
 	}
 	return result
 }
@@ -80,7 +80,7 @@ func (p *SearchPruner) traverse(pos common.Position) common.Visitable {
 		if !ok {
 			panic("this digest should be in cache")
 		}
-		return common.NewCollectable(pos, common.NewCached(pos, digest))
+		return common.NewCollectable(common.NewCached(pos, digest))
 	}
 	if p.navigator.IsLeaf(pos) {
 		return common.NewLeaf(pos, nil)
