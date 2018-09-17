@@ -170,6 +170,27 @@ func TestGetAll(t *testing.T) {
 
 }
 
+func TestGetLast(t *testing.T) {
+	store, closeF := openBadgerStore()
+	defer closeF()
+
+	// insert
+	numElems := uint64(20)
+	prefixes := [][]byte{[]byte{db.IndexPrefix}, []byte{db.HistoryCachePrefix}, []byte{db.HyperCachePrefix}}
+	for _, prefix := range prefixes {
+		for i := uint64(0); i < numElems; i++ {
+			key := util.Uint64AsBytes(i)
+			store.Mutate(*db.NewMutation(prefix[0], key, key))
+		}
+	}
+
+	// get last element for history prefix
+	kv, err := store.GetLast(db.HistoryCachePrefix)
+	require.NoError(t, err)
+	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Key, "The key should match the last inserted element")
+	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
+}
+
 func BenchmarkMutate(b *testing.B) {
 	store, closeF := openBadgerStore()
 	defer closeF()

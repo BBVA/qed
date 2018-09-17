@@ -99,6 +99,38 @@ func (s BadgerStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 	}
 }
 
+func (s BadgerStore) GetLast(prefix byte) (*db.KVPair, error) {
+	result := new(db.KVPair)
+	err := s.db.View(func(txn *b.Txn) error {
+		var err error
+		opts := b.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		opts.Reverse = true
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		// we are using a reversed iterator so we need to seek for
+		// the last possible key for history prefix
+		it.Seek([]byte{prefix, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
+		if it.Valid() {
+			item := it.Item()
+			key := item.KeyCopy(nil)
+			result.Key = key[1:]
+			result.Value, err = item.ValueCopy(nil)
+		} else {
+			err = b.ErrKeyNotFound
+		}
+		return err
+	})
+	switch err {
+	case nil:
+		return result, nil
+	case b.ErrKeyNotFound:
+		return nil, db.ErrKeyNotFound
+	default:
+		return nil, err
+	}
+}
+
 type BadgerKVPairReader struct {
 	prefix byte
 	txn    *b.Txn
