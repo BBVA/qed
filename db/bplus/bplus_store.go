@@ -31,7 +31,7 @@ func (s *BPlusTreeStore) Mutate(mutations ...db.Mutation) error {
 	return nil
 }
 
-func (s *BPlusTreeStore) GetRange(prefix byte, start, end []byte) (db.KVRange, error) {
+func (s BPlusTreeStore) GetRange(prefix byte, start, end []byte) (db.KVRange, error) {
 	result := make(db.KVRange, 0)
 	startKey := append([]byte{prefix}, start...)
 	endKey := append([]byte{prefix}, end...)
@@ -46,7 +46,7 @@ func (s *BPlusTreeStore) GetRange(prefix byte, start, end []byte) (db.KVRange, e
 	return result, nil
 }
 
-func (s *BPlusTreeStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
+func (s BPlusTreeStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 	result := new(db.KVPair)
 	result.Key = key
 	k := append([]byte{prefix}, key...)
@@ -57,6 +57,24 @@ func (s *BPlusTreeStore) Get(prefix byte, key []byte) (*db.KVPair, error) {
 	} else {
 		return nil, db.ErrKeyNotFound
 	}
+}
+
+func (s BPlusTreeStore) GetLast(prefix byte) (*db.KVPair, error) {
+	result := new(db.KVPair)
+	s.db.DescendGreaterThan(KVItem{[]byte{prefix}, nil}, func(i btree.Item) bool {
+		item := i.(KVItem)
+		result.Key = item.Key[1:]
+		result.Value = item.Value
+		return false
+	})
+	if result.Key == nil {
+		return nil, db.ErrKeyNotFound
+	}
+	return result, nil
+}
+
+func (s BPlusTreeStore) GetAll(prefix byte) db.KVPairReader {
+	return NewBPlusKVPairReader(prefix, s.db)
 }
 
 type BPlusKVPairReader struct {
@@ -92,10 +110,6 @@ func (r *BPlusKVPairReader) Read(buffer []*db.KVPair) (n int, err error) {
 
 func (r *BPlusKVPairReader) Close() {
 	r.db = nil
-}
-
-func (s BPlusTreeStore) GetAll(prefix byte) db.KVPairReader {
-	return NewBPlusKVPairReader(prefix, s.db)
 }
 
 func (s BPlusTreeStore) Close() error {

@@ -29,13 +29,13 @@ func NewBalloon(store db.Store, hasherF func() common.Hasher) (*Balloon, error) 
 
 	// get last stored version
 	version := uint64(0)
-	kv, err := store.Get(db.VersionPrefix, BalloonVersionKey)
+	kv, err := store.GetLast(db.HistoryCachePrefix)
 	if err != nil {
 		if err != db.ErrKeyNotFound {
 			return nil, err
 		}
 	} else {
-		version = util.BytesAsUint64(kv.Value) + 1
+		version = util.BytesAsUint64(kv.Key[:8]) + 1
 	}
 
 	// create caches
@@ -172,10 +172,6 @@ func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
 		wg.Done()
 	}()
 
-	// Append version mutation
-	mutations := make([]db.Mutation, 0)
-	mutations = append(mutations, *db.NewMutation(db.VersionPrefix, BalloonVersionKey, util.Uint64AsBytes(version)))
-
 	wg.Wait()
 
 	if historyErr != nil {
@@ -186,6 +182,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []db.Mutation, error) {
 	}
 
 	// Append trees mutations
+	mutations := make([]db.Mutation, 0)
 	mutations = append(mutations, append(historyMutations, hyperMutations...)...)
 
 	commitment := &Commitment{
