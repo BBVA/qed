@@ -118,6 +118,7 @@ func TestDelete(t *testing.T) {
 
 	for _, test := range tests {
 
+		// err := store.Mutate({prefix, test.key, test.value))
 		err := store.Mutate([]storage.Mutation{
 			{prefix, test.key, test.value},
 		})

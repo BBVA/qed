@@ -71,7 +71,7 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	cachedElements := caching.Result()
 	mutations := make([]storage.Mutation, len(cachedElements))
 	for i, e := range cachedElements {
-		mutations[i] = *storage.NewMutation(storage.HyperCachePrefix, e.Pos.Bytes(), e.Digest)
+		mutations[i] = storage.Mutation{storage.HyperCachePrefix, e.Pos.Bytes(), e.Digest}
 		// update cache
 		t.cache.Put(e.Pos, e.Digest)
 	}
