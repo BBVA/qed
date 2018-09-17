@@ -33,7 +33,7 @@ func TestAdd(t *testing.T) {
 		{hashing.Digest{0x9}, hashing.Digest{0x1}},
 	}
 
-	store, closeF := storage_utils.NewBPlusTreeStore()
+	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 	simpleCache := common.NewSimpleCache(10)
 	tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
@@ -94,7 +94,7 @@ func TestProveMembership(t *testing.T) {
 	log.SetLogger("TestProveMembership", log.INFO)
 
 	for i, c := range testCases {
-		store, closeF := storage_utils.NewBPlusTreeStore()
+		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
 		simpleCache := common.NewSimpleCache(10)
 		tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
@@ -127,7 +127,7 @@ func TestAddAndVerify(t *testing.T) {
 
 	for i, c := range testCases {
 		hasher := c.hasherF()
-		store, closeF := storage_utils.NewBPlusTreeStore()
+		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
 		simpleCache := common.NewSimpleCache(10)
 		tree := NewHyperTree(c.hasherF, store, simpleCache)
@@ -149,7 +149,7 @@ func BenchmarkAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkAdd", log.SILENT)
 
-	store, closeF := common.OpenBadgerStore("/var/tmp/hyper_tree_test.db")
+	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/hyper_tree_test.db")
 	defer closeF()
 
 	hasher := hashing.NewSha256Hasher()

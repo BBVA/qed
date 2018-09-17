@@ -3,7 +3,6 @@ package badger
 import (
 	"bytes"
 	"io"
-	"log"
 
 	"github.com/bbva/qed/storage"
 	b "github.com/dgraph-io/badger"
@@ -14,7 +13,7 @@ type BadgerStore struct {
 	db *b.DB
 }
 
-func NewBadgerStore(path string) *BadgerStore {
+func NewBadgerStore(path string) (*BadgerStore, error) {
 	opts := b.DefaultOptions
 	opts.TableLoadingMode = bo.MemoryMap
 	opts.ValueLogLoadingMode = bo.FileIO
@@ -23,9 +22,9 @@ func NewBadgerStore(path string) *BadgerStore {
 	opts.SyncWrites = false
 	db, err := b.Open(opts)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return &BadgerStore{db}
+	return &BadgerStore{db}, nil
 }
 
 func (s BadgerStore) Mutate(mutations []storage.Mutation) error {

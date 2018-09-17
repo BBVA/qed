@@ -9,8 +9,8 @@ import (
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/testutils/rand"
+	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
 )
 
@@ -18,8 +18,8 @@ func TestAdd(t *testing.T) {
 
 	log.SetLogger("TestAdd", log.SILENT)
 
-	store := bplus.NewBPlusTreeStore()
-	defer store.Close()
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
 
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(t, err)
@@ -41,8 +41,8 @@ func TestQueryMembership(t *testing.T) {
 
 	log.SetLogger("TestQueryMembership", log.SILENT)
 
-	store := bplus.NewBPlusTreeStore()
-	defer store.Close()
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
 
 	balloon, err := NewBalloon(store, hashing.NewFakeXorHasher)
 	require.NoError(t, err)
@@ -137,8 +137,8 @@ func TestQueryConsistencyProof(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		store := bplus.NewBPlusTreeStore()
-		defer store.Close()
+		store, closeF := storage_utils.OpenBPlusTreeStore()
+		defer closeF()
 		balloon, err := NewBalloon(store, hashing.NewFakeXorHasher)
 		require.NoError(t, err)
 
@@ -166,7 +166,7 @@ func TestAddQueryAndVerify(t *testing.T) {
 
 	log.SetLogger("TestCacheWarmingUp", log.SILENT)
 
-	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_test.db")
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/ballon_test.db")
 	defer closeF()
 
 	// start balloon
@@ -194,7 +194,7 @@ func TestCacheWarmingUp(t *testing.T) {
 
 	log.SetLogger("TestCacheWarmingUp", log.SILENT)
 
-	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_test.db")
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/ballon_test.db")
 	defer closeF()
 
 	// start balloon
@@ -228,7 +228,7 @@ func TestCacheWarmingUp(t *testing.T) {
 }
 
 func BenchmarkAddBadger(b *testing.B) {
-	store, closeF := common.OpenBadgerStore("/var/tmp/ballon_bench.db")
+	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/ballon_bench.db")
 	defer closeF()
 
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
