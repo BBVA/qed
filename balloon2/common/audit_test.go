@@ -48,8 +48,7 @@ func TestAuditPathVisitor(t *testing.T) {
 		{
 			visitable: NewRoot(
 				&FakePosition{[]byte{0x0}, 2},
-				NewCollectable(&FakePosition{[]byte{0x0}, 1},
-					NewCached(&FakePosition{[]byte{0x0}, 1}, Digest{0x1})),
+				NewCollectable(NewCached(&FakePosition{[]byte{0x0}, 1}, Digest{0x1})),
 				NewPartialNode(&FakePosition{[]byte{0x1}, 1},
 					NewLeaf(&FakePosition{[]byte{0x2}, 0}, Digest{0x2}),
 				),
@@ -61,11 +60,9 @@ func TestAuditPathVisitor(t *testing.T) {
 		{
 			visitable: NewRoot(
 				&FakePosition{[]byte{0x0}, 2},
-				NewCollectable(&FakePosition{[]byte{0x0}, 1},
-					NewCached(&FakePosition{[]byte{0x0}, 1}, Digest{0x1})),
+				NewCollectable(NewCached(&FakePosition{[]byte{0x0}, 1}, Digest{0x1})),
 				NewNode(&FakePosition{[]byte{0x1}, 1},
-					NewCollectable(&FakePosition{[]byte{0x2}, 0},
-						NewCached(&FakePosition{[]byte{0x2}, 0}, Digest{0x2})),
+					NewCollectable(NewCached(&FakePosition{[]byte{0x2}, 0}, Digest{0x2})),
 					NewLeaf(&FakePosition{[]byte{0x3}, 0}, Digest{0x3}),
 				),
 			),

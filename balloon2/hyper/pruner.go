@@ -64,7 +64,7 @@ func (p *InsertPruner) traverse(pos common.Position, leaves db.KVRange) common.V
 	if p.navigator.IsRoot(pos) {
 		return common.NewRoot(pos, left, right)
 	}
-	return common.NewCollectable(pos, common.NewNode(pos, left, right))
+	return common.NewCollectable(common.NewNode(pos, left, right))
 }
 
 func (p *InsertPruner) traverseWithoutCache(pos common.Position, leaves db.KVRange) common.Visitable {
@@ -109,9 +109,9 @@ func (p *SearchPruner) traverseCache(pos common.Position, leaves db.KVRange) com
 		digest, ok := p.cache.Get(pos)
 		if !ok {
 			cached := common.NewCached(pos, p.defaultHashes[pos.Height()])
-			return common.NewCollectable(pos, cached)
+			return common.NewCollectable(cached)
 		}
-		return common.NewCollectable(pos, common.NewCached(pos, digest))
+		return common.NewCollectable(common.NewCached(pos, digest))
 	}
 
 	// if we are over the cache level, we need to do a range query to get the leaves
@@ -142,13 +142,13 @@ func (p *SearchPruner) traverse(pos common.Position, leaves db.KVRange) common.V
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
 		leaf := common.NewLeaf(pos, leaves[0].Value)
 		if !p.cacheResolver.IsOnPath(pos) {
-			return common.NewCollectable(pos, leaf)
+			return common.NewCollectable(leaf)
 		}
 		return leaf
 	}
 	if !p.navigator.IsRoot(pos) && len(leaves) == 0 {
 		cached := common.NewCached(pos, p.defaultHashes[pos.Height()])
-		return common.NewCollectable(pos, cached)
+		return common.NewCollectable(cached)
 	}
 	if len(leaves) > 1 && p.navigator.IsLeaf(pos) {
 		panic("this should never happen (unsorted LeavesSlice or broken split?)")
@@ -166,7 +166,7 @@ func (p *SearchPruner) traverse(pos common.Position, leaves db.KVRange) common.V
 		if p.navigator.IsRoot(pos) {
 			return common.NewRoot(pos, left, right)
 		}
-		return common.NewCollectable(pos, common.NewNode(pos, left, right))
+		return common.NewCollectable(common.NewNode(pos, left, right))
 	}
 
 	left := p.traverse(p.navigator.GoToLeft(pos), leftSlice)

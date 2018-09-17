@@ -26,6 +26,7 @@ type Visitable interface {
 	PostOrder(visitor PostOrderVisitor) interface{}
 	PreOrder(visitor PreOrderVisitor)
 	String() string
+	Position() Position
 }
 
 type Root struct {
@@ -54,7 +55,6 @@ type Cached struct {
 }
 
 type Collectable struct {
-	pos        Position
 	underlying Visitable
 }
 
@@ -72,6 +72,10 @@ func (r Root) PreOrder(visitor PreOrderVisitor) {
 	visitor.VisitRoot(r.pos)
 	r.left.PreOrder(visitor)
 	r.right.PreOrder(visitor)
+}
+
+func (r Root) Position() Position {
+	return r.pos
 }
 
 func (r Root) String() string {
@@ -94,6 +98,10 @@ func (n Node) PreOrder(visitor PreOrderVisitor) {
 	n.right.PreOrder(visitor)
 }
 
+func (n Node) Position() Position {
+	return n.pos
+}
+
 func (n Node) String() string {
 	return fmt.Sprintf("Node(%v)[ %v | %v ]", n.pos, n.left, n.right)
 }
@@ -112,6 +120,10 @@ func (p PartialNode) PreOrder(visitor PreOrderVisitor) {
 	p.left.PreOrder(visitor)
 }
 
+func (p PartialNode) Position() Position {
+	return p.pos
+}
+
 func (p PartialNode) String() string {
 	return fmt.Sprintf("PartialNode(%v)[ %v ]", p.pos, p.left)
 }
@@ -126,6 +138,10 @@ func (l Leaf) PostOrder(visitor PostOrderVisitor) interface{} {
 
 func (l Leaf) PreOrder(visitor PreOrderVisitor) {
 	visitor.VisitLeaf(l.pos, l.value)
+}
+
+func (l Leaf) Position() Position {
+	return l.pos
 }
 
 func (l Leaf) String() string {
@@ -144,22 +160,30 @@ func (c Cached) PreOrder(visitor PreOrderVisitor) {
 	visitor.VisitCached(c.pos, c.digest)
 }
 
+func (c Cached) Position() Position {
+	return c.pos
+}
+
 func (c Cached) String() string {
 	return fmt.Sprintf("Cached(%v)[ %x ]", c.pos, c.digest)
 }
 
-func NewCollectable(pos Position, underlying Visitable) *Collectable {
-	return &Collectable{pos, underlying}
+func NewCollectable(underlying Visitable) *Collectable {
+	return &Collectable{underlying}
 }
 
 func (c Collectable) PostOrder(visitor PostOrderVisitor) interface{} {
 	result := c.underlying.PostOrder(visitor)
-	return visitor.VisitCollectable(c.pos, result)
+	return visitor.VisitCollectable(c.Position(), result)
 }
 
 func (c Collectable) PreOrder(visitor PreOrderVisitor) {
-	visitor.VisitCollectable(c.pos)
+	visitor.VisitCollectable(c.Position())
 	c.underlying.PreOrder(visitor)
+}
+
+func (c Collectable) Position() Position {
+	return c.underlying.Position()
 }
 
 func (c Collectable) String() string {
