@@ -8,10 +8,9 @@ import (
 )
 
 const (
-	VersionPrefix      = byte(0x0)
-	IndexPrefix        = byte(0x1)
-	HyperCachePrefix   = byte(0x2)
-	HistoryCachePrefix = byte(0x3)
+	IndexPrefix        = byte(0x0)
+	HyperCachePrefix   = byte(0x1)
+	HistoryCachePrefix = byte(0x2)
 )
 
 var (
@@ -23,6 +22,7 @@ type Store interface {
 	GetRange(prefix byte, start, end []byte) (KVRange, error)
 	Get(prefix byte, key []byte) (*KVPair, error)
 	GetAll(prefix byte) KVPairReader
+	GetLast(prefix byte) (*KVPair, error)
 	Close() error
 }
 

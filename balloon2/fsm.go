@@ -25,7 +25,6 @@ type BalloonFSM struct {
 	hasherF func() common.Hasher
 
 	store   db.ManagedStore
-	version uint64 // TODO remove this???
 	balloon *Balloon
 
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
@@ -35,7 +34,6 @@ func NewBalloonFSM(dbPath string, hasherF func() common.Hasher) *BalloonFSM {
 	return &BalloonFSM{
 		hasherF: hasherF,
 		store:   bdb.NewBadgerStore(dbPath),
-		version: 0,
 	}
 }
 
