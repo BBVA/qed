@@ -28,7 +28,7 @@ func NewBadgerStore(path string) *BadgerStore {
 	return &BadgerStore{db}
 }
 
-func (s BadgerStore) Mutate(mutations ...storage.Mutation) error {
+func (s BadgerStore) Mutate(mutations []storage.Mutation) error {
 	return s.db.Update(func(txn *b.Txn) error {
 		for _, m := range mutations {
 			key := append([]byte{m.Prefix}, m.Key...)
