@@ -20,7 +20,7 @@ Flags:
   -l, --log string        Choose between log levels: silent, error, info and debug (default "error")
   -p, --path string       Set default storage path. (default "/var/tmp/balloon.db")
   -f, --profiling         Enable profiling server in 6060 port
-  -s, --storage string    Choose between different storage backends. Eg badge|bolt (default "badger")
+  -s, --storage string    Choose between different storage backends. Eg badge (default "badger")
 ```
 
 # Client
