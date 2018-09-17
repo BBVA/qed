@@ -5,7 +5,6 @@ import (
 
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
 )
 
 type QueryProof struct {
@@ -31,8 +30,6 @@ func (p QueryProof) AuditPath() common.AuditPath {
 // root hash that fixes the hyper tree. Returns true if the proof is valid,
 // false otherwise.
 func (p QueryProof) Verify(key []byte, expectedDigest hashing.Digest) (valid bool) {
-
-	log.Debugf("Verifying membership query for key %x", key)
 
 	if len(p.auditPath) == 0 {
 		// and empty audit path shows non-membership for any key

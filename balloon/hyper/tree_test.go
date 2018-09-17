@@ -145,7 +145,6 @@ func TestAddAndVerify(t *testing.T) {
 		assert.Truef(t, correct, "Key %x should be a member for index %d", key, i)
 	}
 }
-
 func BenchmarkAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkAdd", log.SILENT)
