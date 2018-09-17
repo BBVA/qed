@@ -1,13 +1,16 @@
 package common
 
-import "github.com/bbva/qed/log"
+import (
+	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
+)
 
 type CachedElement struct {
 	Pos    Position
-	Digest Digest
+	Digest hashing.Digest
 }
 
-func NewCachedElement(pos Position, digest Digest) *CachedElement {
+func NewCachedElement(pos Position, digest hashing.Digest) *CachedElement {
 	return &CachedElement{pos, digest}
 }
 
@@ -29,12 +32,12 @@ func (v *CachingVisitor) Result() []CachedElement {
 
 func (v *CachingVisitor) VisitRoot(pos Position, leftResult, rightResult interface{}) interface{} {
 	// by-pass
-	return v.decorated.VisitRoot(pos, leftResult, rightResult).(Digest)
+	return v.decorated.VisitRoot(pos, leftResult, rightResult).(hashing.Digest)
 }
 
 func (v *CachingVisitor) VisitNode(pos Position, leftResult, rightResult interface{}) interface{} {
 	// by-pass
-	return v.decorated.VisitNode(pos, leftResult, rightResult).(Digest)
+	return v.decorated.VisitNode(pos, leftResult, rightResult).(hashing.Digest)
 }
 
 func (v *CachingVisitor) VisitPartialNode(pos Position, leftResult interface{}) interface{} {
@@ -44,17 +47,17 @@ func (v *CachingVisitor) VisitPartialNode(pos Position, leftResult interface{}) 
 
 func (v *CachingVisitor) VisitLeaf(pos Position, eventDigest []byte) interface{} {
 	// by-pass
-	return v.decorated.VisitLeaf(pos, eventDigest).(Digest)
+	return v.decorated.VisitLeaf(pos, eventDigest).(hashing.Digest)
 }
 
-func (v *CachingVisitor) VisitCached(pos Position, cachedDigest Digest) interface{} {
+func (v *CachingVisitor) VisitCached(pos Position, cachedDigest hashing.Digest) interface{} {
 	// by-pass
 	return v.decorated.VisitCached(pos, cachedDigest)
 }
 
 func (v *CachingVisitor) VisitCollectable(pos Position, result interface{}) interface{} {
 	log.Debugf("Caching digest with position: %v", pos)
-	element := NewCachedElement(pos, result.(Digest))
+	element := NewCachedElement(pos, result.(hashing.Digest))
 	v.elements = append(v.elements, *element)
 	return result
 }

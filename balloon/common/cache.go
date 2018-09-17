@@ -1,16 +1,17 @@
 package common
 
 import (
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
 type Cache interface {
-	Get(pos Position) (Digest, bool)
+	Get(pos Position) (hashing.Digest, bool)
 }
 
 type ModifiableCache interface {
-	Put(pos Position, value Digest)
+	Put(pos Position, value hashing.Digest)
 	Fill(r storage.KVPairReader) error
 	Cache
 }
@@ -23,7 +24,7 @@ func NewPassThroughCache(prefix byte, store storage.Store) *PassThroughCache {
 	return &PassThroughCache{prefix, store}
 }
 
-func (c PassThroughCache) Get(pos Position) (Digest, bool) {
+func (c PassThroughCache) Get(pos Position) (hashing.Digest, bool) {
 	pair, err := c.store.Get(c.prefix, pos.Bytes())
 	if err != nil {
 		return nil, false
@@ -34,21 +35,21 @@ func (c PassThroughCache) Get(pos Position) (Digest, bool) {
 const keySize = 34
 
 type SimpleCache struct {
-	cached map[[keySize]byte]Digest
+	cached map[[keySize]byte]hashing.Digest
 }
 
 func NewSimpleCache(initialSize uint64) *SimpleCache {
-	return &SimpleCache{make(map[[keySize]byte]Digest, initialSize)}
+	return &SimpleCache{make(map[[keySize]byte]hashing.Digest, initialSize)}
 }
 
-func (c SimpleCache) Get(pos Position) (Digest, bool) {
+func (c SimpleCache) Get(pos Position) (hashing.Digest, bool) {
 	var key [keySize]byte
 	copy(key[:], pos.Bytes())
 	digest, ok := c.cached[key]
 	return digest, ok
 }
 
-func (c *SimpleCache) Put(pos Position, value Digest) {
+func (c *SimpleCache) Put(pos Position, value hashing.Digest) {
 	var key [keySize]byte
 	copy(key[:], pos.Bytes())
 	c.cached[key] = value

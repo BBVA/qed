@@ -4,16 +4,17 @@ import (
 	"bytes"
 
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
 
 type QueryProof struct {
 	Key, Value []byte
 	auditPath  common.AuditPath
-	hasher     common.Hasher
+	hasher     hashing.Hasher
 }
 
-func NewQueryProof(key, value []byte, auditPath common.AuditPath, hasher common.Hasher) *QueryProof {
+func NewQueryProof(key, value []byte, auditPath common.AuditPath, hasher hashing.Hasher) *QueryProof {
 	return &QueryProof{
 		Key:       key,
 		Value:     value,
@@ -29,7 +30,7 @@ func (p QueryProof) AuditPath() common.AuditPath {
 // Verify verifies a membership query for a provided key from an expected
 // root hash that fixes the hyper tree. Returns true if the proof is valid,
 // false otherwise.
-func (p QueryProof) Verify(key []byte, expectedDigest common.Digest) (valid bool) {
+func (p QueryProof) Verify(key []byte, expectedDigest hashing.Digest) (valid bool) {
 
 	log.Debugf("Verifying membership query for key %x", key)
 
@@ -54,7 +55,7 @@ func (p QueryProof) Verify(key []byte, expectedDigest common.Digest) (valid bool
 	pruned := NewVerifyPruner(key, p.Value, context).Prune()
 
 	// visit the pruned tree
-	recomputed := pruned.PostOrder(computeHash).(common.Digest)
+	recomputed := pruned.PostOrder(computeHash).(hashing.Digest)
 
 	return bytes.Equal(key, p.Key) && bytes.Equal(recomputed, expectedDigest)
 }

@@ -6,6 +6,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
@@ -17,25 +18,25 @@ func TestAdd(t *testing.T) {
 	log.SetLogger("TestAdd", log.INFO)
 
 	testCases := []struct {
-		eventDigest      common.Digest
-		expectedRootHash common.Digest
+		eventDigest      hashing.Digest
+		expectedRootHash hashing.Digest
 	}{
-		{common.Digest{0x0}, common.Digest{0x0}},
-		{common.Digest{0x1}, common.Digest{0x1}},
-		{common.Digest{0x2}, common.Digest{0x3}},
-		{common.Digest{0x3}, common.Digest{0x0}},
-		{common.Digest{0x4}, common.Digest{0x4}},
-		{common.Digest{0x5}, common.Digest{0x1}},
-		{common.Digest{0x6}, common.Digest{0x7}},
-		{common.Digest{0x7}, common.Digest{0x0}},
-		{common.Digest{0x8}, common.Digest{0x8}},
-		{common.Digest{0x9}, common.Digest{0x1}},
+		{hashing.Digest{0x0}, hashing.Digest{0x0}},
+		{hashing.Digest{0x1}, hashing.Digest{0x1}},
+		{hashing.Digest{0x2}, hashing.Digest{0x3}},
+		{hashing.Digest{0x3}, hashing.Digest{0x0}},
+		{hashing.Digest{0x4}, hashing.Digest{0x4}},
+		{hashing.Digest{0x5}, hashing.Digest{0x1}},
+		{hashing.Digest{0x6}, hashing.Digest{0x7}},
+		{hashing.Digest{0x7}, hashing.Digest{0x0}},
+		{hashing.Digest{0x8}, hashing.Digest{0x8}},
+		{hashing.Digest{0x9}, hashing.Digest{0x1}},
 	}
 
 	store, closeF := storage_utils.NewBPlusTreeStore()
 	defer closeF()
 	simpleCache := common.NewSimpleCache(10)
-	tree := NewHyperTree(common.NewFakeXorHasher, store, simpleCache)
+	tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
 
 	for i, c := range testCases {
 		index := uint64(i)
@@ -49,43 +50,43 @@ func TestAdd(t *testing.T) {
 
 func TestProveMembership(t *testing.T) {
 
-	hasher := common.NewFakeXorHasher()
-	digest := hasher.Do(common.Digest{0x0})
+	hasher := hashing.NewFakeXorHasher()
+	digest := hasher.Do(hashing.Digest{0x0})
 
 	testCases := []struct {
-		addOps            map[uint64]common.Digest
+		addOps            map[uint64]hashing.Digest
 		expectedAuditPath common.AuditPath
 	}{
 		{
-			addOps: map[uint64]common.Digest{
-				uint64(0): common.Digest{0},
+			addOps: map[uint64]hashing.Digest{
+				uint64(0): hashing.Digest{0},
 			},
 			expectedAuditPath: common.AuditPath{
-				"10|4": common.Digest{0x0},
-				"04|2": common.Digest{0x0},
-				"80|7": common.Digest{0x0},
-				"40|6": common.Digest{0x0},
-				"20|5": common.Digest{0x0},
-				"08|3": common.Digest{0x0},
-				"02|1": common.Digest{0x0},
-				"01|0": common.Digest{0x0},
+				"10|4": hashing.Digest{0x0},
+				"04|2": hashing.Digest{0x0},
+				"80|7": hashing.Digest{0x0},
+				"40|6": hashing.Digest{0x0},
+				"20|5": hashing.Digest{0x0},
+				"08|3": hashing.Digest{0x0},
+				"02|1": hashing.Digest{0x0},
+				"01|0": hashing.Digest{0x0},
 			},
 		},
 		{
-			addOps: map[uint64]common.Digest{
-				uint64(0): common.Digest{0},
-				uint64(1): common.Digest{1},
-				uint64(2): common.Digest{2},
+			addOps: map[uint64]hashing.Digest{
+				uint64(0): hashing.Digest{0},
+				uint64(1): hashing.Digest{1},
+				uint64(2): hashing.Digest{2},
 			},
 			expectedAuditPath: common.AuditPath{
-				"10|4": common.Digest{0x0},
-				"04|2": common.Digest{0x0},
-				"80|7": common.Digest{0x0},
-				"40|6": common.Digest{0x0},
-				"20|5": common.Digest{0x0},
-				"08|3": common.Digest{0x0},
-				"02|1": common.Digest{0x2},
-				"01|0": common.Digest{0x1},
+				"10|4": hashing.Digest{0x0},
+				"04|2": hashing.Digest{0x0},
+				"80|7": hashing.Digest{0x0},
+				"40|6": hashing.Digest{0x0},
+				"20|5": hashing.Digest{0x0},
+				"08|3": hashing.Digest{0x0},
+				"02|1": hashing.Digest{0x2},
+				"01|0": hashing.Digest{0x1},
 			},
 		},
 	}
@@ -96,7 +97,7 @@ func TestProveMembership(t *testing.T) {
 		store, closeF := storage_utils.NewBPlusTreeStore()
 		defer closeF()
 		simpleCache := common.NewSimpleCache(10)
-		tree := NewHyperTree(common.NewFakeXorHasher, store, simpleCache)
+		tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
 
 		for index, digest := range c.addOps {
 			_, mutations, err := tree.Add(digest, index)
@@ -117,11 +118,11 @@ func TestAddAndVerify(t *testing.T) {
 	value := uint64(0)
 
 	testCases := []struct {
-		hasherF func() common.Hasher
+		hasherF func() hashing.Hasher
 	}{
-		{hasherF: common.NewXorHasher},
-		{hasherF: common.NewSha256Hasher},
-		{hasherF: common.NewPearsonHasher},
+		{hasherF: hashing.NewXorHasher},
+		{hasherF: hashing.NewSha256Hasher},
+		{hasherF: hashing.NewPearsonHasher},
 	}
 
 	for i, c := range testCases {
@@ -131,7 +132,7 @@ func TestAddAndVerify(t *testing.T) {
 		simpleCache := common.NewSimpleCache(10)
 		tree := NewHyperTree(c.hasherF, store, simpleCache)
 
-		key := hasher.Do(common.Digest("a test event"))
+		key := hasher.Do(hashing.Digest("a test event"))
 		commitment, mutations, err := tree.Add(key, value)
 		tree.store.Mutate(mutations...)
 		assert.NoErrorf(t, err, "This should not fail for index %d", i)
@@ -152,9 +153,9 @@ func BenchmarkAdd(b *testing.B) {
 	store, closeF := common.OpenBadgerStore("/var/tmp/hyper_tree_test.db")
 	defer closeF()
 
-	hasher := common.NewSha256Hasher()
+	hasher := hashing.NewSha256Hasher()
 	simpleCache := common.NewSimpleCache(0)
-	tree := NewHyperTree(common.NewSha256Hasher, store, simpleCache)
+	tree := NewHyperTree(hashing.NewSha256Hasher, store, simpleCache)
 
 	b.ResetTimer()
 	b.N = 100000

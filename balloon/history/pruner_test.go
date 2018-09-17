@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,7 +33,7 @@ func leafnil(pos common.Position) *common.Leaf {
 }
 
 func cached(pos common.Position) *common.Cached {
-	return common.NewCached(pos, common.Digest{0})
+	return common.NewCached(pos, hashing.Digest{0})
 }
 
 func collectable(underlying common.Visitable) *common.Collectable {
@@ -41,21 +42,21 @@ func collectable(underlying common.Visitable) *common.Collectable {
 
 func TestInsertPruner(t *testing.T) {
 
-	cache := common.NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		version        uint64
-		eventDigest    common.Digest
+		eventDigest    hashing.Digest
 		expectedPruned common.Visitable
 	}{
 		{
 			version:        0,
-			eventDigest:    common.Digest{0x0},
+			eventDigest:    hashing.Digest{0x0},
 			expectedPruned: collectable(leaf(pos(0, 0), 0)),
 		},
 		{
 			version:     1,
-			eventDigest: common.Digest{0x1},
+			eventDigest: hashing.Digest{0x1},
 			expectedPruned: collectable(root(pos(0, 1),
 				cached(pos(0, 0)),
 				collectable(leaf(pos(1, 0), 1))),
@@ -63,7 +64,7 @@ func TestInsertPruner(t *testing.T) {
 		},
 		{
 			version:     2,
-			eventDigest: common.Digest{0x2},
+			eventDigest: hashing.Digest{0x2},
 			expectedPruned: root(pos(0, 2),
 				cached(pos(0, 1)),
 				partialnode(pos(2, 1),
@@ -72,7 +73,7 @@ func TestInsertPruner(t *testing.T) {
 		},
 		{
 			version:     3,
-			eventDigest: common.Digest{0x3},
+			eventDigest: hashing.Digest{0x3},
 			expectedPruned: collectable(root(pos(0, 2),
 				cached(pos(0, 1)),
 				collectable(node(pos(2, 1),
@@ -82,7 +83,7 @@ func TestInsertPruner(t *testing.T) {
 		},
 		{
 			version:     4,
-			eventDigest: common.Digest{0x4},
+			eventDigest: hashing.Digest{0x4},
 			expectedPruned: root(pos(0, 3),
 				cached(pos(0, 2)),
 				partialnode(pos(4, 2),
@@ -92,7 +93,7 @@ func TestInsertPruner(t *testing.T) {
 		},
 		{
 			version:     5,
-			eventDigest: common.Digest{0x5},
+			eventDigest: hashing.Digest{0x5},
 			expectedPruned: root(pos(0, 3),
 				cached(pos(0, 2)),
 				partialnode(pos(4, 2),
@@ -103,7 +104,7 @@ func TestInsertPruner(t *testing.T) {
 		},
 		{
 			version:     6,
-			eventDigest: common.Digest{0x6},
+			eventDigest: hashing.Digest{0x6},
 			expectedPruned: root(pos(0, 3),
 				cached(pos(0, 2)),
 				node(pos(4, 2),
@@ -114,7 +115,7 @@ func TestInsertPruner(t *testing.T) {
 		},
 		{
 			version:     7,
-			eventDigest: common.Digest{0x7},
+			eventDigest: hashing.Digest{0x7},
 			expectedPruned: collectable(root(pos(0, 3),
 				cached(pos(0, 2)),
 				collectable(node(pos(4, 2),
@@ -142,7 +143,7 @@ func TestInsertPruner(t *testing.T) {
 
 func TestSearchPruner(t *testing.T) {
 
-	cache := common.NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		version        uint64
@@ -234,7 +235,7 @@ func TestSearchPruner(t *testing.T) {
 
 func TestSearchPrunerConsistency(t *testing.T) {
 
-	cache := common.NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		index, version uint64
@@ -346,7 +347,7 @@ func TestSearchPrunerConsistency(t *testing.T) {
 
 func TestSearchPrunerIncremental(t *testing.T) {
 
-	cache := common.NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		start, end     uint64
@@ -458,23 +459,23 @@ func TestSearchPrunerIncremental(t *testing.T) {
 
 func TestVerifyPruner(t *testing.T) {
 
-	cache := common.NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		index, version uint64
-		eventDigest    common.Digest
+		eventDigest    hashing.Digest
 		expectedPruned common.Visitable
 	}{
 		{
 			index:          0,
 			version:        0,
-			eventDigest:    common.Digest{0x0},
+			eventDigest:    hashing.Digest{0x0},
 			expectedPruned: leaf(pos(0, 0), 0),
 		},
 		{
 			index:       0,
 			version:     1,
-			eventDigest: common.Digest{0x0},
+			eventDigest: hashing.Digest{0x0},
 			expectedPruned: root(pos(0, 1),
 				leaf(pos(0, 0), 0),
 				cached(pos(1, 0))),
@@ -482,7 +483,7 @@ func TestVerifyPruner(t *testing.T) {
 		{
 			index:       1,
 			version:     1,
-			eventDigest: common.Digest{0x1},
+			eventDigest: hashing.Digest{0x1},
 			expectedPruned: root(pos(0, 1),
 				cached(pos(0, 0)),
 				leaf(pos(1, 0), 1)),
@@ -490,7 +491,7 @@ func TestVerifyPruner(t *testing.T) {
 		{
 			index:       1,
 			version:     2,
-			eventDigest: common.Digest{0x1},
+			eventDigest: hashing.Digest{0x1},
 			expectedPruned: root(pos(0, 2),
 				node(pos(0, 1),
 					cached(pos(0, 0)),
@@ -501,7 +502,7 @@ func TestVerifyPruner(t *testing.T) {
 		{
 			index:       6,
 			version:     6,
-			eventDigest: common.Digest{0x6},
+			eventDigest: hashing.Digest{0x6},
 			expectedPruned: root(pos(0, 3),
 				cached(pos(0, 2)),
 				node(pos(4, 2),
@@ -512,7 +513,7 @@ func TestVerifyPruner(t *testing.T) {
 		{
 			index:       1,
 			version:     7,
-			eventDigest: common.Digest{0x1},
+			eventDigest: hashing.Digest{0x1},
 			expectedPruned: root(pos(0, 3),
 				node(pos(0, 2),
 					node(pos(0, 1),
@@ -546,7 +547,7 @@ func TestVerifyPruner(t *testing.T) {
 
 func TestVerifyPrunerIncremental(t *testing.T) {
 
-	cache := common.NewFakeCache(common.Digest{0x0})
+	cache := common.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		start, end     uint64

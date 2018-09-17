@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	raftbadger "github.com/bbva/raft-badger"
 	"github.com/dgraph-io/badger"
@@ -128,7 +128,7 @@ func (b *RaftBalloon) Open(enableSingle bool) error {
 	}
 
 	// Instantiate balloon FSM
-	b.fsm = NewBalloonFSM(b.dbPath, common.NewSha256Hasher)
+	b.fsm = NewBalloonFSM(b.dbPath, hashing.NewSha256Hasher)
 
 	// Instantiate the Raft system
 	ra, err := raft.NewRaft(config, b.fsm, logStore, stableStore, snapshots, transport)

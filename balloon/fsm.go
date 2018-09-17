@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	bdb "github.com/bbva/qed/storage/badger"
 	"github.com/hashicorp/raft"
@@ -22,7 +22,7 @@ type fsmAddResponse struct {
 }
 
 type BalloonFSM struct {
-	hasherF func() common.Hasher
+	hasherF func() hashing.Hasher
 
 	store   storage.ManagedStore
 	balloon *Balloon
@@ -30,7 +30,7 @@ type BalloonFSM struct {
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
 
-func NewBalloonFSM(dbPath string, hasherF func() common.Hasher) *BalloonFSM {
+func NewBalloonFSM(dbPath string, hasherF func() hashing.Hasher) *BalloonFSM {
 	return &BalloonFSM{
 		hasherF: hasherF,
 		store:   bdb.NewBadgerStore(dbPath),
