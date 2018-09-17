@@ -26,7 +26,7 @@ func TestAdd(t *testing.T) {
 
 	for i := uint64(0); i < 9; i++ {
 		commitment, mutations, err := balloon.Add(rand.Bytes(128))
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 
 		require.NoError(t, err)
 		assert.Truef(t, len(mutations) > 0, "There should be some mutations in test %d", i)
@@ -57,7 +57,7 @@ func TestQueryMembership(t *testing.T) {
 	for i, c := range testCases {
 		_, mutations, err := balloon.Add(c.key)
 		require.NoErrorf(t, err, "Error adding event %d", i)
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 
 		proof, err := balloon.QueryMembership(c.key, c.version)
 
@@ -145,7 +145,7 @@ func TestQueryConsistencyProof(t *testing.T) {
 		for j := 0; j <= int(c.end); j++ {
 			_, mutations, err := balloon.Add(util.Uint64AsBytes(uint64(j)))
 			require.NoErrorf(t, err, "Error adding event %d", j)
-			store.Mutate(mutations...)
+			store.Mutate(mutations)
 		}
 
 		proof, err := balloon.QueryConsistency(c.start, c.end)
@@ -178,7 +178,7 @@ func TestAddQueryAndVerify(t *testing.T) {
 	// Add event
 	commitment, mutations, err := balloon.Add(event)
 	require.NoError(t, err)
-	store.Mutate(mutations...)
+	store.Mutate(mutations)
 
 	// Query event
 	proof, err := balloon.QueryMembership(event, commitment.Version)
@@ -207,7 +207,7 @@ func TestCacheWarmingUp(t *testing.T) {
 		commitment, mutations, err := balloon.Add(util.Uint64AsBytes(i))
 		require.NoError(t, err)
 		lastCommitment = commitment
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 	}
 
 	// close balloon
@@ -239,7 +239,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
 		_, mutations, _ := balloon.Add(event)
-		store.Mutate(mutations...)
+		store.Mutate(mutations)
 	}
 
 }

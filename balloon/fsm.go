@@ -96,6 +96,6 @@ func (fsm *BalloonFSM) applyAdd(event []byte) *fsmAddResponse {
 	if err != nil {
 		return &fsmAddResponse{error: err}
 	}
-	fsm.store.Mutate(mutations...)
+	fsm.store.Mutate(mutations)
 	return &fsmAddResponse{commitment: commitment}
 }

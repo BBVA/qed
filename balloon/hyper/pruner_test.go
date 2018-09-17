@@ -76,7 +76,7 @@ func TestInsertPruner(t *testing.T) {
 			key:   []byte{2},
 			value: []byte{1},
 			storeMutations: []storage.Mutation{
-				*storage.NewMutation(storage.IndexPrefix, []byte{0}, []byte{0}),
+				{storage.IndexPrefix, []byte{0}, []byte{0}},
 			},
 			expectedPruned: root(pos(0, 8),
 				collectable(node(pos(0, 7),
@@ -103,8 +103,8 @@ func TestInsertPruner(t *testing.T) {
 			key:   []byte{255},
 			value: []byte{2},
 			storeMutations: []storage.Mutation{
-				*storage.NewMutation(storage.IndexPrefix, []byte{0}, []byte{0}),
-				*storage.NewMutation(storage.IndexPrefix, []byte{2}, []byte{1}),
+				{storage.IndexPrefix, []byte{0}, []byte{0}},
+				{storage.IndexPrefix, []byte{2}, []byte{1}},
 			},
 			expectedPruned: root(pos(0, 8),
 				cached(pos(0, 7)),
@@ -132,7 +132,7 @@ func TestInsertPruner(t *testing.T) {
 	for i, c := range testCases {
 		store, closeF := storage_utils.NewBPlusTreeStore()
 		defer closeF()
-		store.Mutate(c.storeMutations...)
+		store.Mutate(c.storeMutations)
 
 		cache := common.NewSimpleCache(4)
 
@@ -165,7 +165,7 @@ func TestSearchPruner(t *testing.T) {
 		{
 			key: []byte{0},
 			storeMutations: []storage.Mutation{
-				*storage.NewMutation(storage.IndexPrefix, []byte{0}, []byte{0}),
+				{storage.IndexPrefix, []byte{0}, []byte{0}},
 			},
 			expectedPruned: root(pos(0, 8),
 				node(pos(0, 7),
@@ -189,8 +189,8 @@ func TestSearchPruner(t *testing.T) {
 		{
 			key: []byte{6},
 			storeMutations: []storage.Mutation{
-				*storage.NewMutation(storage.IndexPrefix, []byte{1}, []byte{1}),
-				*storage.NewMutation(storage.IndexPrefix, []byte{6}, []byte{6}),
+				{storage.IndexPrefix, []byte{1}, []byte{1}},
+				{storage.IndexPrefix, []byte{6}, []byte{6}},
 			},
 			expectedPruned: root(pos(0, 8),
 				node(pos(0, 7),
@@ -219,7 +219,7 @@ func TestSearchPruner(t *testing.T) {
 	for i, c := range testCases {
 		store, closeF := storage_utils.NewBPlusTreeStore()
 		defer closeF()
-		store.Mutate(c.storeMutations...)
+		store.Mutate(c.storeMutations)
 
 		cache := common.NewSimpleCache(4)
 
@@ -247,7 +247,9 @@ func TestVerifyPruner(t *testing.T) {
 	// Add element before verifying.
 	store, closeF := storage_utils.NewBPlusTreeStore()
 	defer closeF()
-	mutations := storage.Mutation{storage.IndexPrefix, []byte{0}, []byte{0}}
+	mutations := []storage.Mutation{
+		{storage.IndexPrefix, []byte{0}, []byte{0}},
+	}
 	store.Mutate(mutations)
 
 	testCases := []struct {

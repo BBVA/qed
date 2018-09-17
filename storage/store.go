@@ -18,7 +18,7 @@ var (
 )
 
 type Store interface {
-	Mutate(mutations ...Mutation) error
+	Mutate(mutations []Mutation) error
 	GetRange(prefix byte, start, end []byte) (KVRange, error)
 	Get(prefix byte, key []byte) (*KVPair, error)
 	GetAll(prefix byte) KVPairReader
