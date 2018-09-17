@@ -13,8 +13,12 @@ func TestCachingVisitor(t *testing.T) {
 		expectedElements []CachedElement
 	}{
 		{
-			visitable: NewCollectable(&FakePosition{[]byte{0x0}, 0},
-				NewLeaf(&FakePosition{[]byte{0x0}, 0}, []byte{0x0})),
+			visitable: NewCollectable(
+				NewLeaf(
+					&FakePosition{[]byte{0x0}, 0},
+					[]byte{0x0},
+				),
+			),
 			expectedElements: []CachedElement{
 				*NewCachedElement(
 					&FakePosition{[]byte{0x0}, 0},
@@ -23,10 +27,10 @@ func TestCachingVisitor(t *testing.T) {
 			},
 		},
 		{
-			visitable: NewCollectable(&FakePosition{[]byte{0x0}, 1},
+			visitable: NewCollectable(
 				NewRoot(&FakePosition{[]byte{0x0}, 1},
 					NewCached(&FakePosition{[]byte{0x0}, 0}, Digest{0x0}),
-					NewCollectable(&FakePosition{[]byte{0x1}, 0},
+					NewCollectable(
 						NewLeaf(&FakePosition{[]byte{0x1}, 0}, Digest{0x1})),
 				)),
 			expectedElements: []CachedElement{
@@ -45,8 +49,9 @@ func TestCachingVisitor(t *testing.T) {
 				&FakePosition{[]byte{0x0}, 2},
 				NewCached(&FakePosition{[]byte{0x0}, 1}, Digest{0x1}),
 				NewPartialNode(&FakePosition{[]byte{0x1}, 1},
-					NewCollectable(&FakePosition{[]byte{0x2}, 0},
-						NewLeaf(&FakePosition{[]byte{0x2}, 0}, Digest{0x2})),
+					NewCollectable(
+						NewLeaf(&FakePosition{[]byte{0x2}, 0}, Digest{0x2}),
+					),
 				),
 			),
 			expectedElements: []CachedElement{
@@ -57,14 +62,14 @@ func TestCachingVisitor(t *testing.T) {
 			},
 		},
 		{
-			visitable: NewCollectable(&FakePosition{[]byte{0x0}, 2},
+			visitable: NewCollectable(
 				NewRoot(
 					&FakePosition{[]byte{0x0}, 2},
 					NewCached(&FakePosition{[]byte{0x0}, 1}, Digest{0x1}),
-					NewCollectable(&FakePosition{[]byte{0x2}, 1},
+					NewCollectable(
 						NewNode(&FakePosition{[]byte{0x2}, 1},
 							NewCached(&FakePosition{[]byte{0x2}, 0}, Digest{0x2}),
-							NewCollectable(&FakePosition{[]byte{0x3}, 0},
+							NewCollectable(
 								NewLeaf(&FakePosition{[]byte{0x3}, 0}, Digest{0x3}),
 							))),
 				)),
@@ -89,7 +94,7 @@ func TestCachingVisitor(t *testing.T) {
 				NewCached(&FakePosition{[]byte{0x0}, 2}, Digest{0x0}),
 				NewPartialNode(&FakePosition{[]byte{0x4}, 2},
 					NewPartialNode(&FakePosition{[]byte{0x4}, 1},
-						NewCollectable(&FakePosition{[]byte{0x4}, 0},
+						NewCollectable(
 							NewLeaf(&FakePosition{[]byte{0x4}, 0}, Digest{0x4}))),
 				),
 			),
