@@ -31,8 +31,17 @@ var (
 	ErrNotLeader = errors.New("not leader")
 )
 
-// BalloonStore is a replicated verifiable key-value store, where changes are made via Raft consensus.
-type BalloonStore struct {
+// RaftBalloon is the interface Raft-backed balloons must implement.
+type RaftBalloonApi interface {
+	Add(event []byte) (*Commitment, error)
+	QueryMembership(event []byte, version uint64) (*MembershipProof, error)
+	QueryConsistency(start, end uint64) (*IncrementalProof, error)
+	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
+	Join(nodeID, addr string) error
+}
+
+// RaftBalloon is a replicated verifiable key-value store, where changes are made via Raft consensus.
+type RaftBalloon struct {
 	raftDir      string
 	raftBindAddr string
 	raftID       string     // Node ID.
@@ -44,7 +53,7 @@ type BalloonStore struct {
 
 	lock     sync.RWMutex
 	closedMu sync.Mutex
-	closed   bool // Has the BalloonStore been closed?
+	closed   bool // Has the RaftBalloon been closed?
 
 	wg   sync.WaitGroup
 	done chan struct{}
@@ -56,9 +65,9 @@ type BalloonStore struct {
 	fsm *BalloonFSM // balloon's finite state machine
 }
 
-// New returns a new BalloonStore.
-func New(dbPath, raftDir, raftBindAddr, raftID string) *BalloonStore {
-	return &BalloonStore{
+// New returns a new RaftBalloon.
+func New(dbPath, raftDir, raftBindAddr, raftID string) *RaftBalloon {
+	return &RaftBalloon{
 		dbPath:       dbPath,
 		raftDir:      raftDir,
 		raftBindAddr: raftBindAddr,
@@ -68,7 +77,7 @@ func New(dbPath, raftDir, raftBindAddr, raftID string) *BalloonStore {
 
 // Open opens the Balloon. If enableSingle is set, and there are no existing peers,
 // then this node becomes the first node, and therefore, leader of the cluster.
-func (b *BalloonStore) Open(enableSingle bool) error {
+func (b *RaftBalloon) Open(enableSingle bool) error {
 
 	b.closedMu.Lock()
 	defer b.closedMu.Unlock()
@@ -148,7 +157,7 @@ func (b *BalloonStore) Open(enableSingle bool) error {
 
 // Join joins a node, identified by id and located ad addr, to this store.
 // The node must be ready to respond to Raft communications at that address.
-func (b *BalloonStore) Join(nodeID, addr string) error {
+func (b *RaftBalloon) Join(nodeID, addr string) error {
 
 	log.Infof("received join request for remote node %s at %s", nodeID, addr)
 
@@ -188,9 +197,9 @@ func (b *BalloonStore) Join(nodeID, addr string) error {
 	return nil
 }
 
-// Close closes the BalloonStore. If wait is true, waits for a graceful shutdown.
-// Once closed, a BalloonStore may not be re-opened.
-func (b *BalloonStore) Close(wait bool) error {
+// Close closes the RaftBalloon. If wait is true, waits for a graceful shutdown.
+// Once closed, a RaftBalloon may not be re-opened.
+func (b *RaftBalloon) Close(wait bool) error {
 	b.closedMu.Lock()
 	defer b.closedMu.Unlock()
 	if b.closed {
@@ -233,7 +242,7 @@ func (b *BalloonStore) Close(wait bool) error {
 }
 
 // createDatabase creates the file-based database.
-func (b *BalloonStore) createDatabase() error {
+func (b *RaftBalloon) createDatabase() error {
 	// as it will be rebuilt from (possibly) a snapshot and committed log entries.
 	if err := os.Remove(b.dbPath); err != nil && !os.IsNotExist(err) { // TODO not sure of this
 		return err
@@ -247,7 +256,7 @@ func (b *BalloonStore) createDatabase() error {
 	return nil
 }
 
-func (b *BalloonStore) Add(event []byte) (*Commitment, error) {
+func (b *RaftBalloon) Add(event []byte) (*Commitment, error) {
 	cmd, err := newCommand(insert, newInsertSubCommand(event))
 	if err != nil {
 		return nil, err
@@ -268,10 +277,10 @@ func (b *BalloonStore) Add(event []byte) (*Commitment, error) {
 	return resp.commitment, nil
 }
 
-func (b BalloonStore) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+func (b RaftBalloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
 	return b.fsm.QueryMembership(event, version)
 }
 
-func (b BalloonStore) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
+func (b RaftBalloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
 	return b.fsm.QueryConsistency(start, end)
 }
