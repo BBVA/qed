@@ -44,7 +44,8 @@ import (
 	"os"
 
 	"github.com/bbva/qed/log"
-	b "github.com/bbva/qed/storage/badger"
+	"github.com/bbva/qed/storage"
+	bd "github.com/bbva/qed/storage/badger"
 )
 
 func main() {
@@ -76,26 +77,31 @@ func add() {
 }
 
 func get() {
-	store, closeF := openBadgerStorage()
+	store, closeF := openBadgerStore()
 	defer closeF()
 
 	key := []byte("Key")
 	value := []byte("Value")
 
-	stored, err := store.Get(key)
+	stored, err := store.Get(0, key)
 	if err != nil {
 		log.Error(err)
 	}
-	if bytes.Compare(stored, value) != 0 {
+	if bytes.Compare(stored.Value, value) != 0 {
 		log.Error("The stored key does not match the original: expected %d, actual %d", value, stored)
 	}
 
 }
 
-func openBadgerStorage() (*b.BadgerStorage, func()) {
-	store := b.NewBadgerStorage("/var/tmp/dur.db")
+func openBadgerStore() (*bd.BadgerStore, func()) {
+	store, err := bd.NewBadgerStore("/var/tmp/badger_store_test.db")
+	if err != nil {
+		log.Errorf("Error opening badger store: %v", err)
+		os.Exit(1)
+	}
 	return store, func() {
 		store.Close()
+		deleteFile("/var/tmp/badger_store_test.db")
 	}
 }
 
@@ -107,13 +113,17 @@ func deleteFile(path string) {
 }
 
 func _add() {
-	store, _ := openBadgerStorage()
-	// defer closeF()
+	store, closeF := openBadgerStore()
+	defer closeF()
 
+	prefix := byte(0)
 	key := []byte("Key")
 	value := []byte("Value")
 
-	err := store.Add(key, value)
+	// err := store.Mutate()
+	err := store.Mutate([]storage.Mutation{
+		{prefix, value, key},
+	})
 	if err != nil {
 		log.Error(err)
 	}
