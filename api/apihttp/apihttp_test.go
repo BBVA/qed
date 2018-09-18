@@ -24,13 +24,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/bbva/qed/hashing"
+	assert "github.com/stretchr/testify/require"
 
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/sign"
-
 	"github.com/bbva/qed/balloon"
-	assert "github.com/stretchr/testify/require"
+	"github.com/bbva/qed/balloon/proof"
 )
 
 type fakeRaftBalloon struct {
@@ -114,7 +114,7 @@ func TestAdd(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	signer := sign.NewSigner()
+	signer := sign.NewEd25519Signer()
 	handler := Add(fakeRaftBalloon{}, signer)
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
@@ -189,6 +189,7 @@ func TestMembership(t *testing.T) {
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
 	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
+
 }
 
 func TestIncremental(t *testing.T) {

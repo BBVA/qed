@@ -39,7 +39,7 @@ func newStartCommand() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, args []string) {
 
-			signer, err := sign.NewSignerFromFile(privateKeyPath)
+			signer, err := sign.NewEd25519SignerFromFile(privateKeyPath)
 			if err != nil {
 				log.Error(err)
 			}

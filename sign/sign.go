@@ -25,7 +25,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type Signable interface {
+type Signer interface {
 	Sign(message []byte) ([]byte, error)
 	Verify(message, sig []byte) (bool, error)
 }
@@ -35,7 +35,7 @@ type Ed25519Signer struct {
 	publicKey  ed25519.PublicKey
 }
 
-func NewSigner() Signable {
+func NewEd25519Signer() Signer {
 
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -49,7 +49,7 @@ func NewSigner() Signable {
 
 }
 
-func NewSignerFromFile(privateKeyPath string) (Signable, error) {
+func NewEd25519SignerFromFile(privateKeyPath string) (Signer, error) {
 
 	privateKeyBytes, err := ioutil.ReadFile(privateKeyPath)
 	if err != nil {

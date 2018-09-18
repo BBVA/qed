@@ -69,7 +69,7 @@ func NewServer(
 	storageName string,
 	profiling bool,
 	tamper bool,
-	signer sign.Signable,
+	signer sign.Signer,
 ) *Server {
 
 	storages := make([]Store, 0, 0)
@@ -195,7 +195,7 @@ func buildBalloon(frozen, leaves Store, apiKey string, cacheSize uint64) (*ballo
 	return balloon.NewHyperBalloon(hashing.NewSha256Hasher(), history, hyper), nil
 }
 
-func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon, signer sign.Signable) *http.Server {
+func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon, signer sign.Signer) *http.Server {
 	router := apihttp.NewApiHttp(balloon, signer)
 	server := &http.Server{
 		Addr:    endpoint,

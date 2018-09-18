@@ -78,7 +78,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //     "Version": 1,
 //     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
 //   }
-func Add(balloon balloon.RaftBalloonApi, signer sign.Signable) http.HandlerFunc {
+func Add(balloon balloon.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -128,6 +128,7 @@ func Add(balloon balloon.RaftBalloonApi, signer sign.Signable) http.HandlerFunc 
 		w.WriteHeader(http.StatusCreated)
 		w.Write(out)
 		return
+
 	}
 }
 
@@ -250,7 +251,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/health-check -> HealthCheckHandler
 //	/events -> Add
 //	/proofs/membership -> Membership
-func NewApiHttp(balloon balloon.RaftBalloonApi, signer sign.Signable) *http.ServeMux {
+func NewApiHttp(balloon balloon.RaftBalloonApi, signer sign.Signer) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
