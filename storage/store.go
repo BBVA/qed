@@ -44,7 +44,7 @@ type Store interface {
 
 type DeletableStore interface {
 	Store
-	Delete(key []byte) error
+	Delete(prefix byte, key []byte) error
 }
 type ManagedStore interface {
 	Store

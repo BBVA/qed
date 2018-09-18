@@ -24,7 +24,6 @@ import (
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
-	bdb "github.com/bbva/qed/storage/badger"
 	"github.com/hashicorp/raft"
 )
 
@@ -46,14 +45,15 @@ type BalloonFSM struct {
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
 
-func NewBalloonFSM(dbPath string, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
-	store, err := bdb.NewBadgerStore(dbPath)
+func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
+	balloon, err := NewBalloon(store, hasherF)
 	if err != nil {
 		return nil, err
 	}
 	return &BalloonFSM{
 		hasherF: hasherF,
 		store:   store,
+		balloon: balloon,
 	}, nil
 }
 

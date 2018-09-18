@@ -27,8 +27,8 @@ import (
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 	raftbadger "github.com/bbva/raft-badger"
-	"github.com/dgraph-io/badger"
 	"github.com/hashicorp/raft"
 )
 
@@ -63,10 +63,6 @@ type RaftBalloon struct {
 	raftID       string     // Node ID.
 	raft         *raft.Raft // The consensus mechanism.
 
-	dbPath string // Path to underlying Badger files, if not in-memory.
-	dbOpts badger.Options
-	db     *badger.DB // The underlying Badger database.
-
 	lock     sync.RWMutex
 	closedMu sync.Mutex
 	closed   bool // Has the RaftBalloon been closed?
@@ -74,21 +70,41 @@ type RaftBalloon struct {
 	wg   sync.WaitGroup
 	done chan struct{}
 
-	raftLog         raft.LogStore           // Persistent log store.
-	raftStable      raft.StableStore        // Persistent k-v store.
-	raftBadgerStore *raftbadger.BadgerStore // Physical store.
+	store       storage.ManagedStore    // Persistent database
+	logStore    *raftbadger.BadgerStore // Persistent log store.
+	stableStore *raftbadger.BadgerStore // Persistent k-v store.
 
 	fsm *BalloonFSM // balloon's finite state machine
 }
 
 // New returns a new RaftBalloon.
-func NewRaftBalloon(dbPath, raftDir, raftBindAddr, raftID string) *RaftBalloon {
+func NewRaftBalloon(raftDir, raftBindAddr, raftID string, store storage.ManagedStore) (*RaftBalloon, error) {
+
+	// Create the log store and stable store
+	logStore, err := raftbadger.NewBadgerStore(raftDir + "/logs")
+	if err != nil {
+		return nil, fmt.Errorf("new badger store: %s", err)
+	}
+	stableStore, err := raftbadger.NewBadgerStore(raftDir + "/config")
+	if err != nil {
+		return nil, fmt.Errorf("new badger store: %s", err)
+	}
+
+	// Instantiate balloon FSM
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	if err != nil {
+		return nil, fmt.Errorf("new balloon fsm: %s", err)
+	}
+
 	return &RaftBalloon{
-		dbPath:       dbPath,
 		raftDir:      raftDir,
 		raftBindAddr: raftBindAddr,
 		raftID:       raftID,
-	}
+		store:        store,
+		logStore:     logStore,
+		stableStore:  stableStore,
+		fsm:          fsm,
+	}, nil
 }
 
 // Open opens the Balloon. If enableSingle is set, and there are no existing peers,
@@ -102,16 +118,6 @@ func (b *RaftBalloon) Open(enableSingle bool) error {
 	}
 
 	log.Infof("opening balloon with node ID %s", b.raftID)
-
-	log.Infof("ensuring directory at %s exists", b.raftDir)
-	if err := os.MkdirAll(b.raftDir, 0755); err != nil {
-		return err
-	}
-
-	// Create underlying database.
-	if err := b.createDatabase(); err != nil {
-		return err
-	}
 
 	// Setup Raft configuration
 	config := raft.DefaultConfig()
@@ -133,28 +139,11 @@ func (b *RaftBalloon) Open(enableSingle bool) error {
 		return fmt.Errorf("file snapshot store: %s", err)
 	}
 
-	// Create the log store and stable store
-	logStore, err := raftbadger.NewBadgerStore(b.raftDir + "/logs")
-	if err != nil {
-		return fmt.Errorf("new badger store: %s", err)
-	}
-	stableStore, err := raftbadger.NewBadgerStore(b.raftDir + "/config")
-	if err != nil {
-		return fmt.Errorf("new badger store: %s", err)
-	}
-
-	// Instantiate balloon FSM
-	b.fsm, err = NewBalloonFSM(b.dbPath, hashing.NewSha256Hasher)
-	if err != nil {
-		return fmt.Errorf("new balloon fsm: %s", err)
-	}
-
 	// Instantiate the Raft system
-	ra, err := raft.NewRaft(config, b.fsm, logStore, stableStore, snapshots, transport)
+	b.raft, err = raft.NewRaft(config, b.fsm, b.logStore, b.stableStore, snapshots, transport)
 	if err != nil {
 		return fmt.Errorf("new raft: %s", err)
 	}
-	b.raft = ra
 
 	if enableSingle {
 		log.Info("bootstrap needed")
@@ -166,7 +155,7 @@ func (b *RaftBalloon) Open(enableSingle bool) error {
 				},
 			},
 		}
-		ra.BootstrapCluster(configuration)
+		b.raft.BootstrapCluster(configuration)
 	} else {
 		log.Info("no bootstrap needed")
 	}
@@ -232,9 +221,10 @@ func (b *RaftBalloon) Close(wait bool) error {
 	b.wg.Wait()
 
 	// close database
-	if err := b.db.Close(); err != nil {
+	if err := b.store.Close(); err != nil {
 		return err
 	}
+	b.store = nil
 
 	// shutdown raft
 	if b.raft != nil {
@@ -248,30 +238,15 @@ func (b *RaftBalloon) Close(wait bool) error {
 	}
 
 	// close raft store
-	if b.raftBadgerStore != nil {
-		if err := b.raftBadgerStore.Close(); err != nil {
-			return err
-		}
-		b.raftBadgerStore = nil
-	}
-	b.raftLog = nil
-	b.raftStable = nil
-
-	return nil
-}
-
-// createDatabase creates the file-based database.
-func (b *RaftBalloon) createDatabase() error {
-	// as it will be rebuilt from (possibly) a snapshot and committed log entries.
-	if err := os.Remove(b.dbPath); err != nil && !os.IsNotExist(err) { // TODO not sure of this
+	if err := b.logStore.Close(); err != nil {
 		return err
 	}
-	db, err := badger.Open(b.dbOpts)
-	if err != nil {
+	if err := b.stableStore.Close(); err != nil {
 		return err
 	}
-	log.Infof("Badger database opened at %s", b.dbPath)
-	b.db = db
+	b.logStore = nil
+	b.stableStore = nil
+
 	return nil
 }
 
@@ -292,7 +267,7 @@ func (b *RaftBalloon) Add(event []byte) (*Commitment, error) {
 		}
 		return nil, e.Error()
 	}
-	resp := f.Response().(fsmAddResponse)
+	resp := f.Response().(*fsmAddResponse)
 	return resp.commitment, nil
 }
 
