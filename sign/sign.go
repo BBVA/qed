@@ -83,6 +83,5 @@ func (s *Ed25519Signer) Sign(message []byte) ([]byte, error) {
 }
 
 func (s *Ed25519Signer) Verify(message, sig []byte) (bool, error) {
-
 	return ed25519.Verify(s.publicKey, message, sig), nil
 }
