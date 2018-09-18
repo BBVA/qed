@@ -26,11 +26,10 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/proof"
+	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/sign"
 )
 
 type fakeRaftBalloon struct {
