@@ -82,7 +82,7 @@ type MembershipProof struct {
 	QueryVersion   uint64
 	ActualVersion  uint64 //required for consistency proof
 	KeyDigest      hashing.Digest
-	hasher         hashing.Hasher
+	Hasher         hashing.Hasher
 }
 
 func NewMembershipProof(
@@ -90,7 +90,7 @@ func NewMembershipProof(
 	hyperProof, historyProof common.Verifiable,
 	currentVersion, queryVersion, actualVersion uint64,
 	keyDigest hashing.Digest,
-	hasher hashing.Hasher) *MembershipProof {
+	Hasher hashing.Hasher) *MembershipProof {
 	return &MembershipProof{
 		exists,
 		hyperProof,
@@ -99,7 +99,7 @@ func NewMembershipProof(
 		queryVersion,
 		actualVersion,
 		keyDigest,
-		hasher,
+		Hasher,
 	}
 }
 
@@ -111,7 +111,7 @@ func (p MembershipProof) Verify(event []byte, commitment *Commitment) bool {
 		return false
 	}
 
-	digest := p.hasher.Do(event)
+	digest := p.Hasher.Do(event)
 	hyperCorrect := p.HyperProof.Verify(digest, commitment.HyperDigest)
 
 	if p.Exists {
@@ -199,7 +199,7 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 
 	var proof MembershipProof
 
-	proof.hasher = b.hasherF()
+	proof.Hasher = b.hasherF()
 	proof.KeyDigest = b.hasher.Do(event)
 	proof.QueryVersion = version
 	proof.CurrentVersion = b.version - 1

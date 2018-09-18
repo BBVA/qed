@@ -25,73 +25,51 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/hashing"
+
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/sign"
 
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/proof"
 	assert "github.com/stretchr/testify/require"
 )
 
-type fakeBalloon struct {
-	addch   chan *balloon.Commitment
-	stopch  chan bool
-	proofch chan *balloon.MembershipProof
-	incch   chan *balloon.IncrementalProof
+type fakeRaftBalloon struct {
+	dbPath       string
+	raftDir      string
+	raftBindAddr string
+	raftID       string
 }
 
-func (b fakeBalloon) Add(event []byte) chan *balloon.Commitment {
-	return b.addch
+func (b fakeRaftBalloon) Add(event []byte) (*balloon.Commitment, error) {
+	return &balloon.Commitment{hashing.Digest{0x00}, hashing.Digest{0x01}, 0}, nil
 }
 
-func (b fakeBalloon) Close() chan bool {
-	return b.stopch
+func (b fakeRaftBalloon) Join(nodeID, addr string) error {
+	return nil
 }
 
-func (b fakeBalloon) GenMembershipProof(event []byte, version uint64) chan *balloon.MembershipProof {
-	return b.proofch
-}
-
-func (b fakeBalloon) GenIncrementalProof(start, end uint64) chan *balloon.IncrementalProof {
-	return b.incch
-}
-
-func newAddOpFakeBalloon(addch chan *balloon.Commitment) fakeBalloon {
-	closech := make(chan bool)
-	proofch := make(chan *balloon.MembershipProof)
-	incch := make(chan *balloon.IncrementalProof)
-
-	return fakeBalloon{
-		addch,
-		closech,
-		proofch,
-		incch,
+func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
+	mp := &balloon.MembershipProof{
+		true,
+		common.NewFakeVerifiable(true),
+		common.NewFakeVerifiable(true),
+		1,
+		1,
+		2,
+		hashing.Digest{0x0},
+		hashing.NewFakeXorHasher(),
 	}
+	return mp, nil
 }
 
-func newMembershipOpFakeBalloon(proofch chan *balloon.MembershipProof) fakeBalloon {
-	addch := make(chan *balloon.Commitment)
-	incch := make(chan *balloon.IncrementalProof)
-	closech := make(chan bool)
-
-	return fakeBalloon{
-		addch,
-		closech,
-		proofch,
-		incch,
+func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
+	ip := balloon.IncrementalProof{
+		2,
+		8,
+		common.AuditPath{"0|0": hashing.Digest{0x00}},
+		hashing.NewFakeXorHasher(),
 	}
-}
-
-func newIncrementalOpFakeBalloon(incch chan *balloon.IncrementalProof) fakeBalloon {
-	addch := make(chan *balloon.Commitment)
-	closech := make(chan bool)
-	proofch := make(chan *balloon.MembershipProof)
-
-	return fakeBalloon{
-		addch,
-		closech,
-		proofch,
-		incch,
-	}
+	return &ip, nil
 }
 
 func TestHealthCheckHandler(t *testing.T) {
@@ -136,17 +114,8 @@ func TestAdd(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	addch := make(chan *balloon.Commitment)
 	signer := sign.NewSigner()
-	handler := Add(newAddOpFakeBalloon(addch), signer)
-
-	go func() {
-		addch <- &balloon.Commitment{
-			[]byte{0x0},
-			[]byte{0x1},
-			0,
-		}
-	}()
+	handler := Add(fakeRaftBalloon{}, signer)
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -202,21 +171,8 @@ func TestMembership(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	p := make(chan *balloon.MembershipProof)
-	handler := Membership(newMembershipOpFakeBalloon(p))
-	expectedResult := &MembershipResult{Exists: true, Hyper: map[string][]uint8(nil), History: map[string][]uint8(nil), CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
-	go func() {
-		p <- balloon.NewMembershipProof(
-			true,
-			proof.NewProof(nil, nil, nil),
-			proof.NewProof(nil, nil, nil),
-			version,
-			version,
-			version+1,
-			[]byte{0x0},
-			hashing.NewSha256Hasher(),
-		)
-	}()
+	handler := Membership(fakeRaftBalloon{})
+	expectedResult := &MembershipResult{Exists: true, Hyper: common.AuditPath{}, History: common.AuditPath{}, CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -233,7 +189,6 @@ func TestMembership(t *testing.T) {
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
 	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
-
 }
 
 func TestIncremental(t *testing.T) {
@@ -249,21 +204,12 @@ func TestIncremental(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	incch := make(chan *balloon.IncrementalProof)
-	handler := Incremental(newIncrementalOpFakeBalloon(incch))
+	handler := Incremental(fakeRaftBalloon{})
 	expectedResult := &IncrementalResponse{
 		start,
 		end,
-		map[string][]byte{"0|0": []uint8{0x0}},
+		common.AuditPath{"0|0": []uint8{0x0}},
 	}
-	go func() {
-		incch <- balloon.NewIncrementalProof(
-			start,
-			end,
-			proof.AuditPath{"0|0": []uint8{0x0}},
-			hashing.NewSha256Hasher(),
-		)
-	}()
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.

@@ -78,7 +78,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //     "Version": 1,
 //     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
 //   }
-func Add(balloon balloon.Balloon, signer sign.Signable) http.HandlerFunc {
+func Add(balloon balloon.RaftBalloonApi, signer sign.Signable) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -101,7 +101,11 @@ func Add(balloon balloon.Balloon, signer sign.Signable) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		response := <-balloon.Add(event.Event)
+		response, err := balloon.Add(event.Event)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		snapshot := &Snapshot{
 			response.HistoryDigest,
 			response.HyperDigest,
@@ -124,7 +128,6 @@ func Add(balloon balloon.Balloon, signer sign.Signable) http.HandlerFunc {
 		w.WriteHeader(http.StatusCreated)
 		w.Write(out)
 		return
-
 	}
 }
 
@@ -142,7 +145,7 @@ func Add(balloon balloon.Balloon, signer sign.Signable) http.HandlerFunc {
 //     "queryVersion": "1",
 //     "actualVersion": "2",
 //   }
-func Membership(balloon balloon.Balloon) http.HandlerFunc {
+func Membership(balloon balloon.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -160,7 +163,11 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		proof := <-balloon.GenMembershipProof(query.Key, query.Version)
+		proof, err := balloon.QueryMembership(query.Key, query.Version)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		out, err := json.Marshal(ToMembershipResult(query.Key, proof))
 		if err != nil {
@@ -186,7 +193,7 @@ func Membership(balloon balloon.Balloon) http.HandlerFunc {
 //     "end": "8",
 //     "auditPath": ["<truncated for clarity in docs>"]
 //   }
-func Incremental(balloon balloon.Balloon) http.HandlerFunc {
+func Incremental(balloon balloon.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Make sure we can only be called with an HTTP POST request.
 		if r.Method != "POST" {
@@ -203,7 +210,11 @@ func Incremental(balloon balloon.Balloon) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		proof := <-balloon.GenIncrementalProof(request.Start, request.End)
+		proof, err := balloon.QueryConsistency(request.Start, request.End)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		out, err := json.Marshal(ToIncrementalResponse(proof))
 		if err != nil {
@@ -239,7 +250,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/health-check -> HealthCheckHandler
 //	/events -> Add
 //	/proofs/membership -> Membership
-func NewApiHttp(balloon balloon.Balloon, signer sign.Signable) *http.ServeMux {
+func NewApiHttp(balloon balloon.RaftBalloonApi, signer sign.Signable) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
