@@ -7,7 +7,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func testSign(t *testing.T, signer Signable) {
+func testSign(t *testing.T, signer Signer) {
 
 	message := []byte("send reinforcements, we're going to advance")
 
@@ -17,9 +17,9 @@ func testSign(t *testing.T, signer Signable) {
 	assert.True(t, result, "Must be verified")
 
 }
-func TestEdSign(t *testing.T) { testSign(t, NewSigner()) }
+func TestEdSign(t *testing.T) { testSign(t, NewEd25519Signer()) }
 
-func syncBenchmark(b *testing.B, signer Signable, iterations int) {
+func syncBenchmark(b *testing.B, signer Signer, iterations int) {
 
 	b.N = iterations
 	for i := 0; i < b.N; i++ {
@@ -28,7 +28,7 @@ func syncBenchmark(b *testing.B, signer Signable, iterations int) {
 
 }
 
-func asyncBenchmark(b *testing.B, signer Signable, numRoutines, iterations int) {
+func asyncBenchmark(b *testing.B, signer Signer, numRoutines, iterations int) {
 
 	data := make(chan []byte)
 	close := make(chan bool)
@@ -61,12 +61,12 @@ func BenchmarkEd(b *testing.B) {
 	for _, iterations := range []int{1e3, 1e4, 1e5} {
 		for _, numRoutines := range []int{1e1, 1e2, 1e3} {
 			b.Run(fmt.Sprintf("routines-%d", numRoutines), func(b *testing.B) {
-				asyncBenchmark(b, NewSigner(), numRoutines, iterations)
+				asyncBenchmark(b, NewEd25519Signer(), numRoutines, iterations)
 			})
 		}
 
 		b.Run(fmt.Sprintf(""), func(b *testing.B) {
-			syncBenchmark(b, NewSigner(), iterations)
+			syncBenchmark(b, NewEd25519Signer(), iterations)
 		})
 	}
 
