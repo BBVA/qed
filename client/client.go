@@ -166,15 +166,15 @@ func uint2bytes(i uint64) []byte {
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
 
-func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot, hasher hashing.Hasher) bool {
+func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot, hasherF func() hashing.Hasher) bool {
 
-	proof := apihttp.ToBalloonProof([]byte(c.apiKey), result, hasher)
+	proof := apihttp.ToBalloonProof([]byte(c.apiKey), result, hasherF)
 
-	return proof.Verify(&balloon.Commitment{
+	return proof.Verify(snap.Event, &balloon.Commitment{
 		snap.HistoryDigest,
 		snap.HyperDigest,
 		snap.Version,
-	}, snap.Event)
+	})
 
 }
 
