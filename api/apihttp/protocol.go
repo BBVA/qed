@@ -18,10 +18,11 @@ package apihttp
 
 import (
 	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/balloon/proof"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/util"
 )
 
 // Event is the public struct that Add handler function uses to
@@ -39,8 +40,8 @@ type MembershipQuery struct {
 
 // Snapshot is the public struct that apihttp.Add Handler call returns.
 type Snapshot struct {
-	HistoryDigest []byte
-	HyperDigest   []byte
+	HistoryDigest hashing.Digest
+	HyperDigest   hashing.Digest
 	Version       uint64
 	Event         []byte
 }
@@ -52,12 +53,12 @@ type SignedSnapshot struct {
 
 type MembershipResult struct {
 	Exists         bool
-	Hyper          map[string][]byte
-	History        map[string][]byte
+	Hyper          common.AuditPath
+	History        common.AuditPath
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64
-	KeyDigest      []byte
+	KeyDigest      hashing.Digest
 	Key            []byte
 }
 
@@ -69,7 +70,7 @@ type IncrementalRequest struct {
 type IncrementalResponse struct {
 	Start     uint64
 	End       uint64
-	AuditPath map[string][]byte
+	AuditPath common.AuditPath
 }
 
 // ToMembershipProof translates internal api balloon.MembershipProof to the
@@ -89,16 +90,12 @@ func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResu
 
 // ToBaloonProof translate public apihttp.MembershipResult:w to internal
 // balloon.Proof.
+func ToBalloonProof(id []byte, mr *MembershipResult, hasherF func() hashing.Hasher) *balloon.MembershipProof {
 
-func ToBalloonProof(id []byte, mr *MembershipResult, hasher hashing.Hasher) *balloon.MembershipProof {
+	historyProof := history.NewMembershipProof(mr.ActualVersion, mr.QueryVersion, mr.History, hasherF())
+	hyperProof := hyper.NewQueryProof(mr.Key, util.Uint64AsBytes(mr.ActualVersion), mr.Hyper, hasherF())
 
-	historyPos := history.NewRootPosition(mr.QueryVersion)
-	hyperPos := hyper.NewRootPosition(hasher.Len(), 0)
-
-	historyProof := proof.NewProof(historyPos, mr.History, hasher)
-	hyperProof := proof.NewProof(hyperPos, mr.Hyper, hasher)
-
-	return balloon.NewMembershipProof(mr.Exists, hyperProof, historyProof, mr.CurrentVersion, mr.ActualVersion, mr.QueryVersion, mr.KeyDigest, hasher)
+	return balloon.NewMembershipProof(mr.Exists, hyperProof, historyProof, mr.CurrentVersion, mr.ActualVersion, mr.QueryVersion, mr.KeyDigest, hasherF())
 
 }
 
