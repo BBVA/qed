@@ -23,6 +23,7 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 )
 
 type tamperEvent struct {
@@ -31,24 +32,16 @@ type tamperEvent struct {
 	Value     []byte
 }
 
-type DeletableStore interface {
-	Delete(key []byte) error
-	Add(key []byte, value []byte) error
-	GetRange(start, end []byte) [][]byte
-	Get(key []byte) ([]byte, error)
-	Close() error
-}
-
 // NewTamperingApi will return a mux server with the endpoint required to
 // tamper the server. it's a internal debug implementation. Running a server
 // with this enabled will run useless the qed server.
-func NewTamperingApi(store DeletableStore, hasher hashing.Hasher) *http.ServeMux {
+func NewTamperingApi(store storage.DeletableStore, hasher hashing.Hasher) *http.ServeMux {
 	api := http.NewServeMux()
 	api.HandleFunc("/tamper", apihttp.AuthHandlerMiddleware(http.HandlerFunc(tamperFunc(store, hasher))))
 	return api
 }
 
-func tamperFunc(store DeletableStore, hasher hashing.Hasher) http.HandlerFunc {
+func tamperFunc(store storage.DeletableStore, hasher hashing.Hasher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -74,14 +67,16 @@ func tamperFunc(store DeletableStore, hasher hashing.Hasher) http.HandlerFunc {
 
 		switch r.Method {
 		case "PATCH":
-			get, _ := store.Get(tp.KeyDigest)
+			get, _ := store.Get(storage.IndexPrefix, tp.KeyDigest)
 			log.Debugf("Get: %v", get)
-			log.Debugf("Tamper: %v", store.Add(tp.KeyDigest, tp.Value))
+			mutations := make([]storage.Mutation, 0)
+			mutations = append(mutations, *storage.NewMutation(storage.IndexPrefix, tp.KeyDigest, tp.Value))
+			log.Debugf("Tamper: %v", store.Mutate(mutations))
 
 		case "DELETE":
-			get, _ := store.Get(tp.KeyDigest)
+			get, _ := store.Get(storage.IndexPrefix, tp.KeyDigest)
 			log.Debugf("Get: %v", get)
-			log.Debugf("Delete: %v", store.Delete(tp.KeyDigest))
+			log.Debugf("Delete: %v", store.Delete(storage.IndexPrefix, tp.KeyDigest))
 
 		}
 

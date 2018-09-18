@@ -17,18 +17,19 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
-	"github.com/bbva/qed/sign"
 )
 
 func newStartCommand() *cobra.Command {
 	var (
-		endpoint, dbPath, storageName, privateKeyPath string
-		cacheSize                                     uint64
-		profiling, tampering                          bool
+		nodeId, httpAddr, raftAddr, mgmtAddr, joinAddr string
+		dbPath, raftPath, privateKeyPath               string
+		profiling, tampering                           bool
 	)
 
 	cmd := &cobra.Command{
@@ -39,34 +40,40 @@ func newStartCommand() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, args []string) {
 
-			signer, err := sign.NewEd25519SignerFromFile(privateKeyPath)
-			if err != nil {
-				log.Error(err)
-			}
-
-			srv := server.NewServer(
-				endpoint,
+			srv, err := server.NewServer(
+				nodeId,
+				httpAddr,
+				raftAddr,
+				mgmtAddr,
+				joinAddr,
 				dbPath,
+				raftPath,
+				privateKeyPath,
 				apiKey,
-				cacheSize,
-				storageName,
 				profiling,
 				tampering,
-				signer,
 			)
 
-			err = srv.Run()
 			if err != nil {
-				log.Errorf("Can't start QED server: %v", err)
+				log.Fatalf("Can't start QED server: %v", err)
+			}
+
+			err = srv.Start()
+			if err != nil {
+				log.Fatalf("Can't start QED server: %v", err)
 			}
 
 		},
 	}
 
-	cmd.Flags().StringVarP(&endpoint, "endpoint", "e", "0.0.0.0:8080", "Endpoint for REST requests on (host:port)")
-	cmd.Flags().StringVarP(&dbPath, "path", "p", "/var/tmp/qed.db", "Set default storage path.")
-	cmd.Flags().Uint64VarP(&cacheSize, "cache", "c", 1<<25, "Initialize and reserve custom cache size.")
-	cmd.Flags().StringVarP(&storageName, "storage", "s", "badger", "Choose between different storage backends. Eg badger")
+	hostname, _ := os.Hostname()
+	cmd.Flags().StringVarP(&nodeId, "node-id", "", hostname, "Unique name for node. If not set, fallback to hostname.")
+	cmd.Flags().StringVarP(&httpAddr, "http-addr", "", ":8080", "Endpoint for REST requests on (host:port).")
+	cmd.Flags().StringVarP(&raftAddr, "raft-addr", "", ":9000", "Raft bind address (host:port).")
+	cmd.Flags().StringVarP(&mgmtAddr, "mgmt-addr", "", ":8090", "Managment endpoint bind address (host:port)")
+	cmd.Flags().StringVarP(&joinAddr, "join-addr", "", "", "Comma-delimited list of nodes, through wich a cluster can be joined (protocol://host:port)")
+	cmd.Flags().StringVarP(&dbPath, "dbpath", "p", "/var/tmp/qed/data", "Set default storage path.")
+	cmd.Flags().StringVarP(&raftPath, "raftpath", "", "/var/tmp/qed/raft", "Set raft storage path.")
 	cmd.Flags().StringVarP(&privateKeyPath, "keypath", "y", "~/.ssh/id_ed25519", "Path to the ed25519 key file")
 	cmd.Flags().BoolVarP(&profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 

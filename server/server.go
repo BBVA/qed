@@ -20,9 +20,8 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	_ "net/http/pprof" // this wil enable the default profiling capabilities
+	_ "net/http/pprof" // this will enable the default profiling capabilities
 	"os"
 	"os/signal"
 	"syscall"
@@ -30,12 +29,10 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/tampering"
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/common"
-	"github.com/bbva/qed/balloon/history"
-	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/sign"
+	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/badger"
 )
 
@@ -48,65 +45,101 @@ type Store interface {
 
 // Server encapsulates the data and login to start/stop a QED server
 type Server struct {
-	httpEndpoint string
-	dbPath       string
-	apiKey       string
-	cacheSize    uint64
-	storages     []Store
+	nodeID         string // unique name for node. If not set, fallback to hostname
+	httpAddr       string // HTTP server bind address
+	raftAddr       string // Raft communication bind address
+	mgmtAddr       string // Management server bind address
+	joinAddr       string // Comma-delimited list of nodes, through wich a cluster can be joined (protocol://host:port)
+	dbPath         string // Path to storage directory
+	raftPath       string // Path to Raft storage directory
+	privateKeyPath string // Path to the private key file used to sign commitments
+	apiKey         string
 
 	httpServer      *http.Server
+	mgmtServer      *http.Server
+	raftBalloon     *balloon.RaftBalloon
 	tamperingServer *http.Server
 	profilingServer *http.Server
+	signer          sign.Signer
 }
 
 // NewServer synthesizes a new Server based on the parameters it receives.
-// Note that storageName must be one of 'badger'.
 func NewServer(
-	httpEndpoint string,
+	nodeID string,
+	httpAddr string,
+	raftAddr string,
+	mgmtAddr string,
+	joinAddr string,
 	dbPath string,
+	raftPath string,
+	privateKeyPath string,
 	apiKey string,
-	cacheSize uint64,
-	storageName string,
-	profiling bool,
-	tamper bool,
-	signer sign.Signer,
-) *Server {
-
-	storages := make([]Store, 0, 0)
-
-	frozen, leaves, err := buildStorageEngine(storageName, dbPath)
-	storages = append(storages, frozen, leaves)
-	balloon, err := buildBalloon(frozen, leaves, apiKey, cacheSize)
-	if err != nil {
-		log.Error(err)
-	}
+	enableProfiling bool,
+	enableTampering bool,
+) (*Server, error) {
 
 	server := &Server{
-		httpEndpoint,
-		dbPath,
-		apiKey,
-		cacheSize,
-		storages,
-		newHTTPServer(httpEndpoint, balloon, signer),
-		nil,
-		nil,
-	}
-	if tamper {
-		server.tamperingServer = newTamperingServer("localhost:8081", leaves.(tampering.DeletableStore), hashing.NewSha256Hasher())
+		nodeID:   nodeID,
+		httpAddr: httpAddr,
+		raftAddr: raftAddr,
+		mgmtAddr: mgmtAddr,
+		joinAddr: joinAddr,
+		dbPath:   dbPath,
+		raftPath: raftPath,
+		apiKey:   apiKey,
 	}
 
-	if profiling {
+	log.Infof("ensuring directory at %s exists", dbPath)
+	if err := os.MkdirAll(dbPath, 0755); err != nil {
+		return nil, err
+	}
+
+	log.Infof("ensuring directory at %s exists", raftPath)
+	if err := os.MkdirAll(raftPath, 0755); err != nil {
+		return nil, err
+	}
+
+	// Open badger store
+	store, err := badger.NewBadgerStore(dbPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create signer
+	server.signer, err = sign.NewEd25519SignerFromFile(privateKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create RaftBalloon
+	server.raftBalloon, err = balloon.NewRaftBalloon(raftPath, raftAddr, nodeID, store)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create http endpoints
+	server.httpServer = newHTTPServer(server.httpAddr, server.raftBalloon, server.signer)
+	//server.mgmtServer = newMgmtServer(server.mgmtAddr, server.raftBalloon)
+	if enableTampering {
+		server.tamperingServer = newTamperingServer("localhost:8081", store, hashing.NewSha256Hasher())
+	}
+	if enableProfiling {
 		server.profilingServer = newProfilingServer("localhost:6060")
 	}
 
-	return server
+	return server, nil
 
 }
 
-// Run will start the server in a non-blockable fashion.
-func (s *Server) Run() error {
+// Start will start the server in a non-blockable fashion.
+func (s *Server) Start() error {
 
 	log.Debugf("Starting QED server...")
+
+	err := s.raftBalloon.Open(true)
+	if err != nil {
+		return err
+	}
 
 	if s.profilingServer != nil {
 		go func() {
@@ -127,13 +160,13 @@ func (s *Server) Run() error {
 	}
 
 	go func() {
-		log.Debug("	* Starting QED API HTTP server in addr: ", s.httpEndpoint)
+		log.Debug("	* Starting QED API HTTP server in addr: ", s.httpAddr)
 		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
 			log.Errorf("Can't start QED API HTTP Server: %s", err)
 		}
 	}()
 
-	log.Debugf(" ready on %s\n", s.httpEndpoint)
+	log.Debugf(" ready on %s\n", s.httpAddr)
 
 	awaitTermSignal(s.Stop)
 
@@ -166,37 +199,11 @@ func (s *Server) Stop() {
 		log.Error(err)
 	}
 
-	for _, st := range s.storages {
-		st.Close()
-	}
-
 	log.Debugf("Done. Exiting...\n")
 }
 
-func buildStorageEngine(storageName, dbPath string) (Store, Store, error) {
-	var frozen, leaves Store
-	log.Debugf("Building storage engine...")
-	switch storageName {
-	case "badger":
-		frozen = badger.NewBadgerStorage(fmt.Sprintf("%s/frozen.db", dbPath))
-		leaves = badger.NewBadgerStorage(fmt.Sprintf("%s/leaves.db", dbPath))
-	default:
-		log.Error("Please select a valid storage backend")
-		return nil, nil, fmt.Errorf("Invalid storage name")
-	}
-	log.Debug("Done.")
-	return frozen, leaves, nil
-}
-
-func buildBalloon(frozen, leaves Store, apiKey string, cacheSize uint64) (*balloon.HyperBalloon, error) {
-	cache := common.NewSimpleCache(cacheSize)
-	history := history.NewTree(apiKey, frozen, hashing.NewSha256Hasher())
-	hyper := hyper.NewTree(apiKey, cache, leaves, hashing.NewSha256Hasher())
-	return balloon.NewHyperBalloon(hashing.NewSha256Hasher(), history, hyper), nil
-}
-
-func newHTTPServer(endpoint string, balloon *balloon.HyperBalloon, signer sign.Signer) *http.Server {
-	router := apihttp.NewApiHttp(balloon, signer)
+func newHTTPServer(endpoint string, raftBalloon balloon.RaftBalloonApi, signer sign.Signer) *http.Server {
+	router := apihttp.NewApiHttp(raftBalloon, signer)
 	server := &http.Server{
 		Addr:    endpoint,
 		Handler: apihttp.LogHandler(router),
@@ -212,7 +219,7 @@ func newProfilingServer(endpoint string) *http.Server {
 	return server
 }
 
-func newTamperingServer(endpoint string, store tampering.DeletableStore, hasher hashing.Hasher) *http.Server {
+func newTamperingServer(endpoint string, store storage.DeletableStore, hasher hashing.Hasher) *http.Server {
 	router := tampering.NewTamperingApi(store, hasher)
 	server := &http.Server{
 		Addr:    endpoint,
@@ -224,6 +231,7 @@ func newTamperingServer(endpoint string, store tampering.DeletableStore, hasher 
 func awaitTermSignal(closeFn func()) {
 
 	signals := make(chan os.Signal, 1)
+	// sigint: Ctrl-C, sigterm: kill command
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
 	// block main and wait for a signal
