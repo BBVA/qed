@@ -44,7 +44,7 @@ func setup() (scope.TestF, scope.TestF) {
 		os.RemoveAll(path)
 		os.MkdirAll(path, os.FileMode(0755))
 
-		srv = server.NewServer(listenAddr, path, apiKey, cacheSize, storageType, false, true, sign.NewSigner())
+		srv = server.NewServer(listenAddr, path, apiKey, cacheSize, storageType, false, true, sign.NewEd25519Signer())
 
 		go (func() {
 			err := srv.Run()
