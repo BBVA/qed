@@ -60,7 +60,7 @@ func TestAddSuccess(t *testing.T) {
 		0,
 		[]byte(event),
 	}
-	signer := sign.NewSigner()
+	signer := sign.NewEd25519Signer()
 	sig, err := signer.Sign([]byte(fmt.Sprintf("%v", snap)))
 	fakeSignedSnapshot := &apihttp.SignedSnapshot{
 		snap,
