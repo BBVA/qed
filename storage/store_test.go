@@ -19,32 +19,8 @@ package storage
 import (
 	"testing"
 
-	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGetIndex(t *testing.T) {
-
-	kvrange := NewKVRange()
-	for i := uint64(0); i < 10; i++ {
-		kvpair := NewKVPair(util.Uint64AsBytes(i), util.Uint64AsBytes(i))
-		kvrange = kvrange.InsertSorted(kvpair)
-	}
-
-	tests := []struct {
-		key           []byte
-		expectedIndex int
-	}{
-		{util.Uint64AsBytes(uint64(3)), 3},
-		{util.Uint64AsBytes(uint64(0)), 0},
-		{util.Uint64AsBytes(uint64(9)), 9},
-	}
-
-	for i, test := range tests {
-		require.Equalf(t, test.expectedIndex, getIndex(kvrange, test.key), "Error searching in test: %d, value: %x", i, test.key)
-	}
-
-}
 
 func TestInsertSorted(t *testing.T) {
 
@@ -92,8 +68,22 @@ func TestInsertSorted(t *testing.T) {
 				NewKVPair([]byte{0x01}, []byte{0x01}),
 				NewKVPair([]byte{0x08}, []byte{0x08}),
 			},
+			item: NewKVPair([]byte{0x08}, []byte{0x08}),
+			expectedRange: KVRange{
+				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x08}, []byte{0x08}),
+			},
+		},
+
+		{
+			originalRange: KVRange{
+				NewKVPair([]byte{0x00}, []byte{0x00}),
+				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x08}, []byte{0x08}),
+			},
 			item: NewKVPair([]byte{0x04}, []byte{0x04}),
 			expectedRange: KVRange{
+				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
 				NewKVPair([]byte{0x04}, []byte{0x04}),
 				NewKVPair([]byte{0x08}, []byte{0x08}),
@@ -102,12 +92,16 @@ func TestInsertSorted(t *testing.T) {
 
 		{
 			originalRange: KVRange{
+				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x04}, []byte{0x04}),
 				NewKVPair([]byte{0x08}, []byte{0x08}),
 			},
 			item: NewKVPair([]byte{0x09}, []byte{0x09}),
 			expectedRange: KVRange{
+				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x04}, []byte{0x04}),
 				NewKVPair([]byte{0x08}, []byte{0x08}),
 				NewKVPair([]byte{0x09}, []byte{0x09}),
 			},
