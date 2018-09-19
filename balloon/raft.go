@@ -100,6 +100,7 @@ func NewRaftBalloon(raftDir, raftBindAddr, raftID string, store storage.ManagedS
 		raftDir:      raftDir,
 		raftBindAddr: raftBindAddr,
 		raftID:       raftID,
+		done:         make(chan struct{}),
 		store:        store,
 		logStore:     logStore,
 		stableStore:  stableStore,
