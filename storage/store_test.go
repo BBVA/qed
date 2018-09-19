@@ -48,26 +48,53 @@ func TestGetIndex(t *testing.T) {
 
 func TestInsertSorted(t *testing.T) {
 
-	kvrange := KVRange{
-		NewKVPair([]byte{0x01}, []byte{0x01}),
-		NewKVPair([]byte{0x08}, []byte{0x08}),
-	}
-
 	tests := []struct {
+		originalRange KVRange
 		item          KVPair
 		expectedRange KVRange
 	}{
 
-		{NewKVPair([]byte{0x00}, []byte{0x00}),
-			KVRange{
+		{
+			originalRange: KVRange{},
+			item:          NewKVPair([]byte{0x01}, []byte{0x01}),
+			expectedRange: KVRange{
+				NewKVPair([]byte{0x01}, []byte{0x01}),
+			},
+		},
+
+		{
+			originalRange: KVRange{
+				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x08}, []byte{0x08}),
+			},
+			item: NewKVPair([]byte{0x00}, []byte{0x00}),
+			expectedRange: KVRange{
 				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
 				NewKVPair([]byte{0x08}, []byte{0x08}),
 			},
 		},
 
-		{NewKVPair([]byte{0x04}, []byte{0x04}),
-			KVRange{
+		{
+			originalRange: KVRange{
+				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x08}, []byte{0x08}),
+			},
+			item: NewKVPair([]byte{0x01}, []byte{0x01}),
+			expectedRange: KVRange{
+				NewKVPair([]byte{0x00}, []byte{0x00}),
+				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x08}, []byte{0x08}),
+			},
+		},
+
+		{
+			originalRange: KVRange{
+				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x08}, []byte{0x08}),
+			},
+			item: NewKVPair([]byte{0x04}, []byte{0x04}),
+			expectedRange: KVRange{
 				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
 				NewKVPair([]byte{0x04}, []byte{0x04}),
@@ -75,8 +102,13 @@ func TestInsertSorted(t *testing.T) {
 			},
 		},
 
-		{NewKVPair([]byte{0x09}, []byte{0x09}),
-			KVRange{
+		{
+			originalRange: KVRange{
+				NewKVPair([]byte{0x01}, []byte{0x01}),
+				NewKVPair([]byte{0x08}, []byte{0x08}),
+			},
+			item: NewKVPair([]byte{0x09}, []byte{0x09}),
+			expectedRange: KVRange{
 				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
 				NewKVPair([]byte{0x04}, []byte{0x04}),
@@ -87,7 +119,7 @@ func TestInsertSorted(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		kvrange = kvrange.InsertSorted(test.item)
+		kvrange := test.originalRange.InsertSorted(test.item)
 		require.Equalf(t, test.expectedRange, kvrange, "Error sorting in test: %d, value: %x", i, test.item)
 	}
 
