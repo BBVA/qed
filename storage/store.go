@@ -87,7 +87,14 @@ func getIndex(r KVRange, key []byte) int {
 }
 
 func (r KVRange) InsertSorted(p KVPair) KVRange {
-	index := getIndex(r, p.Key)
+
+	index := sort.Search(len(r), func(i int) bool {
+		return bytes.Compare(r[i].Key, p.Key) >= 0
+	})
+
+	if cap(r) > 0 && index < len(r) && bytes.Equal(r[index].Key, p.Key) {
+		return r
+	}
 	r = append(r, p)
 	copy(r[index+1:], r[index:])
 	r[index] = p
