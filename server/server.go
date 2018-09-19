@@ -199,6 +199,11 @@ func (s *Server) Stop() {
 		log.Error(err)
 	}
 
+	log.Debugf("Stopping RAFT server...")
+	err := s.raftBalloon.Close(true)
+	if err != nil {
+		log.Error(err)
+	}
 	log.Debugf("Done. Exiting...\n")
 }
 
