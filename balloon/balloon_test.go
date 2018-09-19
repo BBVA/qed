@@ -177,7 +177,6 @@ func TestConsistencyProofVerify(t *testing.T) {
 	// Tests already done in history>proof_test.go
 }
 
-// TODO move this to integration
 func TestAddQueryAndVerify(t *testing.T) {
 
 	log.SetLogger("TestCacheWarmingUp", log.SILENT)
