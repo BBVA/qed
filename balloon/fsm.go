@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 	"github.com/hashicorp/raft"
 )
@@ -46,15 +47,21 @@ type BalloonFSM struct {
 }
 
 func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
+
 	balloon, err := NewBalloon(store, hasherF)
 	if err != nil {
 		return nil, err
 	}
+
 	return &BalloonFSM{
 		hasherF: hasherF,
 		store:   store,
 		balloon: balloon,
 	}, nil
+}
+
+func (fsm BalloonFSM) Version() uint64 {
+	return fsm.balloon.Version()
 }
 
 func (fsm BalloonFSM) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
@@ -80,7 +87,7 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 		if err := json.Unmarshal(cmd.Sub, &sub); err != nil {
 			return &fsmGenericResponse{error: err}
 		}
-		return fsm.applyAdd(sub.Event)
+		return fsm.applyAdd(sub.Event, sub.LastBalloonVersion)
 	default:
 		return &fsmGenericResponse{error: fmt.Errorf("unknown command: %v", cmd.Type)}
 	}
@@ -97,13 +104,16 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 
 // Restore restores the node to a previous state.
 func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
+
+	log.Debug("Restoring Balloon...")
+
 	var err error
 	// Set the state from the snapshot, no lock required according to
 	// Hashicorp docs.
 	if err = fsm.store.Load(rc); err != nil {
 		return err
 	}
-	fsm.balloon, err = NewBalloon(fsm.store, fsm.hasherF)
+	fsm.balloon.RefreshVersion()
 	return err
 }
 
@@ -111,7 +121,13 @@ func (fsm *BalloonFSM) Close() error {
 	return fsm.store.Close()
 }
 
-func (fsm *BalloonFSM) applyAdd(event []byte) *fsmAddResponse {
+func (fsm *BalloonFSM) applyAdd(event []byte, version uint64) *fsmAddResponse {
+	if version < fsm.Version() {
+		return &fsmAddResponse{error: fmt.Errorf("Invalid balloon version: command already applied")}
+	}
+	if version > fsm.Version() {
+		return &fsmAddResponse{error: fmt.Errorf("Invalid balloon version: command out of order")}
+	}
 	commitment, mutations, err := fsm.balloon.Add(event)
 	if err != nil {
 		return &fsmAddResponse{error: err}
