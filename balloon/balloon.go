@@ -44,23 +44,12 @@ type Balloon struct {
 
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
-	// get last stored version
-	version := uint64(0)
-	kv, err := store.GetLast(storage.HistoryCachePrefix)
-	if err != nil {
-		if err != storage.ErrKeyNotFound {
-			return nil, err
-		}
-	} else {
-		version = util.BytesAsUint64(kv.Key[:8]) + 1
-	}
-
 	// create caches
 	historyCache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
 	hyperCache := common.NewSimpleCache(1 << 2)
 
 	// warm up hyper cache
-	err = hyperCache.Fill(store.GetAll(storage.HyperCachePrefix))
+	err := hyperCache.Fill(store.GetAll(storage.HyperCachePrefix))
 	if err != nil {
 		return nil, err
 	}
@@ -69,14 +58,19 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 	historyTree := history.NewHistoryTree(hasherF, historyCache)
 	hyperTree := hyper.NewHyperTree(hasherF, store, hyperCache)
 
-	return &Balloon{
-		version:     version,
+	balloon := &Balloon{
+		version:     0,
 		hasherF:     hasherF,
 		store:       store,
 		historyTree: historyTree,
 		hyperTree:   hyperTree,
 		hasher:      hasherF(),
-	}, nil
+	}
+
+	// update version
+	balloon.RefreshVersion()
+
+	return balloon, nil
 }
 
 // Commitment is the struct that has both history and hyper digest and the
@@ -162,6 +156,23 @@ func NewIncrementalProof(
 func (p IncrementalProof) Verify(commitmentStart, commitmentEnd *Commitment) bool {
 	ip := history.NewIncrementalProof(p.Start, p.End, p.AuditPath, p.Hasher)
 	return ip.Verify(commitmentStart.HistoryDigest, commitmentEnd.HistoryDigest)
+}
+
+func (b Balloon) Version() uint64 {
+	return b.version
+}
+
+func (b *Balloon) RefreshVersion() error {
+	// get last stored version
+	kv, err := b.store.GetLast(storage.HistoryCachePrefix)
+	if err != nil {
+		if err != storage.ErrKeyNotFound {
+			return err
+		}
+	} else {
+		b.version = util.BytesAsUint64(kv.Key[:8]) + 1
+	}
+	return nil
 }
 
 func (b *Balloon) Add(event []byte) (*Commitment, []storage.Mutation, error) {
