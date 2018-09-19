@@ -45,7 +45,7 @@ func NewDoubleTargetedCacheResolver(start, end uint64) *DoubleTargetedCacheResol
 }
 
 func (r DoubleTargetedCacheResolver) ShouldGetFromCache(pos common.Position) bool {
-	if pos.Height() == 0 && pos.IndexAsUint64() == r.start { // TODO THIS SHOULD BE TRUE for inc proofs but not for membership
+	if pos.Height() == 0 && pos.IndexAsUint64() == r.start { // THIS SHOULD BE TRUE for inc proofs but not for membership
 		return false
 	}
 	lastDescendantIndex := pos.IndexAsUint64() + pow(2, pos.Height()) - 1
