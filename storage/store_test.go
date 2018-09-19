@@ -82,7 +82,6 @@ func TestInsertSorted(t *testing.T) {
 			},
 			item: NewKVPair([]byte{0x01}, []byte{0x01}),
 			expectedRange: KVRange{
-				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
 				NewKVPair([]byte{0x08}, []byte{0x08}),
 			},
@@ -95,7 +94,6 @@ func TestInsertSorted(t *testing.T) {
 			},
 			item: NewKVPair([]byte{0x04}, []byte{0x04}),
 			expectedRange: KVRange{
-				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
 				NewKVPair([]byte{0x04}, []byte{0x04}),
 				NewKVPair([]byte{0x08}, []byte{0x08}),
@@ -109,9 +107,7 @@ func TestInsertSorted(t *testing.T) {
 			},
 			item: NewKVPair([]byte{0x09}, []byte{0x09}),
 			expectedRange: KVRange{
-				NewKVPair([]byte{0x00}, []byte{0x00}),
 				NewKVPair([]byte{0x01}, []byte{0x01}),
-				NewKVPair([]byte{0x04}, []byte{0x04}),
 				NewKVPair([]byte{0x08}, []byte{0x08}),
 				NewKVPair([]byte{0x09}, []byte{0x09}),
 			},
