@@ -46,9 +46,10 @@ func newCommand(t commandType, d interface{}) (*command, error) {
 }
 
 type insertSubCommand struct {
-	Event []byte `json:"event,omitempty"`
+	Event              []byte `json:"event,omitempty"`
+	LastBalloonVersion uint64 `json:"event,omitempty`
 }
 
-func newInsertSubCommand(event []byte) *insertSubCommand {
-	return &insertSubCommand{event}
+func newInsertSubCommand(event []byte, lastBalloonVersion uint64) *insertSubCommand {
+	return &insertSubCommand{event, lastBalloonVersion}
 }
