@@ -27,13 +27,14 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/testutils/rand"
 	b "github.com/dgraph-io/badger"
 	bo "github.com/dgraph-io/badger/options"
 )
 
-func NewBadgerTest(path string) (*badger.BadgerStorage, *b.DB) {
+func newBadgerTest(path string) (*badger.BadgerStore, error) {
 	opts := b.DefaultOptions
 	opts.Dir = path
 	opts.ValueDir = path
@@ -51,8 +52,7 @@ func NewBadgerTest(path string) (*badger.BadgerStorage, *b.DB) {
 
 	opts.SyncWrites = false
 
-	return badger.NewBadgerStorageOpts(opts)
-
+	return badger.NewBadgerStoreOpts(path, opts)
 }
 
 func cleanup(db *b.DB) {
@@ -90,7 +90,7 @@ func main() {
 	pauseBeforeQuit := flag.Bool("P", false, "pause before end for debugging purposes")
 	flag.Parse()
 
-	b, _ := NewBadgerTest(*path)
+	b, _ := newBadgerTest(*path)
 
 	// start profiler
 	go func() {
@@ -105,7 +105,7 @@ func main() {
 		value := make([]byte, 8)
 		binary.LittleEndian.PutUint64(value, 42)
 		key := rand.Bytes(128)
-		b.Add(key, value)
+		b.Mutate([]storage.Mutation{{storage.IndexPrefix, key, value}})
 		counter++
 	}
 
