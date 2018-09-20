@@ -20,9 +20,10 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/bbva/qed/storage"
 	b "github.com/dgraph-io/badger"
 	bo "github.com/dgraph-io/badger/options"
+
+	"github.com/bbva/qed/storage"
 )
 
 type BadgerStore struct {
@@ -36,6 +37,11 @@ func NewBadgerStore(path string) (*BadgerStore, error) {
 	opts.Dir = path
 	opts.ValueDir = path
 	opts.SyncWrites = false
+
+	return NewBadgerStoreOpts(path, opts)
+}
+
+func NewBadgerStoreOpts(path string, opts b.Options) (*BadgerStore, error) {
 	db, err := b.Open(opts)
 	if err != nil {
 		return nil, err
