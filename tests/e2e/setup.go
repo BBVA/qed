@@ -16,52 +16,73 @@
 package e2e
 
 import (
+	"fmt"
 	"os"
+	"os/user"
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/server"
-	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/testutils/scope"
 )
 
-var endpoint, apiKey, storageType, listenAddr string
+var apiKey, storageType, listenAddr, keyFile string
 var cacheSize uint64
 
 func init() {
-	listenAddr = ":8079"
-	endpoint = "http://127.0.0.1:8079"
 	apiKey = "my-awesome-api-key"
 	cacheSize = 50000
 	storageType = "badger"
+
+	usr, _ := user.Current()
+	keyFile = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
 }
 
-func setup() (scope.TestF, scope.TestF) {
+func setup(id int, joinAddr string, t *testing.T) (scope.TestF, scope.TestF) {
 	var srv *server.Server
-	path := "/var/tmp/balloonE2E"
+	var err error
+	path := fmt.Sprintf("/var/tmp/e2e-qed%d/", id)
 
 	before := func(t *testing.T) {
 		os.RemoveAll(path)
 		os.MkdirAll(path, os.FileMode(0755))
 
-		srv = server.NewServer(listenAddr, path, apiKey, cacheSize, storageType, false, true, sign.NewEd25519Signer())
+		hostname, _ := os.Hostname()
+		nodeId := fmt.Sprintf("%s-%d", hostname, id)
+		httpAddr := fmt.Sprintf("127.0.0.1:850%d", id)
+		raftAddr := fmt.Sprintf("127.0.0.1:830%d", id)
+		mgmtAddr := fmt.Sprintf("127.0.0.1:840%d", id)
+		dbPath := path + "data"
+		raftPath := path + "raft"
+		srv, err = server.NewServer(nodeId, httpAddr, raftAddr, mgmtAddr, joinAddr, dbPath, raftPath, keyFile, apiKey, true, true)
+		if err != nil {
+			t.Fatalf("Unable to create a new server: %v", err)
+		}
 
 		go (func() {
-			err := srv.Run()
+			err := srv.Start()
 			if err != nil {
 				t.Log(err)
 			}
 		})()
+		time.Sleep(2 * time.Second)
 	}
 
 	after := func(t *testing.T) {
 		if srv != nil {
 			srv.Stop()
+		} else {
+			t.Fatalf("Unable to shutdown the server!")
 		}
 	}
 	return before, after
 }
 
-func getClient() *client.HttpClient {
-	return client.NewHttpClient("http://localhost:8079", "my-awesome-api-key")
+func endPoint(id int) string {
+	return fmt.Sprintf("http://127.0.0.1:850%d", id)
+}
+
+func getClient(id int) *client.HttpClient {
+	return client.NewHttpClient(endPoint(id), apiKey)
 }
