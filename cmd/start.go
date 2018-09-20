@@ -70,7 +70,7 @@ func newStartCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&nodeId, "node-id", "", hostname, "Unique name for node. If not set, fallback to hostname.")
 	cmd.Flags().StringVarP(&httpAddr, "http-addr", "", ":8080", "Endpoint for REST requests on (host:port).")
 	cmd.Flags().StringVarP(&raftAddr, "raft-addr", "", ":9000", "Raft bind address (host:port).")
-	cmd.Flags().StringVarP(&mgmtAddr, "mgmt-addr", "", ":8090", "Managment endpoint bind address (host:port)")
+	cmd.Flags().StringVarP(&mgmtAddr, "mgmt-addr", "", ":8090", "Management endpoint bind address (host:port)")
 	cmd.Flags().StringVarP(&joinAddr, "join-addr", "", "", "Comma-delimited list of nodes, through wich a cluster can be joined (protocol://host:port)")
 	cmd.Flags().StringVarP(&dbPath, "dbpath", "p", "/var/tmp/qed/data", "Set default storage path.")
 	cmd.Flags().StringVarP(&raftPath, "raftpath", "", "/var/tmp/qed/raft", "Set raft storage path.")
