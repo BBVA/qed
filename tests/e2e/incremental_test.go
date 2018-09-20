@@ -28,10 +28,10 @@ import (
 )
 
 func TestIncrementalConsistency(t *testing.T) {
-	before, after := setup()
+	before, after := setup(0, "", t)
 	scenario, let := scope.Scope(t, before, after)
 
-	client := getClient()
+	client := getClient(0)
 
 	scenario("Add multiple events and verify consistency between two of them", func() {
 
