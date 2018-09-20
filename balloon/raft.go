@@ -37,6 +37,7 @@ import (
 const (
 	retainSnapshotCount = 2
 	raftTimeout         = 10 * time.Second
+	leaderWaitDelay     = 100 * time.Millisecond
 )
 
 var (
@@ -302,4 +303,27 @@ func (b RaftBalloon) QueryMembership(event []byte, version uint64) (*MembershipP
 
 func (b RaftBalloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
 	return b.fsm.QueryConsistency(start, end)
+}
+
+func (b RaftBalloon) WaitForLeader(timeout time.Duration) (string, error) {
+	tck := time.NewTicker(leaderWaitDelay)
+	defer tck.Stop()
+	tmr := time.NewTimer(timeout)
+	defer tmr.Stop()
+
+	for {
+		select {
+		case <-tck.C:
+			l := string(b.raft.Leader())
+			if l != "" {
+				return l, nil
+			}
+		case <-tmr.C:
+			return "", fmt.Errorf("timeout expired")
+		}
+	}
+}
+
+func (b RaftBalloon) IsLeader() bool {
+	return b.raft.State() == raft.Leader
 }
