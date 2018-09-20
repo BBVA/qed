@@ -17,10 +17,12 @@
 package balloon
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -108,9 +110,10 @@ func NewRaftBalloon(raftDir, raftBindAddr, raftID string, store storage.ManagedS
 	}, nil
 }
 
-// Open opens the Balloon. If enableSingle is set, and there are no existing peers,
+// Open opens the Balloon. If no joinAddr is provided, then there are no existing peers,
 // then this node becomes the first node, and therefore, leader of the cluster.
-func (b *RaftBalloon) Open(enableSingle bool) error {
+// Otherwise, it will try to join the cluster via the aforementioned joinAddr.
+func (b *RaftBalloon) Open(joinAddr, raftAddr, nodeID string) error {
 
 	b.closedMu.Lock()
 	defer b.closedMu.Unlock()
@@ -146,7 +149,7 @@ func (b *RaftBalloon) Open(enableSingle bool) error {
 		return fmt.Errorf("new raft: %s", err)
 	}
 
-	if enableSingle {
+	if joinAddr == "" {
 		log.Info("bootstrap needed")
 		configuration := raft.Configuration{
 			Servers: []raft.Server{
@@ -159,7 +162,25 @@ func (b *RaftBalloon) Open(enableSingle bool) error {
 		b.raft.BootstrapCluster(configuration)
 	} else {
 		log.Info("no bootstrap needed")
+		// If join was specified, make the join request.
+		if err := join(joinAddr, raftAddr, nodeID); err != nil {
+			log.Fatalf("failed to join node at %s: %s", joinAddr, err.Error())
+		}
 	}
+
+	return nil
+}
+
+func join(joinAddr, raftAddr, nodeID string) error {
+	b, err := json.Marshal(map[string]string{"addr": raftAddr, "id": nodeID})
+	if err != nil {
+		return err
+	}
+	resp, err := http.Post(fmt.Sprintf("http://%s/join", joinAddr), "application-type/json", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
 
 	return nil
 }

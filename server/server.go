@@ -27,6 +27,7 @@ import (
 	"syscall"
 
 	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/api/mgmthttp"
 	"github.com/bbva/qed/api/tampering"
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
@@ -119,7 +120,10 @@ func NewServer(
 
 	// Create http endpoints
 	server.httpServer = newHTTPServer(server.httpAddr, server.raftBalloon, server.signer)
-	//server.mgmtServer = newMgmtServer(server.mgmtAddr, server.raftBalloon)
+
+	// Create management endpoints
+	server.mgmtServer = newMgmtServer(server.mgmtAddr, server.raftBalloon)
+
 	if enableTampering {
 		server.tamperingServer = newTamperingServer("localhost:8081", store, hashing.NewSha256Hasher())
 	}
@@ -136,7 +140,7 @@ func (s *Server) Start() error {
 
 	log.Debugf("Starting QED server...")
 
-	err := s.raftBalloon.Open(true)
+	err := s.raftBalloon.Open(s.joinAddr, s.raftAddr, s.nodeID)
 	if err != nil {
 		return err
 	}
@@ -166,7 +170,14 @@ func (s *Server) Start() error {
 		}
 	}()
 
-	log.Debugf(" ready on %s\n", s.httpAddr)
+	go func() {
+		log.Debug("	* Starting QED MGMT HTTP server in addr: ", s.mgmtAddr)
+		if err := s.mgmtServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start QED MGMT HTTP Server: %s", err)
+		}
+	}()
+
+	log.Debugf(" ready on %s and %s\n", s.httpAddr, s.mgmtAddr)
 
 	awaitTermSignal(s.Stop)
 
@@ -209,28 +220,33 @@ func (s *Server) Stop() {
 
 func newHTTPServer(endpoint string, raftBalloon balloon.RaftBalloonApi, signer sign.Signer) *http.Server {
 	router := apihttp.NewApiHttp(raftBalloon, signer)
-	server := &http.Server{
+	return &http.Server{
 		Addr:    endpoint,
 		Handler: apihttp.LogHandler(router),
 	}
-	return server
+}
+
+func newMgmtServer(endpoint string, raftBalloon balloon.RaftBalloonApi) *http.Server {
+	router := mgmthttp.NewMgmtHttp(raftBalloon)
+	return &http.Server{
+		Addr:    endpoint,
+		Handler: apihttp.LogHandler(router),
+	}
 }
 
 func newProfilingServer(endpoint string) *http.Server {
-	server := &http.Server{
+	return &http.Server{
 		Addr:    endpoint,
 		Handler: nil,
 	}
-	return server
 }
 
 func newTamperingServer(endpoint string, store storage.DeletableStore, hasher hashing.Hasher) *http.Server {
 	router := tampering.NewTamperingApi(store, hasher)
-	server := &http.Server{
+	return &http.Server{
 		Addr:    endpoint,
 		Handler: apihttp.LogHandler(router),
 	}
-	return server
 }
 
 func awaitTermSignal(closeFn func()) {
