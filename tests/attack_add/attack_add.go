@@ -36,13 +36,14 @@ func main() {
 	duration := flag.Duration("d", 10*time.Second, "Duration")
 	endpoint := flag.String("e", "http://localhost:8080/events", "Endpoint")
 	apikey := flag.String("k", "apikey", "apikey")
-	rate := flag.Uint64("r", 100, "Request per second")
+	rate := flag.Int("r", 100, "Request per second")
 	flag.Parse()
 
 	targeter := myTargeter(*endpoint, http.Header{"Api-Key": []string{*apikey}})
 
 	atk := vegeta.NewAttacker(vegeta.Connections(*conn), vegeta.Workers(*workers), vegeta.Timeout(*timeout))
-	res := atk.Attack(targeter, *rate, *duration, "attack")
+	vgrate := vegeta.Rate{Freq: *rate, Per: time.Second}
+	res := atk.Attack(targeter, vgrate, *duration, "attack")
 	enc := vegeta.NewEncoder(os.Stdout)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
@@ -77,7 +78,7 @@ func myTargeter(endpoint string, hdr http.Header) vegeta.Targeter {
 
 		event := base64.StdEncoding.EncodeToString([]byte(time.Now().String()))
 
-		tgt.Body = []byte(fmt.Sprintf(`{"event": "%s"}`, event))
+		tgt.Body = []byte(fmt.Sprintf(`{"Event": "%s"}`, event))
 		tgt.Header = hdr
 		tgt.Method = "POST"
 		tgt.URL = endpoint
