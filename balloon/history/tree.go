@@ -17,7 +17,7 @@
 package history
 
 import (
-	"math"
+	"math/bits"
 	"sync"
 
 	"github.com/bbva/qed/balloon/common"
@@ -39,7 +39,7 @@ func NewHistoryTree(hasherF func() hashing.Hasher, cache common.Cache) *HistoryT
 }
 
 func (t *HistoryTree) getDepth(version uint64) uint16 {
-	return uint16(uint64(math.Ceil(math.Log2(float64(version + 1)))))
+	return uint16(bits.Len64(version))
 }
 
 func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []storage.Mutation, error) {
