@@ -27,10 +27,10 @@ import (
 )
 
 func TestAddVerify(t *testing.T) {
-	before, after := setup()
+	before, after := setup(0, "", t)
 	scenario, let := scope.Scope(t, before, after)
 
-	client := getClient()
+	client := getClient(0)
 
 	event := rand.RandomString(10)
 
@@ -65,25 +65,26 @@ func TestAddVerify(t *testing.T) {
 	})
 
 	scenario("Add two events, verify the first one", func() {
-		var result *apihttp.MembershipResult
+		var result_first, result_last *apihttp.MembershipResult
 		var err error
+		var first, last *apihttp.SignedSnapshot
 
-		first, _ := client.Add("Test event 1")
-		last, _ := client.Add("Test event 2")
+		first, err = client.Add("Test event 1")
+		assert.NoError(t, err)
+		last, err = client.Add("Test event 2")
+		assert.NoError(t, err)
 
 		let("Get membership proof for first inserted event", func(t *testing.T) {
-			result, err = client.Membership(first.Snapshot.Event, first.Snapshot.Version)
+			result_first, err = client.Membership(first.Snapshot.Event, first.Snapshot.Version)
+			assert.NoError(t, err)
+			result_last, err = client.Membership(last.Snapshot.Event, last.Snapshot.Version)
 			assert.NoError(t, err)
 		})
 
 		let("Verify first event", func(t *testing.T) {
-			snap := &apihttp.Snapshot{
-				first.Snapshot.HistoryDigest,
-				last.Snapshot.HyperDigest,
-				first.Snapshot.Version,
-				first.Snapshot.Event,
-			}
-			assert.True(t, client.Verify(result, snap, hashing.NewSha256Hasher()), "The proofs should be valid")
+			first.Snapshot.HyperDigest = last.Snapshot.HyperDigest
+			assert.True(t, client.Verify(result_first, first.Snapshot, hashing.NewSha256Hasher), "The first proof should be valid")
+			assert.True(t, client.Verify(result_last, last.Snapshot, hashing.NewSha256Hasher), "The last proof should be valid")
 		})
 
 	})
@@ -117,7 +118,7 @@ func TestAddVerify(t *testing.T) {
 				s[j].Snapshot.Version,
 				s[i].Snapshot.Event,
 			}
-			assert.True(t, client.Verify(p1, snap, hashing.NewSha256Hasher()), "p1 should be valid")
+			assert.True(t, client.Verify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
 
 			snap = &apihttp.Snapshot{
 				s[k].Snapshot.HistoryDigest,
@@ -125,7 +126,7 @@ func TestAddVerify(t *testing.T) {
 				s[k].Snapshot.Version,
 				s[i].Snapshot.Event,
 			}
-			assert.True(t, client.Verify(p2, snap, hashing.NewSha256Hasher()), "p2 should be valid")
+			assert.True(t, client.Verify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
 
 		})
 
