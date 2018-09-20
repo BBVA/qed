@@ -205,6 +205,11 @@ func (s *Server) Stop() {
 		log.Debugf("Done.\n")
 	}
 
+	log.Debugf("Stopping MGMT server...")
+	if err := s.mgmtServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+		log.Error(err)
+	}
+
 	log.Debugf("Stopping HTTP server...")
 	if err := s.httpServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
 		log.Error(err)
