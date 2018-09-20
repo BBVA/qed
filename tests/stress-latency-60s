@@ -14,8 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+echo Create id_ed25519 key
+ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+
 echo Starting server...
-go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -l info &
+go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l info &
 echo done.
 
 sleep 5
@@ -23,10 +26,11 @@ sleep 5
 echo Stress time!
 go run attack_add/attack_add.go -w 100 -r 1000 -d 60s -k pepe -e http://localhost:8080/events > report.bin
 cat report.bin | vegeta report
-cat report.bin | vegeta report -reporter plot > plot.html
+cat report.bin | vegeta plot > plot.html
 echo done.
 
 echo Cleanup...
 fuser -k -n tcp 8080
 rm -rf /var/tmp/demo.*
+rm /var/tmp/id_ed25519*
 echo done.
