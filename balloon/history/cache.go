@@ -33,7 +33,7 @@ func NewSingleTargetedCacheResolver(version uint64) *SingleTargetedCacheResolver
 }
 
 func (r SingleTargetedCacheResolver) ShouldGetFromCache(pos common.Position) bool {
-	return r.version > pos.IndexAsUint64()+pow(2, pos.Height())-1
+	return r.version > pos.IndexAsUint64()+1<<pos.Height()-1
 }
 
 type DoubleTargetedCacheResolver struct {
@@ -48,7 +48,7 @@ func (r DoubleTargetedCacheResolver) ShouldGetFromCache(pos common.Position) boo
 	if pos.Height() == 0 && pos.IndexAsUint64() == r.start { // THIS SHOULD BE TRUE for inc proofs but not for membership
 		return false
 	}
-	lastDescendantIndex := pos.IndexAsUint64() + pow(2, pos.Height()) - 1
+	lastDescendantIndex := pos.IndexAsUint64() + 1<<pos.Height() - 1
 	if r.start > lastDescendantIndex && r.end > lastDescendantIndex {
 		return true
 	}
@@ -67,7 +67,7 @@ func (r IncrementalCacheResolver) ShouldGetFromCache(pos common.Position) bool {
 	if pos.Height() == 0 && pos.IndexAsUint64() == r.start {
 		return true
 	}
-	lastDescendantIndex := pos.IndexAsUint64() + pow(2, pos.Height()) - 1
+	lastDescendantIndex := pos.IndexAsUint64() + 1<<pos.Height() - 1
 	if r.start > lastDescendantIndex && r.end > lastDescendantIndex {
 		return true
 	}

@@ -76,7 +76,7 @@ func (p *InsertPruner) traverse(pos common.Position, eventDigest hashing.Digest)
 }
 
 func (p InsertPruner) shouldCollect(pos common.Position) bool {
-	return p.version >= pos.IndexAsUint64()+pow(2, pos.Height())-1
+	return p.version >= pos.IndexAsUint64()+1<<pos.Height()-1
 }
 
 type SearchPruner struct {
