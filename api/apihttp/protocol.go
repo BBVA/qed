@@ -93,7 +93,7 @@ func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResu
 func ToBalloonProof(id []byte, mr *MembershipResult, hasherF func() hashing.Hasher) *balloon.MembershipProof {
 
 	historyProof := history.NewMembershipProof(mr.ActualVersion, mr.QueryVersion, mr.History, hasherF())
-	hyperProof := hyper.NewQueryProof(mr.Key, util.Uint64AsBytes(mr.ActualVersion), mr.Hyper, hasherF())
+	hyperProof := hyper.NewQueryProof(mr.KeyDigest, util.Uint64AsBytes(mr.ActualVersion), mr.Hyper, hasherF())
 
 	return balloon.NewMembershipProof(mr.Exists, hyperProof, historyProof, mr.CurrentVersion, mr.ActualVersion, mr.QueryVersion, mr.KeyDigest, hasherF())
 
