@@ -17,6 +17,7 @@
 package balloon
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +26,7 @@ import (
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
@@ -178,31 +180,27 @@ func TestConsistencyProofVerify(t *testing.T) {
 }
 
 func TestAddQueryAndVerify(t *testing.T) {
-
 	log.SetLogger("TestCacheWarmingUp", log.SILENT)
 
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/ballon_test.db")
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.1")
 	defer closeF()
 
 	// start balloon
-	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
-	require.NoError(t, err)
+	b, err := NewBalloon(store, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
 
-	event := []byte("Never knows best")
+	event := hashing.Digest("Never knows best")
 
 	// Add event
-	commitment, mutations, err := balloon.Add(event)
-	require.NoError(t, err)
+	commitment, mutations, err := b.Add(event)
 	store.Mutate(mutations)
 
 	// Query event
-	proof, err := balloon.QueryMembership(event, commitment.Version)
-	require.NoError(t, err)
+	proof, err := b.QueryMembership(event, commitment.Version)
+	assert.NoError(t, err)
 
 	// Verify
-	correct := proof.Verify(event, commitment)
-	require.True(t, correct, "The proof should verify correctly")
-
+	assert.True(t, proof.Verify(event, commitment), "The proof should verify correctly")
 }
 
 func TestCacheWarmingUp(t *testing.T) {
@@ -240,6 +238,103 @@ func TestCacheWarmingUp(t *testing.T) {
 		require.NoError(t, err)
 		require.Truef(t, proof.Verify(key, lastCommitment), "The proof should verify correctly for element %d", i)
 	}
+}
+
+func TestTamperAndVerify(t *testing.T) {
+	log.SetLogger("TestTamperAndVerify", log.SILENT)
+
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.2")
+	defer closeF()
+
+	b, err := NewBalloon(store, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
+
+	event := hashing.Digest("Never knows best")
+	eventDigest := b.hasher.Do(event)
+
+	commitment, mutations, err := b.Add(event)
+	store.Mutate(mutations)
+
+	memProof, err := b.QueryMembership(event, commitment.Version)
+	assert.NoError(t, err)
+
+	assert.True(t, memProof.Verify(event, commitment), "The proof should verify correctly")
+
+	original, err := store.Get(storage.IndexPrefix, eventDigest)
+	assert.NoError(t, err)
+
+	tpBytes := util.Uint64AsBytes(^uint64(0))
+
+	assert.NoError(t, store.Mutate(
+		[]storage.Mutation{
+			{storage.IndexPrefix, eventDigest, tpBytes},
+		},
+	), "store add returned non nil value")
+
+	tampered, _ := store.Get(storage.IndexPrefix, eventDigest)
+	assert.Equal(t, tpBytes, tampered.Value, "Tamper unsuccessful")
+	assert.NotEqual(t, original.Value, tampered.Value, "Tamper unsuccessful")
+
+	tpProof, err := b.QueryMembership(event, commitment.Version)
+	assert.NoError(t, err)
+
+	assert.Nil(t, tpProof.HistoryProof, "The history proof must be nil")
+	assert.False(t, tpProof.Verify(event, commitment), "TamperProof unsuccessful")
+}
+
+func TestDeleteAndVerify(t *testing.T) {
+	log.SetLogger("TestDeleteAndVerify", log.SILENT)
+
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.3")
+	defer closeF()
+
+	b, err := NewBalloon(store, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
+
+	event := hashing.Digest("Never knows best")
+	eventDigest := b.hasher.Do(event)
+
+	commitment, mutations, err := b.Add(event)
+	store.Mutate(mutations)
+
+	memProof, err := b.QueryMembership(event, commitment.Version)
+	assert.NoError(t, err)
+
+	assert.True(t, memProof.Verify(event, commitment), "The proof should verify correctly")
+
+	assert.NoError(t, store.Delete(storage.IndexPrefix, eventDigest), "store delete returned non nil value")
+	tampered, _ := store.Get(storage.IndexPrefix, eventDigest)
+	assert.Nil(t, tampered)
+
+	_, err = b.QueryMembership(event, commitment.Version)
+	assert.Error(t, err)
+}
+
+func TestGenIncrementalAndVerify(t *testing.T) {
+	log.SetLogger("TestDeleteAndVerify", log.SILENT)
+
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.3")
+	defer closeF()
+
+	b, err := NewBalloon(store, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
+
+	size := 10
+	c := make([]*Commitment, size)
+	for i := 0; i < size; i++ {
+		event := hashing.Digest(fmt.Sprintf("Never knows %d best", i))
+		commitment, mutations, _ := b.Add(event)
+		store.Mutate(mutations)
+		c[i] = commitment
+	}
+
+	start := uint64(1)
+	end := uint64(7)
+	proof, err := b.QueryConsistency(start, end)
+	assert.NoError(t, err)
+
+	correct := proof.Verify(c[start], c[end])
+	assert.True(t, correct, "Unable to verify incremental proof")
 }
 
 func BenchmarkAddBadger(b *testing.B) {
