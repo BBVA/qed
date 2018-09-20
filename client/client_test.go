@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/sign"
 	"github.com/stretchr/testify/assert"
@@ -98,8 +99,8 @@ func TestMembership(t *testing.T) {
 		Key:            []byte(event),
 		KeyDigest:      []byte("digest"),
 		Exists:         true,
-		Hyper:          make(map[string][]byte),
-		History:        make(map[string][]byte),
+		Hyper:          make(common.AuditPath),
+		History:        make(common.AuditPath),
 		CurrentVersion: version,
 		QueryVersion:   version,
 		ActualVersion:  version,
@@ -134,7 +135,7 @@ func TestIncremental(t *testing.T) {
 	fakeResult := &apihttp.IncrementalResponse{
 		start,
 		end,
-		map[string][]byte{"0|0": []uint8{0x0}},
+		common.AuditPath{"0|0": []uint8{0x0}},
 	}
 
 	resultJSON, _ := json.Marshal(fakeResult)
