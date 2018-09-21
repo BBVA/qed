@@ -24,10 +24,13 @@ import (
 
 type debugLogger struct {
 	log.Logger
+	returnableLogger
 }
 
 func newDebug(out io.Writer, prefix string, flag int) *debugLogger {
-	var l debugLogger
+	l := debugLogger{
+		Logger: log.Logger{},
+	}
 
 	l.SetOutput(out)
 	l.SetPrefix(prefix)

@@ -44,6 +44,16 @@ type logger interface {
 
 	Debug(v ...interface{})
 	Debugf(format string, v ...interface{})
+
+	GetLogger() *log.Logger
+}
+
+type returnableLogger struct {
+	log.Logger
+}
+
+func (r *returnableLogger) GetLogger() *log.Logger {
+	return &r.Logger
 }
 
 // The default logger is an log.ERROR level.
@@ -110,6 +120,12 @@ func Debug(v ...interface{}) {
 // to internal debug information.
 func Debugf(format string, v ...interface{}) {
 	std.Debugf(format, v...)
+}
+
+// GetLogger returns a default log.Logger instance. Useful to let third party
+// modules to use the same formatting options that the defined here.
+func GetLogger() *log.Logger {
+	return std.GetLogger()
 }
 
 // SetLogger is a function that switches between verbosity loggers. Default
