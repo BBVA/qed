@@ -24,10 +24,13 @@ import (
 
 type errorLogger struct {
 	log.Logger
+	returnableLogger
 }
 
 func newError(out io.Writer, prefix string, flag int) *errorLogger {
-	var l errorLogger
+	l := errorLogger{
+		Logger: log.Logger{},
+	}
 
 	l.SetOutput(out)
 	l.SetPrefix(prefix)
