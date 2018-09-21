@@ -88,8 +88,10 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 			return &fsmGenericResponse{error: err}
 		}
 		return fsm.applyAdd(sub.Event, sub.LastBalloonVersion)
+
 	default:
 		return &fsmGenericResponse{error: fmt.Errorf("unknown command: %v", cmd.Type)}
+
 	}
 }
 
