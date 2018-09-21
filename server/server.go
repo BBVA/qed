@@ -55,6 +55,7 @@ type Server struct {
 	raftPath       string // Path to Raft storage directory
 	privateKeyPath string // Path to the private key file used to sign commitments
 	apiKey         string
+	bootstrap      bool // Set bootstrap to true when bringing up the firts node as a master
 
 	httpServer      *http.Server
 	mgmtServer      *http.Server
@@ -79,15 +80,21 @@ func NewServer(
 	enableTampering bool,
 ) (*Server, error) {
 
+	bootstrap := false
+	if joinAddr == "" {
+		bootstrap = true
+	}
+
 	server := &Server{
-		nodeID:   nodeID,
-		httpAddr: httpAddr,
-		raftAddr: raftAddr,
-		mgmtAddr: mgmtAddr,
-		joinAddr: joinAddr,
-		dbPath:   dbPath,
-		raftPath: raftPath,
-		apiKey:   apiKey,
+		nodeID:    nodeID,
+		httpAddr:  httpAddr,
+		raftAddr:  raftAddr,
+		mgmtAddr:  mgmtAddr,
+		joinAddr:  joinAddr,
+		dbPath:    dbPath,
+		raftPath:  raftPath,
+		apiKey:    apiKey,
+		bootstrap: bootstrap,
 	}
 
 	log.Infof("ensuring directory at %s exists", dbPath)
@@ -140,7 +147,7 @@ func (s *Server) Start() error {
 
 	log.Debugf("Starting QED server...")
 
-	err := s.raftBalloon.Open(s.joinAddr, s.raftAddr, s.nodeID)
+	err := s.raftBalloon.Open(s.bootstrap)
 	if err != nil {
 		return err
 	}
