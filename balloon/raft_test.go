@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +48,7 @@ func Test_IsLeader(t *testing.T) {
 	require.NoError(t, err)
 
 	os.MkdirAll(raftPath, os.FileMode(0755))
-	r, err := balloon.NewRaftBalloon(raftPath, raftAddr(0), "0", badger)
+	r, err := NewRaftBalloon(raftPath, raftAddr(0), "0", badger)
 	require.NoError(t, err)
 
 	defer func() {
