@@ -109,6 +109,8 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, false, DEBUG, "tInfof", message)
 	assertOutput(t, false, false, DEBUG, "tDebug", message)
 	assertOutput(t, false, false, DEBUG, "tDebugf", message)
+	SetLogger("test", DEBUG)
+	assert.IsType(t, &log.Logger{}, GetLogger())
 
 	assertOutput(t, true, false, INFO, "tError", message)
 	assertOutput(t, true, false, INFO, "tErrorf", message)
@@ -116,6 +118,8 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, false, INFO, "tInfof", message)
 	assertOutput(t, false, true, INFO, "tDebug", message)
 	assertOutput(t, false, true, INFO, "tDebugf", message)
+	SetLogger("test", INFO)
+	assert.IsType(t, &log.Logger{}, GetLogger())
 
 	assertOutput(t, true, false, ERROR, "tError", message)
 	assertOutput(t, true, false, ERROR, "tErrorf", message)
@@ -123,6 +127,8 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, true, ERROR, "tInfof", message)
 	assertOutput(t, false, true, ERROR, "tDebug", message)
 	assertOutput(t, false, true, ERROR, "tDebugf", message)
+	SetLogger("test", ERROR)
+	assert.IsType(t, &log.Logger{}, GetLogger())
 
 	assertOutput(t, true, true, SILENT, "tError", message)
 	assertOutput(t, true, true, SILENT, "tErrorf", message)
@@ -130,6 +136,8 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, true, SILENT, "tInfof", message)
 	assertOutput(t, false, true, SILENT, "tDebug", message)
 	assertOutput(t, false, true, SILENT, "tDebugf", message)
+	SetLogger("test", SILENT)
+	assert.IsType(t, &log.Logger{}, GetLogger())
 
 }
 
