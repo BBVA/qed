@@ -14,13 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+echo Create id_ed25519 key
+ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+
 echo Starting server...
-/tmp/qed/cloud/aws/qed start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -l info &
+/tmp/qed/cloud/aws/qed start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l info &
 echo done.
 
 sleep 10
 
 echo Stress time!
+
 wrk -t100 -c100 -d60s --latency -s /tmp/qed/attack_add/attack_add.lua http://localhost:8080 >> /tmp/"$(curl -s http://169.254.169.254/latest/meta-data/instance-type)-results.txt"
 cat /proc/cpuinfo >> /tmp/"$(curl -s http://169.254.169.254/latest/meta-data/instance-type)-results.txt"
 echo done.
@@ -28,4 +32,5 @@ echo done.
 echo Cleanup...
 /sbin/fuser -k -n tcp 8080
 rm -rf /var/tmp/demo.*
+rm /var/tmp/id_ed25519
 echo done.
