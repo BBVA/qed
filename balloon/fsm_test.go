@@ -2,6 +2,7 @@ package balloon
 
 import (
 	"encoding/json"
+	"io"
 	"testing"
 
 	"github.com/hashicorp/raft"
@@ -41,14 +42,46 @@ func TestApply(t *testing.T) {
 	// Error: Command out of order
 	r = fsm.Apply(raftLog(insert, 1, 1)).(*fsmAddResponse)
 	assert.Error(t, r.error)
+
+	// Error: Unknown command
+	j := fsm.Apply(raftLog(insert-42, 3)).(*fsmGenericResponse)
+	assert.Error(t, j.error)
+
 }
 
 func TestSnapshot(t *testing.T) {
-	assert.True(t, true)
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
+	defer closeF()
+
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
+
+	_ = fsm.Apply(raftLog(insert, 0)).(*fsmAddResponse)
+
+	// happy path
+	_, err = fsm.Snapshot()
+	assert.NoError(t, err)
+}
+
+type fakeRC struct {
+}
+
+func (f *fakeRC) Read(p []byte) (n int, err error) {
+	return 0, io.EOF
+}
+
+func (f *fakeRC) Close() error {
+	return nil
 }
 
 func TestRestore(t *testing.T) {
-	assert.True(t, true)
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
+	defer closeF()
+
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
+
+	fsm.Restore(&fakeRC{})
 }
 
 func TestClose(t *testing.T) {
