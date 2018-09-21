@@ -27,7 +27,7 @@ type commandType int
 const (
 	insert commandType = iota // Commands which modify the database.
 	metadataDelete
-	//query                     // Commands which query the database.
+	// query                     // Commands which query the database.
 )
 
 type command struct {
