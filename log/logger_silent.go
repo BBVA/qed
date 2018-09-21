@@ -22,10 +22,13 @@ import (
 
 type silentLogger struct {
 	log.Logger
+	returnableLogger
 }
 
 func newSilent() *silentLogger {
-	return &silentLogger{}
+	return &silentLogger{
+		Logger: log.Logger{},
+	}
 }
 
 // A impl 'l Nologger' qed/log.Logger

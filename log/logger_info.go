@@ -24,10 +24,13 @@ import (
 
 type infoLogger struct {
 	log.Logger
+	returnableLogger
 }
 
 func newInfo(out io.Writer, prefix string, flag int) *infoLogger {
-	var l infoLogger
+	l := infoLogger{
+		Logger: log.Logger{},
+	}
 
 	l.SetOutput(out)
 	l.SetPrefix(prefix)
