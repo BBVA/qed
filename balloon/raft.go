@@ -405,7 +405,7 @@ func (b *RaftBalloon) Add(event []byte) (*Commitment, error) {
 	b.Lock()
 	defer b.Unlock()
 
-	cmd, err := newCommand(insert, newInsertSubCommand(event, b.fsm.Version()))
+	cmd, err := newCommand(insert, newInsertSubCommand(event))
 	if err != nil {
 		return nil, err
 	}
