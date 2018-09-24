@@ -27,6 +27,7 @@ const (
 	IndexPrefix        = byte(0x0)
 	HyperCachePrefix   = byte(0x1)
 	HistoryCachePrefix = byte(0x2)
+	FSMStatePrefix     = byte(0x3)
 )
 
 var (
