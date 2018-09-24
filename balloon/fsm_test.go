@@ -1,10 +1,8 @@
 package balloon
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/hashicorp/raft"
@@ -45,10 +43,6 @@ func TestApply(t *testing.T) {
 	r = fsm.Apply(raftLog(insert, 1, 1)).(*fsmAddResponse)
 	assert.Error(t, r.error)
 
-	// Error: Unknown command
-	j := fsm.Apply(raftLog(insert-42, 3)).(*fsmGenericResponse)
-	assert.Error(t, j.error)
-
 }
 
 func TestSnapshot(t *testing.T) {
@@ -59,16 +53,14 @@ func TestSnapshot(t *testing.T) {
 	assert.NoError(t, err)
 
 	// _ = fsm.Apply(raftLog(insert, 0)).(*fsmAddResponse)
-	fsm.Apply(raftLog(insert, 0))
+	fsm.Apply(raftLog(insert, 0, 0))
 
 	// happy path
 	_, err = fsm.Snapshot()
 	assert.NoError(t, err)
 }
 
-type fakeRC struct {
-	p []byte
-}
+type fakeRC struct{}
 
 func (f *fakeRC) Read(p []byte) (n int, err error) {
 	return 0, io.EOF
@@ -96,16 +88,40 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	assert.NoError(t, err)
 
 	// _ = fsm.Apply(raftLog(insert, 0)).(*fsmAddResponse)
-	fsm.Apply(raftLog(insert, 0))
+	fsm.Apply(raftLog(insert, 0, 0))
 
-	// happy path
-	snap, err := fsm.Snapshot()
-
+	fsmsnap, err := fsm.Snapshot()
 	assert.NoError(t, err)
-	snap.Persist(sink)
-	sink.List()
 
-	buf := bytes.NewBuffer(b)
+	snap := raft.NewInmemSnapshotStore()
 
-	assert.NoError(t, fsm.Restore(ioutil.NopCloser(buf)))
+	// Create a new sink
+	var configuration raft.Configuration
+	configuration.Servers = append(configuration.Servers, raft.Server{
+		Suffrage: raft.Voter,
+		ID:       raft.ServerID("my id"),
+		Address:  raft.ServerAddress("over here"),
+	})
+	_, trans := raft.NewInmemTransport(raft.NewInmemAddr())
+	sink, _ := snap.Create(raft.SnapshotVersionMax, 10, 3, configuration, 2, trans)
+
+	fsmsnap.Persist(sink)
+	// fsm.Close()
+
+	// Read the latest snapshot
+	snaps, _ := snap.List()
+	_, r, _ := snap.Open(snaps[0].ID)
+
+	store2, close2F := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.2.db")
+	defer close2F()
+
+	// New FSMStore
+	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
+
+	fsm2.Restore(r)
+
+	// Error: Command already applied
+	e := fsm2.Apply(raftLog(insert, 0, 0)).(*fsmAddResponse)
+	assert.Error(t, e.error)
 }
