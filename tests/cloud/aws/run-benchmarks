@@ -20,23 +20,28 @@ export TF_VOL_SIZE="20"
 # List with all the instance flavours you want to run the benchmark.
 export TF_FLAVOUR="t2.2xlarge c5.2xlarge"
 
+if [ -z $TF_PROFILE ]; then
+	echo Please ensure TF_PROFILE is set
+	exit 1
+fi
+
 function tf_init {
     terraform init -upgrade=true
     clean_resources
 }
 
 function clean_resources {
-    terraform destroy -var "flavour=${TF_FLAVOUR}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -target=null_resource.copy-qed -auto-approve
+    terraform destroy -var "profile=${TF_PROFILE}" -var "flavour=${TF_FLAVOUR}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -target=null_resource.copy-qed -auto-approve
     sleep 10
 }
 
 function destroy_all_resources {
     echo "Terraform destroy all"
-    terraform destroy -var "flavour=${TF_FLAVOUR}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+    terraform destroy -var "profile=${TF_PROFILE}" -var "flavour=${TF_FLAVOUR}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
 }
 
 function refresh_tf_state {
-    terraform refresh -var "flavour=${TF_FLAVOUR}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}"
+    terraform refresh -var "profile=${TF_PROFILE}" -var "flavour=${TF_FLAVOUR}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}"
 }
 
 function get_public_ip {
@@ -55,6 +60,7 @@ function run_benchmark {
     do
         echo "Running on $instance_flavour instance"
         terraform apply -var "flavour=${instance_flavour}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+	# read -p "Press enter to continue..."
         get_results
         clean_resources
     done
