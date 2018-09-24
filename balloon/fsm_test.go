@@ -1,8 +1,10 @@
 package balloon
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"testing"
 
 	"github.com/hashicorp/raft"
@@ -56,7 +58,8 @@ func TestSnapshot(t *testing.T) {
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
-	_ = fsm.Apply(raftLog(insert, 0)).(*fsmAddResponse)
+	// _ = fsm.Apply(raftLog(insert, 0)).(*fsmAddResponse)
+	fsm.Apply(raftLog(insert, 0))
 
 	// happy path
 	_, err = fsm.Snapshot()
@@ -64,6 +67,7 @@ func TestSnapshot(t *testing.T) {
 }
 
 type fakeRC struct {
+	p []byte
 }
 
 func (f *fakeRC) Read(p []byte) (n int, err error) {
@@ -81,13 +85,27 @@ func TestRestore(t *testing.T) {
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
-	fsm.Restore(&fakeRC{})
+	assert.NoError(t, fsm.Restore(&fakeRC{}))
 }
 
-func TestClose(t *testing.T) {
-	assert.True(t, true)
-}
+func TestAddAndRestoreSnapshot(t *testing.T) {
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
+	defer closeF()
 
-func TestAddApply(t *testing.T) {
-	assert.True(t, true)
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
+
+	// _ = fsm.Apply(raftLog(insert, 0)).(*fsmAddResponse)
+	fsm.Apply(raftLog(insert, 0))
+
+	// happy path
+	snap, err := fsm.Snapshot()
+
+	assert.NoError(t, err)
+	snap.Persist(sink)
+	sink.List()
+
+	buf := bytes.NewBuffer(b)
+
+	assert.NoError(t, fsm.Restore(ioutil.NopCloser(buf)))
 }
