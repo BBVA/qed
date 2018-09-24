@@ -402,8 +402,6 @@ func (b *RaftBalloon) remove(id string) error {
 */
 
 func (b *RaftBalloon) Add(event []byte) (*Commitment, error) {
-	b.Lock()
-	defer b.Unlock()
 
 	cmd, err := newCommand(insert, newInsertSubCommand(event))
 	if err != nil {
