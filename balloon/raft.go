@@ -151,8 +151,9 @@ func (b *RaftBalloon) Open(bootstrap bool) error {
 		return err
 	}
 
-	// Create the snapshot store. This allows the Raft to truncate the log.
-	b.store.snapshots, err = raft.NewFileSnapshotStore(b.path+"/snapshots", retainSnapshotCount, os.Stderr)
+	// Create the snapshot store. This allows the Raft to truncate the log. The library creates
+	// a folder to store the snapshots in.
+	b.store.snapshots, err = raft.NewFileSnapshotStore(b.path, retainSnapshotCount, os.Stderr)
 	if err != nil {
 		return fmt.Errorf("file snapshot store: %s", err)
 	}
