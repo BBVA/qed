@@ -10,6 +10,7 @@ qed
 tests/plot.hmtl
 tests/report.bin
 cover.html
+tests/cloud/aws/results
 
 # Documents 
 *.pdf
