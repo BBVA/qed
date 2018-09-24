@@ -11,12 +11,12 @@ import (
 	storage_utils "github.com/bbva/qed/testutils/storage"
 )
 
-func raftLog(c commandType, v uint64) *raft.Log {
+func raftLog(c commandType, index, term uint64) *raft.Log {
 	var sub json.RawMessage
-	sub, _ = json.Marshal(&insertSubCommand{[]byte("All's right with the world"), v})
+	sub, _ = json.Marshal(&insertSubCommand{[]byte("All's right with the world")})
 	data, _ := json.Marshal(&command{insert, sub})
 
-	return &raft.Log{uint64(0), uint64(0), raft.LogCommand, data}
+	return &raft.Log{index, term, raft.LogCommand, data}
 }
 
 func TestApply(t *testing.T) {
@@ -27,16 +27,20 @@ func TestApply(t *testing.T) {
 	assert.NoError(t, err)
 
 	// happy path
-	r := fsm.Apply(raftLog(insert, 0)).(*fsmAddResponse)
+	r := fsm.Apply(raftLog(insert, 1, 1)).(*fsmAddResponse)
 	assert.Nil(t, r.error)
 
 	// Error: Command already applied
-	r = fsm.Apply(raftLog(insert, 0)).(*fsmAddResponse)
+	r = fsm.Apply(raftLog(insert, 1, 1)).(*fsmAddResponse)
 	assert.Error(t, r.error)
 
+	// happy path
+	r = fsm.Apply(raftLog(insert, 2, 1)).(*fsmAddResponse)
+	assert.Nil(t, r.error)
+
 	// Error: Command out of order
-	r = fsm.Apply(raftLog(insert, 3)).(*fsmAddResponse)
-	assert.NoError(t, r.error)
+	r = fsm.Apply(raftLog(insert, 1, 1)).(*fsmAddResponse)
+	assert.Error(t, r.error)
 }
 
 func TestSnapshot(t *testing.T) {

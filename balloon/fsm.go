@@ -17,6 +17,7 @@
 package balloon
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
+	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/raft"
 )
 
@@ -42,8 +44,22 @@ type BalloonFSM struct {
 
 	store   storage.ManagedStore
 	balloon *Balloon
+	state   *fsmState
 
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
+}
+
+func loadState(s storage.ManagedStore) (*fsmState, error) {
+	var state fsmState
+	kvstate, err := s.Get(storage.FSMStatePrefix, []byte{0x00})
+	if err == storage.ErrKeyNotFound {
+		return &fsmState{0, 0, 0}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	err = decodeMsgPack(kvstate.Value, state)
+	return &state, err
 }
 
 func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
@@ -52,16 +68,17 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 	if err != nil {
 		return nil, err
 	}
+	state, err := loadState(store)
+	if err != nil {
+		return nil, err
+	}
 
 	return &BalloonFSM{
 		hasherF: hasherF,
 		store:   store,
 		balloon: balloon,
+		state:   state,
 	}, nil
-}
-
-func (fsm BalloonFSM) Version() uint64 {
-	return fsm.balloon.Version()
 }
 
 func (fsm BalloonFSM) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
@@ -70,6 +87,25 @@ func (fsm BalloonFSM) QueryMembership(event []byte, version uint64) (*Membership
 
 func (fsm BalloonFSM) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
 	return fsm.balloon.QueryConsistency(start, end)
+}
+
+type fsmState struct {
+	index, term, balloonVersion uint64
+}
+
+func (s fsmState) shouldApply(f *fsmState) bool {
+	if f.term < s.term {
+		return false
+	}
+	if f.term == s.term && f.index <= s.index {
+		return false
+	}
+
+	if f.balloonVersion > 0 && s.balloonVersion != (f.balloonVersion-1) {
+		panic("balloonVersion panic!")
+	}
+
+	return true
 }
 
 // Apply applies a Raft log entry to the database.
@@ -85,10 +121,13 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 	case insert:
 		var sub insertSubCommand
 		if err := json.Unmarshal(cmd.Sub, &sub); err != nil {
-			return &fsmGenericResponse{error: err}
+			return &fsmAddResponse{error: err}
 		}
-		return fsm.applyAdd(sub.Event, sub.LastBalloonVersion)
-
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
+		if fsm.state.shouldApply(newState) {
+			return fsm.applyAdd(sub.Event, newState)
+		}
+		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 	default:
 		return &fsmGenericResponse{error: fmt.Errorf("unknown command: %v", cmd.Type)}
 
@@ -123,17 +162,37 @@ func (fsm *BalloonFSM) Close() error {
 	return fsm.store.Close()
 }
 
-func (fsm *BalloonFSM) applyAdd(event []byte, version uint64) *fsmAddResponse {
-	if version < fsm.Version() {
-		return &fsmAddResponse{error: fmt.Errorf("Invalid balloon version: command already applied")}
-	}
-	if version > fsm.Version() {
-		return &fsmAddResponse{error: fmt.Errorf("Invalid balloon version: command out of order")}
-	}
+func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
+
 	commitment, mutations, err := fsm.balloon.Add(event)
 	if err != nil {
 		return &fsmAddResponse{error: err}
 	}
+
+	stateBuff, err := encodeMsgPack(state)
+	if err != nil {
+		return &fsmAddResponse{error: err}
+	}
+
+	mutations = append(mutations, *storage.NewMutation(storage.FSMStatePrefix, []byte{0x00}, stateBuff.Bytes()))
 	fsm.store.Mutate(mutations)
+	fsm.state = state
 	return &fsmAddResponse{commitment: commitment}
+}
+
+// Decode reverses the encode operation on a byte slice input
+func decodeMsgPack(buf []byte, out interface{}) error {
+	r := bytes.NewBuffer(buf)
+	hd := codec.MsgpackHandle{}
+	dec := codec.NewDecoder(r, &hd)
+	return dec.Decode(out)
+}
+
+// Encode writes an encoded object to a new bytes buffer
+func encodeMsgPack(in interface{}) (*bytes.Buffer, error) {
+	buf := bytes.NewBuffer(nil)
+	hd := codec.MsgpackHandle{}
+	enc := codec.NewEncoder(buf, &hd)
+	err := enc.Encode(in)
+	return buf, err
 }
