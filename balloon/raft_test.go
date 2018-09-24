@@ -46,7 +46,7 @@ func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
 	badger, err := badger.NewBadgerStore(badgerPath)
 	require.NoError(t, err)
 
-	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
+	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	os.MkdirAll(raftPath, os.FileMode(0755))
 	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger)
 	require.NoError(t, err)
