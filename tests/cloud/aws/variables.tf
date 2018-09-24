@@ -22,3 +22,6 @@ variable "region" {}
 
 // Force choose root volume size for our instance.
 variable "volume_size" {}
+
+// Force choose AWS IAM profile
+variable "profile" {}
