@@ -51,6 +51,10 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
+data "http" "ip" {
+  url = "http://icanhazip.com"
+}
+
 module "security_group" {
   source = "terraform-aws-modules/security-group/aws"
 
@@ -58,7 +62,7 @@ module "security_group" {
   description = "Security group for QED benchmark usage"
   vpc_id      = "${data.aws_vpc.default.id}"
 
-  ingress_cidr_blocks = ["0.0.0.0/0"]
+  ingress_cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
   ingress_rules       = ["http-8080-tcp", "all-icmp", "ssh-tcp" ]
   egress_rules        = ["all-all"]
 }
@@ -68,7 +72,7 @@ resource "aws_security_group_rule" "allow_profiling" {
   from_port       = 6060
   to_port         = 6060
   protocol        = "tcp"
-  cidr_blocks     = ["0.0.0.0/0"]
+  cidr_blocks     = ["${chomp(data.http.ip.body)}/32"]
 
   security_group_id = "${module.security_group.this_security_group_id}"
 }
