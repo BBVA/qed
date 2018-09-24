@@ -19,7 +19,10 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	_ "net/http/pprof" // this will enable the default profiling capabilities
 	"os"
@@ -142,6 +145,20 @@ func NewServer(
 
 }
 
+func join(joinAddr, raftAddr, nodeID string) error {
+	b, err := json.Marshal(map[string]string{"addr": raftAddr, "id": nodeID})
+	if err != nil {
+		return err
+	}
+	resp, err := http.Post(fmt.Sprintf("http://%s/join", joinAddr), "application-type/json", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 // Start will start the server in a non-blockable fashion.
 func (s *Server) Start() error {
 
@@ -185,6 +202,13 @@ func (s *Server) Start() error {
 	}()
 
 	log.Debugf(" ready on %s and %s\n", s.httpAddr, s.mgmtAddr)
+
+	if !s.bootstrap {
+		log.Debug("	* Joining existen cluster QED MGMT HTTP server in addr: ", s.mgmtAddr)
+		if err := join(s.joinAddr, s.raftAddr, s.nodeID); err != nil {
+			log.Fatalf("failed to join node at %s: %s", s.joinAddr, err.Error())
+		}
+	}
 
 	awaitTermSignal(s.Stop)
 
