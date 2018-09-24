@@ -93,11 +93,11 @@ type RaftBalloon struct {
 func NewRaftBalloon(path, addr, id string, store storage.ManagedStore) (*RaftBalloon, error) {
 
 	// Create the log store and stable store
-	logStore, err := raftbadger.NewBadgerStore(path + "/logs")
+	logStore, err := raftbadger.New(raftbadger.Options{Path: path + "/logs", NoSync: true}) // raftbadger.NewBadgerStore(path + "/logs")
 	if err != nil {
 		return nil, fmt.Errorf("new badger store: %s", err)
 	}
-	stableStore, err := raftbadger.NewBadgerStore(path + "/config")
+	stableStore, err := raftbadger.New(raftbadger.Options{Path: path + "/config", NoSync: true}) // raftbadger.NewBadgerStore(path + "/config")
 	if err != nil {
 		return nil, fmt.Errorf("new badger store: %s", err)
 	}
