@@ -78,6 +78,17 @@ resource "aws_security_group_rule" "allow_profiling" {
   security_group_id = "${module.security_group.this_security_group_id}"
 }
 
+resource "aws_security_group_rule" "allow_cluster_comm" {
+  type            = "ingress"
+  from_port       = 8080
+  to_port         = 9999
+  protocol        = "tcp"
+  source_security_group_id  = "${module.security_group.this_security_group_id}"
+
+  security_group_id = "${module.security_group.this_security_group_id}"
+}
+
+
 
 resource "aws_eip" "qed-benchmark" {
   vpc      = true
@@ -90,6 +101,7 @@ module "ec2" {
   name                        = "qed-benchmark"
   ami                         = "${data.aws_ami.amazon_linux.id}"
   instance_type               = "${var.flavour}"
+  instance_count              = "${var.cluster_size}"
   subnet_id                   = "${element(data.aws_subnet_ids.all.ids, 0)}"
   vpc_security_group_ids      = ["${module.security_group.this_security_group_id}"]
   associate_public_ip_address = true
@@ -100,6 +112,7 @@ module "ec2" {
     volume_size = "${var.volume_size}"
     delete_on_termination = true
   }]
+
 }
 
 // Build qed and outputs a single binary file
