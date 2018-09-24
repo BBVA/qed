@@ -25,3 +25,6 @@ variable "volume_size" {}
 
 // Force choose AWS IAM profile
 variable "profile" {}
+
+// Force choose cluster size
+variable "cluster_size" {}
