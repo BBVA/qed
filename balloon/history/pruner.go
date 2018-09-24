@@ -17,6 +17,8 @@
 package history
 
 import (
+	"fmt"
+
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/hashing"
 )
@@ -132,7 +134,7 @@ func (p *VerifyPruner) traverse(pos common.Position, eventDigest hashing.Digest)
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
-			panic("this digest should be in cache") // TODO return error instead of panic
+			panic(fmt.Sprintf("the digest in position %v must be in cache", pos)) // TODO return error instead of panic
 		}
 		return common.NewCached(pos, digest)
 	}
