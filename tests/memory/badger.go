@@ -105,7 +105,7 @@ func main() {
 		value := make([]byte, 8)
 		binary.LittleEndian.PutUint64(value, 42)
 		key := rand.Bytes(128)
-		b.Mutate([]storage.Mutation{{storage.IndexPrefix, key, value}})
+		b.Mutate([]*storage.Mutation{{storage.IndexPrefix, key, value}})
 		counter++
 	}
 

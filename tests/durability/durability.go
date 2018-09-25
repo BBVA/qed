@@ -121,7 +121,7 @@ func _add() {
 	value := []byte("Value")
 
 	// err := store.Mutate()
-	err := store.Mutate([]storage.Mutation{
+	err := store.Mutate([]*storage.Mutation{
 		{prefix, value, key},
 	})
 	if err != nil {
