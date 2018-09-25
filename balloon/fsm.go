@@ -51,14 +51,16 @@ type BalloonFSM struct {
 
 func loadState(s storage.ManagedStore) (*fsmState, error) {
 	var state fsmState
-	kvstate, err := s.Get(storage.FSMStatePrefix, []byte{0x00})
+	kvstate, err := s.Get(storage.FSMStatePrefix, []byte{0xab})
 	if err == storage.ErrKeyNotFound {
+		log.Infof("Unable to find previous state: assuming a clean instance")
 		return &fsmState{0, 0, 0}, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	err = decodeMsgPack(kvstate.Value, state)
+	err = decodeMsgPack(kvstate.Value, &state)
+
 	return &state, err
 }
 
@@ -70,6 +72,7 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 	}
 	state, err := loadState(store)
 	if err != nil {
+		log.Infof("There was an error recovering the FSM state!!")
 		return nil, err
 	}
 
@@ -90,19 +93,19 @@ func (fsm BalloonFSM) QueryConsistency(start, end uint64) (*IncrementalProof, er
 }
 
 type fsmState struct {
-	index, term, balloonVersion uint64
+	Index, Term, BalloonVersion uint64
 }
 
 func (s fsmState) shouldApply(f *fsmState) bool {
-	if f.term < s.term {
+	if f.Term < s.Term {
 		return false
 	}
-	if f.term == s.term && f.index <= s.index {
+	if f.Term == s.Term && f.Index <= s.Index {
 		return false
 	}
 
-	if f.balloonVersion > 0 && s.balloonVersion != (f.balloonVersion-1) {
-		panic("balloonVersion panic!")
+	if f.BalloonVersion > 0 && s.BalloonVersion != (f.BalloonVersion-1) {
+		panic(fmt.Sprintf("balloonVersion panic! old: %d new %d", s.BalloonVersion, f.BalloonVersion))
 	}
 
 	return true
@@ -174,7 +177,7 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 		return &fsmAddResponse{error: err}
 	}
 
-	mutations = append(mutations, storage.NewMutation(storage.FSMStatePrefix, []byte{0x00}, stateBuff.Bytes()))
+	mutations = append(mutations, storage.NewMutation(storage.FSMStatePrefix, []byte{0xab}, stateBuff.Bytes()))
 	fsm.store.Mutate(mutations)
 	fsm.state = state
 	return &fsmAddResponse{commitment: commitment}

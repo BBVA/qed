@@ -18,7 +18,10 @@ package balloon
 
 import (
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"os"
+	"path/filepath"
 	"sort"
 	"testing"
 	"time"
@@ -52,7 +55,8 @@ func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
 	require.NoError(t, err)
 
 	return r, func() {
-		os.RemoveAll("/var/tmp/raft-test")
+		fmt.Println("Removing node folder")
+		os.RemoveAll(fmt.Sprintf("/var/tmp/raft-test/node%d", id))
 	}
 }
 
@@ -94,7 +98,8 @@ func Test_Raft_OpenStoreCloseSingleNode(t *testing.T) {
 func Test_Raft_MultiNodeJoin(t *testing.T) {
 	r0, clean0 := newNode(t, 0)
 	defer func() {
-		r0.Close(true)
+		err := r0.Close(true)
+		require.NoError(t, err)
 		clean0()
 	}()
 
@@ -106,7 +111,8 @@ func Test_Raft_MultiNodeJoin(t *testing.T) {
 
 	r1, clean1 := newNode(t, 1)
 	defer func() {
-		r1.Close(true)
+		err := r1.Close(true)
+		require.NoError(t, err)
 		clean1()
 	}()
 
@@ -122,7 +128,8 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 
 	r0, clean0 := newNode(t, 0)
 	defer func() {
-		r0.Close(true)
+		err := r0.Close(true)
+		require.NoError(t, err)
 		clean0()
 	}()
 
@@ -134,7 +141,8 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 
 	r1, clean1 := newNode(t, 1)
 	defer func() {
-		r1.Close(true)
+		err := r1.Close(true)
+		require.NoError(t, err)
 		clean1()
 	}()
 
@@ -176,4 +184,94 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 	require.Equal(t, len(nodes), 1, "size of cluster is not correct post remove")
 	require.Equal(t, r0.ID(), string(nodes[0].ID), "cluster does not have correct nodes post remove")
 
+}
+
+func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
+	r0, clean0 := newNode(t, 0)
+
+	err := r0.Open(true)
+	require.NoError(t, err)
+
+	_, err = r0.WaitForLeader(10 * time.Second)
+	require.NoError(t, err)
+
+	// Add event
+	rand.Seed(42)
+	expectedBalloonVersion := uint64(rand.Intn(50))
+	for i := uint64(0); i < expectedBalloonVersion; i++ {
+		_, err = r0.Add([]byte("Test Event"))
+		require.NoError(t, err)
+	}
+	// force snapshot
+	// Snap the node and write to disk.
+	f, err := r0.fsm.Snapshot()
+	require.NoError(t, err)
+
+	snapDir := mustTempDir()
+	defer os.RemoveAll(snapDir)
+	snapFile, err := os.Create(filepath.Join(snapDir, "snapshot"))
+	require.NoError(t, err)
+
+	sink := &mockSnapshotSink{snapFile}
+	if err := f.Persist(sink); err != nil {
+		t.Fatalf("failed to persist snapshot to disk: %s", err.Error())
+	}
+
+	// Check restoration.
+	snapFile, err = os.Open(filepath.Join(snapDir, "snapshot"))
+	if err != nil {
+		t.Fatalf("failed to open snapshot file: %s", err.Error())
+	}
+
+	err = r0.Close(true)
+	require.NoError(t, err)
+	// clean0()
+
+	r0, clean0 = newNode(t, 0)
+	defer func() {
+		r0.Close(true)
+		clean0()
+	}()
+	err = r0.Open(true)
+	require.NoError(t, err)
+
+	_, err = r0.WaitForLeader(10 * time.Second)
+	require.NoError(t, err)
+
+	err = r0.fsm.Restore(snapFile)
+	require.NoError(t, err)
+
+	require.Equal(t, expectedBalloonVersion, r0.fsm.balloon.Version(), "Error in state recovery from snapshot")
+
+}
+
+// TODO
+func Test_Raft_SingleNodeSnapshotFailTransaction(t *testing.T) {
+
+}
+
+// TODO
+func Test_Raft_StoreLogTruncationMultinode(t *testing.T) {
+
+}
+
+type mockSnapshotSink struct {
+	*os.File
+}
+
+func (m *mockSnapshotSink) ID() string {
+	return "1"
+}
+
+func (m *mockSnapshotSink) Cancel() error {
+	return nil
+}
+
+func mustTempDir() string {
+	var err error
+	path, err := ioutil.TempDir("", "raft-test-")
+	if err != nil {
+		panic("failed to create temp dir")
+	}
+	return path
 }
