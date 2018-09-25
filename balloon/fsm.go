@@ -174,7 +174,7 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 		return &fsmAddResponse{error: err}
 	}
 
-	mutations = append(mutations, *storage.NewMutation(storage.FSMStatePrefix, []byte{0x00}, stateBuff.Bytes()))
+	mutations = append(mutations, storage.NewMutation(storage.FSMStatePrefix, []byte{0x00}, stateBuff.Bytes()))
 	fsm.store.Mutate(mutations)
 	fsm.state = state
 	return &fsmAddResponse{commitment: commitment}

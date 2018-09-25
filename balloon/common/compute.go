@@ -52,6 +52,10 @@ func (v *ComputeHashVisitor) VisitCollectable(pos Position, result interface{}) 
 	return result
 }
 
+func (v *ComputeHashVisitor) VisitCacheable(pos Position, result interface{}) interface{} {
+	return result
+}
+
 func (v *ComputeHashVisitor) leafHash(id, leaf []byte) hashing.Digest {
 	return v.hasher.Salted(id, leaf)
 }

@@ -29,6 +29,7 @@ type PostOrderVisitor interface {
 	VisitLeaf(pos Position, value []byte) interface{}
 	VisitCached(pos Position, cachedDigest hashing.Digest) interface{}
 	VisitCollectable(pos Position, result interface{}) interface{}
+	VisitCacheable(pos Position, result interface{}) interface{}
 }
 
 type PreOrderVisitor interface {
@@ -38,6 +39,7 @@ type PreOrderVisitor interface {
 	VisitLeaf(pos Position, value []byte)
 	VisitCached(pos Position, cachedDigest hashing.Digest)
 	VisitCollectable(pos Position)
+	VisitCacheable(pos Position)
 }
 
 type Visitable interface {
@@ -70,6 +72,10 @@ type Leaf struct {
 type Cached struct {
 	pos    Position
 	digest hashing.Digest
+}
+
+type Cacheable struct {
+	underlying Visitable
 }
 
 type Collectable struct {
@@ -184,6 +190,28 @@ func (c Cached) Position() Position {
 
 func (c Cached) String() string {
 	return fmt.Sprintf("Cached(%v)[ %x ]", c.pos, c.digest)
+}
+
+func NewCacheable(underlying Visitable) *Cacheable {
+	return &Cacheable{underlying}
+}
+
+func (c Cacheable) PostOrder(visitor PostOrderVisitor) interface{} {
+	result := c.underlying.PostOrder(visitor)
+	return visitor.VisitCacheable(c.Position(), result)
+}
+
+func (c Cacheable) PreOrder(visitor PreOrderVisitor) {
+	visitor.VisitCacheable(c.Position())
+	c.underlying.PreOrder(visitor)
+}
+
+func (c Cacheable) Position() Position {
+	return c.underlying.Position()
+}
+
+func (c Cacheable) String() string {
+	return fmt.Sprintf("Cacheable[ %v ]", c.underlying)
 }
 
 func NewCollectable(underlying Visitable) *Collectable {

@@ -40,7 +40,7 @@ func TestMutate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := store.Mutate([]storage.Mutation{
+		err := store.Mutate([]*storage.Mutation{
 			{prefix, test.key, test.value},
 		})
 		require.Equalf(t, test.expectedError, err, "Error mutating in test: %s", test.testname)
@@ -67,7 +67,7 @@ func TestGetExistentKey(t *testing.T) {
 
 	for _, test := range testCases {
 		if test.expectedError == nil {
-			err := store.Mutate([]storage.Mutation{
+			err := store.Mutate([]*storage.Mutation{
 				{test.prefix, test.key, test.value},
 			})
 			require.NoError(t, err)
@@ -102,7 +102,7 @@ func TestGetRange(t *testing.T) {
 
 	prefix := byte(0x0)
 	for i := 10; i < 50; i++ {
-		store.Mutate([]storage.Mutation{
+		store.Mutate([]*storage.Mutation{
 			{prefix, []byte{byte(i)}, []byte("Value")},
 		})
 	}
@@ -135,7 +135,7 @@ func TestGetAll(t *testing.T) {
 	// insert
 	for i := uint16(0); i < numElems; i++ {
 		key := util.Uint16AsBytes(i)
-		store.Mutate([]storage.Mutation{
+		store.Mutate([]*storage.Mutation{
 			{prefix, key, key},
 		})
 	}
@@ -170,7 +170,7 @@ func TestGetLast(t *testing.T) {
 	for _, prefix := range prefixes {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
-			store.Mutate([]storage.Mutation{
+			store.Mutate([]*storage.Mutation{
 				{prefix[0], key, key},
 			})
 		}
@@ -190,7 +190,7 @@ func BenchmarkMutate(b *testing.B) {
 	b.N = 10000
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		store.Mutate([]storage.Mutation{
+		store.Mutate([]*storage.Mutation{
 			{prefix, rand.Bytes(128), []byte("Value")},
 		})
 	}
@@ -208,11 +208,11 @@ func BenchmarkGet(b *testing.B) {
 	for i := 0; i < N; i++ {
 		if i == 10 {
 			key = rand.Bytes(128)
-			store.Mutate([]storage.Mutation{
+			store.Mutate([]*storage.Mutation{
 				{prefix, key, []byte("Value")},
 			})
 		} else {
-			store.Mutate([]storage.Mutation{
+			store.Mutate([]*storage.Mutation{
 				{prefix, rand.Bytes(128), []byte("Value")},
 			})
 		}
@@ -234,7 +234,7 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 
 	// populate storage
 	for i := 0; i < N; i++ {
-		store.Mutate([]storage.Mutation{
+		store.Mutate([]*storage.Mutation{
 			{prefix, []byte{byte(i)}, []byte("Value")},
 		})
 	}

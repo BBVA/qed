@@ -266,7 +266,7 @@ func TestTamperAndVerify(t *testing.T) {
 	tpBytes := util.Uint64AsBytes(^uint64(0))
 
 	assert.NoError(t, store.Mutate(
-		[]storage.Mutation{
+		[]*storage.Mutation{
 			{storage.IndexPrefix, eventDigest, tpBytes},
 		},
 	), "store add returned non nil value")
@@ -338,6 +338,9 @@ func TestGenIncrementalAndVerify(t *testing.T) {
 }
 
 func BenchmarkAddBadger(b *testing.B) {
+
+	log.SetLogger("BenchmarkAddBadger", log.SILENT)
+
 	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/ballon_bench.db")
 	defer closeF()
 
