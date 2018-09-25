@@ -48,12 +48,6 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 	historyCache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
 	hyperCache := common.NewSimpleCache(1 << 2)
 
-	// warm up hyper cache
-	err := hyperCache.Fill(store.GetAll(storage.HyperCachePrefix))
-	if err != nil {
-		return nil, err
-	}
-
 	// create trees
 	historyTree := history.NewHistoryTree(hasherF, historyCache)
 	hyperTree := hyper.NewHyperTree(hasherF, store, hyperCache)
