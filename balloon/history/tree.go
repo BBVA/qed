@@ -42,15 +42,13 @@ func (t *HistoryTree) getDepth(version uint64) uint16 {
 	return uint16(bits.Len64(version))
 }
 
-func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []storage.Mutation, error) {
+func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
 	t.lock.Lock() // TODO REMOVE THIS!!!
 	defer t.lock.Unlock()
 
-	log.Debugf("Adding event %b with version %d\n", eventDigest, version)
-
 	// visitors
 	computeHash := common.NewComputeHashVisitor(t.hasher)
-	caching := common.NewCachingVisitor(computeHash)
+	collect := common.NewCollectMutationsVisitor(computeHash, storage.HistoryCachePrefix)
 
 	// build pruning context
 	context := PruningContext{
@@ -67,17 +65,9 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	// log.Debugf("Pruned tree: %s", print.Result())
 
 	// visit the pruned tree
-	rh := pruned.PostOrder(caching).(hashing.Digest)
+	rh := pruned.PostOrder(collect).(hashing.Digest)
 
-	// collect mutations
-	cachedElements := caching.Result()
-	mutations := make([]storage.Mutation, 0)
-	for _, e := range cachedElements {
-		mutation := storage.NewMutation(storage.HistoryCachePrefix, e.Pos.Bytes(), e.Digest)
-		mutations = append(mutations, *mutation)
-	}
-
-	return rh, mutations, nil
+	return rh, collect.Result(), nil
 }
 
 func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, error) {

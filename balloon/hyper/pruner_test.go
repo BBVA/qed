@@ -55,6 +55,10 @@ func collectable(underlying common.Visitable) *common.Collectable {
 	return common.NewCollectable(underlying)
 }
 
+func cacheable(underlying common.Visitable) *common.Cacheable {
+	return common.NewCacheable(underlying)
+}
+
 func TestInsertPruner(t *testing.T) {
 
 	numBits := uint16(8)
@@ -62,17 +66,17 @@ func TestInsertPruner(t *testing.T) {
 
 	testCases := []struct {
 		key, value     []byte
-		storeMutations []storage.Mutation
+		storeMutations []*storage.Mutation
 		expectedPruned common.Visitable
 	}{
 		{
 			key:            []byte{0},
 			value:          []byte{0},
-			storeMutations: []storage.Mutation{},
+			storeMutations: []*storage.Mutation{},
 			expectedPruned: root(pos(0, 8),
-				collectable(node(pos(0, 7),
-					collectable(node(pos(0, 6),
-						collectable(node(pos(0, 5),
+				collectable(cacheable(node(pos(0, 7),
+					collectable(cacheable(node(pos(0, 6),
+						collectable(cacheable(node(pos(0, 5),
 							node(pos(0, 4),
 								node(pos(0, 3),
 									node(pos(0, 2),
@@ -82,22 +86,22 @@ func TestInsertPruner(t *testing.T) {
 										cached(pos(2, 1))),
 									cached(pos(4, 2))),
 								cached(pos(8, 3))),
-							cached(pos(16, 4)))),
-						cached(pos(32, 5)))),
-					cached(pos(64, 6)))),
+							cached(pos(16, 4))))),
+						cached(pos(32, 5))))),
+					cached(pos(64, 6))))),
 				cached(pos(128, 7)),
 			),
 		},
 		{
 			key:   []byte{2},
 			value: []byte{1},
-			storeMutations: []storage.Mutation{
+			storeMutations: []*storage.Mutation{
 				{storage.IndexPrefix, []byte{0}, []byte{0}},
 			},
 			expectedPruned: root(pos(0, 8),
-				collectable(node(pos(0, 7),
-					collectable(node(pos(0, 6),
-						collectable(node(pos(0, 5),
+				collectable(cacheable(node(pos(0, 7),
+					collectable(cacheable(node(pos(0, 6),
+						collectable(cacheable(node(pos(0, 5),
 							node(pos(0, 4),
 								node(pos(0, 3),
 									node(pos(0, 2),
@@ -109,26 +113,26 @@ func TestInsertPruner(t *testing.T) {
 											cached(pos(3, 0)))),
 									cached(pos(4, 2))),
 								cached(pos(8, 3))),
-							cached(pos(16, 4)))),
-						cached(pos(32, 5)))),
-					cached(pos(64, 6)))),
+							cached(pos(16, 4))))),
+						cached(pos(32, 5))))),
+					cached(pos(64, 6))))),
 				cached(pos(128, 7)),
 			),
 		},
 		{
 			key:   []byte{255},
 			value: []byte{2},
-			storeMutations: []storage.Mutation{
+			storeMutations: []*storage.Mutation{
 				{storage.IndexPrefix, []byte{0}, []byte{0}},
 				{storage.IndexPrefix, []byte{2}, []byte{1}},
 			},
 			expectedPruned: root(pos(0, 8),
 				cached(pos(0, 7)),
-				collectable(node(pos(128, 7),
+				collectable(cacheable(node(pos(128, 7),
 					cached(pos(128, 6)),
-					collectable(node(pos(192, 6),
+					collectable(cacheable(node(pos(192, 6),
 						cached(pos(192, 5)),
-						collectable(node(pos(224, 5),
+						collectable(cacheable(node(pos(224, 5),
 							cached(pos(224, 4)),
 							node(pos(240, 4),
 								cached(pos(240, 3)),
@@ -138,8 +142,8 @@ func TestInsertPruner(t *testing.T) {
 										cached(pos(252, 1)),
 										node(pos(254, 1),
 											cached(pos(254, 0)),
-											leaf(pos(255, 0), 2))))))))),
-				),
+											leaf(pos(255, 0), 2))))))))))),
+				)),
 				),
 			),
 		},
@@ -175,12 +179,12 @@ func TestSearchPruner(t *testing.T) {
 
 	testCases := []struct {
 		key            []byte
-		storeMutations []storage.Mutation
+		storeMutations []*storage.Mutation
 		expectedPruned common.Visitable
 	}{
 		{
 			key: []byte{0},
-			storeMutations: []storage.Mutation{
+			storeMutations: []*storage.Mutation{
 				{storage.IndexPrefix, []byte{0}, []byte{0}},
 			},
 			expectedPruned: root(pos(0, 8),
@@ -204,7 +208,7 @@ func TestSearchPruner(t *testing.T) {
 		},
 		{
 			key: []byte{6},
-			storeMutations: []storage.Mutation{
+			storeMutations: []*storage.Mutation{
 				{storage.IndexPrefix, []byte{1}, []byte{1}},
 				{storage.IndexPrefix, []byte{6}, []byte{6}},
 			},
@@ -263,7 +267,7 @@ func TestVerifyPruner(t *testing.T) {
 	// Add element before verifying.
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
-	mutations := []storage.Mutation{
+	mutations := []*storage.Mutation{
 		{storage.IndexPrefix, []byte{0}, []byte{0}},
 	}
 	store.Mutate(mutations)

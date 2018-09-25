@@ -19,8 +19,9 @@ package common
 import (
 	"testing"
 
-	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/require"
+
+	"github.com/bbva/qed/hashing"
 )
 
 func TestCachingVisitor(t *testing.T) {
@@ -31,11 +32,12 @@ func TestCachingVisitor(t *testing.T) {
 	}{
 		{
 			visitable: NewCollectable(
-				NewLeaf(
-					&FakePosition{[]byte{0x0}, 0},
-					[]byte{0x0},
-				),
-			),
+				NewCacheable(
+					NewLeaf(
+						&FakePosition{[]byte{0x0}, 0},
+						[]byte{0x0},
+					),
+				)),
 			expectedElements: []CachedElement{
 				*NewCachedElement(
 					&FakePosition{[]byte{0x0}, 0},
@@ -45,11 +47,13 @@ func TestCachingVisitor(t *testing.T) {
 		},
 		{
 			visitable: NewCollectable(
-				NewRoot(&FakePosition{[]byte{0x0}, 1},
-					NewCached(&FakePosition{[]byte{0x0}, 0}, hashing.Digest{0x0}),
-					NewCollectable(
-						NewLeaf(&FakePosition{[]byte{0x1}, 0}, hashing.Digest{0x1})),
-				)),
+				NewCacheable(
+					NewRoot(&FakePosition{[]byte{0x0}, 1},
+						NewCached(&FakePosition{[]byte{0x0}, 0}, hashing.Digest{0x0}),
+						NewCollectable(
+							NewCacheable(
+								NewLeaf(&FakePosition{[]byte{0x1}, 0}, hashing.Digest{0x1}))),
+					))),
 			expectedElements: []CachedElement{
 				*NewCachedElement(
 					&FakePosition{[]byte{0x1}, 0},
@@ -67,8 +71,9 @@ func TestCachingVisitor(t *testing.T) {
 				NewCached(&FakePosition{[]byte{0x0}, 1}, hashing.Digest{0x1}),
 				NewPartialNode(&FakePosition{[]byte{0x1}, 1},
 					NewCollectable(
-						NewLeaf(&FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x2}),
-					),
+						NewCacheable(
+							NewLeaf(&FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x2}),
+						)),
 				),
 			),
 			expectedElements: []CachedElement{
@@ -80,16 +85,19 @@ func TestCachingVisitor(t *testing.T) {
 		},
 		{
 			visitable: NewCollectable(
-				NewRoot(
-					&FakePosition{[]byte{0x0}, 2},
-					NewCached(&FakePosition{[]byte{0x0}, 1}, hashing.Digest{0x1}),
-					NewCollectable(
-						NewNode(&FakePosition{[]byte{0x2}, 1},
-							NewCached(&FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x2}),
-							NewCollectable(
-								NewLeaf(&FakePosition{[]byte{0x3}, 0}, hashing.Digest{0x3}),
-							))),
-				)),
+				NewCacheable(
+					NewRoot(
+						&FakePosition{[]byte{0x0}, 2},
+						NewCached(&FakePosition{[]byte{0x0}, 1}, hashing.Digest{0x1}),
+						NewCollectable(
+							NewCacheable(
+								NewNode(&FakePosition{[]byte{0x2}, 1},
+									NewCached(&FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x2}),
+									NewCollectable(
+										NewCacheable(
+											NewLeaf(&FakePosition{[]byte{0x3}, 0}, hashing.Digest{0x3}),
+										))))),
+					))),
 			expectedElements: []CachedElement{
 				*NewCachedElement(
 					&FakePosition{[]byte{0x3}, 0},
@@ -112,7 +120,8 @@ func TestCachingVisitor(t *testing.T) {
 				NewPartialNode(&FakePosition{[]byte{0x4}, 2},
 					NewPartialNode(&FakePosition{[]byte{0x4}, 1},
 						NewCollectable(
-							NewLeaf(&FakePosition{[]byte{0x4}, 0}, hashing.Digest{0x4}))),
+							NewCacheable(
+								NewLeaf(&FakePosition{[]byte{0x4}, 0}, hashing.Digest{0x4})))),
 				),
 			),
 			expectedElements: []CachedElement{
@@ -125,10 +134,22 @@ func TestCachingVisitor(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		visitor := NewCachingVisitor(NewComputeHashVisitor(hashing.NewFakeXorHasher()))
+		cache := NewSimpleCache(0)
+		visitor := NewCachingVisitor(NewComputeHashVisitor(hashing.NewFakeXorHasher()), cache)
 		c.visitable.PostOrder(visitor)
-		cachedElements := visitor.Result()
-		require.Equalf(t, c.expectedElements, cachedElements, "The cached elements %v should be equal to the expected %v in test case %d", cachedElements, c.expectedElements, i)
+		for _, e := range c.expectedElements {
+			v, _ := cache.Get(e.Pos)
+			require.Equalf(t, e.Digest, v, "The cached element %v should be cached in test case %d", e, i)
+		}
 	}
 
+}
+
+type CachedElement struct {
+	Pos    Position
+	Digest hashing.Digest
+}
+
+func NewCachedElement(pos Position, digest hashing.Digest) *CachedElement {
+	return &CachedElement{pos, digest}
 }

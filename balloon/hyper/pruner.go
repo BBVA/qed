@@ -81,7 +81,7 @@ func (p *InsertPruner) traverse(pos common.Position, leaves storage.KVRange) com
 	if p.navigator.IsRoot(pos) {
 		return common.NewRoot(pos, left, right)
 	}
-	return common.NewCollectable(common.NewNode(pos, left, right))
+	return common.NewCollectable(common.NewCacheable(common.NewNode(pos, left, right)))
 }
 
 func (p *InsertPruner) traverseWithoutCache(pos common.Position, leaves storage.KVRange) common.Visitable {

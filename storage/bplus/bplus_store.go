@@ -39,7 +39,7 @@ func (p KVItem) Less(b btree.Item) bool {
 	return bytes.Compare(p.Key, b.(KVItem).Key) < 0
 }
 
-func (s *BPlusTreeStore) Mutate(mutations []storage.Mutation) error {
+func (s *BPlusTreeStore) Mutate(mutations []*storage.Mutation) error {
 	for _, m := range mutations {
 		key := append([]byte{m.Prefix}, m.Key...)
 		s.db.ReplaceOrInsert(KVItem{key, m.Value})

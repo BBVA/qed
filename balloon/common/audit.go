@@ -87,7 +87,12 @@ func (v *AuditPathVisitor) VisitCached(pos Position, cachedDigest hashing.Digest
 }
 
 func (v *AuditPathVisitor) VisitCollectable(pos Position, result interface{}) interface{} {
-	digest := v.decorated.VisitCollectable(pos, result)
-	v.auditPath[pos.StringId()] = digest.(hashing.Digest)
+	digest := v.decorated.VisitCollectable(pos, result).(hashing.Digest)
+	v.auditPath[pos.StringId()] = digest
 	return digest
+}
+
+func (v *AuditPathVisitor) VisitCacheable(pos Position, result interface{}) interface{} {
+	// by-pass
+	return v.decorated.VisitCacheable(pos, result)
 }
