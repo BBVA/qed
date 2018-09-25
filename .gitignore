@@ -11,6 +11,7 @@ tests/plot.hmtl
 tests/report.bin
 cover.html
 tests/cloud/aws/results
+tests/cloud/aws/to_upload/rendered
 
 # Documents 
 *.pdf

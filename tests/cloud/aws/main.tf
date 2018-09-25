@@ -80,19 +80,27 @@ resource "aws_security_group_rule" "allow_profiling" {
 
 resource "aws_security_group_rule" "allow_cluster_comm" {
   type            = "ingress"
-  from_port       = 8080
-  to_port         = 9999
+  from_port       = 0
+  to_port         = 65535
   protocol        = "tcp"
   source_security_group_id  = "${module.security_group.this_security_group_id}"
 
   security_group_id = "${module.security_group.this_security_group_id}"
 }
 
-
-
-resource "aws_eip" "qed-benchmark" {
+resource "aws_eip" "qed-benchmark-master" {
   vpc      = true
   instance = "${module.ec2.id[0]}"
+}
+
+resource "aws_eip" "qed-benchmark-slave01" {
+  vpc      = true
+  instance = "${module.ec2.id[1]}"
+}
+
+resource "aws_eip" "qed-benchmark-slave02" {
+  vpc      = true
+  instance = "${module.ec2.id[2]}"
 }
 
 module "ec2" {
@@ -105,7 +113,7 @@ module "ec2" {
   subnet_id                   = "${element(data.aws_subnet_ids.all.ids, 0)}"
   vpc_security_group_ids      = ["${module.security_group.this_security_group_id}"]
   associate_public_ip_address = true
-  key_name                    = "${aws_key_pair.qed-benchmark.key_name}" 
+  key_name                    = "${aws_key_pair.qed-benchmark.key_name}"
 
   root_block_device = [{
     volume_type = "gp2"
@@ -118,21 +126,54 @@ module "ec2" {
 // Build qed and outputs a single binary file
 resource "null_resource" "build-qed" {
   provisioner "local-exec" {
-    command = "go build ../../../"
+    command = "go build -o to_upload/qed ../../../"
   }
 
-  depends_on = ["aws_eip.qed-benchmark"]
+  depends_on = ["aws_eip.qed-benchmark-master", "aws_eip.qed-benchmark-slave01", "aws_eip.qed-benchmark-slave02"]
+
+}
+
+# Template for initial configuration bash script
+ resource "template_dir" "gen-config" {
+   source_dir = "templates"
+   destination_dir = "to_upload/rendered"
+
+   vars {
+     master_address = "${module.ec2.private_ip[0]}"
+     slave01_address = "${module.ec2.private_ip[1]}"
+     slave02_address = "${module.ec2.private_ip[2]}"
+   }
+
+   depends_on = ["module.ec2", "null_resource.build-qed"]
+ }
+
+// Copies qed binary and bench tools to out EC2 instance using SSH
+resource "null_resource" "copy-qed-to-master" {
+  provisioner "file" {
+    source      = "to_upload/"
+    destination = "/tmp/qed"
+
+    connection {
+      host        = "${aws_eip.qed-benchmark-master.public_ip}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+  }
+
+  depends_on = ["null_resource.build-qed", "module.ec2", "template_dir.gen-config"]
 
 }
 
 // Copies qed binary and bench tools to out EC2 instance using SSH
-resource "null_resource" "copy-qed" {
+resource "null_resource" "copy-qed-to-slave01" {
   provisioner "file" {
-    source      = "../../../tests"
+    source      = "to_upload/"
     destination = "/tmp/qed"
 
     connection {
-      host        = "${aws_eip.qed-benchmark.public_ip}"
+      host        = "${aws_eip.qed-benchmark-slave01.public_ip}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -140,18 +181,18 @@ resource "null_resource" "copy-qed" {
     }
   }
 
-  depends_on = ["null_resource.build-qed", "module.ec2"]
+  depends_on = ["null_resource.build-qed", "module.ec2", "template_dir.gen-config"]
 
 }
 
-resource "null_resource" "install-tools" {
-  provisioner "remote-exec" {
-    inline = [
-      "chmod +x /tmp/qed/cloud/aws/install-tools /tmp/qed/cloud/aws/stress-throughput-60s /tmp/qed/cloud/aws/qed",
-      "/tmp/qed/cloud/aws/install-tools",
-    ]
+// Copies qed binary and bench tools to out EC2 instance using SSH
+resource "null_resource" "copy-qed-to-slave02" {
+  provisioner "file" {
+    source      = "to_upload/"
+    destination = "/tmp/qed"
+
     connection {
-      host        = "${aws_eip.qed-benchmark.public_ip}"
+      host        = "${aws_eip.qed-benchmark-slave02.public_ip}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -159,18 +200,99 @@ resource "null_resource" "install-tools" {
     }
   }
 
-  depends_on = ["null_resource.copy-qed"]
+  depends_on = ["null_resource.build-qed", "module.ec2", "template_dir.gen-config"]
+
+}
+
+resource "null_resource" "install-tools-to-master" {
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/qed/install-tools /tmp/qed/stress-throughput-60s /tmp/qed/qed",
+      "/tmp/qed/install-tools",
+    ]
+   
+    connection {
+      host        = "${aws_eip.qed-benchmark-master.public_ip}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+
+  }
+
+  depends_on = ["null_resource.copy-qed-to-master"]
+
+}
+
+resource "null_resource" "start-master" {
+  provisioner "remote-exec" {
+    inline = [
+      "find /tmp/qed -type f -exec chmod a+x {} \\;",
+      "/tmp/qed/rendered/start_master",
+    ]
+
+    connection {
+      host        = "${aws_eip.qed-benchmark-master.public_ip}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+  }
+
+  depends_on = ["null_resource.install-tools-to-master"]
+
+}
+
+resource "null_resource" "start-slave01" {
+  provisioner "remote-exec" {
+    inline = [
+      "find /tmp/qed -type f -exec chmod a+x {} \\;",
+      "/tmp/qed//rendered/start_slave01",
+    ]
+
+    connection {
+      host        = "${aws_eip.qed-benchmark-slave01.public_ip}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+  }
+
+  depends_on = ["null_resource.install-tools-to-master", "null_resource.start-master"]
+
+}
+
+resource "null_resource" "start-slave02" {
+  provisioner "remote-exec" {
+    inline = [
+      "find /tmp/qed -type f -exec chmod a+x {} \\;",
+      "/tmp/qed/rendered/start_slave02",
+    ]
+
+    connection {
+      host        = "${aws_eip.qed-benchmark-slave02.public_ip}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+  }
+
+  depends_on = ["null_resource.install-tools-to-master", "null_resource.start-master"]
 
 }
 
 resource "null_resource" "run-benchmarks" {
   provisioner "remote-exec" {
     inline = [
-      "/tmp/qed/cloud/aws/stress-throughput-60s",
+      "/tmp/qed/rendered/stress-throughput-60s",
     ]
 
     connection {
-      host        = "${aws_eip.qed-benchmark.public_ip}"
+      host        = "${aws_eip.qed-benchmark-master.public_ip}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -178,6 +300,6 @@ resource "null_resource" "run-benchmarks" {
     }
   }
 
-  depends_on = ["null_resource.install-tools"]
+   depends_on = ["null_resource.install-tools-to-master", "null_resource.start-master", "null_resource.start-slave01", "null_resource.start-slave02"]
 
 }
