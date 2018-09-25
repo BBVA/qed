@@ -19,7 +19,8 @@ package hyper
 import (
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/hashing"
@@ -58,7 +59,7 @@ func TestAdd(t *testing.T) {
 		index := uint64(i)
 		commitment, mutations, err := tree.Add(c.eventDigest, index)
 		tree.store.Mutate(mutations)
-		assert.NoErrorf(t, err, "This should not fail for index %d", i)
+		require.NoErrorf(t, err, "This should not fail for index %d", i)
 		assert.Equalf(t, c.expectedRootHash, commitment, "Incorrect root hash for index %d", i)
 
 	}
@@ -118,11 +119,11 @@ func TestProveMembership(t *testing.T) {
 		for index, digest := range c.addOps {
 			_, mutations, err := tree.Add(digest, index)
 			tree.store.Mutate(mutations)
-			assert.NoErrorf(t, err, "This should not fail for index %d", i)
+			require.NoErrorf(t, err, "This should not fail for index %d", i)
 		}
 
 		pf, err := tree.QueryMembership(digest)
-		assert.NoErrorf(t, err, "Error adding to the tree: %v for index %d", err, i)
+		require.NoErrorf(t, err, "Error adding to the tree: %v for index %d", err, i)
 		assert.Equalf(t, c.expectedAuditPath, pf.AuditPath(), "Incorrect audit path for index %d", i)
 	}
 }
@@ -151,16 +152,47 @@ func TestAddAndVerify(t *testing.T) {
 		key := hasher.Do(hashing.Digest("a test event"))
 		commitment, mutations, err := tree.Add(key, value)
 		tree.store.Mutate(mutations)
-		assert.NoErrorf(t, err, "This should not fail for index %d", i)
+		require.NoErrorf(t, err, "This should not fail for index %d", i)
 
 		proof, err := tree.QueryMembership(key)
-		assert.Nilf(t, err, "Error must be nil for index %d", i)
+		require.Nilf(t, err, "Error must be nil for index %d", i)
 		assert.Equalf(t, util.Uint64AsBytes(value), proof.Value, "Incorrect actual value for index %d", i)
 
 		correct := tree.VerifyMembership(proof, value, key, commitment)
 		assert.Truef(t, correct, "Key %x should be a member for index %d", key, i)
 	}
 }
+
+func TestRebuildCache(t *testing.T) {
+
+	log.SetLogger("TestRebuildCache", log.SILENT)
+
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
+	hasherF := hashing.NewSha256Hasher
+	hasher := hasherF()
+
+	firstCache := common.NewSimpleCache(10)
+	tree := NewHyperTree(hasherF, store, firstCache)
+	require.True(t, firstCache.Size() == 0, "The cache should be empty")
+
+	// store multiple elements
+	for i := 0; i < 1000; i++ {
+		key := hasher.Do(rand.Bytes(32))
+		_, mutations, _ := tree.Add(key, uint64(i))
+		store.Mutate(mutations)
+	}
+	expectedSize := firstCache.Size()
+
+	// Close tree and reopen with a new fresh cache
+	tree.Close()
+	secondCache := common.NewSimpleCache(10)
+	tree = NewHyperTree(hasherF, store, secondCache)
+
+	require.Equal(t, expectedSize, secondCache.Size(), "The size of the caches should match")
+	require.True(t, firstCache.Equal(secondCache), "The caches should be equal")
+}
+
 func BenchmarkAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkAdd", log.SILENT)
