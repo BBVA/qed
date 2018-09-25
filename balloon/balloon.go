@@ -179,20 +179,18 @@ func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 	eventDigest := b.hasher.Do(event)
 
 	// Update trees
-	var historyDigest, hyperDigest hashing.Digest
-	var historyMutations, hyperMutations []*storage.Mutation
-	var historyErr, hyperErr error
+	var historyDigest hashing.Digest
+	var historyMutations []*storage.Mutation
+	var historyErr error
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
 	go func() {
 		historyDigest, historyMutations, historyErr = b.historyTree.Add(eventDigest, version)
 		wg.Done()
 	}()
-	go func() {
-		hyperDigest, hyperMutations, hyperErr = b.hyperTree.Add(eventDigest, version)
-		wg.Done()
-	}()
+
+	hyperDigest, mutations, hyperErr := b.hyperTree.Add(eventDigest, version)
 
 	wg.Wait()
 
@@ -204,8 +202,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 	}
 
 	// Append trees mutations
-	mutations := make([]*storage.Mutation, 0)
-	mutations = append(mutations, append(historyMutations, hyperMutations...)...)
+	mutations = append(mutations, historyMutations...)
 
 	commitment := &Commitment{
 		HistoryDigest: historyDigest,
