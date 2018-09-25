@@ -17,6 +17,8 @@
 package common
 
 import (
+	"bytes"
+
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -29,6 +31,7 @@ type Cache interface {
 type ModifiableCache interface {
 	Put(pos Position, value hashing.Digest)
 	Fill(r storage.KVPairReader) error
+	Size() int
 	Cache
 }
 type PassThroughCache struct {
@@ -92,4 +95,21 @@ func (c *SimpleCache) Fill(r storage.KVPairReader) (err error) {
 	}
 	log.Infof("Warming up done, elements cached: %d", cached)
 	return nil
+}
+
+func (c *SimpleCache) Size() int {
+	return len(c.cached)
+}
+
+func (c SimpleCache) Equal(o *SimpleCache) bool {
+	for k, v1 := range c.cached {
+		v2, ok := o.cached[k]
+		if !ok {
+			return false
+		}
+		if !bytes.Equal(v1, v2) {
+			return false
+		}
+	}
+	return true
 }

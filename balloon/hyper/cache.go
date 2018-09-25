@@ -23,6 +23,7 @@ import (
 type CacheResolver interface {
 	ShouldBeInCache(pos common.Position) bool
 	ShouldCache(pos common.Position) bool
+	ShouldCollect(pos common.Position) bool
 	IsOnPath(pos common.Position) bool
 }
 
@@ -42,6 +43,10 @@ func (r SingleTargetedCacheResolver) ShouldBeInCache(pos common.Position) bool {
 
 func (r SingleTargetedCacheResolver) ShouldCache(pos common.Position) bool {
 	return pos.Height() > r.cacheLevel
+}
+
+func (r SingleTargetedCacheResolver) ShouldCollect(pos common.Position) bool {
+	return pos.Height() == r.cacheLevel+1
 }
 
 /*
