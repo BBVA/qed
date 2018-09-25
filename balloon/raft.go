@@ -17,12 +17,10 @@
 package balloon
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -178,20 +176,6 @@ func (b *RaftBalloon) Open(bootstrap bool) error {
 	} else {
 		log.Info("no bootstrap needed")
 	}
-
-	return nil
-}
-
-func join(joinAddr, raftAddr, nodeID string) error {
-	b, err := json.Marshal(map[string]string{"addr": raftAddr, "id": nodeID})
-	if err != nil {
-		return err
-	}
-	resp, err := http.Post(fmt.Sprintf("http://%s/join", joinAddr), "application-type/json", bytes.NewReader(b))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
 
 	return nil
 }
