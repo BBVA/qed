@@ -165,6 +165,48 @@ func (t *HyperTree) Close() {
 func (t *HyperTree) RebuildCache() error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
+
 	// warm up cache
-	return t.cache.Fill(t.store.GetAll(storage.HyperCachePrefix))
+
+	// Fill last cache level with stored data
+	err := t.cache.Fill(t.store.GetAll(storage.HyperCachePrefix))
+	if err != nil {
+		return err
+	}
+
+	// Recompute and fill the rest of the cache
+	navigator := NewHyperTreeNavigator(t.hasher.Len())
+	root := navigator.Root()
+	// skip root
+	t.populateCache(navigator.GoToLeft(root), navigator)
+	t.populateCache(navigator.GoToRight(root), navigator)
+	return nil
+}
+
+func (t *HyperTree) populateCache(pos common.Position, navigator common.TreeNavigator) hashing.Digest {
+	if pos.Height() == t.cacheLevel+1 {
+		cached, ok := t.cache.Get(pos)
+		if !ok {
+			return nil
+		}
+		return cached
+	}
+	leftPos := navigator.GoToLeft(pos)
+	rightPos := navigator.GoToRight(pos)
+	left := t.populateCache(leftPos, navigator)
+	right := t.populateCache(rightPos, navigator)
+
+	if left == nil && right == nil {
+		return nil
+	}
+	if left == nil {
+		left = t.defaultHashes[leftPos.Height()]
+	}
+	if right == nil {
+		right = t.defaultHashes[rightPos.Height()]
+	}
+
+	digest := t.hasher.Salted(pos.Bytes(), left, right)
+	t.cache.Put(pos, digest)
+	return digest
 }
