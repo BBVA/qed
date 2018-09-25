@@ -56,6 +56,10 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache comm
 	for i := uint16(1); i < hasher.Len(); i++ {
 		tree.defaultHashes[i] = tree.hasher.Do(tree.defaultHashes[i-1], tree.defaultHashes[i-1])
 	}
+
+	// warm-up cache
+	tree.RebuildCache()
+
 	return tree
 }
 
@@ -156,4 +160,11 @@ func (t *HyperTree) Close() {
 	t.hasher = nil
 	t.defaultHashes = nil
 	t.store = nil
+}
+
+func (t *HyperTree) RebuildCache() error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	// warm up cache
+	return t.cache.Fill(t.store.GetAll(storage.HyperCachePrefix))
 }
