@@ -69,8 +69,8 @@ func tamperFunc(store storage.DeletableStore, hasher hashing.Hasher) http.Handle
 		case "PATCH":
 			get, _ := store.Get(storage.IndexPrefix, tp.KeyDigest)
 			log.Debugf("Get: %v", get)
-			mutations := make([]storage.Mutation, 0)
-			mutations = append(mutations, *storage.NewMutation(storage.IndexPrefix, tp.KeyDigest, tp.Value))
+			mutations := make([]*storage.Mutation, 0)
+			mutations = append(mutations, storage.NewMutation(storage.IndexPrefix, tp.KeyDigest, tp.Value))
 			log.Debugf("Tamper: %v", store.Mutate(mutations))
 
 		case "DELETE":
