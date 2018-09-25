@@ -348,7 +348,7 @@ func BenchmarkAddBadger(b *testing.B) {
 	require.NoError(b, err)
 
 	b.ResetTimer()
-	b.N = 10000
+	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
 		_, mutations, _ := balloon.Add(event)
