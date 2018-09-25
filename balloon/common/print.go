@@ -47,14 +47,21 @@ func (v *PrintVisitor) VisitNode(pos Position) {
 func (v *PrintVisitor) VisitPartialNode(pos Position) {
 	v.tokens = append(v.tokens, fmt.Sprintf("%sPartialNode(%v)", v.indent(pos.Height()), pos))
 }
+
 func (v *PrintVisitor) VisitLeaf(pos Position, value []byte) {
 	v.tokens = append(v.tokens, fmt.Sprintf("%sLeaf(%v)[%x]", v.indent(pos.Height()), pos, value))
 }
+
 func (v *PrintVisitor) VisitCached(pos Position, cachedDigest hashing.Digest) {
 	v.tokens = append(v.tokens, fmt.Sprintf("%sCached(%v)[%x]", v.indent(pos.Height()), pos, cachedDigest))
 }
+
 func (v *PrintVisitor) VisitCollectable(pos Position) {
 	v.tokens = append(v.tokens, fmt.Sprintf("%sCollectable(%v)", v.indent(pos.Height()), pos))
+}
+
+func (v *PrintVisitor) VisitCacheable(pos Position) {
+	v.tokens = append(v.tokens, fmt.Sprintf("%sCacheable(%v)", v.indent(pos.Height()), pos))
 }
 
 func (v PrintVisitor) indent(height uint16) string {

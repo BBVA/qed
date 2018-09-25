@@ -175,7 +175,7 @@ func (b *Balloon) RefreshVersion() error {
 	return nil
 }
 
-func (b *Balloon) Add(event []byte) (*Commitment, []storage.Mutation, error) {
+func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 
 	// Get version
 	version := b.version
@@ -186,7 +186,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []storage.Mutation, error) {
 
 	// Update trees
 	var historyDigest, hyperDigest hashing.Digest
-	var historyMutations, hyperMutations []storage.Mutation
+	var historyMutations, hyperMutations []*storage.Mutation
 	var historyErr, hyperErr error
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -210,7 +210,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []storage.Mutation, error) {
 	}
 
 	// Append trees mutations
-	mutations := make([]storage.Mutation, 0)
+	mutations := make([]*storage.Mutation, 0)
 	mutations = append(mutations, append(historyMutations, hyperMutations...)...)
 
 	commitment := &Commitment{
