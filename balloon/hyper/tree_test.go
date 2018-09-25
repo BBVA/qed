@@ -31,7 +31,7 @@ import (
 
 func TestAdd(t *testing.T) {
 
-	log.SetLogger("TestAdd", log.INFO)
+	log.SetLogger("TestAdd", log.SILENT)
 
 	testCases := []struct {
 		eventDigest      hashing.Digest
@@ -65,6 +65,8 @@ func TestAdd(t *testing.T) {
 }
 
 func TestProveMembership(t *testing.T) {
+
+	log.SetLogger("TestProveMembership", log.SILENT)
 
 	hasher := hashing.NewFakeXorHasher()
 	digest := hasher.Do(hashing.Digest{0x0})
@@ -107,8 +109,6 @@ func TestProveMembership(t *testing.T) {
 		},
 	}
 
-	log.SetLogger("TestProveMembership", log.INFO)
-
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
@@ -129,7 +129,7 @@ func TestProveMembership(t *testing.T) {
 
 func TestAddAndVerify(t *testing.T) {
 
-	log.SetLogger("TestAddAndVerify", log.INFO)
+	log.SetLogger("TestAddAndVerify", log.SILENT)
 
 	value := uint64(0)
 
@@ -176,7 +176,6 @@ func BenchmarkAdd(b *testing.B) {
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		key := hasher.Do(rand.Bytes(32))
-		// tree.Add(key, uint64(i))
 		_, mutations, _ := tree.Add(key, uint64(i))
 		store.Mutate(mutations)
 	}
