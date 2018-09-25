@@ -59,13 +59,14 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache comm
 	return tree
 }
 
-func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []storage.Mutation, error) {
+func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	// visitors
 	computeHash := common.NewComputeHashVisitor(t.hasher)
-	caching := common.NewCachingVisitor(computeHash)
+	caching := common.NewCachingVisitor(computeHash, t.cache)
+	collect := common.NewCollectMutationsVisitor(caching, storage.HyperCachePrefix)
 
 	// build pruning context
 	versionAsBytes := util.Uint64AsBytes(version)
@@ -81,20 +82,13 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	pruned := NewInsertPruner(eventDigest, versionAsBytes, context).Prune()
 
 	// visit the pruned tree
-	rootHash := pruned.PostOrder(caching).(hashing.Digest)
-
-	// persist mutations
-	cachedElements := caching.Result()
-	mutations := make([]storage.Mutation, len(cachedElements))
-	for i, e := range cachedElements {
-		mutations[i] = storage.Mutation{storage.HyperCachePrefix, e.Pos.Bytes(), e.Digest}
-		// update cache
-		t.cache.Put(e.Pos, e.Digest)
-	}
+	rootHash := pruned.PostOrder(collect).(hashing.Digest)
 
 	// create a mutation for the new leaf
 	leafMutation := storage.NewMutation(storage.IndexPrefix, eventDigest, versionAsBytes)
-	mutations = append(mutations, *leafMutation)
+
+	// collect mutations
+	mutations := append(collect.Result(), leafMutation)
 
 	return rootHash, mutations, nil
 }
