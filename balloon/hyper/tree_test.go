@@ -25,6 +25,7 @@ import (
 	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
@@ -161,6 +162,87 @@ func TestAddAndVerify(t *testing.T) {
 		correct := tree.VerifyMembership(proof, value, key, commitment)
 		assert.Truef(t, correct, "Key %x should be a member for index %d", key, i)
 	}
+}
+
+func TestDeterministicAdd(t *testing.T) {
+
+	log.SetLogger("TestDeterministicAdd", log.SILENT)
+
+	hasher := hashing.NewSha256Hasher()
+
+	// create two trees
+	cache1 := common.NewSimpleCache(0)
+	cache2 := common.NewSimpleCache(0)
+	store1, closeF1 := storage_utils.OpenBPlusTreeStore()
+	store2, closeF2 := storage_utils.OpenBPlusTreeStore()
+	defer closeF1()
+	defer closeF2()
+	tree1 := NewHyperTree(hashing.NewSha256Hasher, store1, cache1)
+	tree2 := NewHyperTree(hashing.NewSha256Hasher, store2, cache2)
+
+	// insert a bunch of events in both trees
+	for i := 0; i < 100; i++ {
+		event := rand.Bytes(32)
+		eventDigest := hasher.Do(event)
+		version := uint64(i)
+		_, m1, _ := tree1.Add(eventDigest, version)
+		store1.Mutate(m1)
+		_, m2, _ := tree2.Add(eventDigest, version)
+		store2.Mutate(m2)
+	}
+
+	// check index store equality
+	reader11 := store1.GetAll(storage.IndexPrefix)
+	reader21 := store2.GetAll(storage.IndexPrefix)
+	defer reader11.Close()
+	defer reader21.Close()
+	buff11 := make([]*storage.KVPair, 0)
+	buff21 := make([]*storage.KVPair, 0)
+	for {
+		b := make([]*storage.KVPair, 100)
+		n, err := reader11.Read(b)
+		if err != nil || n == 0 {
+			break
+		}
+		buff11 = append(buff11, b...)
+	}
+	for {
+		b := make([]*storage.KVPair, 100)
+		n, err := reader21.Read(b)
+		if err != nil || n == 0 {
+			break
+		}
+		buff21 = append(buff21, b...)
+	}
+	require.Equalf(t, buff11, buff21, "The stored indexes should be equal")
+
+	// check cache store equality
+	reader12 := store1.GetAll(storage.HyperCachePrefix)
+	reader22 := store2.GetAll(storage.HyperCachePrefix)
+	defer reader12.Close()
+	defer reader22.Close()
+	buff12 := make([]*storage.KVPair, 0)
+	buff22 := make([]*storage.KVPair, 0)
+	for {
+		b := make([]*storage.KVPair, 100)
+		n, err := reader12.Read(b)
+		if err != nil || n == 0 {
+			break
+		}
+		buff12 = append(buff12, b...)
+	}
+	for {
+		b := make([]*storage.KVPair, 100)
+		n, err := reader22.Read(b)
+		if err != nil || n == 0 {
+			break
+		}
+		buff22 = append(buff22, b...)
+	}
+	require.Equalf(t, buff12, buff22, "The stored cached digests should be equal")
+
+	// check cache equality
+	require.True(t, cache1.Equal(cache2), "Both caches should be equal")
 }
 
 func TestRebuildCache(t *testing.T) {
