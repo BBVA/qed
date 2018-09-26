@@ -75,11 +75,11 @@ type Cached struct {
 }
 
 type Cacheable struct {
-	underlying Visitable
+	Visitable
 }
 
 type Collectable struct {
-	underlying Visitable
+	Visitable
 }
 
 func NewRoot(pos Position, left, right Visitable) *Root {
@@ -193,45 +193,37 @@ func (c Cached) String() string {
 }
 
 func NewCacheable(underlying Visitable) *Cacheable {
-	return &Cacheable{underlying}
+	return &Cacheable{Visitable: underlying}
 }
 
 func (c Cacheable) PostOrder(visitor PostOrderVisitor) interface{} {
-	result := c.underlying.PostOrder(visitor)
+	result := c.Visitable.PostOrder(visitor)
 	return visitor.VisitCacheable(c.Position(), result)
 }
 
 func (c Cacheable) PreOrder(visitor PreOrderVisitor) {
 	visitor.VisitCacheable(c.Position())
-	c.underlying.PreOrder(visitor)
-}
-
-func (c Cacheable) Position() Position {
-	return c.underlying.Position()
+	c.Visitable.PreOrder(visitor)
 }
 
 func (c Cacheable) String() string {
-	return fmt.Sprintf("Cacheable[ %v ]", c.underlying)
+	return fmt.Sprintf("Cacheable[ %v ]", c.Visitable)
 }
 
 func NewCollectable(underlying Visitable) *Collectable {
-	return &Collectable{underlying}
+	return &Collectable{Visitable: underlying}
 }
 
 func (c Collectable) PostOrder(visitor PostOrderVisitor) interface{} {
-	result := c.underlying.PostOrder(visitor)
+	result := c.Visitable.PostOrder(visitor)
 	return visitor.VisitCollectable(c.Position(), result)
 }
 
 func (c Collectable) PreOrder(visitor PreOrderVisitor) {
 	visitor.VisitCollectable(c.Position())
-	c.underlying.PreOrder(visitor)
-}
-
-func (c Collectable) Position() Position {
-	return c.underlying.Position()
+	c.Visitable.PreOrder(visitor)
 }
 
 func (c Collectable) String() string {
-	return fmt.Sprintf("Collectable[ %v ]", c.underlying)
+	return fmt.Sprintf("Collectable[ %v ]", c.Visitable)
 }
