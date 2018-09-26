@@ -1,4 +1,4 @@
-package balloon
+package raftwal
 
 import (
 	"io"
@@ -7,8 +7,8 @@ import (
 	"github.com/hashicorp/raft"
 	assert "github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/balloon/commands"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/raftwal/commands"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 )
 

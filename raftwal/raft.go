@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package balloon
+package raftwal
 
 import (
 	"errors"
@@ -24,9 +24,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bbva/qed/balloon/commands"
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/storage"
 	raftbadger "github.com/bbva/raft-badger"
 	"github.com/hashicorp/raft"
@@ -51,9 +52,9 @@ var (
 
 // RaftBalloon is the interface Raft-backed balloons must implement.
 type RaftBalloonApi interface {
-	Add(event []byte) (*Commitment, error)
-	QueryMembership(event []byte, version uint64) (*MembershipProof, error)
-	QueryConsistency(start, end uint64) (*IncrementalProof, error)
+	Add(event []byte) (*balloon.Commitment, error)
+	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
+	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
 	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
 	Join(nodeID, addr string) error
 }
@@ -394,7 +395,7 @@ func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interf
 
 */
 
-func (b *RaftBalloon) Add(event []byte) (*Commitment, error) {
+func (b *RaftBalloon) Add(event []byte) (*balloon.Commitment, error) {
 	cmd := &commands.AddEventCommand{event}
 	resp, err := b.raftApply(commands.AddEventCommandType, cmd)
 	if err != nil {
@@ -403,10 +404,10 @@ func (b *RaftBalloon) Add(event []byte) (*Commitment, error) {
 	return resp.(*fsmAddResponse).commitment, nil
 }
 
-func (b RaftBalloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+func (b RaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	return b.fsm.QueryMembership(event, version)
 }
 
-func (b RaftBalloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
+func (b RaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	return b.fsm.QueryConsistency(start, end)
 }

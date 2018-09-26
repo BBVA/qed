@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package balloon
+package raftwal
 
 import (
 	"bytes"
@@ -22,9 +22,10 @@ import (
 	"io"
 	"sync"
 
-	"github.com/bbva/qed/balloon/commands"
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/storage"
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/raft"
@@ -35,7 +36,7 @@ type fsmGenericResponse struct {
 }
 
 type fsmAddResponse struct {
-	commitment *Commitment
+	commitment *balloon.Commitment
 	error      error
 }
 
@@ -43,7 +44,7 @@ type BalloonFSM struct {
 	hasherF func() hashing.Hasher
 
 	store   storage.ManagedStore
-	balloon *Balloon
+	balloon *balloon.Balloon
 	state   *fsmState
 
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
@@ -66,7 +67,7 @@ func loadState(s storage.ManagedStore) (*fsmState, error) {
 
 func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
 
-	balloon, err := NewBalloon(store, hasherF)
+	balloon, err := balloon.NewBalloon(store, hasherF)
 	if err != nil {
 		return nil, err
 	}
@@ -84,11 +85,11 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 	}, nil
 }
 
-func (fsm BalloonFSM) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+func (fsm BalloonFSM) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	return fsm.balloon.QueryMembership(event, version)
 }
 
-func (fsm BalloonFSM) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
+func (fsm BalloonFSM) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	return fsm.balloon.QueryConsistency(start, end)
 }
 

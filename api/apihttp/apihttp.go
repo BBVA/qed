@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
 )
 
@@ -78,7 +78,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //     "Version": 1,
 //     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
 //   }
-func Add(balloon balloon.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
+func Add(balloon raftwal.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -146,7 +146,7 @@ func Add(balloon balloon.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
 //     "queryVersion": "1",
 //     "actualVersion": "2",
 //   }
-func Membership(balloon balloon.RaftBalloonApi) http.HandlerFunc {
+func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -194,7 +194,7 @@ func Membership(balloon balloon.RaftBalloonApi) http.HandlerFunc {
 //     "end": "8",
 //     "auditPath": ["<truncated for clarity in docs>"]
 //   }
-func Incremental(balloon balloon.RaftBalloonApi) http.HandlerFunc {
+func Incremental(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Make sure we can only be called with an HTTP POST request.
 		if r.Method != "POST" {
@@ -251,7 +251,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/health-check -> HealthCheckHandler
 //	/events -> Add
 //	/proofs/membership -> Membership
-func NewApiHttp(balloon balloon.RaftBalloonApi, signer sign.Signer) *http.ServeMux {
+func NewApiHttp(balloon raftwal.RaftBalloonApi, signer sign.Signer) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
