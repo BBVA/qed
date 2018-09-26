@@ -18,7 +18,7 @@ echo Create id_ed25519 key
 ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 
 echo Starting server...
-/tmp/qed/qed start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr ${master_address}:8080 --raft-addr ${master_address}:9000 --mgmt-addr ${master_address}:8090 &
+nohup /tmp/to_upload/qed start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr ${master_address}:8080 --raft-addr ${master_address}:9000 --mgmt-addr ${master_address}:8090 &
 echo done.
 
 sleep 10
