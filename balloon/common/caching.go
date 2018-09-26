@@ -21,45 +21,16 @@ import (
 )
 
 type CachingVisitor struct {
-	decorated *ComputeHashVisitor
-	cache     ModifiableCache
+	cache ModifiableCache
+
+	*ComputeHashVisitor
 }
 
 func NewCachingVisitor(decorated *ComputeHashVisitor, cache ModifiableCache) *CachingVisitor {
 	return &CachingVisitor{
-		decorated: decorated,
-		cache:     cache,
+		ComputeHashVisitor: decorated,
+		cache:              cache,
 	}
-}
-
-func (v *CachingVisitor) VisitRoot(pos Position, leftResult, rightResult interface{}) interface{} {
-	// by-pass
-	return v.decorated.VisitRoot(pos, leftResult, rightResult).(hashing.Digest)
-}
-
-func (v *CachingVisitor) VisitNode(pos Position, leftResult, rightResult interface{}) interface{} {
-	// by-pass
-	return v.decorated.VisitNode(pos, leftResult, rightResult).(hashing.Digest)
-}
-
-func (v *CachingVisitor) VisitPartialNode(pos Position, leftResult interface{}) interface{} {
-	// by-pass
-	return v.decorated.VisitPartialNode(pos, leftResult)
-}
-
-func (v *CachingVisitor) VisitLeaf(pos Position, eventDigest []byte) interface{} {
-	// by-pass
-	return v.decorated.VisitLeaf(pos, eventDigest).(hashing.Digest)
-}
-
-func (v *CachingVisitor) VisitCached(pos Position, cachedDigest hashing.Digest) interface{} {
-	// by-pass
-	return v.decorated.VisitCached(pos, cachedDigest)
-}
-
-func (v *CachingVisitor) VisitCollectable(pos Position, result interface{}) interface{} {
-	// by-pass
-	return v.decorated.VisitCollectable(pos, result)
 }
 
 func (v *CachingVisitor) VisitCacheable(pos Position, result interface{}) interface{} {

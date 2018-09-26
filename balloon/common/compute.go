@@ -29,19 +29,19 @@ func NewComputeHashVisitor(hasher hashing.Hasher) *ComputeHashVisitor {
 }
 
 func (v *ComputeHashVisitor) VisitRoot(pos Position, leftResult, rightResult interface{}) interface{} {
-	return v.interiorHash(pos.Bytes(), leftResult.(hashing.Digest), rightResult.(hashing.Digest))
+	return v.hasher.Salted(pos.Bytes(), leftResult.(hashing.Digest), rightResult.(hashing.Digest))
 }
 
 func (v *ComputeHashVisitor) VisitNode(pos Position, leftResult, rightResult interface{}) interface{} {
-	return v.interiorHash(pos.Bytes(), leftResult.(hashing.Digest), rightResult.(hashing.Digest))
+	return v.hasher.Salted(pos.Bytes(), leftResult.(hashing.Digest), rightResult.(hashing.Digest))
 }
 
 func (v *ComputeHashVisitor) VisitPartialNode(pos Position, leftResult interface{}) interface{} {
-	return v.leafHash(pos.Bytes(), leftResult.(hashing.Digest))
+	return v.hasher.Salted(pos.Bytes(), leftResult.(hashing.Digest))
 }
 
 func (v *ComputeHashVisitor) VisitLeaf(pos Position, value []byte) interface{} {
-	return v.leafHash(pos.Bytes(), value)
+	return v.hasher.Salted(pos.Bytes(), value)
 }
 
 func (v *ComputeHashVisitor) VisitCached(pos Position, cachedDigest hashing.Digest) interface{} {
@@ -54,12 +54,4 @@ func (v *ComputeHashVisitor) VisitCollectable(pos Position, result interface{}) 
 
 func (v *ComputeHashVisitor) VisitCacheable(pos Position, result interface{}) interface{} {
 	return result
-}
-
-func (v *ComputeHashVisitor) leafHash(id, leaf []byte) hashing.Digest {
-	return v.hasher.Salted(id, leaf)
-}
-
-func (v *ComputeHashVisitor) interiorHash(id, left, right []byte) hashing.Digest {
-	return v.hasher.Salted(id, left, right)
 }
