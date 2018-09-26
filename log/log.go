@@ -48,14 +48,6 @@ type logger interface {
 	GetLogger() *log.Logger
 }
 
-type returnableLogger struct {
-	log.Logger
-}
-
-func (r *returnableLogger) GetLogger() *log.Logger {
-	return &r.Logger
-}
-
 // The default logger is an log.ERROR level.
 var std logger = newError(os.Stdout, "Qed: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 

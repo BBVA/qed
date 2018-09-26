@@ -24,7 +24,6 @@ import (
 
 type debugLogger struct {
 	log.Logger
-	returnableLogger
 }
 
 func newDebug(out io.Writer, prefix string, flag int) *debugLogger {
@@ -63,4 +62,8 @@ func (l debugLogger) Infof(format string, v ...interface{}) {
 
 func (l debugLogger) Debugf(format string, v ...interface{}) {
 	l.Output(caller, fmt.Sprintf(format, v...))
+}
+
+func (l *debugLogger) GetLogger() *log.Logger {
+	return &l.Logger
 }
