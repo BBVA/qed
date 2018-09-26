@@ -50,7 +50,8 @@ function refresh_tf_state {
 }
 
 function get_public_ip {
-    TF_PUBLIC_IP=$(grep -i "\"public_ip\"" terraform.tfstate | uniq | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b")
+    # Tonight we dine in HELL
+    TF_PUBLIC_IP=$(grep -i "\"public_ip\"" terraform.tfstate | uniq | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b") | head -1
 }
 
 function get_results {
@@ -64,8 +65,8 @@ function run_benchmark {
     for instance_flavour in ${TF_FLAVOUR};
     do
         echo "Running on $instance_flavour instance"
-        terraform apply -var "flavour=${instance_flavour}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
-	# read -p "Press enter to continue..."
+        terraform apply -var "cluster_size=${TF_CLUSTER_SIZE}" -var "profile=${TF_PROFILE}" -var "flavour=${instance_flavour}" -var "region=${TF_REGION}" -var "volume_size=${TF_VOL_SIZE}" -auto-approve
+	    # read -p "Press enter to continue..."
         get_results
         clean_resources
     done

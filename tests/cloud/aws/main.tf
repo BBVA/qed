@@ -150,8 +150,8 @@ resource "null_resource" "build-qed" {
 // Copies qed binary and bench tools to out EC2 instance using SSH
 resource "null_resource" "copy-qed-to-master" {
   provisioner "file" {
-    source      = "to_upload/"
-    destination = "/tmp/qed"
+    source      = "to_upload"
+    destination = "/tmp"
 
     connection {
       host        = "${aws_eip.qed-benchmark-master.public_ip}"
@@ -169,8 +169,8 @@ resource "null_resource" "copy-qed-to-master" {
 // Copies qed binary and bench tools to out EC2 instance using SSH
 resource "null_resource" "copy-qed-to-slave01" {
   provisioner "file" {
-    source      = "to_upload/"
-    destination = "/tmp/qed"
+    source      = "to_upload"
+    destination = "/tmp"
 
     connection {
       host        = "${aws_eip.qed-benchmark-slave01.public_ip}"
@@ -188,8 +188,8 @@ resource "null_resource" "copy-qed-to-slave01" {
 // Copies qed binary and bench tools to out EC2 instance using SSH
 resource "null_resource" "copy-qed-to-slave02" {
   provisioner "file" {
-    source      = "to_upload/"
-    destination = "/tmp/qed"
+    source      = "to_upload"
+    destination = "/tmp"
 
     connection {
       host        = "${aws_eip.qed-benchmark-slave02.public_ip}"
@@ -207,8 +207,8 @@ resource "null_resource" "copy-qed-to-slave02" {
 resource "null_resource" "install-tools-to-master" {
   provisioner "remote-exec" {
     inline = [
-      "chmod +x /tmp/qed/install-tools /tmp/qed/stress-throughput-60s /tmp/qed/qed",
-      "/tmp/qed/install-tools",
+      "chmod +x /tmp/to_upload/install-tools /tmp/to_upload/rendered/stress-throughput-60s /tmp/to_upload/qed",
+      "/tmp/to_upload/install-tools",
     ]
    
     connection {
@@ -228,8 +228,8 @@ resource "null_resource" "install-tools-to-master" {
 resource "null_resource" "start-master" {
   provisioner "remote-exec" {
     inline = [
-      "find /tmp/qed -type f -exec chmod a+x {} \\;",
-      "/tmp/qed/rendered/start_master",
+      "find /tmp/to_upload -type f -exec chmod a+x {} \\;",
+      "/tmp/to_upload/rendered/start_master",
     ]
 
     connection {
@@ -248,8 +248,8 @@ resource "null_resource" "start-master" {
 resource "null_resource" "start-slave01" {
   provisioner "remote-exec" {
     inline = [
-      "find /tmp/qed -type f -exec chmod a+x {} \\;",
-      "/tmp/qed//rendered/start_slave01",
+      "find /tmp/to_upload -type f -exec chmod a+x {} \\;",
+      "/tmp/to_upload//rendered/start_slave01",
     ]
 
     connection {
@@ -268,8 +268,8 @@ resource "null_resource" "start-slave01" {
 resource "null_resource" "start-slave02" {
   provisioner "remote-exec" {
     inline = [
-      "find /tmp/qed -type f -exec chmod a+x {} \\;",
-      "/tmp/qed/rendered/start_slave02",
+      "find /tmp/to_upload -type f -exec chmod a+x {} \\;",
+      "/tmp/to_upload/rendered/start_slave02",
     ]
 
     connection {
@@ -288,7 +288,7 @@ resource "null_resource" "start-slave02" {
 resource "null_resource" "run-benchmarks" {
   provisioner "remote-exec" {
     inline = [
-      "/tmp/qed/rendered/stress-throughput-60s",
+      "/tmp/to_upload/rendered/stress-throughput-60s",
     ]
 
     connection {

@@ -22,7 +22,7 @@ ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 if [ -z "$MULTINODE" ]
 then
     echo Starting single server...
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 &
+    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l info  --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 &
     sleep 10
     echo done.
 else
