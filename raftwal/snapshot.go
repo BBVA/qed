@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package balloon
+package raftwal
 
 import (
 	"github.com/bbva/qed/log"
