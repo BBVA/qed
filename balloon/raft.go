@@ -36,6 +36,7 @@ const (
 	retainSnapshotCount = 2
 	raftTimeout         = 10 * time.Second
 	leaderWaitDelay     = 100 * time.Millisecond
+	raftLogCacheSize    = 512
 )
 
 var (
@@ -73,7 +74,8 @@ type RaftBalloon struct {
 
 	store struct {
 		db        storage.ManagedStore    // Persistent database
-		log       *raftbadger.BadgerStore // Persistent log store
+		log       raft.LogStore           // Persistent log store
+		badgerLog *raftbadger.BadgerStore // Underlying badger-backed persistent log store
 		stable    *raftbadger.BadgerStore // Persistent k-v store
 		snapshots *raft.FileSnapshotStore // Persisten snapstop store
 	}
@@ -91,10 +93,15 @@ type RaftBalloon struct {
 func NewRaftBalloon(path, addr, id string, store storage.ManagedStore) (*RaftBalloon, error) {
 
 	// Create the log store and stable store
-	logStore, err := raftbadger.New(raftbadger.Options{Path: path + "/logs", NoSync: true}) // raftbadger.NewBadgerStore(path + "/logs")
+	badgerLogStore, err := raftbadger.New(raftbadger.Options{Path: path + "/logs", NoSync: true}) // raftbadger.NewBadgerStore(path + "/logs")
 	if err != nil {
 		return nil, fmt.Errorf("new badger store: %s", err)
 	}
+	logStore, err := raft.NewLogCache(raftLogCacheSize, badgerLogStore)
+	if err != nil {
+		return nil, fmt.Errorf("new cached store: %s", err)
+	}
+
 	stableStore, err := raftbadger.New(raftbadger.Options{Path: path + "/config", NoSync: true}) // raftbadger.NewBadgerStore(path + "/config")
 	if err != nil {
 		return nil, fmt.Errorf("new badger store: %s", err)
@@ -117,6 +124,7 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore) (*RaftBal
 	rb.store.db = store
 	rb.store.log = logStore
 	rb.store.stable = stableStore
+	rb.store.badgerLog = badgerLogStore
 
 	return rb, nil
 }
@@ -256,7 +264,7 @@ func (b *RaftBalloon) Close(wait bool) error {
 	}
 
 	// close raft store
-	if err := b.store.log.Close(); err != nil {
+	if err := b.store.badgerLog.Close(); err != nil {
 		return err
 	}
 	if err := b.store.stable.Close(); err != nil {
