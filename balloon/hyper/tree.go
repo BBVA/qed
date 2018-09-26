@@ -167,11 +167,17 @@ func (t *HyperTree) RebuildCache() error {
 	defer t.lock.Unlock()
 
 	// warm up cache
+	log.Info("Warming up hyper cache...")
 
 	// Fill last cache level with stored data
 	err := t.cache.Fill(t.store.GetAll(storage.HyperCachePrefix))
 	if err != nil {
 		return err
+	}
+
+	if t.cache.Size() == 0 { // nothing to recompute
+		log.Infof("Warming up done, elements cached: %d", t.cache.Size())
+		return nil
 	}
 
 	// Recompute and fill the rest of the cache
@@ -180,6 +186,7 @@ func (t *HyperTree) RebuildCache() error {
 	// skip root
 	t.populateCache(navigator.GoToLeft(root), navigator)
 	t.populateCache(navigator.GoToRight(root), navigator)
+	log.Infof("Warming up done, elements cached: %d", t.cache.Size())
 	return nil
 }
 

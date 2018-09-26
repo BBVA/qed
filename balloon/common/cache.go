@@ -20,7 +20,6 @@ import (
 	"bytes"
 
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
@@ -76,7 +75,6 @@ func (c *SimpleCache) Put(pos Position, value hashing.Digest) {
 
 func (c *SimpleCache) Fill(r storage.KVPairReader) (err error) {
 	defer r.Close()
-	log.Info("Warming up hyper cache...")
 	cached := 0
 	for {
 		entries := make([]*storage.KVPair, 100)
@@ -93,7 +91,6 @@ func (c *SimpleCache) Fill(r storage.KVPairReader) (err error) {
 			}
 		}
 	}
-	log.Infof("Warming up done, elements cached: %d", cached)
 	return nil
 }
 
