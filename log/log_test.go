@@ -109,8 +109,6 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, false, DEBUG, "tInfof", message)
 	assertOutput(t, false, false, DEBUG, "tDebug", message)
 	assertOutput(t, false, false, DEBUG, "tDebugf", message)
-	SetLogger("test", DEBUG)
-	assert.IsType(t, &log.Logger{}, GetLogger())
 
 	assertOutput(t, true, false, INFO, "tError", message)
 	assertOutput(t, true, false, INFO, "tErrorf", message)
@@ -118,8 +116,6 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, false, INFO, "tInfof", message)
 	assertOutput(t, false, true, INFO, "tDebug", message)
 	assertOutput(t, false, true, INFO, "tDebugf", message)
-	SetLogger("test", INFO)
-	assert.IsType(t, &log.Logger{}, GetLogger())
 
 	assertOutput(t, true, false, ERROR, "tError", message)
 	assertOutput(t, true, false, ERROR, "tErrorf", message)
@@ -127,8 +123,6 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, true, ERROR, "tInfof", message)
 	assertOutput(t, false, true, ERROR, "tDebug", message)
 	assertOutput(t, false, true, ERROR, "tDebugf", message)
-	SetLogger("test", ERROR)
-	assert.IsType(t, &log.Logger{}, GetLogger())
 
 	assertOutput(t, true, true, SILENT, "tError", message)
 	assertOutput(t, true, true, SILENT, "tErrorf", message)
@@ -136,8 +130,6 @@ func TestLogIntegration(t *testing.T) {
 	assertOutput(t, false, true, SILENT, "tInfof", message)
 	assertOutput(t, false, true, SILENT, "tDebug", message)
 	assertOutput(t, false, true, SILENT, "tDebugf", message)
-	SetLogger("test", SILENT)
-	assert.IsType(t, &log.Logger{}, GetLogger())
 
 }
 
@@ -172,6 +164,8 @@ func TestDebug(t *testing.T) {
 	tLog.Debugf("message6 %s", "comp")
 	assert.Regexp(t, "message6 comp", out.String())
 	out.Reset()
+
+	assert.IsType(t, &log.Logger{}, tLog.GetLogger())
 
 }
 
@@ -208,6 +202,8 @@ func TestInfo(t *testing.T) {
 	assert.Regexp(t, "^$", out.String())
 	out.Reset()
 
+	assert.IsType(t, &log.Logger{}, tLog.GetLogger())
+
 }
 
 func TestError(t *testing.T) {
@@ -243,6 +239,7 @@ func TestError(t *testing.T) {
 	assert.Regexp(t, "^$", out.String())
 	out.Reset()
 
+	assert.IsType(t, &log.Logger{}, tLog.GetLogger())
 }
 
 func TestSilent(t *testing.T) {
@@ -253,12 +250,30 @@ func TestSilent(t *testing.T) {
 
 	tLog := newSilent()
 
+	var out bytes.Buffer
 	tLog.Error("message1")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
 	tLog.Errorf("message2 %s", "comp")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
 
 	tLog.Info("message1")
-	tLog.Infof("message2 %s", "comp")
-	tLog.Debug("message1")
-	tLog.Debugf("message2 %s", "comp")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
 
+	tLog.Infof("message2 %s", "comp")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+	tLog.Debug("message1")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+	tLog.Debugf("message2 %s", "comp")
+	assert.Regexp(t, "^$", out.String())
+	out.Reset()
+
+	assert.IsType(t, &log.Logger{}, tLog.GetLogger())
 }

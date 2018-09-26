@@ -22,7 +22,6 @@ import (
 
 type silentLogger struct {
 	log.Logger
-	returnableLogger
 }
 
 func newSilent() *silentLogger {
@@ -38,3 +37,7 @@ func (l silentLogger) Debug(v ...interface{})                 { return }
 func (l silentLogger) Errorf(format string, v ...interface{}) { osExit(1) }
 func (l silentLogger) Infof(format string, v ...interface{})  { return }
 func (l silentLogger) Debugf(format string, v ...interface{}) { return }
+
+func (l *silentLogger) GetLogger() *log.Logger {
+	return &l.Logger
+}
