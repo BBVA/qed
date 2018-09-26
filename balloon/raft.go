@@ -17,7 +17,6 @@
 package balloon
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -25,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bbva/qed/balloon/commands"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -77,7 +77,7 @@ type RaftBalloon struct {
 		log       raft.LogStore           // Persistent log store
 		badgerLog *raftbadger.BadgerStore // Underlying badger-backed persistent log store
 		stable    *raftbadger.BadgerStore // Persistent k-v store
-		snapshots *raft.FileSnapshotStore // Persisten snapstop store
+		snapshots *raft.FileSnapshotStore // Persistent snapstop store
 	}
 
 	sync.Mutex
@@ -371,21 +371,22 @@ func (b *RaftBalloon) remove(id string) error {
 		return f.Error()
 	}
 
-	// TODO: implement metadataDelete
-	c, err := newCommand(metadataDelete, id)
-	cb, err := json.Marshal(c)
-	if err != nil {
-		return err
-	}
-	f = b.raft.api.Apply(cb, b.raft.applyTimeout)
-	if e := f.(raft.Future); e.Error() != nil {
-		if e.Error() == raft.ErrNotLeader {
-			return ErrNotLeader
-		}
-		e.Error()
-	}
+	cmd := &commands.MetadataDeleteCommand{id}
+	_, err := b.raftApply(commands.MetadataDeleteCommandType, cmd)
 
-	return nil
+	return err
+}
+
+func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interface{}, error) {
+	buf, err := commands.Encode(t, cmd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %v", err)
+	}
+	future := b.raft.api.Apply(buf, b.raft.applyTimeout)
+	if err := future.Error(); err != nil {
+		return nil, err
+	}
+	return future.Response(), nil
 }
 
 /*
@@ -394,25 +395,12 @@ func (b *RaftBalloon) remove(id string) error {
 */
 
 func (b *RaftBalloon) Add(event []byte) (*Commitment, error) {
-
-	cmd, err := newCommand(insert, newInsertSubCommand(event))
+	cmd := &commands.AddEventCommand{event}
+	resp, err := b.raftApply(commands.AddEventCommandType, cmd)
 	if err != nil {
 		return nil, err
 	}
-	cmdBytes, err := json.Marshal(cmd)
-	if err != nil {
-		return nil, err
-	}
-
-	f := b.raft.api.Apply(cmdBytes, raftTimeout)
-	if e := f.(raft.Future); e.Error() != nil {
-		if e.Error() == raft.ErrNotLeader {
-			return nil, ErrNotLeader
-		}
-		return nil, e.Error()
-	}
-	resp := f.Response().(*fsmAddResponse)
-	return resp.commitment, nil
+	return resp.(*fsmAddResponse).commitment, nil
 }
 
 func (b RaftBalloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {

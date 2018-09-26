@@ -18,11 +18,11 @@ package balloon
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
 
+	"github.com/bbva/qed/balloon/commands"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -113,26 +113,24 @@ func (s fsmState) shouldApply(f *fsmState) bool {
 
 // Apply applies a Raft log entry to the database.
 func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
-	// TODO should i use a restore mutex
+	// TODO should i use a restore mutex?
 
-	var cmd command
-	if err := json.Unmarshal(l.Data, &cmd); err != nil {
-		panic(fmt.Sprintf("failed to unmarshal cluster command: %s", err.Error()))
-	}
+	buf := l.Data
+	cmdType := commands.CommandType(buf[0])
 
-	switch cmd.Type {
-	case insert:
-		var sub insertSubCommand
-		if err := json.Unmarshal(cmd.Sub, &sub); err != nil {
+	switch cmdType {
+	case commands.AddEventCommandType:
+		var cmd commands.AddEventCommand
+		if err := commands.Decode(buf[1:], &cmd); err != nil {
 			return &fsmAddResponse{error: err}
 		}
 		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
 		if fsm.state.shouldApply(newState) {
-			return fsm.applyAdd(sub.Event, newState)
+			return fsm.applyAdd(cmd.Event, newState)
 		}
 		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 	default:
-		return &fsmGenericResponse{error: fmt.Errorf("unknown command: %v", cmd.Type)}
+		return &fsmGenericResponse{error: fmt.Errorf("unknown command: %v", cmdType)}
 
 	}
 }
