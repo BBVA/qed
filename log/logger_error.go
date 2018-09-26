@@ -24,7 +24,6 @@ import (
 
 type errorLogger struct {
 	log.Logger
-	returnableLogger
 }
 
 func newError(out io.Writer, prefix string, flag int) *errorLogger {
@@ -53,3 +52,7 @@ func (l errorLogger) Info(v ...interface{})                  { return }
 func (l errorLogger) Debug(v ...interface{})                 { return }
 func (l errorLogger) Infof(format string, v ...interface{})  { return }
 func (l errorLogger) Debugf(format string, v ...interface{}) { return }
+
+func (l *errorLogger) GetLogger() *log.Logger {
+	return &l.Logger
+}
