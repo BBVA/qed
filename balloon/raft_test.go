@@ -199,7 +199,7 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 	rand.Seed(42)
 	expectedBalloonVersion := uint64(rand.Intn(50))
 	for i := uint64(0); i < expectedBalloonVersion; i++ {
-		_, err = r0.Add([]byte("Test Event"))
+		_, err = r0.Add([]byte(fmt.Sprintf("Test Event %d", i)))
 		require.NoError(t, err)
 	}
 	// force snapshot
@@ -213,15 +213,12 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	sink := &mockSnapshotSink{snapFile}
-	if err := f.Persist(sink); err != nil {
-		t.Fatalf("failed to persist snapshot to disk: %s", err.Error())
-	}
+	err = f.Persist(sink)
+	require.NoError(t, err)
 
 	// Check restoration.
 	snapFile, err = os.Open(filepath.Join(snapDir, "snapshot"))
-	if err != nil {
-		t.Fatalf("failed to open snapshot file: %s", err.Error())
-	}
+	require.NoError(t, err)
 
 	err = r0.Close(true)
 	require.NoError(t, err)
@@ -242,16 +239,6 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, expectedBalloonVersion, r0.fsm.balloon.Version(), "Error in state recovery from snapshot")
-
-}
-
-// TODO
-func Test_Raft_SingleNodeSnapshotFailTransaction(t *testing.T) {
-
-}
-
-// TODO
-func Test_Raft_StoreLogTruncationMultinode(t *testing.T) {
 
 }
 
