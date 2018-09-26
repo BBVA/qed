@@ -32,9 +32,9 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/mgmthttp"
 	"github.com/bbva/qed/api/tampering"
-	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/badger"
@@ -62,7 +62,7 @@ type Server struct {
 
 	httpServer      *http.Server
 	mgmtServer      *http.Server
-	raftBalloon     *balloon.RaftBalloon
+	raftBalloon     *raftwal.RaftBalloon
 	tamperingServer *http.Server
 	profilingServer *http.Server
 	signer          sign.Signer
@@ -123,7 +123,7 @@ func NewServer(
 	}
 
 	// Create RaftBalloon
-	server.raftBalloon, err = balloon.NewRaftBalloon(raftPath, raftAddr, nodeID, store)
+	server.raftBalloon, err = raftwal.NewRaftBalloon(raftPath, raftAddr, nodeID, store)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (s *Server) Stop() {
 	log.Debugf("Done. Exiting...\n")
 }
 
-func newHTTPServer(endpoint string, raftBalloon balloon.RaftBalloonApi, signer sign.Signer) *http.Server {
+func newHTTPServer(endpoint string, raftBalloon raftwal.RaftBalloonApi, signer sign.Signer) *http.Server {
 	router := apihttp.NewApiHttp(raftBalloon, signer)
 	return &http.Server{
 		Addr:    endpoint,
@@ -262,7 +262,7 @@ func newHTTPServer(endpoint string, raftBalloon balloon.RaftBalloonApi, signer s
 	}
 }
 
-func newMgmtServer(endpoint string, raftBalloon balloon.RaftBalloonApi) *http.Server {
+func newMgmtServer(endpoint string, raftBalloon raftwal.RaftBalloonApi) *http.Server {
 	router := mgmthttp.NewMgmtHttp(raftBalloon)
 	return &http.Server{
 		Addr:    endpoint,

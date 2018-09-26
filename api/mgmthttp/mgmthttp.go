@@ -20,19 +20,19 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/raftwal"
 )
 
 // NewMgmtHttp will return a mux server with the endpoint required to
 // tamper the server. it's a internal debug implementation. Running a server
 // with this enabled will run useless the qed server.
-func NewMgmtHttp(raftBalloon balloon.RaftBalloonApi) *http.ServeMux {
+func NewMgmtHttp(raftBalloon raftwal.RaftBalloonApi) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/join", joinHandle(raftBalloon))
 	return mux
 }
 
-func joinHandle(raftBalloon balloon.RaftBalloonApi) http.HandlerFunc {
+func joinHandle(raftBalloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		m := map[string]string{}
 
