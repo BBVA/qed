@@ -68,7 +68,11 @@ func Test_Raft_IsLeader(t *testing.T) {
 	err := r.Open(true)
 	require.NoError(t, err)
 
-	defer r.Close(true)
+	defer func(){
+		err = r.Close(true)
+		require.NoError(t, err)
+	}()
+	
 	_, err = r.WaitForLeader(10 * time.Second)
 	require.NoError(t, err)
 
@@ -226,7 +230,8 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 
 	r0, clean0 = newNode(t, 0)
 	defer func() {
-		r0.Close(true)
+		err = r0.Close(true)
+		require.NoError(t, err)
 		clean0()
 	}()
 	err = r0.Open(true)
