@@ -36,10 +36,10 @@ func init() {
 }
 
 func raftAddr(id int) string {
-	return fmt.Sprintf("127.0.0.1:830%d", id)
+	return fmt.Sprintf(":830%d", id)
 }
 func joinAddr(id int) string {
-	return fmt.Sprintf("127.0.0.1:840%d", id)
+	return fmt.Sprintf(":840%d", id)
 }
 
 func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
@@ -62,17 +62,19 @@ func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
 
 func Test_Raft_IsLeader(t *testing.T) {
 
+	log.SetLogger("Test_Raft_IsLeader", log.SILENT)
+
 	r, clean := newNode(t, 0)
 	defer clean()
 
 	err := r.Open(true)
 	require.NoError(t, err)
 
-	defer func(){
+	defer func() {
 		err = r.Close(true)
 		require.NoError(t, err)
 	}()
-	
+
 	_, err = r.WaitForLeader(10 * time.Second)
 	require.NoError(t, err)
 
@@ -100,6 +102,9 @@ func Test_Raft_OpenStoreCloseSingleNode(t *testing.T) {
 }
 
 func Test_Raft_MultiNodeJoin(t *testing.T) {
+
+	log.SetLogger("Test_Raft_MultiNodeJoin", log.SILENT)
+
 	r0, clean0 := newNode(t, 0)
 	defer func() {
 		err := r0.Close(true)
