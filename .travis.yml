@@ -29,10 +29,10 @@ notifications:
   email: false
 
 before_script:
+  - ssh-keygen -t ed25519 -f $HOME/.ssh/id_ed25519 -P ''
   - go mod download
 
 script:
-  - ssh-keygen -t ed25519 -f $HOME/.ssh/id_ed25519 -P ''
   - go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 
 after_success:
