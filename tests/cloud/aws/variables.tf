@@ -14,6 +14,11 @@
    limitations under the License.
 */
 
+variable "slave_prefix" {
+    type    = "list"
+    default = ["slave01", "slave02"]
+}
+
 // Force choose instance size.
 variable "flavour" {}
 

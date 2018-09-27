@@ -88,21 +88,6 @@ resource "aws_security_group_rule" "allow_cluster_comm" {
   security_group_id = "${module.security_group.this_security_group_id}"
 }
 
-resource "aws_eip" "qed-benchmark-master" {
-  vpc      = true
-  instance = "${module.ec2.id[0]}"
-}
-
-resource "aws_eip" "qed-benchmark-slave01" {
-  vpc      = true
-  instance = "${module.ec2.id[1]}"
-}
-
-resource "aws_eip" "qed-benchmark-slave02" {
-  vpc      = true
-  instance = "${module.ec2.id[2]}"
-}
-
 module "ec2" {
   source = "terraform-aws-modules/ec2-instance/aws"
 
@@ -129,12 +114,30 @@ resource "null_resource" "build-qed" {
     command = "go build -o to_upload/qed ../../../"
   }
 
-  depends_on = ["aws_eip.qed-benchmark-master", "aws_eip.qed-benchmark-slave01", "aws_eip.qed-benchmark-slave02"]
+  depends_on = ["module.ec2"]
 
 }
 
 # Template for initial configuration bash script
- resource "template_dir" "gen-config" {
+ resource "template_dir" "gen-single-node-config" {
+   count = "${var.cluster_size == 1 ? 1:0}"
+
+   source_dir = "templates"
+   destination_dir = "to_upload/rendered"
+
+   vars {
+     master_address  = "${module.ec2.private_ip[0]}"
+     slave01_address = ""
+     slave02_address = ""
+   }
+
+   depends_on = ["module.ec2", "null_resource.build-qed"]
+ }
+
+# Template for initial configuration bash script
+ resource "template_dir" "gen-multi-node-config" {
+   count = "${var.cluster_size > 1 ? 1:0}"
+
    source_dir = "templates"
    destination_dir = "to_upload/rendered"
 
@@ -149,12 +152,14 @@ resource "null_resource" "build-qed" {
 
 // Copies qed binary and bench tools to out EC2 instance using SSH
 resource "null_resource" "copy-qed-to-master" {
+  count       = "${var.cluster_size}"
+
   provisioner "file" {
     source      = "to_upload"
     destination = "/tmp"
-
+    
     connection {
-      host        = "${aws_eip.qed-benchmark-master.public_ip}"
+      host        = "${element(module.ec2.public_ip, count.index)}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -162,45 +167,7 @@ resource "null_resource" "copy-qed-to-master" {
     }
   }
 
-  depends_on = ["null_resource.build-qed", "module.ec2", "template_dir.gen-config"]
-
-}
-
-// Copies qed binary and bench tools to out EC2 instance using SSH
-resource "null_resource" "copy-qed-to-slave01" {
-  provisioner "file" {
-    source      = "to_upload"
-    destination = "/tmp"
-
-    connection {
-      host        = "${aws_eip.qed-benchmark-slave01.public_ip}"
-      type        = "ssh"
-      private_key = "${file("~/.ssh/id_rsa")}"
-      user        = "ec2-user"
-      timeout     = "5m"
-    }
-  }
-
-  depends_on = ["null_resource.build-qed", "module.ec2", "template_dir.gen-config"]
-
-}
-
-// Copies qed binary and bench tools to out EC2 instance using SSH
-resource "null_resource" "copy-qed-to-slave02" {
-  provisioner "file" {
-    source      = "to_upload"
-    destination = "/tmp"
-
-    connection {
-      host        = "${aws_eip.qed-benchmark-slave02.public_ip}"
-      type        = "ssh"
-      private_key = "${file("~/.ssh/id_rsa")}"
-      user        = "ec2-user"
-      timeout     = "5m"
-    }
-  }
-
-  depends_on = ["null_resource.build-qed", "module.ec2", "template_dir.gen-config"]
+  depends_on = ["null_resource.build-qed", "module.ec2", "template_dir.gen-single-node-config", "template_dir.gen-multi-node-config"]
 
 }
 
@@ -212,7 +179,7 @@ resource "null_resource" "install-tools-to-master" {
     ]
    
     connection {
-      host        = "${aws_eip.qed-benchmark-master.public_ip}"
+      host        = "${module.ec2.public_ip[0]}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -226,6 +193,7 @@ resource "null_resource" "install-tools-to-master" {
 }
 
 resource "null_resource" "start-master" {
+
   provisioner "remote-exec" {
     inline = [
       "find /tmp/to_upload -type f -exec chmod a+x {} \\;",
@@ -233,7 +201,7 @@ resource "null_resource" "start-master" {
     ]
 
     connection {
-      host        = "${aws_eip.qed-benchmark-master.public_ip}"
+      host        = "${module.ec2.public_ip[0]}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -245,15 +213,18 @@ resource "null_resource" "start-master" {
 
 }
 
-resource "null_resource" "start-slave01" {
+resource "null_resource" "start-slave" {
+
+  count = "${var.cluster_size > 1 ? var.cluster_size - 1 : 0}"
+
   provisioner "remote-exec" {
     inline = [
       "find /tmp/to_upload -type f -exec chmod a+x {} \\;",
-      "/tmp/to_upload//rendered/start_slave01",
+      "/tmp/to_upload/rendered/start_${element(var.slave_prefix, count.index)}",
     ]
 
     connection {
-      host        = "${aws_eip.qed-benchmark-slave01.public_ip}"
+      host        = "${element(module.ec2.public_ip, count.index+1)}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -261,27 +232,7 @@ resource "null_resource" "start-slave01" {
     }
   }
 
-  depends_on = ["null_resource.install-tools-to-master", "null_resource.start-master"]
-
-}
-
-resource "null_resource" "start-slave02" {
-  provisioner "remote-exec" {
-    inline = [
-      "find /tmp/to_upload -type f -exec chmod a+x {} \\;",
-      "/tmp/to_upload/rendered/start_slave02",
-    ]
-
-    connection {
-      host        = "${aws_eip.qed-benchmark-slave02.public_ip}"
-      type        = "ssh"
-      private_key = "${file("~/.ssh/id_rsa")}"
-      user        = "ec2-user"
-      timeout     = "5m"
-    }
-  }
-
-  depends_on = ["null_resource.install-tools-to-master", "null_resource.start-master"]
+  depends_on = ["null_resource.start-master"]
 
 }
 
@@ -292,7 +243,7 @@ resource "null_resource" "run-benchmarks" {
     ]
 
     connection {
-      host        = "${aws_eip.qed-benchmark-master.public_ip}"
+      host        = "${module.ec2.public_ip[0]}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -300,6 +251,6 @@ resource "null_resource" "run-benchmarks" {
     }
   }
 
-   depends_on = ["null_resource.install-tools-to-master", "null_resource.start-master", "null_resource.start-slave01", "null_resource.start-slave02"]
+   depends_on = ["null_resource.install-tools-to-master", "null_resource.start-master", "null_resource.start-slave"]
 
 }
