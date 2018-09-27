@@ -27,7 +27,7 @@ notifications:
   email: false
 
 before_script:
-  - GO111MODULE=on go get -d ./...
+  - GO111MODULE=on go mod download
 
 script:
   - go test -v -coverprofile=coverage.txt -covermode=atomic ./...
