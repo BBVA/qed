@@ -11,6 +11,8 @@ language: go
 go:
   - "1.11"
   # - master
+env:
+  - GO111MODULE=on
 
 # https://docs.travis-ci.com/user/languages/go/#Go-Import-Path
 go_import_path: github.com/bbva/qed
@@ -27,7 +29,7 @@ notifications:
   email: false
 
 before_script:
-  - GO111MODULE=on go mod download
+  - go mod download
 
 script:
   - go test -v -coverprofile=coverage.txt -covermode=atomic ./...
