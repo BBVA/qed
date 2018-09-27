@@ -36,14 +36,13 @@ func main() {
 	duration := flag.Duration("d", 10*time.Second, "Duration")
 	endpoint := flag.String("e", "http://localhost:8080/events", "Endpoint")
 	apikey := flag.String("k", "apikey", "apikey")
-	rate := flag.Int("r", 100, "Request per second")
+	rate := flag.Uint64("r", 100, "Request per second")
 	flag.Parse()
 
 	targeter := myTargeter(*endpoint, http.Header{"Api-Key": []string{*apikey}})
 
 	atk := vegeta.NewAttacker(vegeta.Connections(*conn), vegeta.Workers(*workers), vegeta.Timeout(*timeout))
-	vgrate := vegeta.Rate{Freq: *rate, Per: time.Second}
-	res := atk.Attack(targeter, vgrate, *duration, "attack")
+	res := atk.Attack(targeter, *rate, *duration, "attack")
 	enc := vegeta.NewEncoder(os.Stdout)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
