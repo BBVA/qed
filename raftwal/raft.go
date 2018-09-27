@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 	"sync"
 	"time"
 
@@ -145,6 +144,7 @@ func (b *RaftBalloon) Open(bootstrap bool) error {
 	// Setup Raft configuration
 	b.raft.config = raft.DefaultConfig()
 	b.raft.config.LocalID = raft.ServerID(b.id)
+	b.raft.config.Logger = log.GetLogger()
 	b.raft.applyTimeout = 10 * time.Second
 
 	// Setup Raft communication
@@ -153,14 +153,14 @@ func (b *RaftBalloon) Open(bootstrap bool) error {
 		return err
 	}
 
-	b.raft.transport, err = raft.NewTCPTransport(b.addr, raddr, 3, 10*time.Second, os.Stderr)
+	b.raft.transport, err = raft.NewTCPTransportWithLogger(b.addr, raddr, 3, 10*time.Second, log.GetLogger())
 	if err != nil {
 		return err
 	}
 
 	// Create the snapshot store. This allows the Raft to truncate the log. The library creates
 	// a folder to store the snapshots in.
-	b.store.snapshots, err = raft.NewFileSnapshotStore(b.path, retainSnapshotCount, os.Stderr)
+	b.store.snapshots, err = raft.NewFileSnapshotStoreWithLogger(b.path, retainSnapshotCount, log.GetLogger())
 	if err != nil {
 		return fmt.Errorf("file snapshot store: %s", err)
 	}
