@@ -17,6 +17,7 @@
 package log
 
 import (
+	"io/ioutil"
 	"log"
 )
 
@@ -25,9 +26,11 @@ type silentLogger struct {
 }
 
 func newSilent() *silentLogger {
-	return &silentLogger{
+	l := &silentLogger{
 		Logger: log.Logger{},
 	}
+	l.SetOutput(ioutil.Discard)
+	return l
 }
 
 // A impl 'l Nologger' qed/log.Logger
