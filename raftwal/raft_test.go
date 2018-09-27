@@ -64,7 +64,7 @@ func Test_Raft_IsLeader(t *testing.T) {
 
 	log.SetLogger("Test_Raft_IsLeader", log.SILENT)
 
-	r, clean := newNode(t, 0)
+	r, clean := newNode(t, 1)
 	defer clean()
 
 	err := r.Open(true)
@@ -84,7 +84,7 @@ func Test_Raft_IsLeader(t *testing.T) {
 
 func Test_Raft_OpenStoreCloseSingleNode(t *testing.T) {
 
-	r, clean := newNode(t, 0)
+	r, clean := newNode(t, 2)
 	defer clean()
 
 	err := r.Open(true)
@@ -105,7 +105,7 @@ func Test_Raft_MultiNodeJoin(t *testing.T) {
 
 	log.SetLogger("Test_Raft_MultiNodeJoin", log.SILENT)
 
-	r0, clean0 := newNode(t, 0)
+	r0, clean0 := newNode(t, 3)
 	defer func() {
 		err := r0.Close(true)
 		require.NoError(t, err)
@@ -118,7 +118,7 @@ func Test_Raft_MultiNodeJoin(t *testing.T) {
 	_, err = r0.WaitForLeader(10 * time.Second)
 	require.NoError(t, err)
 
-	r1, clean1 := newNode(t, 1)
+	r1, clean1 := newNode(t, 4)
 	defer func() {
 		err := r1.Close(true)
 		require.NoError(t, err)
@@ -135,7 +135,7 @@ func Test_Raft_MultiNodeJoin(t *testing.T) {
 
 func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 
-	r0, clean0 := newNode(t, 0)
+	r0, clean0 := newNode(t, 5)
 	defer func() {
 		err := r0.Close(true)
 		require.NoError(t, err)
@@ -148,7 +148,7 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 	_, err = r0.WaitForLeader(10 * time.Second)
 	require.NoError(t, err)
 
-	r1, clean1 := newNode(t, 1)
+	r1, clean1 := newNode(t, 6)
 	defer func() {
 		err := r1.Close(true)
 		require.NoError(t, err)
@@ -158,7 +158,7 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 	err = r1.Open(false)
 	require.NoError(t, err)
 
-	err = r0.Join("1", string(r1.raft.transport.LocalAddr()))
+	err = r0.Join("6", string(r1.raft.transport.LocalAddr()))
 	require.NoError(t, err)
 
 	_, err = r0.WaitForLeader(10 * time.Second)
@@ -196,7 +196,7 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 }
 
 func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
-	r0, clean0 := newNode(t, 0)
+	r0, clean0 := newNode(t, 7)
 
 	err := r0.Open(true)
 	require.NoError(t, err)
@@ -233,12 +233,13 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 	require.NoError(t, err)
 	// clean0()
 
-	r0, clean0 = newNode(t, 0)
+	r0, clean0 = newNode(t, 8)
 	defer func() {
 		err = r0.Close(true)
 		require.NoError(t, err)
 		clean0()
 	}()
+
 	err = r0.Open(true)
 	require.NoError(t, err)
 
