@@ -50,8 +50,10 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
  ```
  cd "$GOPATH/src/github.com/bbva/qed"
- mkdir /var/tmp/db_path
- go run main.go start -k key -p /var/tmp/db_path -l info
+ rm -rf /var/tmp/qed
+ mkdir -p /var/tmp/qed/{data,raft}
+ ssh-keygen -t ed25519 -P '' -f ~/.ssh/id_ed25519-qed
+ go run main.go start --apikey key --keypath ~/.ssh/id_ed25519-qed --log info 
  ```
 
  - Using the client
@@ -59,14 +61,15 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
      - add event
 
     ```
-    go run                                      \
-                main.go                         \
-                -k my-key                       \
-                client                          \
-                -e http://localhost:8080        \
-                add                             \
-                --key 'test event'              \
-                --value 2
+    go run                                               \
+                main.go                                  \
+                --apikey my-key                          \
+                client                                   \
+                --endpoint http://localhost:8080         \
+                add                                      \
+                --key 'test event'                       \
+                --value 2                                \
+                --log info
     ```
 
      - membership event
@@ -74,14 +77,15 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
     ```
     go run                                                                                              \
                 main.go                                                                                 \
-                -k my-key                                                                               \
+                --apikey my-key                                                                         \
                 client                                                                                  \
-                -e http://localhost:8080                                                                \
+                --endpoint http://localhost:8080                                                        \
                 membership                                                                              \
-                --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa        \
-                --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b          \
+                --hyperDigest   10aa40be23fb739332e2b9c849f2f110b2d209346500c24f70db442022ef38f2        \
+                --historyDigest 776b33eab8ed829ecffab3d579bf7ccbcc126b94bac1aaca7d5d8b0a2687bdec        \
                 --version 0                                                                             \
-                --key 'test event'
+                --key 'test event'                                                                      \
+                --log info
     ```
 
      - verify event
@@ -89,17 +93,16 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
     ```
     go run                                                                                              \
                 main.go                                                                                 \
-                -k my-key                                                                               \
+                --apikey my-key                                                                         \
                 client                                                                                  \
-                -e http://localhost:8080                                                                \
+                --endpoint http://localhost:8080                                                        \
                 membership                                                                              \
-                --historyDigest 444f6e7eee66986752983c1d8952e2f0998488a5b038bed013c55528551eaafa        \
-                --hyperDigest a45fe00356dfccb20b8bc9a7c8331d5c0f89c4e70e43ea0dc0cb646a4b29e59b          \
+                --hyperDigest   10aa40be23fb739332e2b9c849f2f110b2d209346500c24f70db442022ef38f2        \
+                --historyDigest 776b33eab8ed829ecffab3d579bf7ccbcc126b94bac1aaca7d5d8b0a2687bdec        \
                 --version 0                                                                             \
                 --key 'test event'                                                                      \
-                --verify
+                --log info
     ```
-    See [usage](docs/usage.md) for the gory details.
 
 ## Useful commands
 
@@ -108,44 +111,13 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 ```
 godoc -http=:6061 # http://localhost:6061/pkg/qed/
 ```
+[http://localhost:6061/pkg/github.com/bbva/qed/]
 
 - Test everything
 
 ```
 go test -v "$GOPATH"/src/github.com/bbva/qed/...
 ```
-- Go profiling
-
-```
-go run                                                                  \
-        -cpuprofile cpu.out                                             \
-        -memprofile mem.out                                             \
-        program.go
-
-go test                                                                 \
-        -v                                                              \
-        -bench=BenchmarkAdd                                             \
-        -cpuprofile cpu.out                                             \
-        -memprofile mem.out                                             \
-        qed/balloon/hyper                                               \
-        -run ^$
-
-go tool pprof hyper.test cpu.out
-go tool pprof hyper.test cpu.out mem.out
-```
-
-The server spawns an http server on port 6060 with the pprof api as described in https://golang.org/pkg/net/http/pprof/
-
-- Server profiling
-
-```
-cd "$GOPATH/src/github.com/bbva/qed"
-mkdir /var/tmp/db_path
-go run main.go start -k key -p /var/tmp/db_path -l info --profiling
-```
-
-Spawns an regular http server at port 8080 and another one with the usage stats at port 6060 which can be accessed via http://localhost:6060/debug/vars
-
 ## Other projects, papers and references
 
 - github related projects
