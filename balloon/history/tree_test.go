@@ -92,7 +92,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
+	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -228,7 +228,7 @@ func TestProveMembership(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
+	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -295,7 +295,7 @@ func TestProveConsistency(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
+	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -352,7 +352,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
+	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -382,7 +382,7 @@ func BenchmarkAdd(b *testing.B) {
 	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/history_tree_test.db")
 	defer closeF()
 
-	cache := common.NewPassThroughCache(storage.HistoryCachePrefix, store)
+	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewSha256Hasher, cache)
 
 	b.N = 100000
