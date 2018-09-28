@@ -16,7 +16,10 @@
 
 package common
 
-import "github.com/bbva/qed/hashing"
+import (
+	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/storage"
+)
 
 type FakeCache struct {
 	FixedDigest hashing.Digest
@@ -29,3 +32,9 @@ func NewFakeCache(fixedDigest hashing.Digest) *FakeCache {
 func (c FakeCache) Get(Position) (hashing.Digest, bool) {
 	return hashing.Digest{0x0}, true
 }
+
+func (c *FakeCache) Put(pos Position, value hashing.Digest) {}
+
+func (c *FakeCache) Fill(r storage.KVPairReader) error { return nil }
+
+func (c FakeCache) Size() int { return 1 }

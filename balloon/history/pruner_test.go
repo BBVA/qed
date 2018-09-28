@@ -56,6 +56,10 @@ func collectable(underlying common.Visitable) *common.Collectable {
 	return common.NewCollectable(underlying)
 }
 
+func cacheable(underlying common.Visitable) *common.Cacheable {
+	return common.NewCacheable(underlying)
+}
+
 func TestInsertPruner(t *testing.T) {
 
 	cache := common.NewFakeCache(hashing.Digest{0x0})
@@ -68,14 +72,14 @@ func TestInsertPruner(t *testing.T) {
 		{
 			version:        0,
 			eventDigest:    hashing.Digest{0x0},
-			expectedPruned: collectable(leaf(pos(0, 0), 0)),
+			expectedPruned: collectable(cacheable(leaf(pos(0, 0), 0))),
 		},
 		{
 			version:     1,
 			eventDigest: hashing.Digest{0x1},
-			expectedPruned: collectable(root(pos(0, 1),
+			expectedPruned: collectable(cacheable(root(pos(0, 1),
 				cached(pos(0, 0)),
-				collectable(leaf(pos(1, 0), 1))),
+				collectable(cacheable(leaf(pos(1, 0), 1))))),
 			),
 		},
 		{
@@ -84,17 +88,17 @@ func TestInsertPruner(t *testing.T) {
 			expectedPruned: root(pos(0, 2),
 				cached(pos(0, 1)),
 				partialnode(pos(2, 1),
-					collectable(leaf(pos(2, 0), 2))),
+					collectable(cacheable(leaf(pos(2, 0), 2)))),
 			),
 		},
 		{
 			version:     3,
 			eventDigest: hashing.Digest{0x3},
-			expectedPruned: collectable(root(pos(0, 2),
+			expectedPruned: collectable(cacheable(root(pos(0, 2),
 				cached(pos(0, 1)),
-				collectable(node(pos(2, 1),
+				collectable(cacheable(node(pos(2, 1),
 					cached(pos(2, 0)),
-					collectable(leaf(pos(3, 0), 3))))),
+					collectable(cacheable(leaf(pos(3, 0), 3)))))))),
 			),
 		},
 		{
@@ -104,7 +108,7 @@ func TestInsertPruner(t *testing.T) {
 				cached(pos(0, 2)),
 				partialnode(pos(4, 2),
 					partialnode(pos(4, 1),
-						collectable(leaf(pos(4, 0), 4)))),
+						collectable(cacheable(leaf(pos(4, 0), 4))))),
 			),
 		},
 		{
@@ -113,9 +117,9 @@ func TestInsertPruner(t *testing.T) {
 			expectedPruned: root(pos(0, 3),
 				cached(pos(0, 2)),
 				partialnode(pos(4, 2),
-					collectable(node(pos(4, 1),
+					collectable(cacheable(node(pos(4, 1),
 						cached(pos(4, 0)),
-						collectable(leaf(pos(5, 0), 5))))),
+						collectable(cacheable(leaf(pos(5, 0), 5))))))),
 			),
 		},
 		{
@@ -126,19 +130,19 @@ func TestInsertPruner(t *testing.T) {
 				node(pos(4, 2),
 					cached(pos(4, 1)),
 					partialnode(pos(6, 1),
-						collectable(leaf(pos(6, 0), 6)))),
+						collectable(cacheable(leaf(pos(6, 0), 6))))),
 			),
 		},
 		{
 			version:     7,
 			eventDigest: hashing.Digest{0x7},
-			expectedPruned: collectable(root(pos(0, 3),
+			expectedPruned: collectable(cacheable(root(pos(0, 3),
 				cached(pos(0, 2)),
-				collectable(node(pos(4, 2),
+				collectable(cacheable(node(pos(4, 2),
 					cached(pos(4, 1)),
-					collectable(node(pos(6, 1),
+					collectable(cacheable(node(pos(6, 1),
 						cached(pos(6, 0)),
-						collectable(leaf(pos(7, 0), 7))))))),
+						collectable(cacheable(leaf(pos(7, 0), 7))))))))))),
 			),
 		},
 	}
