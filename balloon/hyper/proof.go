@@ -19,17 +19,17 @@ package hyper
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 )
 
 type QueryProof struct {
 	Key, Value []byte
-	auditPath  common.AuditPath
+	auditPath  visitor.AuditPath
 	hasher     hashing.Hasher
 }
 
-func NewQueryProof(key, value []byte, auditPath common.AuditPath, hasher hashing.Hasher) *QueryProof {
+func NewQueryProof(key, value []byte, auditPath visitor.AuditPath, hasher hashing.Hasher) *QueryProof {
 	return &QueryProof{
 		Key:       key,
 		Value:     value,
@@ -38,7 +38,7 @@ func NewQueryProof(key, value []byte, auditPath common.AuditPath, hasher hashing
 	}
 }
 
-func (p QueryProof) AuditPath() common.AuditPath {
+func (p QueryProof) AuditPath() visitor.AuditPath {
 	return p.auditPath
 }
 
@@ -53,7 +53,7 @@ func (p QueryProof) Verify(key []byte, expectedDigest hashing.Digest) (valid boo
 	}
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(p.hasher)
+	computeHash := visitor.NewComputeHashVisitor(p.hasher)
 
 	// build pruning context
 	context := PruningContext{

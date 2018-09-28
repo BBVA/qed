@@ -19,7 +19,7 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/navigator"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestSingleTargetedCacheResolver(t *testing.T) {
 
 	testCases := []struct {
 		version  uint64
-		position common.Position
+		position navigator.Position
 		ok       bool
 	}{
 		{0, NewPosition(0, 0), false},
@@ -72,7 +72,7 @@ func TestNewDoubleTargetedCacheResolver(t *testing.T) {
 
 	testCases := []struct {
 		start, end uint64
-		position   common.Position
+		position   navigator.Position
 		ok         bool
 	}{
 		{0, 0, NewPosition(0, 0), false},
@@ -110,7 +110,7 @@ func TestIncrementalCacheResolver(t *testing.T) {
 
 	testCases := []struct {
 		start, end uint64
-		position   common.Position
+		position   navigator.Position
 		ok         bool
 	}{
 		{0, 0, NewPosition(0, 0), true},

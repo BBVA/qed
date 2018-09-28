@@ -19,7 +19,7 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/navigator"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestRoot(t *testing.T) {
 
 	testCases := []struct {
 		version     uint64
-		expectedPos common.Position
+		expectedPos navigator.Position
 	}{
 		{0, NewPosition(0, 0)},
 		{1, NewPosition(0, 1)},
@@ -51,7 +51,7 @@ func TestRoot(t *testing.T) {
 func TestIsLeaf(t *testing.T) {
 
 	testCases := []struct {
-		position common.Position
+		position navigator.Position
 		ok       bool
 	}{
 		{NewPosition(0, 0), true},
@@ -72,7 +72,7 @@ func TestIsRoot(t *testing.T) {
 
 	testCases := []struct {
 		version  uint64
-		position common.Position
+		position navigator.Position
 		ok       bool
 	}{
 		{0, NewPosition(0, 0), true},
@@ -99,8 +99,8 @@ func TestGoToLeft(t *testing.T) {
 
 	testCases := []struct {
 		version      uint64
-		position     common.Position
-		expectedLeft common.Position
+		position     navigator.Position
+		expectedLeft navigator.Position
 	}{
 		{0, NewPosition(0, 0), nil},
 		{1, NewPosition(0, 0), nil},
@@ -130,8 +130,8 @@ func TestGoToRight(t *testing.T) {
 
 	testCases := []struct {
 		version       uint64
-		position      common.Position
-		expectedRight common.Position
+		position      navigator.Position
+		expectedRight navigator.Position
 	}{
 		{0, NewPosition(0, 0), nil},
 		{1, NewPosition(0, 0), nil},
@@ -161,8 +161,8 @@ func TestDescendToFirst(t *testing.T) {
 
 	testCases := []struct {
 		version       uint64
-		position      common.Position
-		expectedFirst common.Position
+		position      navigator.Position
+		expectedFirst navigator.Position
 	}{
 		{0, NewPosition(0, 0), nil},
 		{1, NewPosition(0, 0), nil},
@@ -192,8 +192,8 @@ func TestDescendToLast(t *testing.T) {
 
 	testCases := []struct {
 		version      uint64
-		position     common.Position
-		expectedLast common.Position
+		position     navigator.Position
+		expectedLast navigator.Position
 	}{
 		{0, NewPosition(0, 0), nil},
 		{1, NewPosition(0, 0), nil},

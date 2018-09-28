@@ -19,7 +19,7 @@ package hyper
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,13 +27,13 @@ import (
 func TestQueryProofVerify(t *testing.T) {
 	testCases := []struct {
 		key, value     []byte
-		auditPath      common.AuditPath
+		auditPath      visitor.AuditPath
 		expectedDigest hashing.Digest
 	}{
 		{
 			key:   []byte{0},
 			value: []byte{0},
-			auditPath: common.AuditPath{
+			auditPath: visitor.AuditPath{
 				"01|0": hashing.Digest{0x0},
 				"02|1": hashing.Digest{0x0},
 				"04|2": hashing.Digest{0x0},
