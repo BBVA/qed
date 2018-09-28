@@ -15,7 +15,7 @@
 # limitations under the License.
 
 echo Create id_ed25519 key
-ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+yes | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 
 sleep 10
 

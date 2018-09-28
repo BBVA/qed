@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+echo Create id_ed25519 key
+yes | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+
 echo Stress time!
 
 wrk -t100 -c100 -d60s --latency -s /tmp/to_upload/attack_add.lua http://${master_address}:8080 >> /tmp/"$(curl -s http://169.254.169.254/latest/meta-data/instance-type)-results.txt"
@@ -23,5 +26,5 @@ echo done.
 echo Cleanup...
 /sbin/fuser -k -n tcp 8080
 rm -rf /var/tmp/demo.*
-rm /var/tmp/id_ed25519
+rm -rf /var/tmp/id_ed25519*
 echo done.
