@@ -108,6 +108,26 @@ module "ec2" {
 
 }
 
+// Bring up the stress instance.
+module "ec2-spartan" {
+  source = "terraform-aws-modules/ec2-instance/aws"
+
+  name                        = "qed-benchmark-spartan"
+  ami                         = "${data.aws_ami.amazon_linux.id}"
+  instance_type               = "${var.flavour}"
+  subnet_id                   = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  vpc_security_group_ids      = ["${module.security_group.this_security_group_id}"]
+  associate_public_ip_address = true
+  key_name                    = "${aws_key_pair.qed-benchmark.key_name}"
+
+  root_block_device = [{
+    volume_type = "gp2"
+    volume_size = "${var.volume_size}"
+    delete_on_termination = true
+  }]
+
+}
+
 // Build qed and outputs a single binary file
 resource "null_resource" "build-qed" {
   provisioner "local-exec" {
@@ -151,7 +171,7 @@ resource "null_resource" "build-qed" {
  }
 
 // Copies qed binary and bench tools to out EC2 instance using SSH
-resource "null_resource" "copy-qed-to-master" {
+resource "null_resource" "copy-qed-to-nodes" {
   count       = "${var.cluster_size}"
 
   provisioner "file" {
@@ -171,7 +191,27 @@ resource "null_resource" "copy-qed-to-master" {
 
 }
 
-resource "null_resource" "install-tools-to-master" {
+// Copies qed binary and bench tools to out EC2 instance using SSH
+resource "null_resource" "copy-qed-to-spartan" {
+
+  provisioner "file" {
+    source      = "to_upload"
+    destination = "/tmp"
+    
+    connection {
+      host        = "${module.ec2-spartan.public_ip[0]}"
+      type        = "ssh"
+      private_key = "${file("~/.ssh/id_rsa")}"
+      user        = "ec2-user"
+      timeout     = "5m"
+    }
+  }
+
+  depends_on = ["null_resource.build-qed", "module.ec2", "template_dir.gen-single-node-config", "template_dir.gen-multi-node-config"]
+
+}
+
+resource "null_resource" "install-tools-to-spartan" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/to_upload/install-tools /tmp/to_upload/rendered/stress-throughput-60s /tmp/to_upload/qed",
@@ -179,7 +219,7 @@ resource "null_resource" "install-tools-to-master" {
     ]
    
     connection {
-      host        = "${module.ec2.public_ip[0]}"
+      host        = "${module.ec2-spartan.public_ip}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -188,7 +228,7 @@ resource "null_resource" "install-tools-to-master" {
 
   }
 
-  depends_on = ["null_resource.copy-qed-to-master"]
+  depends_on = ["null_resource.copy-qed-to-spartan"]
 
 }
 
@@ -209,7 +249,7 @@ resource "null_resource" "start-master" {
     }
   }
 
-  depends_on = ["null_resource.install-tools-to-master"]
+  depends_on = ["null_resource.copy-qed-to-nodes"]
 
 }
 
@@ -243,7 +283,7 @@ resource "null_resource" "run-benchmarks" {
     ]
 
     connection {
-      host        = "${module.ec2.public_ip[0]}"
+      host        = "${module.ec2-spartan.public_ip}"
       type        = "ssh"
       private_key = "${file("~/.ssh/id_rsa")}"
       user        = "ec2-user"
@@ -251,6 +291,6 @@ resource "null_resource" "run-benchmarks" {
     }
   }
 
-   depends_on = ["null_resource.install-tools-to-master", "null_resource.start-master", "null_resource.start-slave"]
+   depends_on = ["null_resource.install-tools-to-spartan", "null_resource.start-master", "null_resource.start-slave"]
 
 }
