@@ -67,13 +67,13 @@ func newStartCommand() *cobra.Command {
 	}
 
 	hostname, _ := os.Hostname()
-	cmd.Flags().StringVarP(&nodeId, "node-id", "", hostname, "Unique name for node. If not set, fallback to hostname.")
-	cmd.Flags().StringVarP(&httpAddr, "http-addr", "", ":8080", "Endpoint for REST requests on (host:port).")
-	cmd.Flags().StringVarP(&raftAddr, "raft-addr", "", ":9000", "Raft bind address (host:port).")
+	cmd.Flags().StringVarP(&nodeId, "node-id", "", hostname, "Unique name for node. If not set, fallback to hostname")
+	cmd.Flags().StringVarP(&httpAddr, "http-addr", "", ":8080", "Endpoint for REST requests on (host:port)")
+	cmd.Flags().StringVarP(&raftAddr, "raft-addr", "", ":9000", "Raft bind address (host:port)")
 	cmd.Flags().StringVarP(&mgmtAddr, "mgmt-addr", "", ":8090", "Management endpoint bind address (host:port)")
-	cmd.Flags().StringVarP(&joinAddr, "join-addr", "", "", "Comma-delimited list of nodes, through wich a cluster can be joined (protocol://host:port)")
-	cmd.Flags().StringVarP(&dbPath, "dbpath", "p", "/var/tmp/qed/data", "Set default storage path.")
-	cmd.Flags().StringVarP(&raftPath, "raftpath", "", "/var/tmp/qed/raft", "Set raft storage path.")
+	cmd.Flags().StringVarP(&joinAddr, "join-addr", "", "", "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
+	cmd.Flags().StringVarP(&dbPath, "dbpath", "p", "/var/tmp/qed/data", "Set default storage path")
+	cmd.Flags().StringVarP(&raftPath, "raftpath", "", "/var/tmp/qed/raft", "Set raft storage path")
 	cmd.Flags().StringVarP(&privateKeyPath, "keypath", "y", "~/.ssh/id_ed25519", "Path to the ed25519 key file")
 	cmd.Flags().BoolVarP(&profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 
