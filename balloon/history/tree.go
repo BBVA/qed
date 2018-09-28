@@ -29,11 +29,11 @@ import (
 type HistoryTree struct {
 	lock    sync.RWMutex
 	hasherF func() hashing.Hasher
-	cache   common.Cache
+	cache   common.ModifiableCache
 	hasher  hashing.Hasher
 }
 
-func NewHistoryTree(hasherF func() hashing.Hasher, cache common.Cache) *HistoryTree {
+func NewHistoryTree(hasherF func() hashing.Hasher, cache common.ModifiableCache) *HistoryTree {
 	var lock sync.RWMutex
 	return &HistoryTree{lock, hasherF, cache, hasherF()}
 }
@@ -48,7 +48,8 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 
 	// visitors
 	computeHash := common.NewComputeHashVisitor(t.hasher)
-	collect := common.NewCollectMutationsVisitor(computeHash, storage.HistoryCachePrefix)
+	caching := common.NewCachingVisitor(computeHash, t.cache)
+	collect := common.NewCollectMutationsVisitor(caching, storage.HistoryCachePrefix)
 
 	// build pruning context
 	context := PruningContext{

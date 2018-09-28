@@ -56,7 +56,7 @@ func (p *InsertPruner) traverse(pos common.Position, eventDigest hashing.Digest)
 		return common.NewCached(pos, digest)
 	}
 	if p.navigator.IsLeaf(pos) {
-		return common.NewCollectable(common.NewLeaf(pos, eventDigest))
+		return common.NewCollectable(common.NewCacheable(common.NewLeaf(pos, eventDigest)))
 	}
 	// we do a post-order traversal
 	left := p.traverse(p.navigator.GoToLeft(pos), eventDigest)
@@ -72,7 +72,7 @@ func (p *InsertPruner) traverse(pos common.Position, eventDigest hashing.Digest)
 		result = common.NewNode(pos, left, right)
 	}
 	if p.shouldCollect(pos) {
-		return common.NewCollectable(result)
+		return common.NewCollectable(common.NewCacheable(result))
 	}
 	return result
 }
