@@ -27,7 +27,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/sign"
 )
@@ -50,8 +50,8 @@ func (b fakeRaftBalloon) Join(nodeID, addr string) error {
 func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	mp := &balloon.MembershipProof{
 		true,
-		common.NewFakeVerifiable(true),
-		common.NewFakeVerifiable(true),
+		visitor.NewFakeVerifiable(true),
+		visitor.NewFakeVerifiable(true),
 		1,
 		1,
 		2,
@@ -65,7 +65,7 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 	ip := balloon.IncrementalProof{
 		2,
 		8,
-		common.AuditPath{"0|0": hashing.Digest{0x00}},
+		visitor.AuditPath{"0|0": hashing.Digest{0x00}},
 		hashing.NewFakeXorHasher(),
 	}
 	return &ip, nil
@@ -171,7 +171,7 @@ func TestMembership(t *testing.T) {
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	handler := Membership(fakeRaftBalloon{})
-	expectedResult := &MembershipResult{Exists: true, Hyper: common.AuditPath{}, History: common.AuditPath{}, CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
+	expectedResult := &MembershipResult{Exists: true, Hyper: visitor.AuditPath{}, History: visitor.AuditPath{}, CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -208,7 +208,7 @@ func TestIncremental(t *testing.T) {
 	expectedResult := &IncrementalResponse{
 		start,
 		end,
-		common.AuditPath{"0|0": []uint8{0x0}},
+		visitor.AuditPath{"0|0": []uint8{0x0}},
 	}
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method

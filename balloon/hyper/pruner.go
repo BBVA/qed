@@ -17,21 +17,23 @@
 package hyper
 
 import (
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/navigator"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 )
 
 type PruningContext struct {
-	navigator     common.TreeNavigator
+	navigator     navigator.TreeNavigator
 	cacheResolver CacheResolver
-	cache         common.Cache
+	cache         cache.Cache
 	store         storage.Store
 	defaultHashes []hashing.Digest
 }
 
 type Pruner interface {
-	Prune() common.Visitable
+	Prune() visitor.Visitable
 }
 
 type InsertPruner struct {
@@ -44,18 +46,18 @@ func NewInsertPruner(key, value []byte, context PruningContext) *InsertPruner {
 	return &InsertPruner{key, value, context}
 }
 
-func (p *InsertPruner) Prune() common.Visitable {
+func (p *InsertPruner) Prune() visitor.Visitable {
 	leaves := storage.KVRange{storage.NewKVPair(p.key, p.value)}
 	return p.traverse(p.navigator.Root(), leaves)
 }
 
-func (p *InsertPruner) traverse(pos common.Position, leaves storage.KVRange) common.Visitable {
+func (p *InsertPruner) traverse(pos navigator.Position, leaves storage.KVRange) visitor.Visitable {
 	if p.cacheResolver.ShouldBeInCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
-			return common.NewCached(pos, p.defaultHashes[pos.Height()])
+			return visitor.NewCached(pos, p.defaultHashes[pos.Height()])
 		}
-		return common.NewCached(pos, digest)
+		return visitor.NewCached(pos, digest)
 	}
 
 	// if we are over the cache level, we need to do a range query to get the leaves
@@ -79,21 +81,21 @@ func (p *InsertPruner) traverse(pos common.Position, leaves storage.KVRange) com
 	left := p.traverse(p.navigator.GoToLeft(pos), leftSlice)
 	right := p.traverse(rightPos, rightSlice)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	result := common.NewCacheable(common.NewNode(pos, left, right))
+	result := visitor.NewCacheable(visitor.NewNode(pos, left, right))
 	if p.cacheResolver.ShouldCollect(pos) {
-		return common.NewCollectable(result)
+		return visitor.NewCollectable(result)
 	}
 	return result
 }
 
-func (p *InsertPruner) traverseWithoutCache(pos common.Position, leaves storage.KVRange) common.Visitable {
+func (p *InsertPruner) traverseWithoutCache(pos navigator.Position, leaves storage.KVRange) visitor.Visitable {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
-		return common.NewLeaf(pos, leaves[0].Value)
+		return visitor.NewLeaf(pos, leaves[0].Value)
 	}
 	if !p.navigator.IsRoot(pos) && len(leaves) == 0 {
-		return common.NewCached(pos, p.defaultHashes[pos.Height()])
+		return visitor.NewCached(pos, p.defaultHashes[pos.Height()])
 	}
 	if len(leaves) > 1 && p.navigator.IsLeaf(pos) {
 		panic("this should never happen (unsorted LeavesSlice or broken split?)")
@@ -107,9 +109,9 @@ func (p *InsertPruner) traverseWithoutCache(pos common.Position, leaves storage.
 	left := p.traverseWithoutCache(p.navigator.GoToLeft(pos), leftSlice)
 	right := p.traverseWithoutCache(rightPos, rightSlice)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	return visitor.NewNode(pos, left, right)
 }
 
 type SearchPruner struct {
@@ -121,18 +123,18 @@ func NewSearchPruner(key []byte, context PruningContext) *SearchPruner {
 	return &SearchPruner{key, context}
 }
 
-func (p *SearchPruner) Prune() common.Visitable {
+func (p *SearchPruner) Prune() visitor.Visitable {
 	return p.traverseCache(p.navigator.Root(), storage.NewKVRange())
 }
 
-func (p *SearchPruner) traverseCache(pos common.Position, leaves storage.KVRange) common.Visitable {
+func (p *SearchPruner) traverseCache(pos navigator.Position, leaves storage.KVRange) visitor.Visitable {
 	if p.cacheResolver.ShouldBeInCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
-			cached := common.NewCached(pos, p.defaultHashes[pos.Height()])
-			return common.NewCollectable(cached)
+			cached := visitor.NewCached(pos, p.defaultHashes[pos.Height()])
+			return visitor.NewCollectable(cached)
 		}
-		return common.NewCollectable(common.NewCached(pos, digest))
+		return visitor.NewCollectable(visitor.NewCached(pos, digest))
 	}
 
 	// if we are over the cache level, we need to do a range query to get the leaves
@@ -154,22 +156,22 @@ func (p *SearchPruner) traverseCache(pos common.Position, leaves storage.KVRange
 	left := p.traverseCache(p.navigator.GoToLeft(pos), leftSlice)
 	right := p.traverseCache(rightPos, rightSlice)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	return visitor.NewNode(pos, left, right)
 }
 
-func (p *SearchPruner) traverse(pos common.Position, leaves storage.KVRange) common.Visitable {
+func (p *SearchPruner) traverse(pos navigator.Position, leaves storage.KVRange) visitor.Visitable {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
-		leaf := common.NewLeaf(pos, leaves[0].Value)
+		leaf := visitor.NewLeaf(pos, leaves[0].Value)
 		if !p.cacheResolver.IsOnPath(pos) {
-			return common.NewCollectable(leaf)
+			return visitor.NewCollectable(leaf)
 		}
 		return leaf
 	}
 	if !p.navigator.IsRoot(pos) && len(leaves) == 0 {
-		cached := common.NewCached(pos, p.defaultHashes[pos.Height()])
-		return common.NewCollectable(cached)
+		cached := visitor.NewCached(pos, p.defaultHashes[pos.Height()])
+		return visitor.NewCollectable(cached)
 	}
 	if len(leaves) > 1 && p.navigator.IsLeaf(pos) {
 		panic("this should never happen (unsorted LeavesSlice or broken split?)")
@@ -185,25 +187,25 @@ func (p *SearchPruner) traverse(pos common.Position, leaves storage.KVRange) com
 		left := p.traverseWithoutCaching(p.navigator.GoToLeft(pos), leftSlice)
 		right := p.traverseWithoutCaching(rightPos, rightSlice)
 		if p.navigator.IsRoot(pos) {
-			return common.NewRoot(pos, left, right)
+			return visitor.NewRoot(pos, left, right)
 		}
-		return common.NewCollectable(common.NewNode(pos, left, right))
+		return visitor.NewCollectable(visitor.NewNode(pos, left, right))
 	}
 
 	left := p.traverse(p.navigator.GoToLeft(pos), leftSlice)
 	right := p.traverse(rightPos, rightSlice)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	return visitor.NewNode(pos, left, right)
 }
 
-func (p *SearchPruner) traverseWithoutCaching(pos common.Position, leaves storage.KVRange) common.Visitable {
+func (p *SearchPruner) traverseWithoutCaching(pos navigator.Position, leaves storage.KVRange) visitor.Visitable {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
-		return common.NewLeaf(pos, leaves[0].Value)
+		return visitor.NewLeaf(pos, leaves[0].Value)
 	}
 	if !p.navigator.IsRoot(pos) && len(leaves) == 0 {
-		return common.NewCached(pos, p.defaultHashes[pos.Height()])
+		return visitor.NewCached(pos, p.defaultHashes[pos.Height()])
 	}
 	if len(leaves) > 1 && p.navigator.IsLeaf(pos) {
 		panic("this should never happen (unsorted LeavesSlice or broken split?)")
@@ -217,9 +219,9 @@ func (p *SearchPruner) traverseWithoutCaching(pos common.Position, leaves storag
 	left := p.traverseWithoutCaching(p.navigator.GoToLeft(pos), leftSlice)
 	right := p.traverseWithoutCaching(rightPos, rightSlice)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	return visitor.NewNode(pos, left, right)
 }
 
 type VerifyPruner struct {
@@ -232,21 +234,21 @@ func NewVerifyPruner(key, value []byte, context PruningContext) *VerifyPruner {
 	return &VerifyPruner{key, value, context}
 }
 
-func (p *VerifyPruner) Prune() common.Visitable {
+func (p *VerifyPruner) Prune() visitor.Visitable {
 	leaves := storage.KVRange{storage.NewKVPair(p.key, p.value)}
 	return p.traverse(p.navigator.Root(), leaves)
 }
 
-func (p *VerifyPruner) traverse(pos common.Position, leaves storage.KVRange) common.Visitable {
+func (p *VerifyPruner) traverse(pos navigator.Position, leaves storage.KVRange) visitor.Visitable {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
-		return common.NewLeaf(pos, leaves[0].Value)
+		return visitor.NewLeaf(pos, leaves[0].Value)
 	}
 	if !p.navigator.IsRoot(pos) && len(leaves) == 0 {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
 			panic("this should never happen (wrong audit path)")
 		}
-		return common.NewCached(pos, digest)
+		return visitor.NewCached(pos, digest)
 	}
 	if len(leaves) > 1 && p.navigator.IsLeaf(pos) {
 		panic("this should never happen (unsorted LeavesSlice or broken split?)")
@@ -260,7 +262,7 @@ func (p *VerifyPruner) traverse(pos common.Position, leaves storage.KVRange) com
 	left := p.traverse(p.navigator.GoToLeft(pos), leftSlice)
 	right := p.traverse(rightPos, rightSlice)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	return visitor.NewNode(pos, left, right)
 }

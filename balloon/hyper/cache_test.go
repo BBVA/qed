@@ -19,7 +19,7 @@ package hyper
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/navigator"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,7 +29,7 @@ func TestShouldBeInCache(t *testing.T) {
 		numBits        uint16
 		cacheLevel     uint16
 		targetKey      []byte
-		position       common.Position
+		position       navigator.Position
 		expectedResult bool
 	}{
 		{"Position on path", 8, 3, []byte{0}, NewPosition([]byte{0}, 2), false},
@@ -49,7 +49,7 @@ func TestShouldCache(t *testing.T) {
 		numBits        uint16
 		cacheLevel     uint16
 		targetKey      []byte
-		position       common.Position
+		position       navigator.Position
 		expectedResult bool
 	}{
 		{8, 3, []byte{0}, NewPosition([]byte{0}, 0), false},
@@ -69,7 +69,7 @@ func TestIsOnPath(t *testing.T) {
 		numBits        uint16
 		cacheLevel     uint16
 		targetKey      []byte
-		position       common.Position
+		position       navigator.Position
 		expectedResult bool
 	}{
 		{8, 3, []byte{0}, NewPosition([]byte{0}, 1), true},

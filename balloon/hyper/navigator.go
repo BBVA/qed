@@ -16,9 +16,7 @@
 
 package hyper
 
-import (
-	"github.com/bbva/qed/balloon/common"
-)
+import "github.com/bbva/qed/balloon/navigator"
 
 type HyperTreeNavigator struct {
 	numBits uint16
@@ -28,38 +26,38 @@ func NewHyperTreeNavigator(numBits uint16) *HyperTreeNavigator {
 	return &HyperTreeNavigator{numBits}
 }
 
-func (n HyperTreeNavigator) Root() common.Position {
+func (n HyperTreeNavigator) Root() navigator.Position {
 	index := make([]byte, n.numBits/8)
 	return NewPosition(index, n.numBits)
 }
 
-func (n HyperTreeNavigator) IsLeaf(pos common.Position) bool {
+func (n HyperTreeNavigator) IsLeaf(pos navigator.Position) bool {
 	return pos.Height() == 0
 }
 
-func (n HyperTreeNavigator) IsRoot(pos common.Position) bool {
+func (n HyperTreeNavigator) IsRoot(pos navigator.Position) bool {
 	return pos.Height() == n.numBits
 }
 
-func (n HyperTreeNavigator) GoToLeft(pos common.Position) common.Position {
+func (n HyperTreeNavigator) GoToLeft(pos navigator.Position) navigator.Position {
 	if pos.Height() == 0 {
 		return nil
 	}
 	return NewPosition(pos.Index(), pos.Height()-1)
 }
 
-func (n HyperTreeNavigator) GoToRight(pos common.Position) common.Position {
+func (n HyperTreeNavigator) GoToRight(pos navigator.Position) navigator.Position {
 	if pos.Height() == 0 {
 		return nil
 	}
 	return NewPosition(n.splitBase(pos), pos.Height()-1)
 }
 
-func (n HyperTreeNavigator) DescendToFirst(pos common.Position) common.Position {
+func (n HyperTreeNavigator) DescendToFirst(pos navigator.Position) navigator.Position {
 	return NewPosition(pos.Index(), 0)
 }
 
-func (n HyperTreeNavigator) DescendToLast(pos common.Position) common.Position {
+func (n HyperTreeNavigator) DescendToLast(pos navigator.Position) navigator.Position {
 	layer := n.numBits - pos.Height()
 	base := make([]byte, n.numBits/8)
 	copy(base, pos.Index())
@@ -69,7 +67,7 @@ func (n HyperTreeNavigator) DescendToLast(pos common.Position) common.Position {
 	return NewPosition(base, 0)
 }
 
-func (n HyperTreeNavigator) splitBase(pos common.Position) []byte {
+func (n HyperTreeNavigator) splitBase(pos navigator.Position) []byte {
 	splitBit := n.numBits - pos.Height()
 	split := make([]byte, n.numBits/8)
 	copy(split, pos.Index())

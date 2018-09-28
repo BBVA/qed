@@ -21,7 +21,9 @@ import (
 
 	assert "github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/navigator"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	storage_utils "github.com/bbva/qed/testutils/storage"
@@ -31,32 +33,32 @@ var (
 	FixedDigest = make([]byte, 8)
 )
 
-func pos(index byte, height uint16) common.Position {
+func pos(index byte, height uint16) navigator.Position {
 	return NewPosition([]byte{index}, height)
 }
 
-func root(pos common.Position, left, right common.Visitable) *common.Root {
-	return common.NewRoot(pos, left, right)
+func root(pos navigator.Position, left, right visitor.Visitable) *visitor.Root {
+	return visitor.NewRoot(pos, left, right)
 }
 
-func node(pos common.Position, left, right common.Visitable) *common.Node {
-	return common.NewNode(pos, left, right)
+func node(pos navigator.Position, left, right visitor.Visitable) *visitor.Node {
+	return visitor.NewNode(pos, left, right)
 }
 
-func leaf(pos common.Position, value byte) *common.Leaf {
-	return common.NewLeaf(pos, []byte{value})
+func leaf(pos navigator.Position, value byte) *visitor.Leaf {
+	return visitor.NewLeaf(pos, []byte{value})
 }
 
-func cached(pos common.Position) *common.Cached {
-	return common.NewCached(pos, hashing.Digest{0})
+func cached(pos navigator.Position) *visitor.Cached {
+	return visitor.NewCached(pos, hashing.Digest{0})
 }
 
-func collectable(underlying common.Visitable) *common.Collectable {
-	return common.NewCollectable(underlying)
+func collectable(underlying visitor.Visitable) *visitor.Collectable {
+	return visitor.NewCollectable(underlying)
 }
 
-func cacheable(underlying common.Visitable) *common.Cacheable {
-	return common.NewCacheable(underlying)
+func cacheable(underlying visitor.Visitable) *visitor.Cacheable {
+	return visitor.NewCacheable(underlying)
 }
 
 func TestInsertPruner(t *testing.T) {
@@ -67,7 +69,7 @@ func TestInsertPruner(t *testing.T) {
 	testCases := []struct {
 		key, value     []byte
 		storeMutations []*storage.Mutation
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			key:            []byte{0},
@@ -153,7 +155,7 @@ func TestInsertPruner(t *testing.T) {
 		defer closeF()
 		store.Mutate(c.storeMutations)
 
-		cache := common.NewSimpleCache(4)
+		cache := cache.NewSimpleCache(4)
 
 		context := PruningContext{
 			navigator:     NewHyperTreeNavigator(numBits),
@@ -179,7 +181,7 @@ func TestSearchPruner(t *testing.T) {
 	testCases := []struct {
 		key            []byte
 		storeMutations []*storage.Mutation
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			key: []byte{0},
@@ -240,7 +242,7 @@ func TestSearchPruner(t *testing.T) {
 		defer closeF()
 		store.Mutate(c.storeMutations)
 
-		cache := common.NewSimpleCache(4)
+		cache := cache.NewSimpleCache(4)
 
 		context := PruningContext{
 			navigator:     NewHyperTreeNavigator(numBits),
@@ -262,7 +264,7 @@ func TestVerifyPruner(t *testing.T) {
 	numBits := uint16(8)
 	cacheLevel := uint16(4)
 
-	fakeCache := common.NewFakeCache(hashing.Digest{0}) // Always return hashing.Digest{0}
+	fakeCache := cache.NewFakeCache(hashing.Digest{0}) // Always return hashing.Digest{0}
 	// Add element before verifying.
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
@@ -273,7 +275,7 @@ func TestVerifyPruner(t *testing.T) {
 
 	testCases := []struct {
 		key, value     []byte
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			key:   []byte{0},

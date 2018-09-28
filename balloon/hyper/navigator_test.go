@@ -19,7 +19,7 @@ package hyper
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/navigator"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestRoot(t *testing.T) {
 
 	testCases := []struct {
 		numBits     uint16
-		expectedPos common.Position
+		expectedPos navigator.Position
 	}{
 		{8, NewPosition(make([]byte, 1), 8)},
 		{256, NewPosition(make([]byte, 32), 256)},
@@ -44,7 +44,7 @@ func TestRoot(t *testing.T) {
 func TestIsLeaf(t *testing.T) {
 
 	testCases := []struct {
-		position common.Position
+		position navigator.Position
 		ok       bool
 	}{
 		{NewPosition([]byte{0}, 0), true},
@@ -64,7 +64,7 @@ func TestIsRoot(t *testing.T) {
 
 	testCases := []struct {
 		numBits  uint16
-		position common.Position
+		position navigator.Position
 		ok       bool
 	}{
 		{8, NewPosition([]byte{0}, 8), true},
@@ -84,8 +84,8 @@ func TestGoToLeft(t *testing.T) {
 
 	testCases := []struct {
 		numBits      uint16
-		position     common.Position
-		expectedLeft common.Position
+		position     navigator.Position
+		expectedLeft navigator.Position
 	}{
 		{8, NewPosition([]byte{0}, 0), nil},
 		{8, NewPosition([]byte{0}, 1), NewPosition([]byte{0}, 0)},
@@ -103,8 +103,8 @@ func TestGoToRight(t *testing.T) {
 
 	testCases := []struct {
 		numBits       uint16
-		position      common.Position
-		expectedRight common.Position
+		position      navigator.Position
+		expectedRight navigator.Position
 	}{
 		{8, NewPosition([]byte{0}, 0), nil},
 		{8, NewPosition([]byte{0}, 1), NewPosition([]byte{1}, 0)},
@@ -121,8 +121,8 @@ func TestDescendToFirst(t *testing.T) {
 
 	testCases := []struct {
 		numBits       uint16
-		position      common.Position
-		expectedFirst common.Position
+		position      navigator.Position
+		expectedFirst navigator.Position
 	}{
 		{8, NewPosition([]byte{0}, 0), NewPosition([]byte{0}, 0)},
 		{8, NewPosition([]byte{4}, 4), NewPosition([]byte{4}, 0)},
@@ -139,8 +139,8 @@ func TestDescendToLast(t *testing.T) {
 
 	testCases := []struct {
 		numBits      uint16
-		position     common.Position
-		expectedLast common.Position
+		position     navigator.Position
+		expectedLast navigator.Position
 	}{
 		{8, NewPosition([]byte{0}, 0), NewPosition([]byte{0}, 0)},
 		{8, NewPosition([]byte{0}, 1), NewPosition([]byte{1}, 0)},

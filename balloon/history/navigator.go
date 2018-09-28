@@ -19,7 +19,7 @@ package history
 import (
 	"math/bits"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/navigator"
 )
 
 type HistoryTreeNavigator struct {
@@ -32,25 +32,25 @@ func NewHistoryTreeNavigator(version uint64) *HistoryTreeNavigator {
 	return &HistoryTreeNavigator{version, depth}
 }
 
-func (n HistoryTreeNavigator) Root() common.Position {
+func (n HistoryTreeNavigator) Root() navigator.Position {
 	return NewPosition(0, n.depth)
 }
 
-func (n HistoryTreeNavigator) IsLeaf(pos common.Position) bool {
+func (n HistoryTreeNavigator) IsLeaf(pos navigator.Position) bool {
 	return pos.Height() == 0
 }
 
-func (n HistoryTreeNavigator) IsRoot(pos common.Position) bool {
+func (n HistoryTreeNavigator) IsRoot(pos navigator.Position) bool {
 	return pos.Height() == n.depth && pos.IndexAsUint64() == 0
 }
 
-func (n HistoryTreeNavigator) GoToLeft(pos common.Position) common.Position {
+func (n HistoryTreeNavigator) GoToLeft(pos navigator.Position) navigator.Position {
 	if pos.Height() == 0 {
 		return nil
 	}
 	return NewPosition(pos.IndexAsUint64(), pos.Height()-1)
 }
-func (n HistoryTreeNavigator) GoToRight(pos common.Position) common.Position {
+func (n HistoryTreeNavigator) GoToRight(pos navigator.Position) navigator.Position {
 	rightIndex := pos.IndexAsUint64() + 1<<(pos.Height()-1)
 	if pos.Height() == 0 || rightIndex > n.version {
 		return nil
@@ -58,14 +58,14 @@ func (n HistoryTreeNavigator) GoToRight(pos common.Position) common.Position {
 	return NewPosition(rightIndex, pos.Height()-1)
 }
 
-func (n HistoryTreeNavigator) DescendToFirst(pos common.Position) common.Position {
+func (n HistoryTreeNavigator) DescendToFirst(pos navigator.Position) navigator.Position {
 	if n.IsLeaf(pos) {
 		return nil
 	}
 	return NewPosition(pos.IndexAsUint64(), 0)
 }
 
-func (n HistoryTreeNavigator) DescendToLast(pos common.Position) common.Position {
+func (n HistoryTreeNavigator) DescendToLast(pos navigator.Position) navigator.Position {
 	if n.IsLeaf(pos) {
 		return nil
 	}

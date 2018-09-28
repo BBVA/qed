@@ -17,11 +17,11 @@
 package history
 
 import (
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/navigator"
 )
 
 type CacheResolver interface {
-	ShouldGetFromCache(pos common.Position) bool
+	ShouldGetFromCache(pos navigator.Position) bool
 }
 
 type SingleTargetedCacheResolver struct {
@@ -32,7 +32,7 @@ func NewSingleTargetedCacheResolver(version uint64) *SingleTargetedCacheResolver
 	return &SingleTargetedCacheResolver{version}
 }
 
-func (r SingleTargetedCacheResolver) ShouldGetFromCache(pos common.Position) bool {
+func (r SingleTargetedCacheResolver) ShouldGetFromCache(pos navigator.Position) bool {
 	return r.version > pos.IndexAsUint64()+1<<pos.Height()-1
 }
 
@@ -44,7 +44,7 @@ func NewDoubleTargetedCacheResolver(start, end uint64) *DoubleTargetedCacheResol
 	return &DoubleTargetedCacheResolver{start, end}
 }
 
-func (r DoubleTargetedCacheResolver) ShouldGetFromCache(pos common.Position) bool {
+func (r DoubleTargetedCacheResolver) ShouldGetFromCache(pos navigator.Position) bool {
 	if pos.Height() == 0 && pos.IndexAsUint64() == r.start { // THIS SHOULD BE TRUE for inc proofs but not for membership
 		return false
 	}
@@ -63,7 +63,7 @@ func NewIncrementalCacheResolver(start, end uint64) *IncrementalCacheResolver {
 	return &IncrementalCacheResolver{start, end}
 }
 
-func (r IncrementalCacheResolver) ShouldGetFromCache(pos common.Position) bool {
+func (r IncrementalCacheResolver) ShouldGetFromCache(pos navigator.Position) bool {
 	if pos.Height() == 0 && pos.IndexAsUint64() == r.start {
 		return true
 	}
