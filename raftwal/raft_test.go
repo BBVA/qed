@@ -231,25 +231,25 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 
 	err = r0.Close(true)
 	require.NoError(t, err)
-	// clean0()
+	clean0()
 
-	r0, clean0 = newNode(t, 8)
+	r8, clean8 := newNode(t, 8)
 	defer func() {
-		err = r0.Close(true)
+		err = r8.Close(true)
 		require.NoError(t, err)
-		clean0()
+		clean8()
 	}()
 
-	err = r0.Open(true)
+	err = r8.Open(true)
 	require.NoError(t, err)
 
-	_, err = r0.WaitForLeader(10 * time.Second)
+	_, err = r8.WaitForLeader(10 * time.Second)
 	require.NoError(t, err)
 
-	err = r0.fsm.Restore(snapFile)
+	err = r8.fsm.Restore(snapFile)
 	require.NoError(t, err)
 
-	require.Equal(t, expectedBalloonVersion, r0.fsm.balloon.Version(), "Error in state recovery from snapshot")
+	require.Equal(t, expectedBalloonVersion, r8.fsm.balloon.Version(), "Error in state recovery from snapshot")
 
 }
 
