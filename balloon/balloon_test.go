@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -129,8 +129,8 @@ func TestMembershipProofVerify(t *testing.T) {
 		}
 		proof := NewMembershipProof(
 			c.exists,
-			common.NewFakeVerifiable(c.hyperOK),
-			common.NewFakeVerifiable(c.historyOK),
+			visitor.NewFakeVerifiable(c.hyperOK),
+			visitor.NewFakeVerifiable(c.historyOK),
 			c.currentVersion,
 			c.queryVersion,
 			c.actualVersion,

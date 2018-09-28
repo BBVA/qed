@@ -19,19 +19,19 @@ package history
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
 
 type MembershipProof struct {
-	auditPath      common.AuditPath
+	auditPath      visitor.AuditPath
 	Index, Version uint64
 	hasher         hashing.Hasher // TODO should we remove this and pass as an argument when verifying?
 	// TODO should we include the eventDigest?
 }
 
-func NewMembershipProof(index, version uint64, auditPath common.AuditPath, hasher hashing.Hasher) *MembershipProof {
+func NewMembershipProof(index, version uint64, auditPath visitor.AuditPath, hasher hashing.Hasher) *MembershipProof {
 	return &MembershipProof{
 		auditPath: auditPath,
 		Index:     index,
@@ -40,7 +40,7 @@ func NewMembershipProof(index, version uint64, auditPath common.AuditPath, hashe
 	}
 }
 
-func (p MembershipProof) AuditPath() common.AuditPath {
+func (p MembershipProof) AuditPath() visitor.AuditPath {
 	return p.auditPath
 }
 
@@ -48,7 +48,7 @@ func (p MembershipProof) AuditPath() common.AuditPath {
 func (p MembershipProof) Verify(eventDigest []byte, expectedDigest hashing.Digest) (correct bool) {
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(p.hasher)
+	computeHash := visitor.NewComputeHashVisitor(p.hasher)
 
 	// build pruning context
 	var cacheResolver CacheResolver
@@ -73,12 +73,12 @@ func (p MembershipProof) Verify(eventDigest []byte, expectedDigest hashing.Diges
 }
 
 type IncrementalProof struct {
-	AuditPath                common.AuditPath
+	AuditPath                visitor.AuditPath
 	StartVersion, EndVersion uint64
 	hasher                   hashing.Hasher
 }
 
-func NewIncrementalProof(start, end uint64, auditPath common.AuditPath, hasher hashing.Hasher) *IncrementalProof {
+func NewIncrementalProof(start, end uint64, auditPath visitor.AuditPath, hasher hashing.Hasher) *IncrementalProof {
 	return &IncrementalProof{
 		AuditPath:    auditPath,
 		StartVersion: start,
@@ -92,7 +92,7 @@ func (p IncrementalProof) Verify(startDigest, endDigest hashing.Digest) (correct
 	log.Debugf("Verifying incremental between versions %d and %d", p.StartVersion, p.EndVersion)
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(p.hasher)
+	computeHash := visitor.NewComputeHashVisitor(p.hasher)
 
 	// build pruning context
 	startContext := PruningContext{

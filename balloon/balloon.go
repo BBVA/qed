@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
@@ -45,8 +46,8 @@ type Balloon struct {
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// create caches
-	historyCache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
-	hyperCache := common.NewSimpleCache(1 << 2)
+	historyCache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
+	hyperCache := cache.NewSimpleCache(1 << 2)
 
 	// create trees
 	historyTree := history.NewHistoryTree(hasherF, historyCache)
@@ -80,8 +81,8 @@ type Commitment struct {
 // Current, Actual and Query Versions.
 type MembershipProof struct {
 	Exists         bool
-	HyperProof     common.Verifiable
-	HistoryProof   common.Verifiable
+	HyperProof     visitor.Verifiable
+	HistoryProof   visitor.Verifiable
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64 //required for consistency proof
@@ -91,7 +92,7 @@ type MembershipProof struct {
 
 func NewMembershipProof(
 	exists bool,
-	hyperProof, historyProof common.Verifiable,
+	hyperProof, historyProof visitor.Verifiable,
 	currentVersion, queryVersion, actualVersion uint64,
 	keyDigest hashing.Digest,
 	Hasher hashing.Hasher) *MembershipProof {
@@ -130,13 +131,13 @@ func (p MembershipProof) Verify(event []byte, commitment *Commitment) bool {
 
 type IncrementalProof struct {
 	Start, End uint64
-	AuditPath  common.AuditPath
+	AuditPath  visitor.AuditPath
 	Hasher     hashing.Hasher
 }
 
 func NewIncrementalProof(
 	start, end uint64,
-	auditPath common.AuditPath,
+	auditPath visitor.AuditPath,
 	hasher hashing.Hasher,
 ) *IncrementalProof {
 	return &IncrementalProof{

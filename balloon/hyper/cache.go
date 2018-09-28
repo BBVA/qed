@@ -16,15 +16,13 @@
 
 package hyper
 
-import (
-	"github.com/bbva/qed/balloon/common"
-)
+import "github.com/bbva/qed/balloon/navigator"
 
 type CacheResolver interface {
-	ShouldBeInCache(pos common.Position) bool
-	ShouldCache(pos common.Position) bool
-	ShouldCollect(pos common.Position) bool
-	IsOnPath(pos common.Position) bool
+	ShouldBeInCache(pos navigator.Position) bool
+	ShouldCache(pos navigator.Position) bool
+	ShouldCollect(pos navigator.Position) bool
+	IsOnPath(pos navigator.Position) bool
 }
 
 type SingleTargetedCacheResolver struct {
@@ -37,22 +35,22 @@ func NewSingleTargetedCacheResolver(numBits, cacheLevel uint16, targetKey []byte
 	return &SingleTargetedCacheResolver{numBits, cacheLevel, targetKey}
 }
 
-func (r SingleTargetedCacheResolver) ShouldBeInCache(pos common.Position) bool {
+func (r SingleTargetedCacheResolver) ShouldBeInCache(pos navigator.Position) bool {
 	return pos.Height() > r.cacheLevel && !r.IsOnPath(pos)
 }
 
-func (r SingleTargetedCacheResolver) ShouldCache(pos common.Position) bool {
+func (r SingleTargetedCacheResolver) ShouldCache(pos navigator.Position) bool {
 	return pos.Height() > r.cacheLevel
 }
 
-func (r SingleTargetedCacheResolver) ShouldCollect(pos common.Position) bool {
+func (r SingleTargetedCacheResolver) ShouldCollect(pos navigator.Position) bool {
 	return pos.Height() == r.cacheLevel+1
 }
 
 /*
 	This method does not reach leafs. Goes from root (bit := 0) to height=1 (bit := numbits - 1)
 */
-func (r SingleTargetedCacheResolver) IsOnPath(pos common.Position) bool {
+func (r SingleTargetedCacheResolver) IsOnPath(pos navigator.Position) bool {
 	height := pos.Height()
 	if height == r.numBits {
 		return true
