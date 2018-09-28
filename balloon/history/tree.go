@@ -20,7 +20,8 @@ import (
 	"math/bits"
 	"sync"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -29,11 +30,11 @@ import (
 type HistoryTree struct {
 	lock    sync.RWMutex
 	hasherF func() hashing.Hasher
-	cache   common.ModifiableCache
+	cache   cache.ModifiableCache
 	hasher  hashing.Hasher
 }
 
-func NewHistoryTree(hasherF func() hashing.Hasher, cache common.ModifiableCache) *HistoryTree {
+func NewHistoryTree(hasherF func() hashing.Hasher, cache cache.ModifiableCache) *HistoryTree {
 	var lock sync.RWMutex
 	return &HistoryTree{lock, hasherF, cache, hasherF()}
 }
@@ -47,9 +48,9 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	defer t.lock.Unlock()
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(t.hasher)
-	caching := common.NewCachingVisitor(computeHash, t.cache)
-	collect := common.NewCollectMutationsVisitor(caching, storage.HistoryCachePrefix)
+	computeHash := visitor.NewComputeHashVisitor(t.hasher)
+	caching := visitor.NewCachingVisitor(computeHash, t.cache)
+	collect := visitor.NewCollectMutationsVisitor(caching, storage.HistoryCachePrefix)
 
 	// build pruning context
 	context := PruningContext{
@@ -61,7 +62,7 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	// traverse from root and generate a visitable pruned tree
 	pruned := NewInsertPruner(version, eventDigest, context).Prune()
 
-	// print := common.NewPrintVisitor(t.getDepth(version))
+	// print := visitor.NewPrintVisitor(t.getDepth(version))
 	// pruned.PreOrder(print)
 	// log.Debugf("Pruned tree: %s", print.Result())
 
@@ -78,8 +79,8 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	log.Debugf("Proving membership for index %d with version %d", index, version)
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(t.hasher)
-	calcAuditPath := common.NewAuditPathVisitor(computeHash)
+	computeHash := visitor.NewComputeHashVisitor(t.hasher)
+	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
 
 	// build pruning context
 	var resolver CacheResolver
@@ -98,7 +99,7 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	// traverse from root and generate a visitable pruned tree
 	pruned := NewSearchPruner(context).Prune()
 
-	// print := common.NewPrintVisitor(t.getDepth(version))
+	// print := visitor.NewPrintVisitor(t.getDepth(version))
 	// pruned.PreOrder(print)
 	// log.Debugf("Pruned tree: %s", print.Result())
 
@@ -117,8 +118,8 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 	log.Debugf("Proving consistency between versions %d and %d", start, end)
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(t.hasher)
-	calcAuditPath := common.NewAuditPathVisitor(computeHash)
+	computeHash := visitor.NewComputeHashVisitor(t.hasher)
+	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
 
 	// build pruning context
 	context := PruningContext{

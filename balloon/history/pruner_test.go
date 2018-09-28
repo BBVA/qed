@@ -19,55 +19,57 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/navigator"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/assert"
 )
 
-func pos(index uint64, height uint16) common.Position {
+func pos(index uint64, height uint16) navigator.Position {
 	return NewPosition(index, height)
 }
 
-func root(pos common.Position, left, right common.Visitable) *common.Root {
-	return common.NewRoot(pos, left, right)
+func root(pos navigator.Position, left, right visitor.Visitable) *visitor.Root {
+	return visitor.NewRoot(pos, left, right)
 }
 
-func node(pos common.Position, left, right common.Visitable) *common.Node {
-	return common.NewNode(pos, left, right)
+func node(pos navigator.Position, left, right visitor.Visitable) *visitor.Node {
+	return visitor.NewNode(pos, left, right)
 }
 
-func partialnode(pos common.Position, left common.Visitable) *common.PartialNode {
-	return common.NewPartialNode(pos, left)
+func partialnode(pos navigator.Position, left visitor.Visitable) *visitor.PartialNode {
+	return visitor.NewPartialNode(pos, left)
 }
 
-func leaf(pos common.Position, value byte) *common.Leaf {
-	return common.NewLeaf(pos, []byte{value})
+func leaf(pos navigator.Position, value byte) *visitor.Leaf {
+	return visitor.NewLeaf(pos, []byte{value})
 }
 
-func leafnil(pos common.Position) *common.Leaf {
-	return common.NewLeaf(pos, nil)
+func leafnil(pos navigator.Position) *visitor.Leaf {
+	return visitor.NewLeaf(pos, nil)
 }
 
-func cached(pos common.Position) *common.Cached {
-	return common.NewCached(pos, hashing.Digest{0})
+func cached(pos navigator.Position) *visitor.Cached {
+	return visitor.NewCached(pos, hashing.Digest{0})
 }
 
-func collectable(underlying common.Visitable) *common.Collectable {
-	return common.NewCollectable(underlying)
+func collectable(underlying visitor.Visitable) *visitor.Collectable {
+	return visitor.NewCollectable(underlying)
 }
 
-func cacheable(underlying common.Visitable) *common.Cacheable {
-	return common.NewCacheable(underlying)
+func cacheable(underlying visitor.Visitable) *visitor.Cacheable {
+	return visitor.NewCacheable(underlying)
 }
 
 func TestInsertPruner(t *testing.T) {
 
-	cache := common.NewFakeCache(hashing.Digest{0x0})
+	cache := cache.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		version        uint64
 		eventDigest    hashing.Digest
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			version:        0,
@@ -163,11 +165,11 @@ func TestInsertPruner(t *testing.T) {
 
 func TestSearchPruner(t *testing.T) {
 
-	cache := common.NewFakeCache(hashing.Digest{0x0})
+	cache := cache.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		version        uint64
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			version:        0,
@@ -255,11 +257,11 @@ func TestSearchPruner(t *testing.T) {
 
 func TestSearchPrunerConsistency(t *testing.T) {
 
-	cache := common.NewFakeCache(hashing.Digest{0x0})
+	cache := cache.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		index, version uint64
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			index:          0,
@@ -367,11 +369,11 @@ func TestSearchPrunerConsistency(t *testing.T) {
 
 func TestSearchPrunerIncremental(t *testing.T) {
 
-	cache := common.NewFakeCache(hashing.Digest{0x0})
+	cache := cache.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		start, end     uint64
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			start:          0,
@@ -479,12 +481,12 @@ func TestSearchPrunerIncremental(t *testing.T) {
 
 func TestVerifyPruner(t *testing.T) {
 
-	cache := common.NewFakeCache(hashing.Digest{0x0})
+	cache := cache.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		index, version uint64
 		eventDigest    hashing.Digest
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			index:          0,
@@ -567,11 +569,11 @@ func TestVerifyPruner(t *testing.T) {
 
 func TestVerifyPrunerIncremental(t *testing.T) {
 
-	cache := common.NewFakeCache(hashing.Digest{0x0})
+	cache := cache.NewFakeCache(hashing.Digest{0x0})
 
 	testCases := []struct {
 		start, end     uint64
-		expectedPruned common.Visitable
+		expectedPruned visitor.Visitable
 	}{
 		{
 			start:          0,

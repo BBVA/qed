@@ -19,7 +19,8 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -92,7 +93,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
+	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -115,120 +116,120 @@ func TestProveMembership(t *testing.T) {
 	testCases := []struct {
 		index, version    uint64
 		eventDigest       hashing.Digest
-		expectedAuditPath common.AuditPath
+		expectedAuditPath visitor.AuditPath
 	}{
 		{
 			index:             0,
 			version:           0,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{},
+			expectedAuditPath: visitor.AuditPath{},
 		},
 		{
 			index:             1,
 			version:           1,
 			eventDigest:       hashing.Digest{0x1},
-			expectedAuditPath: common.AuditPath{"0|0": hashing.Digest{0x0}},
+			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}},
 		},
 		{
 			index:             2,
 			version:           2,
 			eventDigest:       hashing.Digest{0x2},
-			expectedAuditPath: common.AuditPath{"0|1": hashing.Digest{0x1}},
+			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}},
 		},
 		{
 			index:             3,
 			version:           3,
 			eventDigest:       hashing.Digest{0x3},
-			expectedAuditPath: common.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
+			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
 		},
 		{
 			index:             4,
 			version:           4,
 			eventDigest:       hashing.Digest{0x4},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}},
 		},
 		{
 			index:             5,
 			version:           5,
 			eventDigest:       hashing.Digest{0x5},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}},
 		},
 		{
 			index:             6,
 			version:           6,
 			eventDigest:       hashing.Digest{0x6},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}},
 		},
 		{
 			index:             7,
 			version:           7,
 			eventDigest:       hashing.Digest{0x7},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}},
 		},
 		{
 			index:             8,
 			version:           8,
 			eventDigest:       hashing.Digest{0x8},
-			expectedAuditPath: common.AuditPath{"0|3": hashing.Digest{0x0}},
+			expectedAuditPath: visitor.AuditPath{"0|3": hashing.Digest{0x0}},
 		},
 		{
 			index:             9,
 			version:           9,
 			eventDigest:       hashing.Digest{0x9},
-			expectedAuditPath: common.AuditPath{"0|3": hashing.Digest{0x0}, "8|0": hashing.Digest{0x8}},
+			expectedAuditPath: visitor.AuditPath{"0|3": hashing.Digest{0x0}, "8|0": hashing.Digest{0x8}},
 		},
 		{
 			index:             0,
 			version:           1,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"1|0": hashing.Digest{0x1}},
+			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}},
 		},
 		{
 			index:             0,
 			version:           1,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"1|0": hashing.Digest{0x1}},
+			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}},
 		},
 		{
 			index:             0,
 			version:           2,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"1|0": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
+			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
 		},
 		{
 			index:             0,
 			version:           3,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}},
+			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}},
 		},
 		{
 			index:             0,
 			version:           4,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|0": hashing.Digest{0x4}},
+			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|0": hashing.Digest{0x4}},
 		},
 		{
 			index:             0,
 			version:           5,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|1": hashing.Digest{0x1}},
+			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|1": hashing.Digest{0x1}},
 		},
 		{
 			index:             0,
 			version:           6,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}},
+			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}},
 		},
 		{
 			index:             0,
 			version:           7,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|2": hashing.Digest{0x0}},
+			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|2": hashing.Digest{0x0}},
 		},
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
+	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -250,52 +251,52 @@ func TestProveConsistency(t *testing.T) {
 
 	testCases := []struct {
 		eventDigest       hashing.Digest
-		expectedAuditPath common.AuditPath
+		expectedAuditPath visitor.AuditPath
 	}{
 		{
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"0|0": hashing.Digest{0x0}},
+			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x1},
-			expectedAuditPath: common.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}},
+			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x2},
-			expectedAuditPath: common.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
+			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x3},
-			expectedAuditPath: common.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}},
+			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x4},
-			expectedAuditPath: common.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}, "4|0": hashing.Digest{0x4}},
+			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}, "4|0": hashing.Digest{0x4}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x5},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}, "5|0": hashing.Digest{0x5}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}, "5|0": hashing.Digest{0x5}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x6},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}, "5|0": hashing.Digest{0x5}, "6|0": hashing.Digest{0x6}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}, "5|0": hashing.Digest{0x5}, "6|0": hashing.Digest{0x6}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x7},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}, "7|0": hashing.Digest{0x7}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}, "7|0": hashing.Digest{0x7}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x8},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}, "7|0": hashing.Digest{0x7}, "8|0": hashing.Digest{0x8}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}, "7|0": hashing.Digest{0x7}, "8|0": hashing.Digest{0x8}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x9},
-			expectedAuditPath: common.AuditPath{"0|3": hashing.Digest{0x0}, "8|0": hashing.Digest{0x8}, "9|0": hashing.Digest{0x9}},
+			expectedAuditPath: visitor.AuditPath{"0|3": hashing.Digest{0x0}, "8|0": hashing.Digest{0x8}, "9|0": hashing.Digest{0x9}},
 		},
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
+	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -322,37 +323,37 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	testCases := []struct {
 		index             uint64
 		eventDigest       hashing.Digest
-		expectedAuditPath common.AuditPath
+		expectedAuditPath visitor.AuditPath
 	}{
 		{
 			index:             0,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: common.AuditPath{"0|0": hashing.Digest{0x0}},
+			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}},
 		},
 		{
 			index:             1,
 			eventDigest:       hashing.Digest{0x1},
-			expectedAuditPath: common.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}},
+			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}},
 		},
 		{
 			index:             2,
 			eventDigest:       hashing.Digest{0x2},
-			expectedAuditPath: common.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
+			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
 		},
 		{
 			index:             3,
 			eventDigest:       hashing.Digest{0x3},
-			expectedAuditPath: common.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}},
+			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}},
 		},
 		{
 			index:             4,
 			eventDigest:       hashing.Digest{0x4},
-			expectedAuditPath: common.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}},
+			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}},
 		},
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
+	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
 
 	for i, c := range testCases {
@@ -382,7 +383,7 @@ func BenchmarkAdd(b *testing.B) {
 	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/history_tree_test.db")
 	defer closeF()
 
-	cache := common.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
+	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	tree := NewHistoryTree(hashing.NewSha256Hasher, cache)
 
 	b.N = 100000

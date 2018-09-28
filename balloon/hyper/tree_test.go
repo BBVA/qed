@@ -22,7 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -53,7 +54,7 @@ func TestAdd(t *testing.T) {
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
-	simpleCache := common.NewSimpleCache(10)
+	simpleCache := cache.NewSimpleCache(10)
 	tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
 
 	for i, c := range testCases {
@@ -75,13 +76,13 @@ func TestProveMembership(t *testing.T) {
 
 	testCases := []struct {
 		addOps            map[uint64]hashing.Digest
-		expectedAuditPath common.AuditPath
+		expectedAuditPath visitor.AuditPath
 	}{
 		{
 			addOps: map[uint64]hashing.Digest{
 				uint64(0): hashing.Digest{0},
 			},
-			expectedAuditPath: common.AuditPath{
+			expectedAuditPath: visitor.AuditPath{
 				"10|4": hashing.Digest{0x0},
 				"04|2": hashing.Digest{0x0},
 				"80|7": hashing.Digest{0x0},
@@ -98,7 +99,7 @@ func TestProveMembership(t *testing.T) {
 				uint64(1): hashing.Digest{1},
 				uint64(2): hashing.Digest{2},
 			},
-			expectedAuditPath: common.AuditPath{
+			expectedAuditPath: visitor.AuditPath{
 				"10|4": hashing.Digest{0x0},
 				"04|2": hashing.Digest{0x0},
 				"80|7": hashing.Digest{0x0},
@@ -114,7 +115,7 @@ func TestProveMembership(t *testing.T) {
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
-		simpleCache := common.NewSimpleCache(10)
+		simpleCache := cache.NewSimpleCache(10)
 		tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
 
 		for index, digest := range c.addOps {
@@ -147,7 +148,7 @@ func TestAddAndVerify(t *testing.T) {
 		hasher := c.hasherF()
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
-		simpleCache := common.NewSimpleCache(10)
+		simpleCache := cache.NewSimpleCache(10)
 		tree := NewHyperTree(c.hasherF, store, simpleCache)
 
 		key := hasher.Do(hashing.Digest("a test event"))
@@ -171,8 +172,8 @@ func TestDeterministicAdd(t *testing.T) {
 	hasher := hashing.NewSha256Hasher()
 
 	// create two trees
-	cache1 := common.NewSimpleCache(0)
-	cache2 := common.NewSimpleCache(0)
+	cache1 := cache.NewSimpleCache(0)
+	cache2 := cache.NewSimpleCache(0)
 	store1, closeF1 := storage_utils.OpenBPlusTreeStore()
 	store2, closeF2 := storage_utils.OpenBPlusTreeStore()
 	defer closeF1()
@@ -254,7 +255,7 @@ func TestRebuildCache(t *testing.T) {
 	hasherF := hashing.NewSha256Hasher
 	hasher := hasherF()
 
-	firstCache := common.NewSimpleCache(10)
+	firstCache := cache.NewSimpleCache(10)
 	tree := NewHyperTree(hasherF, store, firstCache)
 	require.True(t, firstCache.Size() == 0, "The cache should be empty")
 
@@ -268,7 +269,7 @@ func TestRebuildCache(t *testing.T) {
 
 	// Close tree and reopen with a new fresh cache
 	tree.Close()
-	secondCache := common.NewSimpleCache(10)
+	secondCache := cache.NewSimpleCache(10)
 	tree = NewHyperTree(hasherF, store, secondCache)
 
 	require.Equal(t, expectedSize, secondCache.Size(), "The size of the caches should match")
@@ -283,7 +284,7 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 
 	hasher := hashing.NewSha256Hasher()
-	simpleCache := common.NewSimpleCache(0)
+	simpleCache := cache.NewSimpleCache(0)
 	tree := NewHyperTree(hashing.NewSha256Hasher, store, simpleCache)
 
 	b.ResetTimer()

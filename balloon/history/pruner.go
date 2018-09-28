@@ -19,18 +19,20 @@ package history
 import (
 	"fmt"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/navigator"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 )
 
 type PruningContext struct {
-	navigator     common.TreeNavigator
+	navigator     navigator.TreeNavigator
 	cacheResolver CacheResolver
-	cache         common.Cache
+	cache         cache.Cache
 }
 
 type Pruner interface {
-	Prune() common.Visitable
+	Prune() visitor.Visitable
 }
 
 type InsertPruner struct {
@@ -43,41 +45,41 @@ func NewInsertPruner(version uint64, eventDigest hashing.Digest, context Pruning
 	return &InsertPruner{version, eventDigest, context}
 }
 
-func (p *InsertPruner) Prune() common.Visitable {
+func (p *InsertPruner) Prune() visitor.Visitable {
 	return p.traverse(p.navigator.Root(), p.eventDigest)
 }
 
-func (p *InsertPruner) traverse(pos common.Position, eventDigest hashing.Digest) common.Visitable {
+func (p *InsertPruner) traverse(pos navigator.Position, eventDigest hashing.Digest) visitor.Visitable {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
 			panic("this digest should be in cache")
 		}
-		return common.NewCached(pos, digest)
+		return visitor.NewCached(pos, digest)
 	}
 	if p.navigator.IsLeaf(pos) {
-		return common.NewCollectable(common.NewCacheable(common.NewLeaf(pos, eventDigest)))
+		return visitor.NewCollectable(visitor.NewCacheable(visitor.NewLeaf(pos, eventDigest)))
 	}
 	// we do a post-order traversal
 	left := p.traverse(p.navigator.GoToLeft(pos), eventDigest)
 	rightPos := p.navigator.GoToRight(pos)
 	if rightPos == nil {
-		return common.NewPartialNode(pos, left)
+		return visitor.NewPartialNode(pos, left)
 	}
 	right := p.traverse(rightPos, eventDigest)
-	var result common.Visitable
+	var result visitor.Visitable
 	if p.navigator.IsRoot(pos) {
-		result = common.NewRoot(pos, left, right)
+		result = visitor.NewRoot(pos, left, right)
 	} else {
-		result = common.NewNode(pos, left, right)
+		result = visitor.NewNode(pos, left, right)
 	}
 	if p.shouldCollect(pos) {
-		return common.NewCollectable(common.NewCacheable(result))
+		return visitor.NewCollectable(visitor.NewCacheable(result))
 	}
 	return result
 }
 
-func (p InsertPruner) shouldCollect(pos common.Position) bool {
+func (p InsertPruner) shouldCollect(pos navigator.Position) bool {
 	return p.version >= pos.IndexAsUint64()+1<<pos.Height()-1
 }
 
@@ -89,32 +91,32 @@ func NewSearchPruner(context PruningContext) *SearchPruner {
 	return &SearchPruner{context}
 }
 
-func (p *SearchPruner) Prune() common.Visitable {
+func (p *SearchPruner) Prune() visitor.Visitable {
 	return p.traverse(p.navigator.Root())
 }
 
-func (p *SearchPruner) traverse(pos common.Position) common.Visitable {
+func (p *SearchPruner) traverse(pos navigator.Position) visitor.Visitable {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
 			panic("this digest should be in cache")
 		}
-		return common.NewCollectable(common.NewCached(pos, digest))
+		return visitor.NewCollectable(visitor.NewCached(pos, digest))
 	}
 	if p.navigator.IsLeaf(pos) {
-		return common.NewLeaf(pos, nil)
+		return visitor.NewLeaf(pos, nil)
 	}
 	// we do a post-order traversal
 	left := p.traverse(p.navigator.GoToLeft(pos))
 	rightPos := p.navigator.GoToRight(pos)
 	if rightPos == nil {
-		return common.NewPartialNode(pos, left)
+		return visitor.NewPartialNode(pos, left)
 	}
 	right := p.traverse(rightPos)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	return visitor.NewNode(pos, left, right)
 }
 
 type VerifyPruner struct {
@@ -126,32 +128,32 @@ func NewVerifyPruner(eventDigest hashing.Digest, context PruningContext) *Verify
 	return &VerifyPruner{eventDigest, context}
 }
 
-func (p *VerifyPruner) Prune() common.Visitable {
+func (p *VerifyPruner) Prune() visitor.Visitable {
 	return p.traverse(p.navigator.Root(), p.eventDigest)
 }
 
-func (p *VerifyPruner) traverse(pos common.Position, eventDigest hashing.Digest) common.Visitable {
+func (p *VerifyPruner) traverse(pos navigator.Position, eventDigest hashing.Digest) visitor.Visitable {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
 			panic(fmt.Sprintf("the digest in position %v must be in cache", pos)) // TODO return error instead of panic
 		}
-		return common.NewCached(pos, digest)
+		return visitor.NewCached(pos, digest)
 	}
 	if p.navigator.IsLeaf(pos) {
-		return common.NewLeaf(pos, eventDigest)
+		return visitor.NewLeaf(pos, eventDigest)
 	}
 	// we do a post-order traversal
 	left := p.traverse(p.navigator.GoToLeft(pos), eventDigest)
 	rightPos := p.navigator.GoToRight(pos)
 	if rightPos == nil {
-		return common.NewPartialNode(pos, left)
+		return visitor.NewPartialNode(pos, left)
 	}
 	right := p.traverse(rightPos, eventDigest)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	return visitor.NewNode(pos, left, right)
 
 }
 
@@ -163,17 +165,17 @@ func NewVerifyIncrementalPruner(context PruningContext) *VerifyIncrementalPruner
 	return &VerifyIncrementalPruner{context}
 }
 
-func (p *VerifyIncrementalPruner) Prune() common.Visitable {
+func (p *VerifyIncrementalPruner) Prune() visitor.Visitable {
 	return p.traverse(p.navigator.Root())
 }
 
-func (p *VerifyIncrementalPruner) traverse(pos common.Position) common.Visitable {
+func (p *VerifyIncrementalPruner) traverse(pos navigator.Position) visitor.Visitable {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
 			panic("this digest should be in cache")
 		}
-		return common.NewCached(pos, digest)
+		return visitor.NewCached(pos, digest)
 	}
 	if p.navigator.IsLeaf(pos) {
 		panic("this digest should be in cache")
@@ -182,11 +184,11 @@ func (p *VerifyIncrementalPruner) traverse(pos common.Position) common.Visitable
 	left := p.traverse(p.navigator.GoToLeft(pos))
 	rightPos := p.navigator.GoToRight(pos)
 	if rightPos == nil {
-		return common.NewPartialNode(pos, left)
+		return visitor.NewPartialNode(pos, left)
 	}
 	right := p.traverse(rightPos)
 	if p.navigator.IsRoot(pos) {
-		return common.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right)
 	}
-	return common.NewNode(pos, left, right)
+	return visitor.NewNode(pos, left, right)
 }

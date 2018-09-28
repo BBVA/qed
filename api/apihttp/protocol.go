@@ -18,9 +18,9 @@ package apihttp
 
 import (
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/common"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/util"
 )
@@ -53,8 +53,8 @@ type SignedSnapshot struct {
 
 type MembershipResult struct {
 	Exists         bool
-	Hyper          common.AuditPath
-	History        common.AuditPath
+	Hyper          visitor.AuditPath
+	History        visitor.AuditPath
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64
@@ -70,7 +70,7 @@ type IncrementalRequest struct {
 type IncrementalResponse struct {
 	Start     uint64
 	End       uint64
-	AuditPath common.AuditPath
+	AuditPath visitor.AuditPath
 }
 
 // ToMembershipProof translates internal api balloon.MembershipProof to the

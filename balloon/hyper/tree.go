@@ -21,7 +21,9 @@ import (
 	"math"
 	"sync"
 
-	"github.com/bbva/qed/balloon/common"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/navigator"
+	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -31,14 +33,14 @@ import (
 type HyperTree struct {
 	lock          sync.RWMutex
 	store         storage.Store
-	cache         common.ModifiableCache
+	cache         cache.ModifiableCache
 	hasherF       func() hashing.Hasher
 	cacheLevel    uint16
 	defaultHashes []hashing.Digest
 	hasher        hashing.Hasher
 }
 
-func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache common.ModifiableCache) *HyperTree {
+func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache) *HyperTree {
 	var lock sync.RWMutex
 	hasher := hasherF()
 	cacheLevel := hasher.Len() - uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
@@ -68,9 +70,9 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	defer t.lock.Unlock()
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(t.hasher)
-	caching := common.NewCachingVisitor(computeHash, t.cache)
-	collect := common.NewCollectMutationsVisitor(caching, storage.HyperCachePrefix)
+	computeHash := visitor.NewComputeHashVisitor(t.hasher)
+	caching := visitor.NewCachingVisitor(computeHash, t.cache)
+	collect := visitor.NewCollectMutationsVisitor(caching, storage.HyperCachePrefix)
 
 	// build pruning context
 	versionAsBytes := util.Uint64AsBytes(version)
@@ -107,8 +109,8 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	}
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(t.hasher)
-	calcAuditPath := common.NewAuditPathVisitor(computeHash)
+	computeHash := visitor.NewComputeHashVisitor(t.hasher)
+	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
 
 	// build pruning context
 	context := PruningContext{
@@ -135,7 +137,7 @@ func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDig
 	log.Debugf("Verifying membership for eventDigest %x", eventDigest)
 
 	// visitors
-	computeHash := common.NewComputeHashVisitor(t.hasher)
+	computeHash := visitor.NewComputeHashVisitor(t.hasher)
 
 	// build pruning context
 	versionAsBytes := util.Uint64AsBytes(version)
@@ -190,7 +192,7 @@ func (t *HyperTree) RebuildCache() error {
 	return nil
 }
 
-func (t *HyperTree) populateCache(pos common.Position, navigator common.TreeNavigator) hashing.Digest {
+func (t *HyperTree) populateCache(pos navigator.Position, nav navigator.TreeNavigator) hashing.Digest {
 	if pos.Height() == t.cacheLevel+1 {
 		cached, ok := t.cache.Get(pos)
 		if !ok {
@@ -198,10 +200,10 @@ func (t *HyperTree) populateCache(pos common.Position, navigator common.TreeNavi
 		}
 		return cached
 	}
-	leftPos := navigator.GoToLeft(pos)
-	rightPos := navigator.GoToRight(pos)
-	left := t.populateCache(leftPos, navigator)
-	right := t.populateCache(rightPos, navigator)
+	leftPos := nav.GoToLeft(pos)
+	rightPos := nav.GoToRight(pos)
+	left := t.populateCache(leftPos, nav)
+	right := t.populateCache(rightPos, nav)
 
 	if left == nil && right == nil {
 		return nil
