@@ -24,16 +24,6 @@ import (
 
 const fifoKeySize = 10
 
-type Cache interface {
-	Get(pos navigator.Position) (hashing.Digest, bool)
-}
-
-type ModifiableCache interface {
-	Put(pos navigator.Position, value hashing.Digest)
-	Fill(r storage.KVPairReader) error
-	Size() int
-	Cache
-}
 type PassThroughCache struct {
 	prefix byte
 	store  storage.Store
