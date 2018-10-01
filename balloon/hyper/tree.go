@@ -129,7 +129,7 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	// traverse from root and generate a visitable pruned tree
 	pruned, err := NewSearchPruner(eventDigest, context).Prune()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	// visit the pruned tree
