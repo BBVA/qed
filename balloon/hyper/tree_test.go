@@ -124,8 +124,9 @@ func TestProveMembership(t *testing.T) {
 			require.NoErrorf(t, err, "This should not fail for index %d", i)
 		}
 
-		pf, err := tree.QueryMembership(digest)
+		pf, exists, err := tree.QueryMembership(digest)
 		require.NoErrorf(t, err, "Error adding to the tree: %v for index %d", err, i)
+		assert.True(t, exists)
 		assert.Equalf(t, c.expectedAuditPath, pf.AuditPath(), "Incorrect audit path for index %d", i)
 	}
 }
@@ -156,8 +157,9 @@ func TestAddAndVerify(t *testing.T) {
 		tree.store.Mutate(mutations)
 		require.NoErrorf(t, err, "This should not fail for index %d", i)
 
-		proof, err := tree.QueryMembership(key)
+		proof, exists, err := tree.QueryMembership(key)
 		require.Nilf(t, err, "Error must be nil for index %d", i)
+		assert.True(t, exists)
 		assert.Equalf(t, util.Uint64AsBytes(value), proof.Value, "Incorrect actual value for index %d", i)
 
 		correct := tree.VerifyMembership(proof, value, key, commitment)
