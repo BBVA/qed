@@ -85,7 +85,10 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	pruned := NewInsertPruner(eventDigest, versionAsBytes, context).Prune()
+	pruned, err := NewInsertPruner(eventDigest, versionAsBytes, context).Prune()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// visit the pruned tree
 	rootHash := pruned.PostOrder(collect).(hashing.Digest)
@@ -124,7 +127,10 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	pruned := NewSearchPruner(eventDigest, context).Prune()
+	pruned, err := NewSearchPruner(eventDigest, context).Prune()
+	if err != nil {
+		return nil, err
+	}
 
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)
@@ -152,7 +158,10 @@ func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDig
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	pruned := NewVerifyPruner(eventDigest, versionAsBytes, context).Prune()
+	pruned, err := NewVerifyPruner(eventDigest, versionAsBytes, context).Prune()
+	if err != nil {
+		return false
+	}
 
 	// visit the pruned tree
 	recomputed := pruned.PostOrder(computeHash).(hashing.Digest)

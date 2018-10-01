@@ -60,7 +60,10 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	pruned := NewInsertPruner(version, eventDigest, context).Prune()
+	pruned, err := NewInsertPruner(version, eventDigest, context).Prune()
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// print := visitor.NewPrintVisitor(t.getDepth(version))
 	// pruned.PreOrder(print)
@@ -97,7 +100,10 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	pruned := NewSearchPruner(context).Prune()
+	pruned, err := NewSearchPruner(context).Prune()
+	if err != nil {
+		return nil, err
+	}
 
 	// print := visitor.NewPrintVisitor(t.getDepth(version))
 	// pruned.PreOrder(print)
@@ -129,7 +135,10 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	pruned := NewSearchPruner(context).Prune()
+	pruned, err := NewSearchPruner(context).Prune()
+	if err != nil {
+		return nil, err
+	}
 
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)

@@ -64,7 +64,10 @@ func (p MembershipProof) Verify(eventDigest []byte, expectedDigest hashing.Diges
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	pruned := NewVerifyPruner(eventDigest, context).Prune()
+	pruned, err := NewVerifyPruner(eventDigest, context).Prune()
+	if err != nil {
+		return false
+	}
 
 	// visit the pruned tree
 	recomputed := pruned.PostOrder(computeHash).(hashing.Digest)
@@ -107,8 +110,14 @@ func (p IncrementalProof) Verify(startDigest, endDigest hashing.Digest) (correct
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	startPruned := NewVerifyPruner(startDigest, startContext).Prune()
-	endPruned := NewVerifyPruner(endDigest, endContext).Prune()
+	startPruned, err := NewVerifyPruner(startDigest, startContext).Prune()
+	if err != nil {
+		return false
+	}
+	endPruned, err := NewVerifyPruner(endDigest, endContext).Prune()
+	if err != nil {
+		return false
+	}
 
 	// visit the pruned trees
 	startRecomputed := startPruned.PostOrder(computeHash).(hashing.Digest)

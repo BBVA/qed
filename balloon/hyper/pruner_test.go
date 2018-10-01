@@ -168,7 +168,7 @@ func TestInsertPruner(t *testing.T) {
 			},
 		}
 
-		pruned := NewInsertPruner(c.key, c.value, context).Prune()
+		pruned, _ := NewInsertPruner(c.key, c.value, context).Prune()
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
 }
@@ -255,7 +255,7 @@ func TestSearchPruner(t *testing.T) {
 			},
 		}
 
-		pruned := NewSearchPruner(c.key, context).Prune()
+		pruned, _ := NewSearchPruner(c.key, context).Prune()
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
 }
@@ -312,7 +312,7 @@ func TestVerifyPruner(t *testing.T) {
 			},
 		}
 
-		pruned := NewVerifyPruner(c.key, c.value, context).Prune()
+		pruned, _ := NewVerifyPruner(c.key, c.value, context).Prune()
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
 }
