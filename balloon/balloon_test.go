@@ -306,8 +306,8 @@ func TestDeleteAndVerify(t *testing.T) {
 	tampered, _ := store.Get(storage.IndexPrefix, eventDigest)
 	assert.Nil(t, tampered)
 
-	_, err = b.QueryMembership(event, commitment.Version)
-	assert.Error(t, err)
+	proof, _ := b.QueryMembership(event, commitment.Version)
+	assert.False(t, proof.Exists)
 }
 
 func TestGenIncrementalAndVerify(t *testing.T) {

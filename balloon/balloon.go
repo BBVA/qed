@@ -228,11 +228,8 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
 	}
 	proof.HyperProof = hyperProof
-
-	if len(hyperProof.Value) > 0 {
-		proof.Exists = true
-		proof.ActualVersion = util.BytesAsUint64(hyperProof.Value)
-	}
+	proof.Exists = hyperProof.Exists
+	proof.ActualVersion = util.BytesAsUint64(hyperProof.Value)
 
 	if proof.Exists && proof.ActualVersion <= proof.QueryVersion {
 		historyProof, err := b.historyTree.ProveMembership(proof.ActualVersion, proof.QueryVersion)
