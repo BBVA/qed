@@ -24,7 +24,6 @@ import (
 )
 
 type QueryProof struct {
-	Exists     bool
 	Key, Value []byte
 	auditPath  visitor.AuditPath
 	hasher     hashing.Hasher
@@ -32,7 +31,6 @@ type QueryProof struct {
 
 func NewQueryProof(key, value []byte, auditPath visitor.AuditPath, hasher hashing.Hasher) *QueryProof {
 	return &QueryProof{
-		Exists:    true,
 		Key:       key,
 		Value:     value,
 		auditPath: auditPath,
