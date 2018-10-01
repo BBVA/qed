@@ -103,8 +103,10 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	pair, err := t.store.Get(storage.IndexPrefix, eventDigest) // TODO check existence
-	if err != nil {
+	pair, err := t.store.Get(storage.IndexPrefix, eventDigest)
+	if err == storage.ErrKeyNotFound {
+		return &QueryProof{}, nil
+	} else if err != nil {
 		return nil, err
 	}
 
