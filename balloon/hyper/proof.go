@@ -65,7 +65,10 @@ func (p QueryProof) Verify(key []byte, expectedDigest hashing.Digest) (valid boo
 	}
 
 	// traverse from root and generate a visitable pruned tree
-	pruned := NewVerifyPruner(key, p.Value, context).Prune()
+	pruned, err := NewVerifyPruner(key, p.Value, context).Prune()
+	if err != nil {
+		return false
+	}
 
 	// visit the pruned tree
 	recomputed := pruned.PostOrder(computeHash).(hashing.Digest)

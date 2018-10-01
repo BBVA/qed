@@ -17,7 +17,7 @@
 package history
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/navigator"
@@ -32,8 +32,12 @@ type PruningContext struct {
 }
 
 type Pruner interface {
-	Prune() visitor.Visitable
+	Prune() (visitor.Visitable, error)
 }
+
+var (
+	ErrCacheNotFound = errors.New("this digest should be in cache")
+)
 
 type InsertPruner struct {
 	version     uint64
@@ -45,38 +49,49 @@ func NewInsertPruner(version uint64, eventDigest hashing.Digest, context Pruning
 	return &InsertPruner{version, eventDigest, context}
 }
 
-func (p *InsertPruner) Prune() visitor.Visitable {
+func (p *InsertPruner) Prune() (visitor.Visitable, error) {
 	return p.traverse(p.navigator.Root(), p.eventDigest)
 }
 
-func (p *InsertPruner) traverse(pos navigator.Position, eventDigest hashing.Digest) visitor.Visitable {
+func (p *InsertPruner) traverse(pos navigator.Position, eventDigest hashing.Digest) (visitor.Visitable, error) {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
-			panic("this digest should be in cache")
+			return nil, ErrCacheNotFound
 		}
-		return visitor.NewCached(pos, digest)
+		return visitor.NewCached(pos, digest), nil
 	}
 	if p.navigator.IsLeaf(pos) {
-		return visitor.NewCollectable(visitor.NewCacheable(visitor.NewLeaf(pos, eventDigest)))
+		return visitor.NewCollectable(visitor.NewCacheable(visitor.NewLeaf(pos, eventDigest))), nil
 	}
 	// we do a post-order traversal
-	left := p.traverse(p.navigator.GoToLeft(pos), eventDigest)
+	left, err := p.traverse(p.navigator.GoToLeft(pos), eventDigest)
+	if err != nil {
+		return nil, err
+	}
+
 	rightPos := p.navigator.GoToRight(pos)
 	if rightPos == nil {
-		return visitor.NewPartialNode(pos, left)
+		return visitor.NewPartialNode(pos, left), nil
 	}
-	right := p.traverse(rightPos, eventDigest)
+
+	right, err := p.traverse(rightPos, eventDigest)
+	if err != nil {
+		return nil, err
+	}
+
 	var result visitor.Visitable
 	if p.navigator.IsRoot(pos) {
 		result = visitor.NewRoot(pos, left, right)
 	} else {
 		result = visitor.NewNode(pos, left, right)
 	}
+
 	if p.shouldCollect(pos) {
-		return visitor.NewCollectable(visitor.NewCacheable(result))
+		return visitor.NewCollectable(visitor.NewCacheable(result)), nil
 	}
-	return result
+
+	return result, nil
 }
 
 func (p InsertPruner) shouldCollect(pos navigator.Position) bool {
@@ -91,32 +106,44 @@ func NewSearchPruner(context PruningContext) *SearchPruner {
 	return &SearchPruner{context}
 }
 
-func (p *SearchPruner) Prune() visitor.Visitable {
+func (p *SearchPruner) Prune() (visitor.Visitable, error) {
 	return p.traverse(p.navigator.Root())
 }
 
-func (p *SearchPruner) traverse(pos navigator.Position) visitor.Visitable {
+func (p *SearchPruner) traverse(pos navigator.Position) (visitor.Visitable, error) {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
-			panic("this digest should be in cache")
+			return nil, ErrCacheNotFound
 		}
-		return visitor.NewCollectable(visitor.NewCached(pos, digest))
+		return visitor.NewCollectable(visitor.NewCached(pos, digest)), nil
 	}
+
 	if p.navigator.IsLeaf(pos) {
-		return visitor.NewLeaf(pos, nil)
+		return visitor.NewLeaf(pos, nil), nil
 	}
+
 	// we do a post-order traversal
-	left := p.traverse(p.navigator.GoToLeft(pos))
+	left, err := p.traverse(p.navigator.GoToLeft(pos))
+	if err != nil {
+		return nil, err
+	}
+
 	rightPos := p.navigator.GoToRight(pos)
 	if rightPos == nil {
-		return visitor.NewPartialNode(pos, left)
+		return visitor.NewPartialNode(pos, left), nil
 	}
-	right := p.traverse(rightPos)
+
+	right, err := p.traverse(rightPos)
+	if err != nil {
+		return nil, err
+	}
+
 	if p.navigator.IsRoot(pos) {
-		return visitor.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right), nil
 	}
-	return visitor.NewNode(pos, left, right)
+
+	return visitor.NewNode(pos, left, right), nil
 }
 
 type VerifyPruner struct {
@@ -128,32 +155,43 @@ func NewVerifyPruner(eventDigest hashing.Digest, context PruningContext) *Verify
 	return &VerifyPruner{eventDigest, context}
 }
 
-func (p *VerifyPruner) Prune() visitor.Visitable {
+func (p *VerifyPruner) Prune() (visitor.Visitable, error) {
 	return p.traverse(p.navigator.Root(), p.eventDigest)
 }
 
-func (p *VerifyPruner) traverse(pos navigator.Position, eventDigest hashing.Digest) visitor.Visitable {
+func (p *VerifyPruner) traverse(pos navigator.Position, eventDigest hashing.Digest) (visitor.Visitable, error) {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
-			panic(fmt.Sprintf("the digest in position %v must be in cache", pos)) // TODO return error instead of panic
+			return nil, ErrCacheNotFound
 		}
-		return visitor.NewCached(pos, digest)
+		return visitor.NewCached(pos, digest), nil
 	}
 	if p.navigator.IsLeaf(pos) {
-		return visitor.NewLeaf(pos, eventDigest)
+		return visitor.NewLeaf(pos, eventDigest), nil
 	}
+
 	// we do a post-order traversal
-	left := p.traverse(p.navigator.GoToLeft(pos), eventDigest)
+	left, err := p.traverse(p.navigator.GoToLeft(pos), eventDigest)
+	if err != nil {
+		return nil, err
+	}
+
 	rightPos := p.navigator.GoToRight(pos)
 	if rightPos == nil {
-		return visitor.NewPartialNode(pos, left)
+		return visitor.NewPartialNode(pos, left), nil
 	}
-	right := p.traverse(rightPos, eventDigest)
+
+	right, err := p.traverse(rightPos, eventDigest)
+	if err != nil {
+		return nil, err
+	}
+
 	if p.navigator.IsRoot(pos) {
-		return visitor.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right), nil
 	}
-	return visitor.NewNode(pos, left, right)
+
+	return visitor.NewNode(pos, left, right), nil
 
 }
 
@@ -165,30 +203,41 @@ func NewVerifyIncrementalPruner(context PruningContext) *VerifyIncrementalPruner
 	return &VerifyIncrementalPruner{context}
 }
 
-func (p *VerifyIncrementalPruner) Prune() visitor.Visitable {
+func (p *VerifyIncrementalPruner) Prune() (visitor.Visitable, error) {
 	return p.traverse(p.navigator.Root())
 }
 
-func (p *VerifyIncrementalPruner) traverse(pos navigator.Position) visitor.Visitable {
+func (p *VerifyIncrementalPruner) traverse(pos navigator.Position) (visitor.Visitable, error) {
 	if p.cacheResolver.ShouldGetFromCache(pos) {
 		digest, ok := p.cache.Get(pos)
 		if !ok {
-			panic("this digest should be in cache")
+			return nil, ErrCacheNotFound
 		}
-		return visitor.NewCached(pos, digest)
+		return visitor.NewCached(pos, digest), nil
 	}
+
 	if p.navigator.IsLeaf(pos) {
-		panic("this digest should be in cache")
+		return nil, ErrCacheNotFound
 	}
+
 	// we do a post-order traversal
-	left := p.traverse(p.navigator.GoToLeft(pos))
+	left, err := p.traverse(p.navigator.GoToLeft(pos))
+	if err != nil {
+		return nil, err
+	}
+
 	rightPos := p.navigator.GoToRight(pos)
 	if rightPos == nil {
-		return visitor.NewPartialNode(pos, left)
+		return visitor.NewPartialNode(pos, left), nil
 	}
-	right := p.traverse(rightPos)
+	right, err := p.traverse(rightPos)
+	if err != nil {
+		return nil, err
+	}
+
 	if p.navigator.IsRoot(pos) {
-		return visitor.NewRoot(pos, left, right)
+		return visitor.NewRoot(pos, left, right), nil
 	}
-	return visitor.NewNode(pos, left, right)
+
+	return visitor.NewNode(pos, left, right), nil
 }
