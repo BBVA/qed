@@ -156,7 +156,7 @@ func TestInsertPruner(t *testing.T) {
 			cache:         cache,
 		}
 
-		pruned := NewInsertPruner(c.version, c.eventDigest, context).Prune()
+		pruned, _ := NewInsertPruner(c.version, c.eventDigest, context).Prune()
 
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
@@ -248,7 +248,7 @@ func TestSearchPruner(t *testing.T) {
 			cache:         cache,
 		}
 
-		pruned := NewSearchPruner(context).Prune()
+		pruned, _ := NewSearchPruner(context).Prune()
 
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
@@ -360,7 +360,7 @@ func TestSearchPrunerConsistency(t *testing.T) {
 			cache:         cache,
 		}
 
-		pruned := NewSearchPruner(context).Prune()
+		pruned, _ := NewSearchPruner(context).Prune()
 
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
@@ -472,7 +472,7 @@ func TestSearchPrunerIncremental(t *testing.T) {
 			cache:         cache,
 		}
 
-		pruned := NewSearchPruner(context).Prune()
+		pruned, _ := NewSearchPruner(context).Prune()
 
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
@@ -560,7 +560,7 @@ func TestVerifyPruner(t *testing.T) {
 			cache:         cache,
 		}
 
-		pruned := NewVerifyPruner(c.eventDigest, context).Prune()
+		pruned, _ := NewVerifyPruner(c.eventDigest, context).Prune()
 
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
@@ -672,7 +672,7 @@ func TestVerifyPrunerIncremental(t *testing.T) {
 			cache:         cache,
 		}
 
-		pruned := NewVerifyIncrementalPruner(context).Prune()
+		pruned, _ := NewVerifyIncrementalPruner(context).Prune()
 
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
 	}
