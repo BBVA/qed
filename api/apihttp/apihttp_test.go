@@ -163,7 +163,7 @@ func TestMembership(t *testing.T) {
 		version,
 	})
 
-	req, err := http.NewRequest("POST", "/proof/membership", bytes.NewBuffer(query))
+	req, err := http.NewRequest("POST", "/proofs/membership", bytes.NewBuffer(query))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +199,7 @@ func TestIncremental(t *testing.T) {
 		end,
 	})
 
-	req, err := http.NewRequest("POST", "/proof/incremental", bytes.NewBuffer(query))
+	req, err := http.NewRequest("POST", "/proofs/incremental", bytes.NewBuffer(query))
 	assert.NoError(t, err, "Error querying for incremental proof")
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
