@@ -219,7 +219,7 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 	var proof MembershipProof
 
 	proof.Hasher = b.hasherF()
-	proof.KeyDigest = b.hasher.Do(event)
+	proof.KeyDigest = proof.Hasher.Do(event)
 	proof.QueryVersion = version
 	proof.CurrentVersion = b.version - 1
 
