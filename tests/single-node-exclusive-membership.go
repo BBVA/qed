@@ -66,7 +66,11 @@ func AddSampleEvents(baseVersion int, continuous bool) {
 			for j := baseVersion + goRutineId; j < baseVersion+maxRequests; j += maxGoRutines {
 
 				buf := []byte(fmt.Sprintf("event %d", j))
-				query, err := json.Marshal(&apihttp.Event{buf})
+				query, err := json.Marshal(
+					&apihttp.Event{
+						buf,
+					},
+				)
 				if len(query) == 0 {
 					log.Fatalf("Empty query: %v", err)
 				}
@@ -150,10 +154,12 @@ func QueryMembership(baseVersion int, continuous bool) {
 			for j := baseVersion + goRutineId; j < baseVersion+maxRequests; j += maxGoRutines {
 
 				buf := []byte(fmt.Sprintf("event %d", j))
-				query, err := json.Marshal(apihttp.MembershipQuery{
-					buf,
-					version,
-				})
+				query, err := json.Marshal(
+					&apihttp.MembershipQuery{
+						buf,
+						version,
+					},
+				)
 				if len(query) == 0 {
 					log.Fatalf("Empty query: %v", err)
 				}
