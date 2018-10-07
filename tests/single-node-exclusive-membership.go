@@ -133,17 +133,22 @@ func getVersion(eventTemplate string) uint64 {
 	return version
 }
 
-func QueryMembership() {
+func QueryMembership(baseVersion int, continuous bool) {
 	client := &http.Client{}
 
 	var wg sync.WaitGroup
 	var version uint64 = uint64(numRequests - 1)
+	maxRequests := numRequests
+
+	if continuous == true {
+		maxRequests *= 100
+	}
 
 	for i := 0; i < maxGoRutines; i++ {
 		wg.Add(1)
 		go func(goRutineId int) {
 			defer wg.Done()
-			for j := goRutineId; j < numRequests; j += maxGoRutines {
+			for j := baseVersion + goRutineId; j < baseVersion+maxRequests; j += maxGoRutines {
 
 				buf := []byte(fmt.Sprintf("event %d", j))
 				query, _ := json.Marshal(apihttp.MembershipQuery{
@@ -189,7 +194,7 @@ func main() {
 
 	start = time.Now()
 	fmt.Println("Starting exclusive Query Membership...")
-	QueryMembership()
+	QueryMembership(0, false)
 	elapsed = time.Now().Sub(start).Seconds()
 	fmt.Printf("Query done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, numRequests, elapsed, maxGoRutines)
 
@@ -199,7 +204,7 @@ func main() {
 	//go currentVersion()
 	start = time.Now()
 	fmt.Println("Starting Query Membership with continuous load...")
-	QueryMembership()
+	QueryMembership(0, false)
 	elapsed = time.Now().Sub(start).Seconds()
 	currentVersion := getVersion("last-event")
 	fmt.Printf("Query done. Reading Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, numRequests, elapsed, maxGoRutines)
