@@ -65,14 +65,13 @@ func AddSampleEvents(baseVersion int, continuous bool) {
 			defer wg.Done()
 			for j := baseVersion + goRutineId; j < baseVersion+maxRequests; j += maxGoRutines {
 
-				buf := fmt.Sprintf("event %d", j)
-
-				data, err := json.Marshal(&apihttp.Event{[]byte(buf)})
-				if len(data) == 0 {
-					log.Fatalf("Empty data: %v", err)
+				buf := []byte(fmt.Sprintf("event %d", j))
+				query, err := json.Marshal(&apihttp.Event{buf})
+				if len(query) == 0 {
+					log.Fatalf("Empty query: %v", err)
 				}
 
-				req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(data))
+				req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(query))
 				if err != nil {
 					log.Fatalf("Error preparing request: %v", err)
 				}
@@ -101,12 +100,12 @@ func getVersion(eventTemplate string) uint64 {
 
 	buf := fmt.Sprintf(eventTemplate)
 
-	data, err := json.Marshal(&apihttp.Event{[]byte(buf)})
-	if len(data) == 0 {
-		log.Fatalf("Empty data: %v", err)
+	query, err := json.Marshal(&apihttp.Event{[]byte(buf)})
+	if len(query) == 0 {
+		log.Fatalf("Empty query: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(query))
 	if err != nil {
 		log.Fatalf("Error preparing request: %v", err)
 	}
@@ -151,10 +150,13 @@ func QueryMembership(baseVersion int, continuous bool) {
 			for j := baseVersion + goRutineId; j < baseVersion+maxRequests; j += maxGoRutines {
 
 				buf := []byte(fmt.Sprintf("event %d", j))
-				query, _ := json.Marshal(apihttp.MembershipQuery{
+				query, err := json.Marshal(apihttp.MembershipQuery{
 					buf,
 					version,
 				})
+				if len(query) == 0 {
+					log.Fatalf("Empty query: %v", err)
+				}
 
 				req, err := http.NewRequest("POST", "http://localhost:8080/proofs/membership", bytes.NewBuffer(query))
 				if err != nil {
