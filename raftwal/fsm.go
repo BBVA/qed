@@ -106,7 +106,7 @@ func (s fsmState) shouldApply(f *fsmState) bool {
 	}
 
 	if f.BalloonVersion > 0 && s.BalloonVersion != (f.BalloonVersion-1) {
-		panic(fmt.Sprintf("balloonVersion panic! old: %d new %d", s.BalloonVersion, f.BalloonVersion))
+		panic(fmt.Sprintf("balloonVersion panic! old: %+v, new %+v", s, f))
 	}
 
 	return true
