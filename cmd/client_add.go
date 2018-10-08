@@ -34,10 +34,10 @@ func newAddCommand(ctx *clientContext) *cobra.Command {
 			log.Infof("Adding key [ %s ] with value [ %s ]\n", key, value)
 
 			signedSnapshot, err := ctx.client.Add(key)
-			snapshot := signedSnapshot.Snapshot
 			if err != nil {
 				return err
 			}
+			snapshot := signedSnapshot.Snapshot
 
 			log.Infof("Received snapshot with values: \n\tEvent: %s\n\tHyperDigest: %x\n\tHistoryDigest: %x\n\tVersion: %d\n",
 				snapshot.Event, snapshot.HyperDigest, snapshot.HistoryDigest, snapshot.Version)
