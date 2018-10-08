@@ -22,7 +22,12 @@ go run ../../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath 
 echo done.
 
 echo Cleanup...
-fuser -k -n tcp 8080
+if [ $(uname) == "Darwin" ]; then
+    pkill main
+else
+    fuser -k -n tcp 8080
+fi
+
 rm -rf /var/tmp/demo.*
 rm -f /var/tmp/id_ed25519{,.pub}
 echo done.
