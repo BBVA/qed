@@ -15,7 +15,9 @@
 # limitations under the License.
 
 echo 'Add multiple events...'
-for i in `seq 0 9`;do
-    go run ../../main.go -k pepe client add --key $i --value $i -l info
+go build -o qed ../..
+for i in $(seq 0 9); do
+    ./qed -k pepe client add --key $i --value $i -l info
 done
+rm -f qed
 echo done.
