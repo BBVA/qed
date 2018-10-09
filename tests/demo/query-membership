@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+
+# Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+case "$1" in
+	leader)
+		endpoint=http://localhost:8080
+	;;
+	follower1)
+		endpoint=http://localhost:8081
+	;;
+	follower2)
+		endpoint=http://localhost:8082
+	;;
+	*)
+	echo "usage: $0 <leader|follower1|follower2>"
+	exit 1
+	;;
+esac
+
+go run ../../main.go										\
+	-k pepe											\
+	client											\
+	--endpoint "$endpoint"									\
+	membership										\
+	--verify										\
+	--key 5											\
+	--hyperDigest	d8023adff2350dbabc42fb0cf7ce0f72461abba9523e11079e354b6c36f06edf	\
+	--historyDigest	c77be374dba03f7a02303b72c3930bf1f7de7cdb81c2199dde84885626b99bbc	\
+	--version 5										\
+	-l info
