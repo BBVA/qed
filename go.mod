@@ -15,10 +15,10 @@ require (
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/testify v1.2.2
-	github.com/tsenart/vegeta v8.0.0+incompatible
-	golang.org/x/crypto v0.0.0-20181001203147-e3636079e1a4
-	golang.org/x/net v0.0.0-20181005035420-146acd28ed58 // indirect
-	golang.org/x/sys v0.0.0-20181005133103-4497e2df6f9e // indirect
+	github.com/tsenart/vegeta v8.0.1-0.20181009223527-f25ac6abb70a+incompatible
+	golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b
+	golang.org/x/net v0.0.0-20180926154720-4dfa2610cdf3 // indirect
+	golang.org/x/sys v0.0.0-20180926160741-c2ed4eda69e7 // indirect
 	google.golang.org/appengine v1.2.0 // indirect
 	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
 )
