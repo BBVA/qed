@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os/exec"
 	"sync"
 	"time"
 
@@ -36,18 +35,6 @@ const (
 	apiKey       = "pepe"
 	numRequests  = 100000
 )
-
-func startServer() {
-	cmd := exec.Command("./start_server")
-	go cmd.Run()
-	time.Sleep(5 * time.Second)
-}
-
-func stopServer() {
-	fmt.Println("Shutting down server...")
-	cmd := exec.Command("./stop_server")
-	cmd.Run()
-}
 
 // func BenchmarkMembership(b *testing.B) {
 func AddSampleEvents(baseVersion int, continuous bool) {
@@ -191,8 +178,6 @@ func QueryMembership(baseVersion int, continuous bool) {
 func main() {
 	fmt.Println("Starting contest...")
 	numRequestsf := float64(numRequests)
-	startServer()
-	defer stopServer()
 
 	start := time.Now()
 	fmt.Println("Preloading events...")
