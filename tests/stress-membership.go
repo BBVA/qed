@@ -30,6 +30,26 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 )
 
+type Config struct {
+	maxGoRutines int
+	numRequests  int
+	apiKey       string
+	baseVersion  int
+	continuous   bool
+}
+
+// type Config map[string]interface{}
+
+func NewDefaultConfig() *Config {
+	return &Config{
+		maxGoRutines: 10,
+		numRequests:  100000,
+		apiKey:       "pepe",
+		baseVersion:  0,
+		continuous:   true,
+	}
+}
+
 const (
 	maxGoRutines = 10
 	apiKey       = "pepe"
@@ -177,22 +197,26 @@ func QueryMembership(baseVersion int, continuous bool) {
 
 func main() {
 	fmt.Println("Starting contest...")
-	numRequestsf := float64(numRequests)
+
+	c := NewDefaultConfig()
+	numRequestsf := float64(c.numRequests)
 
 	start := time.Now()
 	fmt.Println("Preloading events...")
-	AddSampleEvents(0, false)
+	AddSampleEvents(c.baseVersion, false)
 	elapsed := time.Now().Sub(start).Seconds()
-	fmt.Printf("Preload done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, numRequests, elapsed, maxGoRutines)
+	fmt.Printf("Preload done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, c.numRequests, elapsed, c.maxGoRutines)
 
 	start = time.Now()
 	fmt.Println("Starting exclusive Query Membership...")
-	QueryMembership(0, false)
+	QueryMembership(c.baseVersion, false)
 	elapsed = time.Now().Sub(start).Seconds()
-	fmt.Printf("Query done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, numRequests, elapsed, maxGoRutines)
+	fmt.Printf("Query done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, c.numRequests, elapsed, c.maxGoRutines)
 
 	fmt.Println("Starting continuous load...")
-	go AddSampleEvents(numRequests, true)
+	ca := NewDefaultConfig()
+	ca.baseVersion = ca.numRequests
+	go AddSampleEvents(ca.baseVersion, true)
 
 	//go currentVersion()
 	start = time.Now()
@@ -200,6 +224,6 @@ func main() {
 	QueryMembership(0, false)
 	elapsed = time.Now().Sub(start).Seconds()
 	currentVersion := getVersion("last-event")
-	fmt.Printf("Query done. Reading Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, numRequests, elapsed, maxGoRutines)
-	fmt.Printf("Query done. Writing Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", (float64(currentVersion)-numRequestsf)/elapsed, currentVersion-numRequests, elapsed, maxGoRutines)
+	fmt.Printf("Query done. Reading Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, c.numRequests, elapsed, c.maxGoRutines)
+	fmt.Printf("Query done. Writing Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", (float64(currentVersion)-numRequestsf)/elapsed, currentVersion-uint64(c.numRequests), elapsed, c.maxGoRutines)
 }
