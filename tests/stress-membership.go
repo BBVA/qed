@@ -45,6 +45,7 @@ type Snapshot struct {
 	Version       uint64
 	Event         []byte
 }
+
 type Config struct {
 	maxGoRoutines  int
 	numRequests    int
@@ -52,6 +53,7 @@ type Config struct {
 	startVersion   int
 	continuous     bool
 	balloonVersion uint64
+	counter        float64
 	req            HTTPClient
 }
 type HTTPClient struct {
@@ -70,6 +72,7 @@ func NewDefaultConfig() *Config {
 		startVersion:   0,
 		continuous:     false,
 		balloonVersion: 9999,
+		counter:        0,
 		req: HTTPClient{
 			client:             nil,
 			method:             "POST",
@@ -119,9 +122,10 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 		if res.StatusCode != c.req.expectedStatusCode {
 			log.Fatalf("Server error: %v", err)
 		}
-
+		c.counter++
 		io.Copy(ioutil.Discard, res.Body)
 	}
+	c.counter = 0
 }
 
 func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
@@ -191,12 +195,39 @@ func summary(message string, numRequestsf, elapsed float64, c *Config) {
 	)
 }
 
+func summaryPerDuration(message string, numRequestsf, elapsed float64, c *Config) {
+	fmt.Printf(
+		"%s throughput: %.0f req/s | Concurrency: %d | Elapsed time: %.3f seconds\n",
+		message,
+		c.counter/elapsed,
+		c.maxGoRoutines,
+		elapsed,
+	)
+}
+
 func stats(c *Config, t Task, message string) {
+	ticker := time.NewTicker(1 * time.Second)
 	numRequestsf := float64(c.numRequests)
 	start := time.Now()
-	SpawnerOfEvil(c, t)
-	elapsed := time.Now().Sub(start).Seconds()
-	summary(message, numRequestsf, elapsed, c)
+	defer ticker.Stop()
+	done := make(chan bool)
+	go func() {
+		SpawnerOfEvil(c, t)
+		elapsed := time.Now().Sub(start).Seconds()
+		fmt.Println("Task done.")
+		summary(message, numRequestsf, elapsed, c)
+		done <- true
+	}()
+	for {
+		select {
+		case <-done:
+			return
+		case t := <-ticker.C:
+			_ = t
+			elapsed := time.Now().Sub(start).Seconds()
+			summaryPerDuration(message, numRequestsf, elapsed, c)
+		}
+	}
 }
 
 func singleNode() {
@@ -228,12 +259,11 @@ func singleNode() {
 	ca.req.endpoint += "/events"
 	ca.startVersion = c.numRequests
 	ca.continuous = true
-	go SpawnerOfEvil(ca, addSampleEvents)
-
+	go stats(ca, addSampleEvents, "Write")
 	fmt.Println("Starting Query Membership with continuous load...")
 	//	stats(c, QueryMembership, "Read query")
 	start := time.Now()
-	SpawnerOfEvil(cq, queryMembership)
+	stats(cq, queryMembership, "Query")
 	elapsed := time.Now().Sub(start).Seconds()
 	fmt.Printf(
 		"Query done. Reading Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
@@ -265,7 +295,7 @@ func multiNode() {
 	c.req.endpoint += "/events"
 
 	fmt.Println("PRELOAD")
-	stats(c, addSampleEvents, "Leader write")
+	stats(c, addSampleEvents, "Preload")
 
 	time.Sleep(1 * time.Second)
 	fmt.Println("EXCLUSIVE QUERY MEMBERSHIP")
@@ -274,7 +304,7 @@ func multiNode() {
 	cq.req.expectedStatusCode = 200
 	cq.req.endpoint = "http://localhost:8081"
 	cq.req.endpoint += "/proofs/membership"
-	stats(cq, queryMembership, "Follower 1 read ")
+	stats(cq, queryMembership, "Follower 1 read")
 
 	fmt.Println("QUERY MEMBERSHIP CONTINUOUS LOAD")
 	queryWg.Add(1)
@@ -303,7 +333,7 @@ func multiNode() {
 	ca.continuous = true
 
 	start := time.Now()
-	go stats(ca, addSampleEvents, "NO APLICA")
+	go stats(ca, addSampleEvents, "Leader write")
 	queryWg.Wait()
 	elapsed := time.Now().Sub(start).Seconds()
 
@@ -319,6 +349,6 @@ func multiNode() {
 }
 
 func main() {
-	//singleNode()
+	// singleNode()
 	multiNode()
 }
