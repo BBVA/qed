@@ -31,79 +31,111 @@ import (
 )
 
 type Config struct {
-	maxGoRutines int
-	numRequests  int
-	apiKey       string
-	baseVersion  int
-	continuous   bool
+	maxGoRoutines  int
+	numRequests    int
+	apiKey         string
+	startVersion   int
+	continuous     bool
+	balloonVersion uint64
+	req            HTTPClient
+}
+
+type HTTPClient struct {
+	client             *http.Client
+	method             string
+	endpoint           string
+	expectedStatusCode int
 }
 
 // type Config map[string]interface{}
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		maxGoRutines: 10,
-		numRequests:  100000,
-		apiKey:       "pepe",
-		baseVersion:  0,
-		continuous:   true,
+		maxGoRoutines:  10,
+		numRequests:    10000,
+		apiKey:         "pepe",
+		startVersion:   0,
+		continuous:     false,
+		balloonVersion: 9999,
+		req: HTTPClient{
+			client:             nil,
+			method:             "POST",
+			endpoint:           "http://localhost:8080",
+			expectedStatusCode: 200,
+		},
 	}
 }
 
-const (
-	maxGoRutines = 10
-	apiKey       = "pepe"
-	numRequests  = 100000
-)
+type Task func(goRoutineId int, c *Config) ([]byte, error)
 
-// func BenchmarkMembership(b *testing.B) {
-func AddSampleEvents(baseVersion int, continuous bool) {
-	client := &http.Client{}
+// func (t *Task) Timeout()
+
+func SpawnerOfEvil(c *Config, t Task) {
+	// TODO: only one client per run MAYBE
 	var wg sync.WaitGroup
-	maxRequests := numRequests
 
-	if continuous == true {
-		maxRequests *= 100
-	}
-
-	for i := 0; i < maxGoRutines; i++ {
+	for i := 0; i < c.maxGoRoutines; i++ {
 		wg.Add(1)
-		go func(goRutineId int) {
+		go func(i int) {
 			defer wg.Done()
-			for j := baseVersion + goRutineId; j < baseVersion+maxRequests; j += maxGoRutines {
-
-				buf := []byte(fmt.Sprintf("event %d", j))
-				query, err := json.Marshal(
-					&apihttp.Event{
-						buf,
-					},
-				)
-				if len(query) == 0 {
-					log.Fatalf("Empty query: %v", err)
-				}
-
-				req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(query))
-				if err != nil {
-					log.Fatalf("Error preparing request: %v", err)
-				}
-
-				// Set Api-Key header
-				req.Header.Set("Api-Key", apiKey)
-				res, err := client.Do(req)
-				defer res.Body.Close()
-				if err != nil {
-					log.Fatalf("Unable to perform request: %v", err)
-				}
-				if res.StatusCode != 201 {
-					log.Fatalf("Server error: %v", err)
-				}
-
-				io.Copy(ioutil.Discard, res.Body)
-			}
+			Attacker(i, c, t)
 		}(i)
 	}
-
 	wg.Wait()
+}
+
+// func BenchmarkMembership(b *testing.B) {
+func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, error)) {
+
+	for j := c.startVersion + goRoutineId; j < c.startVersion+c.numRequests || c.continuous; j += c.maxGoRoutines {
+		query, err := f(j, c)
+		if len(query) == 0 {
+			log.Fatalf("Empty query: %v", err)
+		}
+
+		req, err := http.NewRequest(c.req.method, c.req.endpoint, bytes.NewBuffer(query))
+		if err != nil {
+			log.Fatalf("Error preparing request: %v", err)
+		}
+
+		// Set Api-Key header
+		req.Header.Set("Api-Key", c.apiKey)
+		res, err := c.req.client.Do(req)
+		defer res.Body.Close()
+		if err != nil {
+			log.Fatalf("Unable to perform request: %v", err)
+		}
+		if res.StatusCode != c.req.expectedStatusCode {
+			log.Fatalf("Server error: %v", err)
+		}
+
+		io.Copy(ioutil.Discard, res.Body)
+	}
+}
+
+func addSampleEvents(j int, c *Config) ([]byte, error) {
+	buf := []byte(fmt.Sprintf("event %d", j))
+
+	query, err := json.Marshal(
+		&apihttp.Event{
+			buf,
+		},
+	)
+
+	return query, err
+}
+
+func queryMembership(j int, c *Config) ([]byte, error) {
+	buf := []byte(fmt.Sprintf("event %d", j))
+
+	query, err := json.Marshal(
+		&apihttp.MembershipQuery{
+			buf,
+			c.balloonVersion,
+		},
+	)
+
+	return query, err
 }
 
 func getVersion(eventTemplate string) uint64 {
@@ -122,7 +154,8 @@ func getVersion(eventTemplate string) uint64 {
 	}
 
 	// Set Api-Key header
-	req.Header.Set("Api-Key", apiKey)
+	// TODO: remove pepe and pass a config var
+	req.Header.Set("Api-Key", "pepe")
 	res, err := client.Do(req)
 	defer res.Body.Close()
 	if err != nil {
@@ -143,87 +176,75 @@ func getVersion(eventTemplate string) uint64 {
 	return version
 }
 
-func QueryMembership(baseVersion int, continuous bool) {
-	client := &http.Client{}
+func summary(op string, numRequestsf, elapsed float64, c *Config) {
+	fmt.Printf(
+		"%s done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		op,
+		numRequestsf/elapsed,
+		c.numRequests,
+		elapsed,
+		c.maxGoRoutines,
+	)
+}
 
-	var wg sync.WaitGroup
-	var version uint64 = uint64(numRequests - 1)
-	maxRequests := numRequests
-
-	if continuous == true {
-		maxRequests *= 100
-	}
-
-	for i := 0; i < maxGoRutines; i++ {
-		wg.Add(1)
-		go func(goRutineId int) {
-			defer wg.Done()
-			for j := baseVersion + goRutineId; j < baseVersion+maxRequests; j += maxGoRutines {
-
-				buf := []byte(fmt.Sprintf("event %d", j))
-				query, err := json.Marshal(
-					&apihttp.MembershipQuery{
-						buf,
-						version,
-					},
-				)
-				if len(query) == 0 {
-					log.Fatalf("Empty query: %v", err)
-				}
-
-				req, err := http.NewRequest("POST", "http://localhost:8080/proofs/membership", bytes.NewBuffer(query))
-				if err != nil {
-					log.Fatalf("Error preparing request: %v", err)
-				}
-
-				// Set Api-Key header
-				req.Header.Set("Api-Key", apiKey)
-				res, err := client.Do(req)
-				defer res.Body.Close()
-				if err != nil {
-					log.Fatalf("Unable to perform request: %v", err)
-				}
-				if res.StatusCode != 200 {
-					log.Fatalf("Server error: %v", err)
-				}
-
-				io.Copy(ioutil.Discard, res.Body)
-			}
-		}(i)
-	}
-
-	wg.Wait()
+func stats(c *Config, t Task, message string) {
+	numRequestsf := float64(c.numRequests)
+	start := time.Now()
+	SpawnerOfEvil(c, t)
+	elapsed := time.Now().Sub(start).Seconds()
+	summary(message, numRequestsf, elapsed, c)
 }
 
 func main() {
 	fmt.Println("Starting contest...")
 
+	client := &http.Client{}
+
 	c := NewDefaultConfig()
+	c.req.client = client
+	c.req.expectedStatusCode = 201
+	c.req.endpoint += "/events"
+
 	numRequestsf := float64(c.numRequests)
 
-	start := time.Now()
 	fmt.Println("Preloading events...")
-	AddSampleEvents(c.baseVersion, false)
-	elapsed := time.Now().Sub(start).Seconds()
-	fmt.Printf("Preload done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, c.numRequests, elapsed, c.maxGoRutines)
+	stats(c, addSampleEvents, "Preload")
 
-	start = time.Now()
 	fmt.Println("Starting exclusive Query Membership...")
-	QueryMembership(c.baseVersion, false)
-	elapsed = time.Now().Sub(start).Seconds()
-	fmt.Printf("Query done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, c.numRequests, elapsed, c.maxGoRutines)
+	cq := NewDefaultConfig()
+	cq.req.client = client
+	cq.req.expectedStatusCode = 200
+	cq.req.endpoint += "/proofs/membership"
+	stats(cq, queryMembership, "Query")
 
 	fmt.Println("Starting continuous load...")
 	ca := NewDefaultConfig()
-	ca.baseVersion = ca.numRequests
-	go AddSampleEvents(ca.baseVersion, true)
+	ca.req.client = client
+	ca.req.expectedStatusCode = 201
+	ca.req.endpoint += "/events"
+	ca.startVersion = c.numRequests
+	ca.continuous = true
+	go SpawnerOfEvil(ca, addSampleEvents)
 
-	//go currentVersion()
-	start = time.Now()
 	fmt.Println("Starting Query Membership with continuous load...")
-	QueryMembership(0, false)
-	elapsed = time.Now().Sub(start).Seconds()
+	//	stats(c, QueryMembership, "Read query")
+	start := time.Now()
+	SpawnerOfEvil(cq, queryMembership)
+	elapsed := time.Now().Sub(start).Seconds()
+	fmt.Printf(
+		"Query done. Reading Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		numRequestsf/elapsed,
+		cq.numRequests,
+		elapsed,
+		cq.maxGoRoutines,
+	)
+
 	currentVersion := getVersion("last-event")
-	fmt.Printf("Query done. Reading Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", numRequestsf/elapsed, c.numRequests, elapsed, c.maxGoRutines)
-	fmt.Printf("Query done. Writing Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n", (float64(currentVersion)-numRequestsf)/elapsed, currentVersion-uint64(c.numRequests), elapsed, c.maxGoRutines)
+	fmt.Printf(
+		"Query done. Writing Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		(float64(currentVersion)-numRequestsf)/elapsed,
+		currentVersion-uint64(c.numRequests),
+		elapsed,
+		c.maxGoRoutines,
+	)
 }
