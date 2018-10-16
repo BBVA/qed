@@ -74,21 +74,20 @@ func SpawnerOfEvil(c *Config, t Task) {
 	// TODO: only one client per run MAYBE
 	var wg sync.WaitGroup
 
-	for i := 0; i < c.maxGoRoutines; i++ {
+	for goRoutineId := 0; goRoutineId < c.maxGoRoutines; goRoutineId++ {
 		wg.Add(1)
-		go func(i int) {
+		go func(goRoutineId int) {
 			defer wg.Done()
-			Attacker(i, c, t)
-		}(i)
+			Attacker(goRoutineId, c, t)
+		}(goRoutineId)
 	}
 	wg.Wait()
 }
 
-// func BenchmarkMembership(b *testing.B) {
 func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, error)) {
 
-	for j := c.startVersion + goRoutineId; j < c.startVersion+c.numRequests || c.continuous; j += c.maxGoRoutines {
-		query, err := f(j, c)
+	for eventIndex := c.startVersion + goRoutineId; eventIndex < c.startVersion+c.numRequests || c.continuous; eventIndex += c.maxGoRoutines {
+		query, err := f(eventIndex, c)
 		if len(query) == 0 {
 			log.Fatalf("Empty query: %v", err)
 		}
@@ -113,29 +112,21 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 	}
 }
 
-func addSampleEvents(j int, c *Config) ([]byte, error) {
-	buf := []byte(fmt.Sprintf("event %d", j))
-
-	query, err := json.Marshal(
+func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
+	return json.Marshal(
 		&apihttp.Event{
-			buf,
+			[]byte(fmt.Sprintf("event %d", eventIndex)),
 		},
 	)
-
-	return query, err
 }
 
-func queryMembership(j int, c *Config) ([]byte, error) {
-	buf := []byte(fmt.Sprintf("event %d", j))
-
-	query, err := json.Marshal(
+func queryMembership(eventIndex int, c *Config) ([]byte, error) {
+	return json.Marshal(
 		&apihttp.MembershipQuery{
-			buf,
+			[]byte(fmt.Sprintf("event %d", eventIndex)),
 			c.balloonVersion,
 		},
 	)
-
-	return query, err
 }
 
 func getVersion(eventTemplate string) uint64 {
@@ -176,10 +167,10 @@ func getVersion(eventTemplate string) uint64 {
 	return version
 }
 
-func summary(op string, numRequestsf, elapsed float64, c *Config) {
+func summary(message string, numRequestsf, elapsed float64, c *Config) {
 	fmt.Printf(
 		"%s done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
-		op,
+		message,
 		numRequestsf/elapsed,
 		c.numRequests,
 		elapsed,
@@ -196,7 +187,7 @@ func stats(c *Config, t Task, message string) {
 }
 
 func main() {
-	fmt.Println("Starting contest...")
+	fmt.Println("\nStarting contest...")
 
 	client := &http.Client{}
 
