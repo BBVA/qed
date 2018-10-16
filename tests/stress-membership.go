@@ -169,7 +169,7 @@ func getVersion(eventTemplate string) uint64 {
 
 func summary(message string, numRequestsf, elapsed float64, c *Config) {
 	fmt.Printf(
-		"%s done. Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		"%s throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
 		message,
 		numRequestsf/elapsed,
 		c.numRequests,
@@ -186,7 +186,7 @@ func stats(c *Config, t Task, message string) {
 	summary(message, numRequestsf, elapsed, c)
 }
 
-func main() {
+func singleNode() {
 	fmt.Println("\nStarting contest...")
 
 	client := &http.Client{}
@@ -238,4 +238,74 @@ func main() {
 		elapsed,
 		c.maxGoRoutines,
 	)
+}
+
+func multiNode() {
+	fmt.Println("\nStarting contest...")
+	var queryWg sync.WaitGroup
+
+	client := &http.Client{}
+
+	c := NewDefaultConfig()
+	c.req.client = client
+	c.req.expectedStatusCode = 201
+	c.req.endpoint += "/events"
+
+	fmt.Println("PRELOAD")
+	stats(c, addSampleEvents, "Leader write")
+
+	time.Sleep(1 * time.Second)
+	fmt.Println("EXCLUSIVE QUERY MEMBERSHIP")
+	cq := NewDefaultConfig()
+	cq.req.client = client
+	cq.req.expectedStatusCode = 200
+	cq.req.endpoint = "http://localhost:8081"
+	cq.req.endpoint += "/proofs/membership"
+	stats(cq, queryMembership, "Follower 1 read ")
+
+	fmt.Println("QUERY MEMBERSHIP CONTINUOUS LOAD")
+	queryWg.Add(1)
+	go func() {
+		defer queryWg.Done()
+		stats(cq, queryMembership, "Follower 1 read")
+	}()
+
+	cb := NewDefaultConfig()
+	cb.req.client = client
+	cb.req.expectedStatusCode = 200
+	cb.req.endpoint = "http://localhost:8082"
+	cb.req.endpoint += "/proofs/membership"
+	queryWg.Add(1)
+	go func() {
+		defer queryWg.Done()
+		stats(cb, queryMembership, "Follower 2 read")
+	}()
+
+	fmt.Println("Starting continuous load...")
+	ca := NewDefaultConfig()
+	ca.req.client = client
+	ca.req.expectedStatusCode = 201
+	ca.req.endpoint += "/events"
+	ca.startVersion = c.numRequests
+	ca.continuous = true
+
+	start := time.Now()
+	go stats(ca, addSampleEvents, "NO APLICA")
+	queryWg.Wait()
+	elapsed := time.Now().Sub(start).Seconds()
+
+	numRequestsf := float64(c.numRequests)
+	currentVersion := getVersion("last-event")
+	fmt.Printf(
+		"Leader write throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		(float64(currentVersion)-numRequestsf)/elapsed,
+		currentVersion-uint64(c.numRequests),
+		elapsed,
+		c.maxGoRoutines,
+	)
+}
+
+func main() {
+	//singleNode()
+	multiNode()
 }
