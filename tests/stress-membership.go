@@ -26,10 +26,25 @@ import (
 	"net/http"
 	"sync"
 	"time"
-
-	"github.com/bbva/qed/api/apihttp"
 )
 
+type Event struct {
+	Event []byte
+}
+type MembershipQuery struct {
+	Key     []byte
+	Version uint64
+}
+type SignedSnapshot struct {
+	Snapshot  *Snapshot
+	Signature []byte
+}
+type Snapshot struct {
+	HistoryDigest []byte
+	HyperDigest   []byte
+	Version       uint64
+	Event         []byte
+}
 type Config struct {
 	maxGoRoutines  int
 	numRequests    int
@@ -39,7 +54,6 @@ type Config struct {
 	balloonVersion uint64
 	req            HTTPClient
 }
-
 type HTTPClient struct {
 	client             *http.Client
 	method             string
@@ -48,7 +62,6 @@ type HTTPClient struct {
 }
 
 // type Config map[string]interface{}
-
 func NewDefaultConfig() *Config {
 	return &Config{
 		maxGoRoutines:  10,
@@ -68,8 +81,7 @@ func NewDefaultConfig() *Config {
 
 type Task func(goRoutineId int, c *Config) ([]byte, error)
 
-// func (t *Task) Timeout()
-
+// func (t *Task) Timeout()event
 func SpawnerOfEvil(c *Config, t Task) {
 	// TODO: only one client per run MAYBE
 	var wg sync.WaitGroup
@@ -113,8 +125,9 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 }
 
 func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
+
 	return json.Marshal(
-		&apihttp.Event{
+		&Event{
 			[]byte(fmt.Sprintf("event %d", eventIndex)),
 		},
 	)
@@ -122,7 +135,7 @@ func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
 
 func queryMembership(eventIndex int, c *Config) ([]byte, error) {
 	return json.Marshal(
-		&apihttp.MembershipQuery{
+		&MembershipQuery{
 			[]byte(fmt.Sprintf("event %d", eventIndex)),
 			c.balloonVersion,
 		},
@@ -134,7 +147,7 @@ func getVersion(eventTemplate string) uint64 {
 
 	buf := fmt.Sprintf(eventTemplate)
 
-	query, err := json.Marshal(&apihttp.Event{[]byte(buf)})
+	query, err := json.Marshal(&Event{[]byte(buf)})
 	if len(query) == 0 {
 		log.Fatalf("Empty query: %v", err)
 	}
@@ -158,7 +171,7 @@ func getVersion(eventTemplate string) uint64 {
 
 	body, _ := ioutil.ReadAll(res.Body)
 
-	var signedSnapshot apihttp.SignedSnapshot
+	var signedSnapshot SignedSnapshot
 	json.Unmarshal(body, &signedSnapshot)
 	version := signedSnapshot.Snapshot.Version
 
