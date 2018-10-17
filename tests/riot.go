@@ -66,13 +66,14 @@ type HTTPClient struct {
 
 // type Config map[string]interface{}
 func NewDefaultConfig() *Config {
+	numRequests := 10000
 	return &Config{
 		maxGoRoutines:  10,
-		numRequests:    10000,
+		numRequests:    numRequests,
 		apiKey:         "pepe",
 		startVersion:   0,
 		continuous:     false,
-		balloonVersion: 9999,
+		balloonVersion: uint64(numRequests) - 1,
 		counter:        0,
 		req: HTTPClient{
 			client:             nil,
