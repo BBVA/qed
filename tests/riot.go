@@ -19,19 +19,33 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"sync"
 	"time"
-
-	"github.com/bbva/qed/api/apihttp"
 )
+
+type Event struct {
+	Event []byte
+}
+type MembershipQuery struct {
+	Key     []byte
+	Version uint64
+}
+type SignedSnapshot struct {
+	Snapshot  *Snapshot
+	Signature []byte
+}
+type Snapshot struct {
+	HistoryDigest []byte
+	HyperDigest   []byte
+	Version       uint64
+	Event         []byte
+}
 
 type Config struct {
 	maxGoRoutines  int
@@ -54,11 +68,11 @@ type HTTPClient struct {
 func NewDefaultConfig() *Config {
 	return &Config{
 		maxGoRoutines:  10,
-		numRequests:    numRequests,
+		numRequests:    10000,
 		apiKey:         "pepe",
 		startVersion:   0,
 		continuous:     false,
-		balloonVersion: uint64(numRequests) - 1,
+		balloonVersion: 9999,
 		counter:        0,
 		req: HTTPClient{
 			client:             nil,
@@ -73,6 +87,7 @@ type Task func(goRoutineId int, c *Config) ([]byte, error)
 
 // func (t *Task) Timeout()event
 func SpawnerOfEvil(c *Config, t Task) {
+	// TODO: only one client per run MAYBE
 	var wg sync.WaitGroup
 
 	for goRoutineId := 0; goRoutineId < c.maxGoRoutines; goRoutineId++ {
@@ -101,11 +116,10 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 		// Set Api-Key header
 		req.Header.Set("Api-Key", c.apiKey)
 		res, err := c.req.client.Do(req)
+		defer res.Body.Close()
 		if err != nil {
 			log.Fatalf("Unable to perform request: %v", err)
 		}
-		defer res.Body.Close()
-
 		if res.StatusCode != c.req.expectedStatusCode {
 			log.Fatalf("Server error: %v", err)
 		}
@@ -118,7 +132,7 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
 
 	return json.Marshal(
-		&apihttp.Event{
+		&Event{
 			[]byte(fmt.Sprintf("event %d", eventIndex)),
 		},
 	)
@@ -126,55 +140,43 @@ func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
 
 func queryMembership(eventIndex int, c *Config) ([]byte, error) {
 	return json.Marshal(
-		&apihttp.MembershipQuery{
+		&MembershipQuery{
 			[]byte(fmt.Sprintf("event %d", eventIndex)),
 			c.balloonVersion,
 		},
 	)
 }
 
-func queryIncremental(eventIndex int, c *Config) ([]byte, error) {
-	end := uint64(eventIndex)
-	start := uint64(math.Max(float64(eventIndex-incrementalDelta), 0.0))
-	// start := end >> 1
-	return json.Marshal(
-		&apihttp.IncrementalRequest{
-			Start: start,
-			End:   end,
-		},
-	)
-}
-
-func getVersion(eventTemplate string, c *Config) uint64 {
+func getVersion(eventTemplate string) uint64 {
 	client := &http.Client{}
 
 	buf := fmt.Sprintf(eventTemplate)
 
-	query, err := json.Marshal(&apihttp.Event{[]byte(buf)})
+	query, err := json.Marshal(&Event{[]byte(buf)})
 	if len(query) == 0 {
 		log.Fatalf("Empty query: %v", err)
 	}
 
-	req, err := http.NewRequest(c.req.method, c.req.endpoint, bytes.NewBuffer(query))
+	req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(query))
 	if err != nil {
 		log.Fatalf("Error preparing request: %v", err)
 	}
 
 	// Set Api-Key header
-	req.Header.Set("Api-Key", c.apiKey)
+	// TODO: remove pepe and pass a config var
+	req.Header.Set("Api-Key", "pepe")
 	res, err := client.Do(req)
+	defer res.Body.Close()
 	if err != nil {
 		log.Fatalf("Unable to perform request: %v", err)
 	}
-	defer res.Body.Close()
-
 	if res.StatusCode != 201 {
 		log.Fatalf("Server error: %v", err)
 	}
 
 	body, _ := ioutil.ReadAll(res.Body)
 
-	var signedSnapshot apihttp.SignedSnapshot
+	var signedSnapshot SignedSnapshot
 	json.Unmarshal(body, &signedSnapshot)
 	version := signedSnapshot.Snapshot.Version
 
@@ -229,64 +231,103 @@ func stats(c *Config, t Task, message string) {
 	}
 }
 
-func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
-	fmt.Println("\nStarting benchmark run...")
+func singleNode() {
+	fmt.Println("\nStarting single-node contest...")
+
+	client := &http.Client{}
+
+	c := NewDefaultConfig()
+	c.req.client = client
+	c.req.expectedStatusCode = 201
+	c.req.endpoint += "/events"
+
+	numRequestsf := float64(c.numRequests)
+
+	fmt.Println("Preloading events...")
+	stats(c, addSampleEvents, "Preload")
+
+	fmt.Println("Starting exclusive Query Membership...")
+	cq := NewDefaultConfig()
+	cq.req.client = client
+	cq.req.expectedStatusCode = 200
+	cq.req.endpoint += "/proofs/membership"
+	stats(cq, queryMembership, "Query")
+
+	fmt.Println("Starting continuous load...")
+	ca := NewDefaultConfig()
+	ca.req.client = client
+	ca.req.expectedStatusCode = 201
+	ca.req.endpoint += "/events"
+	ca.startVersion = c.numRequests
+	ca.continuous = true
+	go stats(ca, addSampleEvents, "Write")
+	fmt.Println("Starting Query Membership with continuous load...")
+	//	stats(c, QueryMembership, "Read query")
+	start := time.Now()
+	stats(cq, queryMembership, "Query")
+	elapsed := time.Now().Sub(start).Seconds()
+	fmt.Printf(
+		"Query done. Reading Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		numRequestsf/elapsed,
+		cq.numRequests,
+		elapsed,
+		cq.maxGoRoutines,
+	)
+
+	currentVersion := getVersion("last-event")
+	fmt.Printf(
+		"Query done. Writing Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		(float64(currentVersion)-numRequestsf)/elapsed,
+		currentVersion-uint64(c.numRequests),
+		elapsed,
+		c.maxGoRoutines,
+	)
+}
+
+func multiNode() {
+	fmt.Println("\nStarting multi-node contest...")
 	var queryWg sync.WaitGroup
 
 	client := &http.Client{}
 
 	c := NewDefaultConfig()
 	c.req.client = client
-	c.numRequests = numReqests
-	c.maxGoRoutines = writeConcurrency
 	c.req.expectedStatusCode = 201
 	c.req.endpoint += "/events"
 
 	fmt.Println("PRELOAD")
 	stats(c, addSampleEvents, "Preload")
 
-	config := make([]*Config, 0, numFollowers)
-	if numFollowers == 0 {
-		c := NewDefaultConfig()
-		c.req.client = client
-		c.numRequests = numReqests
-		c.maxGoRoutines = readConcurrency
-		c.req.expectedStatusCode = 200
-		c.req.endpoint += "/proofs/membership"
-
-		config = append(config, c)
-	}
-	for i := 0; i < numFollowers; i++ {
-		c := NewDefaultConfig()
-		c.req.client = client
-		c.numRequests = numReqests
-		c.maxGoRoutines = readConcurrency
-		c.req.expectedStatusCode = 200
-		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
-		c.req.endpoint += "/proofs/membership"
-
-		config = append(config, c)
-	}
-
 	time.Sleep(1 * time.Second)
-
 	fmt.Println("EXCLUSIVE QUERY MEMBERSHIP")
-	stats(config[0], queryMembership, "Follower 1 read")
+	cq := NewDefaultConfig()
+	cq.req.client = client
+	cq.req.expectedStatusCode = 200
+	cq.req.endpoint = "http://localhost:8081"
+	cq.req.endpoint += "/proofs/membership"
+	stats(cq, queryMembership, "Follower 1 read")
 
-	fmt.Println("QUERY MEMBERSHIP UNDER CONTINUOUS LOAD")
-	for i, c := range config {
-		queryWg.Add(1)
-		go func(i int, c *Config) {
-			defer queryWg.Done()
-			stats(c, queryMembership, fmt.Sprintf("Follower %d read", i+1))
-		}(i, c)
-	}
+	fmt.Println("QUERY MEMBERSHIP CONTINUOUS LOAD")
+	queryWg.Add(1)
+	go func() {
+		defer queryWg.Done()
+		stats(cq, queryMembership, "Follower 1 read")
+	}()
+
+	cb := NewDefaultConfig()
+	cb.req.client = client
+	cb.req.expectedStatusCode = 200
+	cb.req.endpoint = "http://localhost:8082"
+	cb.req.endpoint += "/proofs/membership"
+	queryWg.Add(1)
+	go func() {
+		defer queryWg.Done()
+		stats(cb, queryMembership, "Follower 2 read")
+	}()
 
 	fmt.Println("Starting continuous load...")
 	ca := NewDefaultConfig()
 	ca.req.client = client
-	ca.numRequests = numReqests
-	ca.maxGoRoutines = writeConcurrency
 	ca.req.expectedStatusCode = 201
 	ca.req.endpoint += "/events"
 	ca.startVersion = c.numRequests
@@ -298,7 +339,7 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 	elapsed := time.Now().Sub(start).Seconds()
 
 	numRequestsf := float64(c.numRequests)
-	currentVersion := getVersion("last-event", c)
+	currentVersion := getVersion("last-event")
 	fmt.Printf(
 		"Leader write throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
 		(float64(currentVersion)-numRequestsf)/elapsed,
@@ -306,139 +347,13 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 		elapsed,
 		c.maxGoRoutines,
 	)
-}
-
-func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
-	fmt.Println("\nStarting benchmark run...")
-	var queryWg sync.WaitGroup
-
-	client := &http.Client{}
-
-	c := NewDefaultConfig()
-	c.req.client = client
-	c.numRequests = numReqests
-	c.maxGoRoutines = writeConcurrency
-	c.req.expectedStatusCode = 201
-	c.req.endpoint += "/events"
-
-	fmt.Println("PRELOAD")
-	stats(c, addSampleEvents, "Preload")
-
-	config := make([]*Config, 0, numFollowers)
-	if numFollowers == 0 {
-		c := NewDefaultConfig()
-		c.req.client = client
-		c.numRequests = numReqests
-		c.maxGoRoutines = writeConcurrency
-		c.req.expectedStatusCode = 200
-		c.req.endpoint += "/proofs/incremental"
-
-		config = append(config, c)
-	}
-	for i := 0; i < numFollowers; i++ {
-		c := NewDefaultConfig()
-		c.req.client = client
-		c.numRequests = numReqests
-		c.maxGoRoutines = writeConcurrency
-		c.req.expectedStatusCode = 200
-		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
-		c.req.endpoint += "/proofs/incremental"
-
-		config = append(config, c)
-	}
-
-	time.Sleep(1 * time.Second)
-
-	fmt.Println("EXCLUSIVE QUERY INCREMENTAL")
-	stats(config[0], queryIncremental, "Follower 1 read")
-
-	fmt.Println("QUERY INCREMENTAL UNDER CONTINUOUS LOAD")
-	for i, c := range config {
-		queryWg.Add(1)
-		go func(i int, c *Config) {
-			defer queryWg.Done()
-			stats(c, queryIncremental, fmt.Sprintf("Follower %d read", i+1))
-		}(i, c)
-	}
-
-	fmt.Println("Starting continuous load...")
-	ca := NewDefaultConfig()
-	ca.req.client = client
-	ca.numRequests = numReqests
-	ca.maxGoRoutines = writeConcurrency
-	ca.req.expectedStatusCode = 201
-	ca.req.endpoint += "/events"
-	ca.startVersion = c.numRequests
-	ca.continuous = true
-
-	start := time.Now()
-	go stats(ca, addSampleEvents, "Leader write")
-	queryWg.Wait()
-	elapsed := time.Now().Sub(start).Seconds()
-
-	numRequestsf := float64(c.numRequests)
-	currentVersion := getVersion("last-event", c)
-	fmt.Printf(
-		"Leader write throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
-		(float64(currentVersion)-numRequestsf)/elapsed,
-		currentVersion-uint64(c.numRequests),
-		elapsed,
-		c.maxGoRoutines,
-	)
-}
-
-var (
-	wantMembership   bool
-	incrementalDelta int
-	numRequests      int
-	readConcurrency  int
-	writeConcurrency int
-)
-
-func init() {
-	const (
-		defaultWantMembership   = false
-		defaultIncrementalDelta = 1000
-		defaultNumRequests      = 100000
-		usage                   = "Benchmark MembershipProof"
-		usageDelta              = "Specify delta for the IncrementalProof"
-		usageNumRequests        = "Number of requests for the attack"
-		usageReadConcurrency    = "Set read concurrency value"
-		usageWriteConcurrency   = "Set write concurrency value"
-	)
-
-	// Create a default config to use as default values in flags
-	config := NewDefaultConfig()
-
-	flag.BoolVar(&wantMembership, "membership", defaultWantMembership, usage)
-	flag.BoolVar(&wantMembership, "m", defaultWantMembership, usage+" (shorthand)")
-	flag.IntVar(&incrementalDelta, "delta", defaultIncrementalDelta, usageDelta)
-	flag.IntVar(&incrementalDelta, "d", defaultIncrementalDelta, usageDelta+" (shorthand)")
-	flag.IntVar(&numRequests, "n", defaultNumRequests, usageNumRequests)
-	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, usageReadConcurrency)
-	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, usageWriteConcurrency)
 }
 
 func main() {
-	var n int
-	switch m := os.Getenv("MULTINODE"); m {
-	case "":
-		n = 0
-	case "2":
-		n = 2
-	case "4":
-		n = 4
-	default:
-		fmt.Println("Error: MULTINODE env var should have values 2 or 4, or not be defined at all.")
-	}
 
-	flag.Parse()
-
-	if wantMembership {
-		fmt.Println("Benchmark MEMBERSHIP")
-		benchmarkMembership(n, numRequests, readConcurrency, writeConcurrency)
+	if os.Getenv("MULTINODE") == "" {
+		singleNode()
 	} else {
-		fmt.Println("Benchmark INCREMENTAL")
-		benchmarkIncremental(n, numRequests, readConcurrency, writeConcurrency)
+		multiNode()
 	}
 }
