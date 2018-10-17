@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -231,7 +232,7 @@ func stats(c *Config, t Task, message string) {
 }
 
 func singleNode() {
-	fmt.Println("\nStarting contest...")
+	fmt.Println("\nStarting single-node contest...")
 
 	client := &http.Client{}
 
@@ -284,7 +285,7 @@ func singleNode() {
 }
 
 func multiNode() {
-	fmt.Println("\nStarting contest...")
+	fmt.Println("\nStarting multi-node contest...")
 	var queryWg sync.WaitGroup
 
 	client := &http.Client{}
@@ -349,6 +350,10 @@ func multiNode() {
 }
 
 func main() {
-	// singleNode()
-	multiNode()
+
+	if os.Getenv("MULTINODE") == "" {
+		singleNode()
+	} else {
+		multiNode()
+	}
 }
