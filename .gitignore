@@ -16,6 +16,7 @@ tests/cloud/aws/to_upload/rendered
 
 # Documents 
 *.pdf
+TODO.md
 
 # Test binary, build with `go test -c`
 *.test
