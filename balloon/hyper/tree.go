@@ -32,21 +32,20 @@ import (
 )
 
 type HyperTree struct {
-	lock          *sync.RWMutex
 	store         storage.Store
 	cache         cache.ModifiableCache
 	hasherF       func() hashing.Hasher
 	cacheLevel    uint16
 	defaultHashes []hashing.Digest
 	hasher        hashing.Hasher
+
+	sync.RWMutex
 }
 
 func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache) *HyperTree {
-	var lock sync.RWMutex
 	hasher := hasherF()
 	cacheLevel := hasher.Len() - uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
 	tree := &HyperTree{
-		lock:          &lock,
 		store:         store,
 		cache:         cache,
 		hasherF:       hasherF,
@@ -67,8 +66,8 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 }
 
 func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
 	// Activate metrics gathering
 	stats := metrics.Hyper
@@ -110,8 +109,8 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 }
 
 func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) (proof *QueryProof, err error) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
 	// visitors
 	computeHash := visitor.NewComputeHashVisitor(t.hasher)
@@ -140,8 +139,8 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) 
 }
 
 func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDigest, expectedDigest hashing.Digest) bool {
-	t.lock.Lock()
-	defer t.lock.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
 	log.Debugf("Verifying membership for eventDigest %x", eventDigest)
 
@@ -177,8 +176,8 @@ func (t *HyperTree) Close() {
 }
 
 func (t *HyperTree) RebuildCache() error {
-	t.lock.Lock()
-	defer t.lock.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
 	// warm up cache
 	log.Info("Warming up hyper cache...")
