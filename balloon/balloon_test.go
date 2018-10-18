@@ -352,3 +352,28 @@ func BenchmarkAddBadger(b *testing.B) {
 	}
 
 }
+
+func BenchmarkQueryBadger(b *testing.B) {
+	var events [][]byte
+	log.SetLogger("BenchmarkAddBadger", log.SILENT)
+
+	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/ballon_bench.db")
+	defer closeF()
+
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(b, err)
+
+	b.N = 100000
+	for i := 0; i < b.N; i++ {
+		event := rand.Bytes(128)
+		events = append(events, event)
+		_, mutations, _ := balloon.Add(event)
+		store.Mutate(mutations)
+	}
+
+	b.ResetTimer()
+	for i, e := range events {
+		balloon.QueryMembership(e, uint64(i))
+	}
+
+}
