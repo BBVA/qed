@@ -116,11 +116,12 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 
 		// Set Api-Key header
 		req.Header.Set("Api-Key", c.apiKey)
-		res, err := c.req.client.Do(req)
-		defer res.Body.Close()
+		res, _ := c.req.client.Do(req)
 		if err != nil {
 			log.Fatalf("Unable to perform request: %v", err)
 		}
+		defer res.Body.Close()
+
 		if res.StatusCode != c.req.expectedStatusCode {
 			log.Fatalf("Server error: %v", err)
 		}
@@ -167,10 +168,11 @@ func getVersion(eventTemplate string) uint64 {
 	// TODO: remove pepe and pass a config var
 	req.Header.Set("Api-Key", "pepe")
 	res, err := client.Do(req)
-	defer res.Body.Close()
 	if err != nil {
 		log.Fatalf("Unable to perform request: %v", err)
 	}
+	defer res.Body.Close()
+
 	if res.StatusCode != 201 {
 		log.Fatalf("Server error: %v", err)
 	}
