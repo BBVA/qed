@@ -30,15 +30,19 @@ import (
 )
 
 type HistoryTree struct {
-	lock    *sync.RWMutex
 	hasherF func() hashing.Hasher
 	cache   cache.ModifiableCache
 	hasher  hashing.Hasher
+
+	sync.RWMutex
 }
 
 func NewHistoryTree(hasherF func() hashing.Hasher, cache cache.ModifiableCache) *HistoryTree {
-	var lock sync.RWMutex
-	return &HistoryTree{&lock, hasherF, cache, hasherF()}
+	return &HistoryTree{
+		hasherF: hasherF,
+		cache:   cache,
+		hasher:  hasherF(),
+	}
 }
 
 func (t *HistoryTree) getDepth(version uint64) uint16 {
@@ -46,8 +50,8 @@ func (t *HistoryTree) getDepth(version uint64) uint16 {
 }
 
 func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
-	t.lock.Lock() // TODO REMOVE THIS!!!
-	defer t.lock.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
 	// Activate metrics gathering
 	stats := metrics.History
@@ -84,8 +88,8 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 }
 
 func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, error) {
-	t.lock.Lock() // TODO REMOVE THIS!!!
-	defer t.lock.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
 	log.Debugf("Proving membership for index %d with version %d", index, version)
 
@@ -126,8 +130,8 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 }
 
 func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, error) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
+	t.Lock()
+	defer t.Unlock()
 
 	log.Debugf("Proving consistency between versions %d and %d", start, end)
 
