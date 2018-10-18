@@ -66,7 +66,7 @@ type HTTPClient struct {
 
 // type Config map[string]interface{}
 func NewDefaultConfig() *Config {
-	numRequests := 10000
+	numRequests := 100000
 	return &Config{
 		maxGoRoutines:  10,
 		numRequests:    numRequests,

@@ -26,6 +26,7 @@ import (
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
@@ -69,6 +70,9 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
+	// Activate metrics gathering
+	stats := metrics.Hyper
+
 	// visitors
 	computeHash := visitor.NewComputeHashVisitor(t.hasher)
 	caching := visitor.NewCachingVisitor(computeHash, t.cache)
@@ -98,6 +102,9 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 
 	// collect mutations
 	mutations := append(collect.Result(), leafMutation)
+
+	// Increment add hits
+	stats.Add("add_hits", 1)
 
 	return rootHash, mutations, nil
 }
