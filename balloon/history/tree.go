@@ -20,6 +20,8 @@ import (
 	"math/bits"
 	"sync"
 
+	"github.com/bbva/qed/metrics"
+
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
@@ -47,6 +49,9 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	t.lock.Lock() // TODO REMOVE THIS!!!
 	defer t.lock.Unlock()
 
+	// Activate metrics gathering
+	stats := metrics.History
+
 	// visitors
 	computeHash := visitor.NewComputeHashVisitor(t.hasher)
 	caching := visitor.NewCachingVisitor(computeHash, t.cache)
@@ -71,6 +76,9 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 
 	// visit the pruned tree
 	rh := pruned.PostOrder(collect).(hashing.Digest)
+
+	// Increment add hits
+	stats.Add("add_hits", 1)
 
 	return rh, collect.Result(), nil
 }

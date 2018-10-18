@@ -25,6 +25,7 @@ import (
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
@@ -172,6 +173,9 @@ func (b *Balloon) RefreshVersion() error {
 
 func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 
+	// Activate metrics gathering
+	stats := metrics.Balloon
+
 	// Get version
 	version := b.version
 	b.version++
@@ -210,6 +214,10 @@ func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 		HyperDigest:   hyperDigest,
 		Version:       version,
 	}
+
+	// Increment add hits and version
+	stats.Add("add_hits", 1)
+	stats.Set("version", metrics.Uint64ToVar(version))
 
 	return commitment, mutations, nil
 }
