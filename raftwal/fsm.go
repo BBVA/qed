@@ -85,11 +85,11 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 	}, nil
 }
 
-func (fsm BalloonFSM) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
+func (fsm *BalloonFSM) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	return fsm.balloon.QueryMembership(event, version)
 }
 
-func (fsm BalloonFSM) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
+func (fsm *BalloonFSM) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	return fsm.balloon.QueryConsistency(start, end)
 }
 
