@@ -88,7 +88,6 @@ type Task func(goRoutineId int, c *Config) ([]byte, error)
 
 // func (t *Task) Timeout()event
 func SpawnerOfEvil(c *Config, t Task) {
-	// TODO: only one client per run MAYBE
 	var wg sync.WaitGroup
 
 	for goRoutineId := 0; goRoutineId < c.maxGoRoutines; goRoutineId++ {
