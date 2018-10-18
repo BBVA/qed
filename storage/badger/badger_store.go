@@ -102,8 +102,7 @@ func (s BadgerStore) Get(prefix byte, key []byte) (*storage.KVPair, error) {
 		if err != nil {
 			return err
 		}
-		var value []byte
-		value, err = item.ValueCopy(value)
+		value, err := item.ValueCopy(nil)
 		if err != nil {
 			return err
 		}
