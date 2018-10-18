@@ -217,12 +217,12 @@ func (p *SearchPruner) traverse(pos navigator.Position, leaves storage.KVRange) 
 	leftSlice, rightSlice := leaves.Split(rightPos.Index())
 
 	if !p.cacheResolver.IsOnPath(pos) {
-		left, err := p.traverseWithoutCaching(p.navigator.GoToLeft(pos), leftSlice)
+		left, err := p.traverseWithoutCollecting(p.navigator.GoToLeft(pos), leftSlice)
 		if err != nil {
 			return nil, err
 		}
 
-		right, err := p.traverseWithoutCaching(rightPos, rightSlice)
+		right, err := p.traverseWithoutCollecting(rightPos, rightSlice)
 		if err != nil {
 			return nil, err
 		}
@@ -249,7 +249,7 @@ func (p *SearchPruner) traverse(pos navigator.Position, leaves storage.KVRange) 
 	return visitor.NewNode(pos, left, right), nil
 }
 
-func (p *SearchPruner) traverseWithoutCaching(pos navigator.Position, leaves storage.KVRange) (visitor.Visitable, error) {
+func (p *SearchPruner) traverseWithoutCollecting(pos navigator.Position, leaves storage.KVRange) (visitor.Visitable, error) {
 	if p.navigator.IsLeaf(pos) && len(leaves) == 1 {
 		return visitor.NewLeaf(pos, leaves[0].Value), nil
 	}
@@ -265,11 +265,11 @@ func (p *SearchPruner) traverseWithoutCaching(pos navigator.Position, leaves sto
 	// split leaves
 	rightPos := p.navigator.GoToRight(pos)
 	leftSlice, rightSlice := leaves.Split(rightPos.Index())
-	left, err := p.traverseWithoutCaching(p.navigator.GoToLeft(pos), leftSlice)
+	left, err := p.traverseWithoutCollecting(p.navigator.GoToLeft(pos), leftSlice)
 	if err != nil {
 		return nil, ErrLeavesSlice
 	}
-	right, err := p.traverseWithoutCaching(rightPos, rightSlice)
+	right, err := p.traverseWithoutCollecting(rightPos, rightSlice)
 	if err != nil {
 		return nil, ErrLeavesSlice
 	}
