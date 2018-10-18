@@ -257,7 +257,6 @@ func TestTamperAndVerify(t *testing.T) {
 
 	memProof, err := b.QueryMembership(event, commitment.Version)
 	assert.NoError(t, err)
-
 	assert.True(t, memProof.Verify(event, commitment), "The proof should verify correctly")
 
 	original, err := store.Get(storage.IndexPrefix, eventDigest)
@@ -275,11 +274,8 @@ func TestTamperAndVerify(t *testing.T) {
 	assert.Equal(t, tpBytes, tampered.Value, "Tamper unsuccessful")
 	assert.NotEqual(t, original.Value, tampered.Value, "Tamper unsuccessful")
 
-	tpProof, err := b.QueryMembership(event, commitment.Version)
-	assert.NoError(t, err)
-
-	assert.Nil(t, tpProof.HistoryProof, "The history proof must be nil")
-	assert.False(t, tpProof.Verify(event, commitment), "TamperProof unsuccessful")
+	_, err = b.QueryMembership(event, commitment.Version)
+	require.Error(t, err)
 }
 
 func TestDeleteAndVerify(t *testing.T) {
@@ -299,15 +295,15 @@ func TestDeleteAndVerify(t *testing.T) {
 
 	memProof, err := b.QueryMembership(event, commitment.Version)
 	assert.NoError(t, err)
-
 	assert.True(t, memProof.Verify(event, commitment), "The proof should verify correctly")
-
 	assert.NoError(t, store.Delete(storage.IndexPrefix, eventDigest), "store delete returned non nil value")
+
 	tampered, _ := store.Get(storage.IndexPrefix, eventDigest)
 	assert.Nil(t, tampered)
 
-	proof, _ := b.QueryMembership(event, commitment.Version)
-	assert.False(t, proof.Exists)
+	proof, err := b.QueryMembership(event, commitment.Version)
+	assert.Nil(t, proof)
+	assert.Error(t, err, "ballon should not return a proof")
 }
 
 func TestGenIncrementalAndVerify(t *testing.T) {

@@ -217,33 +217,48 @@ func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
 
 	var proof MembershipProof
+	var wg sync.WaitGroup
+	var hyperErr, historyErr error
+	var hyperProof *hyper.QueryProof
+	var historyProof *history.MembershipProof
 
 	proof.Hasher = b.hasherF()
 	proof.KeyDigest = proof.Hasher.Do(event)
 	proof.QueryVersion = version
 	proof.CurrentVersion = b.version - 1
 
-	hyperProof, exists, err := b.hyperTree.QueryMembership(proof.KeyDigest)
+	leaf, err := b.store.Get(storage.IndexPrefix, proof.KeyDigest)
 	if err != nil {
+		return nil, fmt.Errorf("No leaf with digest %v", proof.KeyDigest)
+	}
+
+	proof.Exists = true
+	proof.ActualVersion = util.BytesAsUint64(leaf.Value)
+
+	if proof.ActualVersion <= proof.QueryVersion {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, proof.QueryVersion)
+		}()
+	} else {
+		return nil, fmt.Errorf("query version %d is not on history tree which version is %d", proof.QueryVersion, proof.ActualVersion)
+	}
+
+	hyperProof, hyperErr = b.hyperTree.QueryMembership(leaf.Key, leaf.Value)
+
+	wg.Wait()
+	if hyperErr != nil {
 		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
 	}
+
+	if historyErr != nil {
+		return nil, fmt.Errorf("Unable to get proof from history tree: %v", err)
+	}
+
 	proof.HyperProof = hyperProof
-
-	if exists {
-		proof.Exists = exists
-		proof.ActualVersion = util.BytesAsUint64(hyperProof.Value)
-	}
-
-	if proof.Exists && proof.ActualVersion <= proof.QueryVersion {
-		historyProof, err := b.historyTree.ProveMembership(proof.ActualVersion, proof.QueryVersion)
-		if err != nil {
-			return nil, fmt.Errorf("Unable to get proof from history tree: %v", err)
-		}
-		proof.HistoryProof = historyProof
-	} else {
-		proof.Exists = false
-	}
-
+	proof.HistoryProof = historyProof
+	proof.Exists = true
 	return &proof, nil
 }
 

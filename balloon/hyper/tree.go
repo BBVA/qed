@@ -102,16 +102,9 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	return rootHash, mutations, nil
 }
 
-func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryProof, exists bool, err error) {
+func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) (proof *QueryProof, err error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-
-	pair, err := t.store.Get(storage.IndexPrefix, eventDigest)
-	if err == storage.ErrKeyNotFound {
-		return nil, false, nil
-	} else if err != nil {
-		return nil, false, err
-	}
 
 	// visitors
 	computeHash := visitor.NewComputeHashVisitor(t.hasher)
@@ -129,13 +122,14 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	// traverse from root and generate a visitable pruned tree
 	pruned, err := NewSearchPruner(eventDigest, context).Prune()
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	// visit the pruned tree
 	pruned.PostOrder(calcAuditPath)
 
-	return NewQueryProof(pair.Key, pair.Value, calcAuditPath.Result(), t.hasherF()), true, nil // TODO include version in audit path visitor
+	// TODO include version in audit path visitor
+	return NewQueryProof(eventDigest, version, calcAuditPath.Result(), t.hasherF()), nil
 }
 
 func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDigest, expectedDigest hashing.Digest) bool {
