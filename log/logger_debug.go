@@ -38,29 +38,29 @@ func newDebug(out io.Writer, prefix string, flag int) *debugLogger {
 }
 
 // A impl 'l debugLogger' qed/log.Logger
-func (l debugLogger) Error(v ...interface{}) {
+func (l *debugLogger) Error(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
 	osExit(1)
 }
 
-func (l debugLogger) Info(v ...interface{}) {
+func (l *debugLogger) Info(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
 }
 
-func (l debugLogger) Debug(v ...interface{}) {
+func (l *debugLogger) Debug(v ...interface{}) {
 	l.Output(caller, fmt.Sprint(v...))
 }
 
-func (l debugLogger) Errorf(format string, v ...interface{}) {
+func (l *debugLogger) Errorf(format string, v ...interface{}) {
 	l.Output(caller, fmt.Sprintf(format, v...))
 	osExit(1)
 }
 
-func (l debugLogger) Infof(format string, v ...interface{}) {
+func (l *debugLogger) Infof(format string, v ...interface{}) {
 	l.Output(caller, fmt.Sprintf(format, v...))
 }
 
-func (l debugLogger) Debugf(format string, v ...interface{}) {
+func (l *debugLogger) Debugf(format string, v ...interface{}) {
 	l.Output(caller, fmt.Sprintf(format, v...))
 }
 

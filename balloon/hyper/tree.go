@@ -32,7 +32,7 @@ import (
 )
 
 type HyperTree struct {
-	lock          sync.RWMutex
+	lock          *sync.RWMutex
 	store         storage.Store
 	cache         cache.ModifiableCache
 	hasherF       func() hashing.Hasher
@@ -46,7 +46,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 	hasher := hasherF()
 	cacheLevel := hasher.Len() - uint16(math.Max(float64(2), math.Floor(float64(hasher.Len())/10)))
 	tree := &HyperTree{
-		lock:          lock,
+		lock:          &lock,
 		store:         store,
 		cache:         cache,
 		hasherF:       hasherF,

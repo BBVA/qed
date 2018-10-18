@@ -30,7 +30,7 @@ import (
 )
 
 type HistoryTree struct {
-	lock    sync.RWMutex
+	lock    *sync.RWMutex
 	hasherF func() hashing.Hasher
 	cache   cache.ModifiableCache
 	hasher  hashing.Hasher
@@ -38,7 +38,7 @@ type HistoryTree struct {
 
 func NewHistoryTree(hasherF func() hashing.Hasher, cache cache.ModifiableCache) *HistoryTree {
 	var lock sync.RWMutex
-	return &HistoryTree{lock, hasherF, cache, hasherF()}
+	return &HistoryTree{&lock, hasherF, cache, hasherF()}
 }
 
 func (t *HistoryTree) getDepth(version uint64) uint16 {
