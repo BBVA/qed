@@ -16,16 +16,29 @@
 
 package metrics
 
-import "expvar"
+import (
+	"expvar"
+	"fmt"
+)
 
 var (
 	// HyperStats has a Map of all the stats relative to our Hyper Tree
 	Hyper *expvar.Map
 	// HistoryStats has a Map of all the stats relative to our History Tree
 	History *expvar.Map
+	// BalloonStats has a Map of all the stats relative to Balloon
+	Balloon *expvar.Map
 )
+
+// Implement expVar.Var interface
+type Uint64ToVar uint64
+
+func (v Uint64ToVar) String() string {
+	return fmt.Sprintf("%d", v)
+}
 
 func init() {
 	Hyper = expvar.NewMap("hyper_stats")
 	History = expvar.NewMap("history_stats")
+	Balloon = expvar.NewMap("balloon_stats")
 }
