@@ -278,7 +278,7 @@ func (b *RaftBalloon) Close(wait bool) error {
 }
 
 // Wait until node becomes leader or time is out
-func (b RaftBalloon) WaitForLeader(timeout time.Duration) (string, error) {
+func (b *RaftBalloon) WaitForLeader(timeout time.Duration) (string, error) {
 	tck := time.NewTicker(leaderWaitDelay)
 	defer tck.Stop()
 	tmr := time.NewTimer(timeout)
@@ -297,29 +297,29 @@ func (b RaftBalloon) WaitForLeader(timeout time.Duration) (string, error) {
 	}
 }
 
-func (b RaftBalloon) IsLeader() bool {
+func (b *RaftBalloon) IsLeader() bool {
 	return b.raft.api.State() == raft.Leader
 }
 
 // Addr returns the address of the store.
-func (b RaftBalloon) Addr() string {
+func (b *RaftBalloon) Addr() string {
 	return string(b.raft.transport.LocalAddr())
 }
 
 // LeaderAddr returns the Raft address of the current leader. Returns a
 // blank string if there is no leader.
-func (b RaftBalloon) LeaderAddr() string {
+func (b *RaftBalloon) LeaderAddr() string {
 	return string(b.raft.api.Leader())
 }
 
 // ID returns the Raft ID of the store.
-func (b RaftBalloon) ID() string {
+func (b *RaftBalloon) ID() string {
 	return b.id
 }
 
 // LeaderID returns the node ID of the Raft leader. Returns a
 // blank string if there is no leader, or an error.
-func (b RaftBalloon) LeaderID() (string, error) {
+func (b *RaftBalloon) LeaderID() (string, error) {
 	addr := b.LeaderAddr()
 	configFuture := b.raft.api.GetConfiguration()
 	if err := configFuture.Error(); err != nil {
@@ -336,7 +336,7 @@ func (b RaftBalloon) LeaderID() (string, error) {
 }
 
 // Nodes returns the slice of nodes in the cluster, sorted by ID ascending.
-func (b RaftBalloon) Nodes() ([]raft.Server, error) {
+func (b *RaftBalloon) Nodes() ([]raft.Server, error) {
 	f := b.raft.api.GetConfiguration()
 	if f.Error() != nil {
 		return nil, f.Error()
@@ -404,10 +404,10 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Commitment, error) {
 	return resp.(*fsmAddResponse).commitment, nil
 }
 
-func (b RaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
+func (b *RaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	return b.fsm.QueryMembership(event, version)
 }
 
-func (b RaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
+func (b *RaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	return b.fsm.QueryConsistency(start, end)
 }
