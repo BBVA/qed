@@ -116,7 +116,7 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 
 		// Set Api-Key header
 		req.Header.Set("Api-Key", c.apiKey)
-		res, _ := c.req.client.Do(req)
+		res, err := c.req.client.Do(req)
 		if err != nil {
 			log.Fatalf("Unable to perform request: %v", err)
 		}
