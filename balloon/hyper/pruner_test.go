@@ -162,10 +162,7 @@ func TestInsertPruner(t *testing.T) {
 			cacheResolver: NewSingleTargetedCacheResolver(numBits, cacheLevel, c.key),
 			cache:         cache,
 			store:         store,
-			defaultHashes: []hashing.Digest{
-				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
-				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
-			},
+			defaultHashes: []hashing.Digest{{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}},
 		}
 
 		pruned, _ := NewInsertPruner(c.key, c.value, context).Prune()
@@ -249,10 +246,7 @@ func TestSearchPruner(t *testing.T) {
 			cacheResolver: NewSingleTargetedCacheResolver(numBits, cacheLevel, c.key),
 			cache:         cache,
 			store:         store,
-			defaultHashes: []hashing.Digest{
-				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
-				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
-			},
+			defaultHashes: []hashing.Digest{{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}},
 		}
 
 		pruned, _ := NewSearchPruner(c.key, context).Prune()
@@ -306,10 +300,7 @@ func TestVerifyPruner(t *testing.T) {
 			cacheResolver: NewSingleTargetedCacheResolver(numBits, cacheLevel, c.key),
 			cache:         fakeCache,
 			store:         store,
-			defaultHashes: []hashing.Digest{
-				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
-				hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0}, hashing.Digest{0},
-			},
+			defaultHashes: []hashing.Digest{{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}},
 		}
 
 		pruned, _ := NewVerifyPruner(c.key, c.value, context).Prune()

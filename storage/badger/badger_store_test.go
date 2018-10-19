@@ -203,7 +203,7 @@ func TestGetLast(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	prefixes := [][]byte{[]byte{storage.IndexPrefix}, []byte{storage.HistoryCachePrefix}, []byte{storage.HyperCachePrefix}}
+	prefixes := [][]byte{{storage.IndexPrefix}, {storage.HistoryCachePrefix}, {storage.HyperCachePrefix}}
 	for _, prefix := range prefixes {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
