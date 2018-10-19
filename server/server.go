@@ -53,12 +53,12 @@ type Server struct {
 	httpAddr       string // HTTP server bind address
 	raftAddr       string // Raft communication bind address
 	mgmtAddr       string // Management server bind address
-	joinAddr       string // Comma-delimited list of nodes, through wich a cluster can be joined (protocol://host:port)
+	joinAddr       string // Comma-delimited list of nodes, through which a cluster can be joined (protocol://host:port)
 	dbPath         string // Path to storage directory
 	raftPath       string // Path to Raft storage directory
 	privateKeyPath string // Path to the private key file used to sign commitments
 	apiKey         string
-	bootstrap      bool // Set bootstrap to true when bringing up the firts node as a master
+	bootstrap      bool // Set bootstrap to true when bringing up the first node as a master
 
 	httpServer      *http.Server
 	mgmtServer      *http.Server
