@@ -171,7 +171,7 @@ func TestQueryConsistencyProof(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equalf(t, c.start, proof.Start, "The query start does not match in test %d: expected %d, actual %d", i, c.start, proof.Start)
 		assert.Equalf(t, c.end, proof.End, "The query end does not match in test %d: expected %d, actual %d", i, c.end, proof.End)
-		assert.Truef(t, len(proof.AuditPath) > 0, "The lenght of the audith path should be >0 in test %d ", i)
+		assert.Truef(t, len(proof.AuditPath) > 0, "The length of the audith path should be >0 in test %d ", i)
 	}
 }
 
