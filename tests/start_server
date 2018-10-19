@@ -29,9 +29,10 @@ else
     echo Starting multinode...
     go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 --profiling &
     sleep 10
-    echo Starting fallowers
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8081 --join-addr :8090 --raft-addr :9001 --mgmt-addr :8091 --node-id node1 &
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8082 --join-addr :8090 --raft-addr :9002 --mgmt-addr :8092 --node-id node2 &
+    echo Starting followers
+    for i in $(seq 1 $MULTINODE); do
+        go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :808$i --join-addr :8090 --raft-addr :900$i --mgmt-addr :809$i --node-id node$i &
+    done
     sleep 10
     echo done.
 fi
