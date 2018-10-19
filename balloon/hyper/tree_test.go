@@ -80,7 +80,7 @@ func TestProveMembership(t *testing.T) {
 	}{
 		{
 			addOps: map[uint64]hashing.Digest{
-				uint64(0): hashing.Digest{0},
+				uint64(0): {0},
 			},
 			expectedAuditPath: visitor.AuditPath{
 				"10|4": hashing.Digest{0x0},
@@ -95,9 +95,9 @@ func TestProveMembership(t *testing.T) {
 		},
 		{
 			addOps: map[uint64]hashing.Digest{
-				uint64(0): hashing.Digest{0},
-				uint64(1): hashing.Digest{1},
-				uint64(2): hashing.Digest{2},
+				uint64(0): {0},
+				uint64(1): {1},
+				uint64(2): {2},
 			},
 			expectedAuditPath: visitor.AuditPath{
 				"10|4": hashing.Digest{0x0},
