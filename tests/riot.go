@@ -287,7 +287,7 @@ func singleNode() {
 	)
 }
 
-func multiNode() {
+func multiNode(numFollowers int) {
 	fmt.Println("\nStarting multi-node contest...")
 	var queryWg sync.WaitGroup
 
@@ -301,32 +301,31 @@ func multiNode() {
 	fmt.Println("PRELOAD")
 	stats(c, addSampleEvents, "Preload")
 
+	config := make([]*Config, 0, numFollowers)
+	for i := 0; i < numFollowers; i++ {
+		c := NewDefaultConfig()
+		c.req.client = client
+		c.req.expectedStatusCode = 200
+		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
+		c.req.endpoint += "/proofs/membership"
+
+		config = append(config, c)
+	}
+
 	time.Sleep(1 * time.Second)
+
 	fmt.Println("EXCLUSIVE QUERY MEMBERSHIP")
-	cq := NewDefaultConfig()
-	cq.req.client = client
-	cq.req.expectedStatusCode = 200
-	cq.req.endpoint = "http://localhost:8081"
-	cq.req.endpoint += "/proofs/membership"
-	stats(cq, queryMembership, "Follower 1 read")
+	stats(config[0], queryMembership, "Follower 1 read")
 
-	fmt.Println("QUERY MEMBERSHIP CONTINUOUS LOAD")
-	queryWg.Add(1)
-	go func() {
-		defer queryWg.Done()
-		stats(cq, queryMembership, "Follower 1 read")
-	}()
+	fmt.Println("QUERY MEMBERSHIP UNDER CONTINUOUS LOAD")
+	for i, c := range config {
+		queryWg.Add(1)
+		go func(i int, c *Config) {
+			defer queryWg.Done()
+			stats(c, queryMembership, fmt.Sprintf("Follower %d read", i+1))
+		}(i, c)
 
-	cb := NewDefaultConfig()
-	cb.req.client = client
-	cb.req.expectedStatusCode = 200
-	cb.req.endpoint = "http://localhost:8082"
-	cb.req.endpoint += "/proofs/membership"
-	queryWg.Add(1)
-	go func() {
-		defer queryWg.Done()
-		stats(cb, queryMembership, "Follower 2 read")
-	}()
+	}
 
 	fmt.Println("Starting continuous load...")
 	ca := NewDefaultConfig()
@@ -353,10 +352,14 @@ func multiNode() {
 }
 
 func main() {
-
-	if os.Getenv("MULTINODE") == "" {
+	switch m := os.Getenv("MULTINODE"); m {
+	case "":
 		singleNode()
-	} else {
-		multiNode()
+	case "2":
+		multiNode(2)
+	case "4":
+		multiNode(4)
+	default:
+		fmt.Println("Error: MULTINODE env var should have values 2 or 4, or not be defined at all.")
 	}
 }
