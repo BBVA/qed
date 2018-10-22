@@ -15,24 +15,37 @@
 # limitations under the License.
 
 echo "export MULTINODE=true env variable to execute the benchmark in replica mode"
+echo "export PROFILING=true env variable to enable go profiling. Default profiling time is 60. Output: profile.svg"
 
 echo Create id_ed25519 key
 ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 
+if [ ! -z "$PROFILING" ]
+then
+    echo PROFILING=enabled
+    PROFILING=--profiling
+    PROFILER_CMD="go tool pprof -svg -seconds 60 -output profile.svg http://localhost:6060"
+else
+    echo PROFILING=disabled
+    PROFILER_CMD="true"
+fi
+
 if [ -z "$MULTINODE" ]
 then
     echo Starting single server...
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l info  --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 --profiling &
+    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l info  --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 $PROFILING &
     sleep 10
+    $PROFILER_CMD &
     echo done.
 else
     echo Starting multinode...
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 --profiling &
+    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 $PROFILING &
     sleep 10
     echo Starting followers
     for i in $(seq 1 $MULTINODE); do
         go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :808$i --join-addr :8090 --raft-addr :900$i --mgmt-addr :809$i --node-id node$i &
     done
     sleep 10
+    $PROFILER_CMD &
     echo done.
 fi
