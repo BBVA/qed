@@ -20,13 +20,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net/http"
-	"strconv"
 	"sync"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/publish"
 	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/storage"
 	"github.com/hashicorp/go-msgpack/codec"
@@ -49,6 +48,8 @@ type BalloonFSM struct {
 	balloon *balloon.Balloon
 	state   *fsmState
 
+	chPublisher chan balloon.Commitment
+
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
 
@@ -69,7 +70,7 @@ func loadState(s storage.ManagedStore) (*fsmState, error) {
 
 func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
 
-	balloon, err := balloon.NewBalloon(store, hasherF)
+	b, err := balloon.NewBalloon(store, hasherF)
 	if err != nil {
 		return nil, err
 	}
@@ -79,11 +80,15 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 		return nil, err
 	}
 
+	chPublisher := make(chan balloon.Commitment, 10000)
+	go publish.SpawnPublishers(chPublisher)
+
 	return &BalloonFSM{
-		hasherF: hasherF,
-		store:   store,
-		balloon: balloon,
-		state:   state,
+		hasherF:     hasherF,
+		store:       store,
+		balloon:     b,
+		state:       state,
+		chPublisher: chPublisher,
 	}, nil
 }
 
@@ -166,24 +171,6 @@ func (fsm *BalloonFSM) Close() error {
 	return fsm.store.Close()
 }
 
-func sendToPublisher(key, value string) {
-
-	client := &http.Client{}
-
-	req, _ := http.NewRequest("GET", "http://127.0.0.1:4001/gossip/add", nil)
-	q := req.URL.Query()
-	q.Add("key", key)
-	q.Add("val", value)
-	req.URL.RawQuery = q.Encode()
-	rs, err := client.Do(req)
-
-	if err != nil {
-		fmt.Println("Errored when sending request to the server")
-		return
-	}
-	defer rs.Body.Close()
-}
-
 func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 
 	commitment, mutations, err := fsm.balloon.Add(event)
@@ -200,10 +187,8 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 	fsm.store.Mutate(mutations)
 	fsm.state = state
 
-	//TODO: send to publisher
-	message := "Version: " + string(commitment.Version) // + "; History: " + string(commitment.HistoryDigest) + " ;Hyper: " + string(commitment.HyperDigest)
-	fmt.Println(message)
-	sendToPublisher(strconv.FormatUint(commitment.Version, 10), "test")
+	//Send snapshot to publishers
+	fsm.chPublisher <- *commitment
 
 	return &fsmAddResponse{commitment: commitment}
 }

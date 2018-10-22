@@ -218,6 +218,7 @@ type client struct {
 	rcli *redis.Client
 }
 
+// REDIS STUFF
 func NewRedisClient() *client {
 	c := redis.NewClient(&redis.Options{
 		Addr:     "127.0.0.1:6379",
@@ -237,6 +238,8 @@ func (c *client) Publish(key, value string) {
 		panic(err)
 	}
 }
+
+// END REDIS STUFF
 
 func main() {
 	if err := startGossip(); err != nil {
