@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/bbva/qed/balloon"
@@ -164,6 +166,24 @@ func (fsm *BalloonFSM) Close() error {
 	return fsm.store.Close()
 }
 
+func sendToPublisher(key, value string) {
+
+	client := &http.Client{}
+
+	req, _ := http.NewRequest("GET", "http://127.0.0.1:4001/gossip/add", nil)
+	q := req.URL.Query()
+	q.Add("key", key)
+	q.Add("val", value)
+	req.URL.RawQuery = q.Encode()
+	rs, err := client.Do(req)
+
+	if err != nil {
+		fmt.Println("Errored when sending request to the server")
+		return
+	}
+	defer rs.Body.Close()
+}
+
 func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 
 	commitment, mutations, err := fsm.balloon.Add(event)
@@ -179,6 +199,12 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 	mutations = append(mutations, storage.NewMutation(storage.FSMStatePrefix, []byte{0xab}, stateBuff.Bytes()))
 	fsm.store.Mutate(mutations)
 	fsm.state = state
+
+	//TODO: send to publisher
+	message := "Version: " + string(commitment.Version) // + "; History: " + string(commitment.HistoryDigest) + " ;Hyper: " + string(commitment.HyperDigest)
+	fmt.Println(message)
+	sendToPublisher(strconv.FormatUint(commitment.Version, 10), "test")
+
 	return &fsmAddResponse{commitment: commitment}
 }
 
