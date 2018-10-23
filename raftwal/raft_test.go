@@ -28,6 +28,7 @@ import (
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/badger"
+	utilrand "github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/require"
 )
 
@@ -272,4 +273,50 @@ func mustTempDir() string {
 		panic("failed to create temp dir")
 	}
 	return path
+}
+
+func newNodeBench(b *testing.B, id int) (*RaftBalloon, func()) {
+	badgerPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
+
+	os.MkdirAll(badgerPath, os.FileMode(0755))
+	badger, err := badger.NewBadgerStore(badgerPath)
+	require.NoError(b, err)
+
+	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
+	os.MkdirAll(raftPath, os.FileMode(0755))
+	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger)
+	require.NoError(b, err)
+
+	return r, func() {
+		fmt.Println("Removing node folder")
+		os.RemoveAll(fmt.Sprintf("/var/tmp/raft-test/node%d", id))
+	}
+
+}
+
+func BenchmarkRaftAdd(b *testing.B) {
+
+	log.SetLogger("BenchmarkRaftAdd", log.SILENT)
+
+	r, clean := newNodeBench(b, 1)
+	defer clean()
+
+	err := r.Open(true)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	// b.N shoul be eq or greater than 500k to avoid benchmark framework spreding more than one goroutine.
+	b.N = 500000
+	nilCount := 0
+	notNilCount := 0
+	for i := 0; i < b.N; i++ {
+		event := utilrand.Bytes(128)
+		comm, _ := r.Add(event)
+		if comm == nil {
+			nilCount++
+		} else {
+			notNilCount++
+		}
+	}
+	fmt.Printf("Nil: %d, Not Nil: %d\n", nilCount, notNilCount)
 }
