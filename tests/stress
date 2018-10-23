@@ -17,6 +17,6 @@
 
 ./start_server
 
-go run riot.go
+go run riot.go "$@"
 
 ./stop_server
