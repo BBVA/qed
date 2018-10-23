@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	_ "net/http/pprof"
 	"sync"
 
 	"github.com/bbva/qed/balloon"
@@ -48,7 +49,7 @@ type BalloonFSM struct {
 	balloon *balloon.Balloon
 	state   *fsmState
 
-	chPublisher chan balloon.Commitment
+	chPublisher chan *balloon.Commitment
 
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
@@ -80,8 +81,8 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 		return nil, err
 	}
 
-	chPublisher := make(chan balloon.Commitment, 10000)
-	go publish.SpawnPublishers(chPublisher)
+	chPublisher := make(chan *balloon.Commitment, 10000)
+	publish.SpawnPublishers(chPublisher)
 
 	return &BalloonFSM{
 		hasherF:     hasherF,
@@ -188,7 +189,7 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 	fsm.state = state
 
 	//Send snapshot to publishers
-	fsm.chPublisher <- *commitment
+	fsm.chPublisher <- commitment
 
 	return &fsmAddResponse{commitment: commitment}
 }

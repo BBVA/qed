@@ -118,7 +118,7 @@ func addHandler(w http.ResponseWriter, r *http.Request, client *client) {
 	val := r.Form.Get("val")
 	mtx.Lock()
 	items[key] = val
-	client.Publish(key, val)
+	go client.Publish(key, val)
 	mtx.Unlock()
 
 	b, err := json.Marshal([]*update{
