@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,25 +28,9 @@ import (
 	"os"
 	"sync"
 	"time"
-)
 
-type Event struct {
-	Event []byte
-}
-type MembershipQuery struct {
-	Key     []byte
-	Version uint64
-}
-type SignedSnapshot struct {
-	Snapshot  *Snapshot
-	Signature []byte
-}
-type Snapshot struct {
-	HistoryDigest []byte
-	HyperDigest   []byte
-	Version       uint64
-	Event         []byte
-}
+	"github.com/bbva/qed/api/apihttp"
+)
 
 type Config struct {
 	maxGoRoutines  int
@@ -133,7 +118,7 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
 
 	return json.Marshal(
-		&Event{
+		&apihttp.Event{
 			[]byte(fmt.Sprintf("event %d", eventIndex)),
 		},
 	)
@@ -141,9 +126,22 @@ func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
 
 func queryMembership(eventIndex int, c *Config) ([]byte, error) {
 	return json.Marshal(
-		&MembershipQuery{
+		&apihttp.MembershipQuery{
 			[]byte(fmt.Sprintf("event %d", eventIndex)),
 			c.balloonVersion,
+		},
+	)
+}
+
+func queryIncremental(eventIndex int, c *Config) ([]byte, error) {
+	// delta := 1000
+	end := uint64(eventIndex)
+	// start := uint64(math.Max(float64(eventIndex-delta), 0.0))
+	start := end >> 1
+	return json.Marshal(
+		&apihttp.IncrementalRequest{
+			Start: start,
+			End:   end,
 		},
 	)
 }
@@ -153,7 +151,7 @@ func getVersion(eventTemplate string) uint64 {
 
 	buf := fmt.Sprintf(eventTemplate)
 
-	query, err := json.Marshal(&Event{[]byte(buf)})
+	query, err := json.Marshal(&apihttp.Event{[]byte(buf)})
 	if len(query) == 0 {
 		log.Fatalf("Empty query: %v", err)
 	}
@@ -178,7 +176,7 @@ func getVersion(eventTemplate string) uint64 {
 
 	body, _ := ioutil.ReadAll(res.Body)
 
-	var signedSnapshot SignedSnapshot
+	var signedSnapshot apihttp.SignedSnapshot
 	json.Unmarshal(body, &signedSnapshot)
 	version := signedSnapshot.Snapshot.Version
 
@@ -304,15 +302,107 @@ func benchmarkMembership(numFollowers int) {
 	)
 }
 
+func benchmarkIncremental(numFollowers int) {
+	fmt.Println("\nStarting benchmark run...")
+	var queryWg sync.WaitGroup
+
+	client := &http.Client{}
+
+	c := NewDefaultConfig()
+	c.req.client = client
+	c.req.expectedStatusCode = 201
+	c.req.endpoint += "/events"
+
+	fmt.Println("PRELOAD")
+	stats(c, addSampleEvents, "Preload")
+
+	config := make([]*Config, 0, numFollowers)
+	if numFollowers == 0 {
+		c := NewDefaultConfig()
+		c.req.client = client
+		c.req.expectedStatusCode = 200
+		c.req.endpoint += "/proofs/incremental"
+
+		config = append(config, c)
+	}
+	for i := 0; i < numFollowers; i++ {
+		c := NewDefaultConfig()
+		c.req.client = client
+		c.req.expectedStatusCode = 200
+		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
+		c.req.endpoint += "/proofs/incremental"
+
+		config = append(config, c)
+	}
+
+	time.Sleep(1 * time.Second)
+
+	fmt.Println("EXCLUSIVE QUERY INCREMENTAL")
+	stats(config[0], queryIncremental, "Follower 1 read")
+
+	fmt.Println("QUERY INCREMENTAL UNDER CONTINUOUS LOAD")
+	for i, c := range config {
+		queryWg.Add(1)
+		go func(i int, c *Config) {
+			defer queryWg.Done()
+			stats(c, queryIncremental, fmt.Sprintf("Follower %d read", i+1))
+		}(i, c)
+	}
+
+	fmt.Println("Starting continuous load...")
+	ca := NewDefaultConfig()
+	ca.req.client = client
+	ca.req.expectedStatusCode = 201
+	ca.req.endpoint += "/events"
+	ca.startVersion = c.numRequests
+	ca.continuous = true
+
+	start := time.Now()
+	go stats(ca, addSampleEvents, "Leader write")
+	queryWg.Wait()
+	elapsed := time.Now().Sub(start).Seconds()
+
+	numRequestsf := float64(c.numRequests)
+	currentVersion := getVersion("last-event")
+	fmt.Printf(
+		"Leader write throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		(float64(currentVersion)-numRequestsf)/elapsed,
+		currentVersion-uint64(c.numRequests),
+		elapsed,
+		c.maxGoRoutines,
+	)
+}
+
+var wantMembership bool
+
+func init() {
+	const (
+		defaultWantMembership = false
+		usage                 = "Benchmark MembershipProof"
+	)
+	flag.BoolVar(&wantMembership, "membership", defaultWantMembership, usage)
+	flag.BoolVar(&wantMembership, "m", defaultWantMembership, usage+" (shorthand)")
+}
+
 func main() {
+	var n int
 	switch m := os.Getenv("MULTINODE"); m {
 	case "":
-		benchmarkMembership(0)
+		n = 0
 	case "2":
-		benchmarkMembership(2)
+		n = 2
 	case "4":
-		benchmarkMembership(4)
+		n = 4
 	default:
 		fmt.Println("Error: MULTINODE env var should have values 2 or 4, or not be defined at all.")
+	}
+
+	flag.Parse()
+	if wantMembership {
+		fmt.Println("Benchmark MEMBERSHIP")
+		benchmarkMembership(n)
+	} else {
+		fmt.Println("Benchmark INCREMENTAL")
+		benchmarkIncremental(n)
 	}
 }
