@@ -22,14 +22,18 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
-
-	assert "github.com/stretchr/testify/require"
+	"time"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
+	"github.com/bbva/qed/storage/badger"
+	"github.com/bbva/qed/testutils/rand"
+	assert "github.com/stretchr/testify/require"
 )
 
 type fakeRaftBalloon struct {
@@ -297,5 +301,49 @@ func BenchmarkAuth(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		client.Do(req)
+	}
+}
+
+func newNodeBench(b *testing.B, id int) (*raftwal.RaftBalloon, func()) {
+	badgerPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
+
+	os.MkdirAll(badgerPath, os.FileMode(0755))
+	badger, err := badger.NewBadgerStore(badgerPath)
+	assert.NoError(b, err)
+
+	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
+	os.MkdirAll(raftPath, os.FileMode(0755))
+	r, err := raftwal.NewRaftBalloon(raftPath, ":8301", fmt.Sprintf("%d", id), badger)
+	assert.NoError(b, err)
+
+	return r, func() {
+		fmt.Println("Removing node folder")
+		os.RemoveAll(fmt.Sprintf("/var/tmp/raft-test/node%d", id))
+	}
+
+}
+func BenchmarkApiAdd(b *testing.B) {
+
+	signer := sign.NewEd25519Signer()
+	r, clean := newNodeBench(b, 1)
+	defer clean()
+
+	err := r.Open(true)
+	assert.NoError(b, err)
+
+	handler := Add(r, signer)
+
+	time.Sleep(2 * time.Second)
+	b.ResetTimer()
+	b.N = 10000
+	for i := 0; i < b.N; i++ {
+		data, _ := json.Marshal(&Event{rand.Bytes(128)})
+		req, _ := http.NewRequest("POST", "/events", bytes.NewBuffer(data))
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		if status := rr.Code; status != http.StatusCreated {
+			b.Errorf("handler returned wrong status code: got %v want %v",
+				status, http.StatusCreated)
+		}
 	}
 }
