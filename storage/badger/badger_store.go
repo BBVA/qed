@@ -18,10 +18,14 @@ package badger
 
 import (
 	"bytes"
+	"encoding/binary"
 	"io"
+	"log"
 
 	b "github.com/dgraph-io/badger"
 	bo "github.com/dgraph-io/badger/options"
+	"github.com/dgraph-io/badger/protos"
+	"github.com/dgraph-io/badger/y"
 
 	"github.com/bbva/qed/storage"
 )
@@ -201,8 +205,57 @@ func (s BadgerStore) Delete(prefix byte, key []byte) error {
 		return txn.Delete(k)
 	})
 }
+
+// Borrowed from github.com/dgraph-io/badger/backup.go
+func writeTo(entry *protos.KVPair, w io.Writer) error {
+	if err := binary.Write(w, binary.LittleEndian, uint64(entry.Size())); err != nil {
+		return err
+	}
+	buf, err := entry.Marshal()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(buf)
+	return err
+}
+
+// Backup dumps a protobuf-encoded list of all entries in the database into the
+// given writer, that are newer than the specified version.
+//
+// Borrowed from github.com/dgraph-io/badger/backup.go
 func (s *BadgerStore) Backup(w io.Writer, since uint64) error {
-	_, err := s.db.Backup(w, since)
+	err := s.db.View(func(txn *b.Txn) error {
+		opts := b.DefaultIteratorOptions
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			if item.Version() < since {
+				// Ignore versions less than given timestamp
+				continue
+			}
+			val, err := item.Value()
+			if err != nil {
+				log.Printf("Key [%x]. Error while fetching value [%v]\n", item.Key(), err)
+				continue
+			}
+
+			entry := &protos.KVPair{
+				Key:       y.Copy(item.Key()),
+				Value:     y.Copy(val),
+				UserMeta:  []byte{item.UserMeta()},
+				Version:   item.Version(),
+				ExpiresAt: item.ExpiresAt(),
+			}
+
+			// Write entries to disk
+			if err := writeTo(entry, w); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	return err
 }
 
