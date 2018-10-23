@@ -234,61 +234,8 @@ func stats(c *Config, t Task, message string) {
 	}
 }
 
-func singleNode() {
-	fmt.Println("\nStarting single-node contest...")
-
-	client := &http.Client{}
-
-	c := NewDefaultConfig()
-	c.req.client = client
-	c.req.expectedStatusCode = 201
-	c.req.endpoint += "/events"
-
-	numRequestsf := float64(c.numRequests)
-
-	fmt.Println("Preloading events...")
-	stats(c, addSampleEvents, "Preload")
-
-	fmt.Println("Starting exclusive Query Membership...")
-	cq := NewDefaultConfig()
-	cq.req.client = client
-	cq.req.expectedStatusCode = 200
-	cq.req.endpoint += "/proofs/membership"
-	stats(cq, queryMembership, "Query")
-
-	fmt.Println("Starting continuous load...")
-	ca := NewDefaultConfig()
-	ca.req.client = client
-	ca.req.expectedStatusCode = 201
-	ca.req.endpoint += "/events"
-	ca.startVersion = c.numRequests
-	ca.continuous = true
-	go stats(ca, addSampleEvents, "Write")
-	fmt.Println("Starting Query Membership with continuous load...")
-	//	stats(c, QueryMembership, "Read query")
-	start := time.Now()
-	stats(cq, queryMembership, "Query")
-	elapsed := time.Now().Sub(start).Seconds()
-	fmt.Printf(
-		"Query done. Reading Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
-		numRequestsf/elapsed,
-		cq.numRequests,
-		elapsed,
-		cq.maxGoRoutines,
-	)
-
-	currentVersion := getVersion("last-event")
-	fmt.Printf(
-		"Query done. Writing Throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
-		(float64(currentVersion)-numRequestsf)/elapsed,
-		currentVersion-uint64(c.numRequests),
-		elapsed,
-		c.maxGoRoutines,
-	)
-}
-
-func multiNode(numFollowers int) {
-	fmt.Println("\nStarting multi-node contest...")
+func benchmarkMembership(numFollowers int) {
+	fmt.Println("\nStarting benchmark run...")
 	var queryWg sync.WaitGroup
 
 	client := &http.Client{}
@@ -302,6 +249,14 @@ func multiNode(numFollowers int) {
 	stats(c, addSampleEvents, "Preload")
 
 	config := make([]*Config, 0, numFollowers)
+	if numFollowers == 0 {
+		c := NewDefaultConfig()
+		c.req.client = client
+		c.req.expectedStatusCode = 200
+		c.req.endpoint += "/proofs/membership"
+
+		config = append(config, c)
+	}
 	for i := 0; i < numFollowers; i++ {
 		c := NewDefaultConfig()
 		c.req.client = client
@@ -324,7 +279,6 @@ func multiNode(numFollowers int) {
 			defer queryWg.Done()
 			stats(c, queryMembership, fmt.Sprintf("Follower %d read", i+1))
 		}(i, c)
-
 	}
 
 	fmt.Println("Starting continuous load...")
@@ -354,11 +308,11 @@ func multiNode(numFollowers int) {
 func main() {
 	switch m := os.Getenv("MULTINODE"); m {
 	case "":
-		singleNode()
+		benchmarkMembership(0)
 	case "2":
-		multiNode(2)
+		benchmarkMembership(2)
 	case "4":
-		multiNode(4)
+		benchmarkMembership(4)
 	default:
 		fmt.Println("Error: MULTINODE env var should have values 2 or 4, or not be defined at all.")
 	}
