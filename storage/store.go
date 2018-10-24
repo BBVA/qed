@@ -49,8 +49,9 @@ type DeletableStore interface {
 }
 type ManagedStore interface {
 	Store
-	Backup(w io.Writer, since uint64) error
+	Backup(w io.Writer, until uint64) error
 	Load(r io.Reader) error
+	GetLastVersion() (uint64, error)
 }
 
 type Mutation struct {
