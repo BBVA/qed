@@ -23,14 +23,15 @@ import (
 )
 
 type fsmSnapshot struct {
-	store storage.ManagedStore
+	lastVersion uint64
+	store       storage.ManagedStore
 }
 
 // Persist writes the snapshot to the given sink.
 func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 	log.Debug("Persisting snapshot...")
 	err := func() error {
-		if err := f.store.Backup(sink, 0); err != nil {
+		if err := f.store.Backup(sink, f.lastVersion); err != nil {
 			return err
 		}
 		return sink.Close()

@@ -223,7 +223,7 @@ func writeTo(entry *protos.KVPair, w io.Writer) error {
 // given writer, that are newer than the specified version.
 //
 // Borrowed from github.com/dgraph-io/badger/backup.go
-func (s *BadgerStore) Backup(w io.Writer, since uint64) error {
+func (s *BadgerStore) Backup(w io.Writer, until uint64) error {
 	err := s.db.View(func(txn *b.Txn) error {
 		opts := b.DefaultIteratorOptions
 		it := txn.NewIterator(opts)
@@ -231,9 +231,9 @@ func (s *BadgerStore) Backup(w io.Writer, since uint64) error {
 
 		for it.Rewind(); it.Valid(); it.Next() {
 			item := it.Item()
-			if item.Version() < since {
-				// Ignore versions less than given timestamp
-				continue
+			if item.Version() > until {
+				// Ignore versions great than given timestamp
+				break
 			}
 			val, err := item.Value()
 			if err != nil {
@@ -261,4 +261,24 @@ func (s *BadgerStore) Backup(w io.Writer, since uint64) error {
 
 func (s *BadgerStore) Load(r io.Reader) error {
 	return s.db.Load(r)
+}
+
+func (s *BadgerStore) GetLastVersion() (uint64, error) {
+	var version uint64
+	err := s.db.View(func(txn *b.Txn) error {
+		opts := b.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		opts.Reverse = true
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		// we are using a reversed iterator so we need to seek for
+		// the last possible key for history prefix
+		it.Rewind()
+		if it.Valid() {
+			item := it.Item()
+			version = item.Version()
+		}
+		return nil
+	})
+	return version, err
 }
