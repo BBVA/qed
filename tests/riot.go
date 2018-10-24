@@ -24,6 +24,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"sync"
@@ -134,10 +135,9 @@ func queryMembership(eventIndex int, c *Config) ([]byte, error) {
 }
 
 func queryIncremental(eventIndex int, c *Config) ([]byte, error) {
-	// delta := 1000
 	end := uint64(eventIndex)
-	// start := uint64(math.Max(float64(eventIndex-delta), 0.0))
-	start := end >> 1
+	start := uint64(math.Max(float64(eventIndex-incrementalDelta), 0.0))
+	// start := end >> 1
 	return json.Marshal(
 		&apihttp.IncrementalRequest{
 			Start: start,
@@ -373,15 +373,22 @@ func benchmarkIncremental(numFollowers int) {
 	)
 }
 
-var wantMembership bool
+var (
+	wantMembership   bool
+	incrementalDelta int
+)
 
 func init() {
 	const (
-		defaultWantMembership = false
-		usage                 = "Benchmark MembershipProof"
+		defaultWantMembership   = false
+		defaultIncrementalDelta = 1000
+		usage                   = "Benchmark MembershipProof"
+		usageDelta              = "Specify delta for the IncrementalProof"
 	)
 	flag.BoolVar(&wantMembership, "membership", defaultWantMembership, usage)
 	flag.BoolVar(&wantMembership, "m", defaultWantMembership, usage+" (shorthand)")
+	flag.IntVar(&incrementalDelta, "delta", defaultIncrementalDelta, usageDelta)
+	flag.IntVar(&incrementalDelta, "d", defaultIncrementalDelta, usageDelta+" (shorthand)")
 }
 
 func main() {
