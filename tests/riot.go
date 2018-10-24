@@ -390,9 +390,10 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 var (
 	wantMembership   bool
 	incrementalDelta int
+	numRequests      int
+	readConcurrency  int
+	writeConcurrency int
 )
-
-var numRequests, readConcurrency, writeConcurrency int
 
 func init() {
 	const (
