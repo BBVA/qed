@@ -9,8 +9,10 @@ require (
 	github.com/hashicorp/go-msgpack v0.0.0-20150518234257-fa3f63826f7c
 	github.com/hashicorp/raft v1.0.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/influxdata/tdigest v0.0.0-20180711151920-a7d76c6f093a // indirect
 	github.com/kr/pty v1.1.3 // indirect
 	github.com/lucasb-eyer/go-colorful v0.0.0-20180709185858-c7842319cf3a // indirect
+	github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329 // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect

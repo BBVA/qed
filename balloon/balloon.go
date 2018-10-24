@@ -47,11 +47,10 @@ type Balloon struct {
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// create caches
-	historyCache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
 	hyperCache := cache.NewSimpleCache(1 << 2)
 
 	// create trees
-	historyTree := history.NewHistoryTree(hasherF, historyCache)
+	historyTree := history.NewHistoryTree(hasherF, store, 30)
 	hyperTree := hyper.NewHyperTree(hasherF, store, hyperCache)
 
 	balloon := &Balloon{
