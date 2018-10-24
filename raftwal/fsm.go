@@ -142,7 +142,12 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 	fsm.restoreMu.Lock()
 	defer fsm.restoreMu.Unlock()
-	return &fsmSnapshot{store: fsm.store}, nil
+	version, err := fsm.store.GetLastVersion()
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("Generationg snapshot until version: %d", version)
+	return &fsmSnapshot{lastVersion: version, store: fsm.store}, nil
 }
 
 // Restore restores the node to a previous state.
