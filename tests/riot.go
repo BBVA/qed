@@ -146,7 +146,7 @@ func queryIncremental(eventIndex int, c *Config) ([]byte, error) {
 	)
 }
 
-func getVersion(eventTemplate string) uint64 {
+func getVersion(eventTemplate string, c *Config) uint64 {
 	client := &http.Client{}
 
 	buf := fmt.Sprintf(eventTemplate)
@@ -156,14 +156,14 @@ func getVersion(eventTemplate string) uint64 {
 		log.Fatalf("Empty query: %v", err)
 	}
 
-	req, err := http.NewRequest("POST", "http://localhost:8080/events", bytes.NewBuffer(query))
+	req, err := http.NewRequest(c.req.method, c.req.endpoint, bytes.NewBuffer(query))
 	if err != nil {
 		log.Fatalf("Error preparing request: %v", err)
 	}
 
 	// Set Api-Key header
-	// TODO: remove pepe and pass a config var
-	req.Header.Set("Api-Key", "pepe")
+
+	req.Header.Set("Api-Key", c.apiKey)
 	res, err := client.Do(req)
 	if err != nil {
 		log.Fatalf("Unable to perform request: %v", err)
@@ -292,7 +292,7 @@ func benchmarkMembership(numFollowers int) {
 	elapsed := time.Now().Sub(start).Seconds()
 
 	numRequestsf := float64(c.numRequests)
-	currentVersion := getVersion("last-event")
+	currentVersion := getVersion("last-event", c)
 	fmt.Printf(
 		"Leader write throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
 		(float64(currentVersion)-numRequestsf)/elapsed,
@@ -363,7 +363,7 @@ func benchmarkIncremental(numFollowers int) {
 	elapsed := time.Now().Sub(start).Seconds()
 
 	numRequestsf := float64(c.numRequests)
-	currentVersion := getVersion("last-event")
+	currentVersion := getVersion("last-event", c)
 	fmt.Printf(
 		"Leader write throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
 		(float64(currentVersion)-numRequestsf)/elapsed,
