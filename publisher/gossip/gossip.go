@@ -2,7 +2,6 @@ package gossip
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -34,10 +33,6 @@ type delegate struct {
 type update struct {
 	Action string // add, del
 	Data   map[string]string
-}
-
-func init() {
-	flag.Parse()
 }
 
 func (b *broadcast) Invalidates(other memberlist.Broadcast) bool {
@@ -137,7 +132,7 @@ func GossipBroadcast(action, key string) error {
 	return nil
 }
 
-func StartGossip(ctx Context, members *string) error {
+func StartGossip(ctx *Context, members *string) error {
 	hostname, _ := os.Hostname()
 	c := memberlist.DefaultLocalConfig()
 	c.Delegate = &delegate{
