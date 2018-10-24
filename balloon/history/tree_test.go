@@ -19,11 +19,9 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
@@ -93,8 +91,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
-	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
+	tree := NewHistoryTree(hashing.NewFakeXorHasher, store, 30)
 
 	for i, c := range testCases {
 		index := uint64(i)
@@ -229,8 +226,7 @@ func TestProveMembership(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
-	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
+	tree := NewHistoryTree(hashing.NewFakeXorHasher, store, 30)
 
 	for i, c := range testCases {
 		_, mutations, _ := tree.Add(c.eventDigest, c.index)
@@ -296,8 +292,7 @@ func TestProveConsistency(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
-	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
+	tree := NewHistoryTree(hashing.NewFakeXorHasher, store, 30)
 
 	for i, c := range testCases {
 		index := uint64(i)
@@ -353,8 +348,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	}
 
 	store := bplus.NewBPlusTreeStore()
-	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
-	tree := NewHistoryTree(hashing.NewFakeXorHasher, cache)
+	tree := NewHistoryTree(hashing.NewFakeXorHasher, store, 30)
 
 	for i, c := range testCases {
 		_, mutations, err := tree.Add(c.eventDigest, c.index)
@@ -383,8 +377,7 @@ func BenchmarkAdd(b *testing.B) {
 	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/history_tree_test.db")
 	defer closeF()
 
-	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, 30)
-	tree := NewHistoryTree(hashing.NewSha256Hasher, cache)
+	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 30)
 
 	b.N = 100000
 	b.ResetTimer()
