@@ -146,7 +146,7 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Generationg snapshot until version: %d", version)
+	log.Debugf("Generating snapshot until version: %d", version)
 	return &fsmSnapshot{lastVersion: version, store: fsm.store}, nil
 }
 
@@ -161,8 +161,7 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	if err = fsm.store.Load(rc); err != nil {
 		return err
 	}
-	fsm.balloon.RefreshVersion()
-	return err
+	return fsm.balloon.RefreshVersion()
 }
 
 func (fsm *BalloonFSM) Close() error {
