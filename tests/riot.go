@@ -52,10 +52,9 @@ type HTTPClient struct {
 
 // type Config map[string]interface{}
 func NewDefaultConfig() *Config {
-	numRequests := 100000
 	return &Config{
 		maxGoRoutines:  10,
-		numRequests:    numRequests,
+		numRequests:    100000,
 		apiKey:         "pepe",
 		startVersion:   0,
 		continuous:     false,
@@ -162,7 +161,6 @@ func getVersion(eventTemplate string, c *Config) uint64 {
 	}
 
 	// Set Api-Key header
-
 	req.Header.Set("Api-Key", c.apiKey)
 	res, err := client.Do(req)
 	if err != nil {
@@ -231,7 +229,7 @@ func stats(c *Config, t Task, message string) {
 	}
 }
 
-func benchmarkMembership(numFollowers int) {
+func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
 	fmt.Println("\nStarting benchmark run...")
 	var queryWg sync.WaitGroup
 
@@ -239,6 +237,8 @@ func benchmarkMembership(numFollowers int) {
 
 	c := NewDefaultConfig()
 	c.req.client = client
+	c.numRequests = numReqests
+	c.maxGoRoutines = writeConcurrency
 	c.req.expectedStatusCode = 201
 	c.req.endpoint += "/events"
 
@@ -249,6 +249,8 @@ func benchmarkMembership(numFollowers int) {
 	if numFollowers == 0 {
 		c := NewDefaultConfig()
 		c.req.client = client
+		c.numRequests = numReqests
+		c.maxGoRoutines = readConcurrency
 		c.req.expectedStatusCode = 200
 		c.req.endpoint += "/proofs/membership"
 
@@ -257,6 +259,8 @@ func benchmarkMembership(numFollowers int) {
 	for i := 0; i < numFollowers; i++ {
 		c := NewDefaultConfig()
 		c.req.client = client
+		c.numRequests = numReqests
+		c.maxGoRoutines = readConcurrency
 		c.req.expectedStatusCode = 200
 		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
 		c.req.endpoint += "/proofs/membership"
@@ -281,6 +285,8 @@ func benchmarkMembership(numFollowers int) {
 	fmt.Println("Starting continuous load...")
 	ca := NewDefaultConfig()
 	ca.req.client = client
+	ca.numRequests = numReqests
+	ca.maxGoRoutines = writeConcurrency
 	ca.req.expectedStatusCode = 201
 	ca.req.endpoint += "/events"
 	ca.startVersion = c.numRequests
@@ -302,7 +308,7 @@ func benchmarkMembership(numFollowers int) {
 	)
 }
 
-func benchmarkIncremental(numFollowers int) {
+func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
 	fmt.Println("\nStarting benchmark run...")
 	var queryWg sync.WaitGroup
 
@@ -310,6 +316,8 @@ func benchmarkIncremental(numFollowers int) {
 
 	c := NewDefaultConfig()
 	c.req.client = client
+	c.numRequests = numReqests
+	c.maxGoRoutines = writeConcurrency
 	c.req.expectedStatusCode = 201
 	c.req.endpoint += "/events"
 
@@ -320,6 +328,8 @@ func benchmarkIncremental(numFollowers int) {
 	if numFollowers == 0 {
 		c := NewDefaultConfig()
 		c.req.client = client
+		c.numRequests = numReqests
+		c.maxGoRoutines = writeConcurrency
 		c.req.expectedStatusCode = 200
 		c.req.endpoint += "/proofs/incremental"
 
@@ -328,6 +338,8 @@ func benchmarkIncremental(numFollowers int) {
 	for i := 0; i < numFollowers; i++ {
 		c := NewDefaultConfig()
 		c.req.client = client
+		c.numRequests = numReqests
+		c.maxGoRoutines = writeConcurrency
 		c.req.expectedStatusCode = 200
 		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
 		c.req.endpoint += "/proofs/incremental"
@@ -352,6 +364,8 @@ func benchmarkIncremental(numFollowers int) {
 	fmt.Println("Starting continuous load...")
 	ca := NewDefaultConfig()
 	ca.req.client = client
+	ca.numRequests = numReqests
+	ca.maxGoRoutines = writeConcurrency
 	ca.req.expectedStatusCode = 201
 	ca.req.endpoint += "/events"
 	ca.startVersion = c.numRequests
@@ -378,17 +392,29 @@ var (
 	incrementalDelta int
 )
 
+var numRequests, readConcurrency, writeConcurrency int
+
 func init() {
 	const (
 		defaultWantMembership   = false
 		defaultIncrementalDelta = 1000
 		usage                   = "Benchmark MembershipProof"
 		usageDelta              = "Specify delta for the IncrementalProof"
+		usageNumRequests        = "Number of requests for the attack"
+		usageReadConcurrency    = "Set read concurrency value"
+		usageWriteConcurrency   = "Set write concurrency value"
 	)
+
+	// Create a default config to use as default values in flags
+	config := NewDefaultConfig()
+
 	flag.BoolVar(&wantMembership, "membership", defaultWantMembership, usage)
 	flag.BoolVar(&wantMembership, "m", defaultWantMembership, usage+" (shorthand)")
 	flag.IntVar(&incrementalDelta, "delta", defaultIncrementalDelta, usageDelta)
 	flag.IntVar(&incrementalDelta, "d", defaultIncrementalDelta, usageDelta+" (shorthand)")
+	flag.IntVar(&numRequests, "n", config.numRequests, usageNumRequests)
+	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, usageReadConcurrency)
+	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, usageWriteConcurrency)
 }
 
 func main() {
@@ -405,11 +431,12 @@ func main() {
 	}
 
 	flag.Parse()
+
 	if wantMembership {
 		fmt.Println("Benchmark MEMBERSHIP")
-		benchmarkMembership(n)
+		benchmarkMembership(n, numRequests, readConcurrency, writeConcurrency)
 	} else {
 		fmt.Println("Benchmark INCREMENTAL")
-		benchmarkIncremental(n)
+		benchmarkIncremental(n, numRequests, readConcurrency, writeConcurrency)
 	}
 }
