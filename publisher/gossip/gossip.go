@@ -15,9 +15,14 @@ var (
 	broadcasts *memberlist.TransmitLimitedQueue
 )
 
+type Snapshot struct {
+	Version    string
+	Commitment string
+}
 type Context struct {
-	Mtx   sync.RWMutex
-	Items map[string]string
+	Mtx       sync.RWMutex
+	Snapshots []Snapshot
+	// Items map[string]string
 }
 
 type broadcast struct {
@@ -26,8 +31,9 @@ type broadcast struct {
 }
 
 type delegate struct {
-	mtx   sync.RWMutex
-	items map[string]string
+	mtx       sync.RWMutex
+	snapshots []Snapshot
+	// items map[string]string
 }
 
 type update struct {
@@ -67,11 +73,13 @@ func (d *delegate) NotifyMsg(b []byte) {
 		d.mtx.Lock()
 		for _, u := range updates {
 			for k, v := range u.Data {
+				snapshot := Snapshot{Version: k, Commitment: v}
 				switch u.Action {
 				case "add":
-					d.items[k] = v
-				case "del":
-					delete(d.items, k)
+					d.snapshots = append(d.snapshots, snapshot)
+					// d.items[k] = v
+					// case "del":
+					// 	delete(d.items, k)
 				}
 			}
 		}
@@ -85,7 +93,8 @@ func (d *delegate) GetBroadcasts(overhead, limit int) [][]byte {
 
 func (d *delegate) LocalState(join bool) []byte {
 	d.mtx.RLock()
-	m := d.items
+	// m := d.items
+	m := d.snapshots
 	d.mtx.RUnlock()
 	b, _ := json.Marshal(m)
 	return b
@@ -104,7 +113,9 @@ func (d *delegate) MergeRemoteState(buf []byte, join bool) {
 	}
 	d.mtx.Lock()
 	for k, v := range m {
-		d.items[k] = v
+		snapshot := Snapshot{Version: k, Commitment: v}
+		d.snapshots = append(d.snapshots, snapshot)
+		// d.items[k] = v
 	}
 	d.mtx.Unlock()
 }
@@ -136,8 +147,8 @@ func StartGossip(ctx *Context, members *string) error {
 	hostname, _ := os.Hostname()
 	c := memberlist.DefaultLocalConfig()
 	c.Delegate = &delegate{
-		mtx:   ctx.Mtx,
-		items: ctx.Items,
+		mtx:       ctx.Mtx,
+		snapshots: ctx.Snapshots,
 	}
 	c.BindPort = 0
 	c.Name = hostname + "-" + uuid.NewUUID().String()

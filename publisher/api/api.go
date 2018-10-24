@@ -11,10 +11,12 @@ func AddHandler(ctx gossip.Context, w http.ResponseWriter, r *http.Request, clie
 	r.ParseForm()
 	key := r.Form.Get("key")
 	val := r.Form.Get("val")
+	snapshot := gossip.Snapshot{Version: key, Commitment: val}
 	ctx.Mtx.Lock()
-	ctx.Items[key] = val // fatal error: concurrent map read and map write
-	go client.Publish(key, val)
+	ctx.Snapshots = append(ctx.Snapshots, snapshot)
+	//ctx.Items[key] = val // fatal error: concurrent map read and map write
 	ctx.Mtx.Unlock()
+	go client.Publish(key, val)
 
 	gossip.GossipBroadcast("add", key)
 }
