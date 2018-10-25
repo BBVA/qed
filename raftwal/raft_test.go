@@ -23,12 +23,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/badger"
 	utilrand "github.com/bbva/qed/testutils/rand"
+	"github.com/hashicorp/raft"
 	"github.com/stretchr/testify/require"
 )
 
@@ -214,7 +216,7 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 	}
 	// force snapshot
 	// Snap the node and write to disk.
-	f, err := r0.fsm.Snapshot()
+	snapshot, err := r0.fsm.Snapshot()
 	require.NoError(t, err)
 
 	snapDir := mustTempDir()
@@ -223,7 +225,7 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	sink := &mockSnapshotSink{snapFile}
-	err = f.Persist(sink)
+	err = snapshot.Persist(sink)
 	require.NoError(t, err)
 
 	// Check restoration.
@@ -251,6 +253,79 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, expectedBalloonVersion, r8.fsm.balloon.Version(), "Error in state recovery from snapshot")
+
+}
+
+func Test_Raft_SingleNodeSnapshotConsistency(t *testing.T) {
+	r0, clean0 := newNode(t, 8)
+
+	err := r0.Open(true)
+	require.NoError(t, err)
+
+	_, err = r0.WaitForLeader(10 * time.Second)
+	require.NoError(t, err)
+
+	// Add event
+	rand.Seed(42)
+	expectedBalloonVersion := uint64(9000)
+
+	var wg, wgSnap sync.WaitGroup
+	var snapshot raft.FSMSnapshot
+
+	wg.Add(1)
+	wgSnap.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := uint64(0); i < 20000; i++ {
+			if i == expectedBalloonVersion {
+				// force snapshot
+				// Snap the node and write to disk.
+				snapshot, err = r0.fsm.Snapshot()
+				require.NoError(t, err)
+				wgSnap.Done()
+			}
+			_, err = r0.Add([]byte(fmt.Sprintf("Test Event %d", i)))
+			require.NoError(t, err)
+		}
+	}()
+
+	wgSnap.Wait()
+
+	snapDir := mustTempDir()
+	// defer os.RemoveAll(snapDir)
+	snapFile, err := os.Create(filepath.Join(snapDir, "snapshot"))
+	require.NoError(t, err)
+
+	sink := &mockSnapshotSink{snapFile}
+	err = snapshot.Persist(sink)
+	require.NoError(t, err)
+
+	// Check restoration.
+	snapFile, err = os.Open(filepath.Join(snapDir, "snapshot"))
+	require.NoError(t, err)
+
+	wg.Wait()
+	err = r0.Close(true)
+	require.NoError(t, err)
+	clean0()
+
+	r9, clean9 := newNode(t, 9)
+	defer func() {
+		err = r9.Close(true)
+		require.NoError(t, err)
+		clean9()
+	}()
+
+	err = r9.Open(true)
+	require.NoError(t, err)
+
+	_, err = r9.WaitForLeader(10 * time.Second)
+	require.NoError(t, err)
+
+	err = r9.fsm.Restore(snapFile)
+	require.NoError(t, err)
+
+	require.Equal(t, expectedBalloonVersion, r9.fsm.balloon.Version(), "Error in state recovery from snapshot")
 
 }
 
