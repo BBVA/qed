@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "export MULTINODE=true env variable to execute the benchmark in replica mode"
+echo "export MULTINODE=N [2|4] env variable to execute the benchmark in replica mode. N number of folowers"
 echo "export PROFILING=true env variable to enable go profiling. Default profiling time is 60. Output: profile.svg"
 
 echo Create id_ed25519 key
