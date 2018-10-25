@@ -272,7 +272,7 @@ func (s *BadgerStore) GetLastVersion() (uint64, error) {
 		it := txn.NewIterator(opts)
 		defer it.Close()
 		// we are using a reversed iterator so we need to seek for
-		// the last possible key for history prefix
+		// the last possible key
 		it.Rewind()
 		if it.Valid() {
 			item := it.Item()
