@@ -146,7 +146,7 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Generating snapshot until version: %d", version)
+	log.Debugf("Generating snapshot until version: %d (balloon version %d)", version, fsm.balloon.Version())
 	return &fsmSnapshot{lastVersion: version, store: fsm.store}, nil
 }
 
