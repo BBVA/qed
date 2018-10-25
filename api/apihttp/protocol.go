@@ -38,19 +38,6 @@ type MembershipQuery struct {
 	Version uint64
 }
 
-// Snapshot is the public struct that apihttp.Add Handler call returns.
-type Snapshot struct {
-	HistoryDigest hashing.Digest
-	HyperDigest   hashing.Digest
-	Version       uint64
-	Event         []byte
-}
-
-type SignedSnapshot struct {
-	Snapshot  *Snapshot
-	Signature []byte
-}
-
 type MembershipResult struct {
 	Exists         bool
 	Hyper          visitor.AuditPath

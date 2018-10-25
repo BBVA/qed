@@ -116,12 +116,6 @@ func NewServer(
 		return nil, err
 	}
 
-	// Create signer
-	server.signer, err = sign.NewEd25519SignerFromFile(privateKeyPath)
-	if err != nil {
-		return nil, err
-	}
-
 	// Create RaftBalloon
 	server.raftBalloon, err = raftwal.NewRaftBalloon(raftPath, raftAddr, nodeID, store)
 	if err != nil {
@@ -129,7 +123,7 @@ func NewServer(
 	}
 
 	// Create http endpoints
-	server.httpServer = newHTTPServer(server.httpAddr, server.raftBalloon, server.signer)
+	server.httpServer = newHTTPServer(server.httpAddr, server.raftBalloon)
 
 	// Create management endpoints
 	server.mgmtServer = newMgmtServer(server.mgmtAddr, server.raftBalloon)
@@ -254,8 +248,8 @@ func (s *Server) Stop() {
 	log.Debugf("Done. Exiting...\n")
 }
 
-func newHTTPServer(endpoint string, raftBalloon raftwal.RaftBalloonApi, signer sign.Signer) *http.Server {
-	router := apihttp.NewApiHttp(raftBalloon, signer)
+func newHTTPServer(endpoint string, raftBalloon raftwal.RaftBalloonApi) *http.Server {
+	router := apihttp.NewApiHttp(raftBalloon)
 	return &http.Server{
 		Addr:    endpoint,
 		Handler: apihttp.LogHandler(router),

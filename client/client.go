@@ -30,6 +30,7 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/publish"
 )
 
 // HttpClient ist the stuct that has the required information for the cli.
@@ -102,20 +103,16 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 }
 
 // Add will do a request to the server with a post data to store a new event.
-func (c HttpClient) Add(event string) (*apihttp.SignedSnapshot, error) {
+func (c HttpClient) Add(event string) error {
 
 	data, _ := json.Marshal(&apihttp.Event{[]byte(event)})
 
-	body, err := c.doReq("POST", "/events", data)
+	_, err := c.doReq("POST", "/events", data)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var signedSnapshot apihttp.SignedSnapshot
-	json.Unmarshal(body, &signedSnapshot)
-
-	return &signedSnapshot, nil
-
+	return nil
 }
 
 // Membership will ask for a Proof to the server.
@@ -166,11 +163,11 @@ func uint2bytes(i uint64) []byte {
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
 
-func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot, hasherF func() hashing.Hasher) bool {
+func (c HttpClient) Verify(result *apihttp.MembershipResult, event []byte, snap *publish.Snapshot, hasherF func() hashing.Hasher) bool {
 
 	proof := apihttp.ToBalloonProof([]byte(c.apiKey), result, hasherF)
 
-	return proof.Verify(snap.Event, &balloon.Commitment{
+	return proof.Verify(event, &balloon.Commitment{
 		snap.HistoryDigest,
 		snap.HyperDigest,
 		snap.Version,
@@ -178,7 +175,7 @@ func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snaps
 
 }
 
-func (c HttpClient) VerifyIncremental(result *apihttp.IncrementalResponse, startSnapshot, endSnapshot *apihttp.SignedSnapshot, hasher hashing.Hasher) bool {
+func (c HttpClient) VerifyIncremental(result *apihttp.IncrementalResponse, startSnapshot, endSnapshot *publish.SignedSnapshot, hasher hashing.Hasher) bool {
 
 	proof := apihttp.ToIncrementalProof(result, hasher)
 

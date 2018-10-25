@@ -19,7 +19,6 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,7 +28,6 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/sign"
 )
 
 type fakeRaftBalloon struct {
@@ -113,8 +111,7 @@ func TestAdd(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	signer := sign.NewEd25519Signer()
-	handler := Add(fakeRaftBalloon{}, signer)
+	handler := Add(fakeRaftBalloon{})
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -125,34 +122,6 @@ func TestAdd(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusCreated)
 	}
-
-	// Check the body response
-	signedSnapshot := &SignedSnapshot{}
-
-	json.Unmarshal([]byte(rr.Body.String()), signedSnapshot)
-
-	if !bytes.Equal(signedSnapshot.Snapshot.HyperDigest, []byte{0x1}) {
-		t.Errorf("HyperDigest is not consistent: %s", signedSnapshot.Snapshot.HyperDigest)
-	}
-
-	if !bytes.Equal(signedSnapshot.Snapshot.HistoryDigest, []byte{0x0}) {
-		t.Errorf("HistoryDigest is not consistent %s", signedSnapshot.Snapshot.HistoryDigest)
-	}
-
-	if signedSnapshot.Snapshot.Version != 0 {
-		t.Errorf("Version is not consistent")
-	}
-
-	if !bytes.Equal(signedSnapshot.Snapshot.Event, []byte("this is a sample event")) {
-		t.Errorf("Event is not consistent ")
-	}
-
-	signature, err := signer.Sign([]byte(fmt.Sprintf("%v", signedSnapshot.Snapshot)))
-
-	if !bytes.Equal(signedSnapshot.Signature, signature) {
-		t.Errorf("Signature is not consistent")
-	}
-
 }
 
 func TestMembership(t *testing.T) {

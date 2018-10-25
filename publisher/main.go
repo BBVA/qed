@@ -25,8 +25,7 @@ func main() {
 	flag.Parse()
 	ctx := gossip.Context{
 		Mtx:       sync.RWMutex{},
-		Snapshots: []gossip.Snapshot{},
-		//		Items: map[string]string{},
+		Snapshots: []gossip.SignedSnapshot{},
 	}
 
 	if err := gossip.StartGossip(&ctx, &members); err != nil {

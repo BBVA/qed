@@ -16,13 +16,21 @@ var (
 )
 
 type Snapshot struct {
-	Version    string
-	Commitment string
+	HistoryDigest Digest
+	HyperDigest   Digest
+	Version       uint64
 }
+
+type Digest []byte
+
+type SignedSnapshot struct {
+	Snapshot  Snapshot
+	Signature []byte
+}
+
 type Context struct {
 	Mtx       sync.RWMutex
-	Snapshots []Snapshot
-	// Items map[string]string
+	Snapshots []SignedSnapshot
 }
 
 type broadcast struct {
@@ -32,7 +40,7 @@ type broadcast struct {
 
 type delegate struct {
 	mtx       sync.RWMutex
-	snapshots []Snapshot
+	snapshots []SignedSnapshot
 	// items map[string]string
 }
 
@@ -70,20 +78,17 @@ func (d *delegate) NotifyMsg(b []byte) {
 		if err := json.Unmarshal(b[1:], &updates); err != nil {
 			return
 		}
-		d.mtx.Lock()
-		for _, u := range updates {
-			for k, v := range u.Data {
-				snapshot := Snapshot{Version: k, Commitment: v}
-				switch u.Action {
-				case "add":
-					d.snapshots = append(d.snapshots, snapshot)
-					// d.items[k] = v
-					// case "del":
-					// 	delete(d.items, k)
-				}
-			}
-		}
-		d.mtx.Unlock()
+		// d.mtx.Lock()
+		// for _, u := range updates {
+		// 	for k, v := range u.Data {
+		// 		snapshot := Snapshot{Version: k, Commitment: v}
+		// 		switch u.Action {
+		// 		case "add":
+		// 			d.snapshots = append(d.snapshots, snapshot)
+		// 		}
+		// 	}
+		// }
+		// d.mtx.Unlock()
 	}
 }
 
@@ -111,13 +116,12 @@ func (d *delegate) MergeRemoteState(buf []byte, join bool) {
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return
 	}
-	d.mtx.Lock()
-	for k, v := range m {
-		snapshot := Snapshot{Version: k, Commitment: v}
-		d.snapshots = append(d.snapshots, snapshot)
-		// d.items[k] = v
-	}
-	d.mtx.Unlock()
+	// d.mtx.Lock()
+	// for k, v := range m {
+	// 	snapshot := Snapshot{Version: k, Commitment: v}
+	// 	d.snapshots = append(d.snapshots, snapshot)
+	// }
+	// d.mtx.Unlock()
 }
 
 func GossipBroadcast(action, key string) error {

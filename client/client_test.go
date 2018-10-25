@@ -27,6 +27,7 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/publish"
 	"github.com/bbva/qed/sign"
 	"github.com/stretchr/testify/assert"
 )
@@ -55,15 +56,15 @@ func TestAddSuccess(t *testing.T) {
 	defer tearDown()
 
 	event := "Hello world!"
-	snap := &apihttp.Snapshot{
+	snap := &publish.Snapshot{
 		[]byte("hyper"),
 		[]byte("history"),
 		0,
-		[]byte(event),
+		// []byte(event),
 	}
 	signer := sign.NewEd25519Signer()
 	sig, err := signer.Sign([]byte(fmt.Sprintf("%v", snap)))
-	fakeSignedSnapshot := &apihttp.SignedSnapshot{
+	fakeSignedSnapshot := &publish.SignedSnapshot{
 		snap,
 		sig,
 	}
@@ -71,9 +72,9 @@ func TestAddSuccess(t *testing.T) {
 	result, _ := json.Marshal(fakeSignedSnapshot)
 	mux.HandleFunc("/events", okHandler(result))
 
-	signedSnapshot, err := client.Add(event)
+	err = client.Add(event)
 	assert.NoError(t, err)
-	assert.Equal(t, fakeSignedSnapshot, signedSnapshot, "The snapshots should match")
+	// assert.Equal(t, fakeSignedSnapshot, signedSnapshot, "The snapshots should match")
 
 }
 
@@ -84,7 +85,7 @@ func TestAddWithServerFailure(t *testing.T) {
 	event := "Hello world!"
 	mux.HandleFunc("/events", serverErrorHandler())
 
-	_, err := client.Add(event)
+	err := client.Add(event)
 	assert.Error(t, err)
 
 }
