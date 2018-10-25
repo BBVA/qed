@@ -54,7 +54,7 @@ type HTTPClient struct {
 func NewDefaultConfig() *Config {
 	return &Config{
 		maxGoRoutines:  10,
-		numRequests:    100000,
+		numRequests:    numRequests,
 		apiKey:         "pepe",
 		startVersion:   0,
 		continuous:     false,
@@ -399,6 +399,7 @@ func init() {
 	const (
 		defaultWantMembership   = false
 		defaultIncrementalDelta = 1000
+		defaultNumRequests      = 100000
 		usage                   = "Benchmark MembershipProof"
 		usageDelta              = "Specify delta for the IncrementalProof"
 		usageNumRequests        = "Number of requests for the attack"
@@ -413,7 +414,7 @@ func init() {
 	flag.BoolVar(&wantMembership, "m", defaultWantMembership, usage+" (shorthand)")
 	flag.IntVar(&incrementalDelta, "delta", defaultIncrementalDelta, usageDelta)
 	flag.IntVar(&incrementalDelta, "d", defaultIncrementalDelta, usageDelta+" (shorthand)")
-	flag.IntVar(&numRequests, "n", config.numRequests, usageNumRequests)
+	flag.IntVar(&numRequests, "n", defaultNumRequests, usageNumRequests)
 	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, usageReadConcurrency)
 	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, usageWriteConcurrency)
 }
