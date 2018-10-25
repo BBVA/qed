@@ -134,7 +134,7 @@ func (s BadgerStore) GetLast(prefix byte) (*storage.KVPair, error) {
 		defer it.Close()
 		// we are using a reversed iterator so we need to seek for
 		// the last possible key for history prefix
-		it.Seek([]byte{prefix, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
+		it.Seek([]byte{prefix, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
 		if it.ValidForPrefix([]byte{prefix}) {
 			item := it.Item()
 			key := item.KeyCopy(nil)
