@@ -175,9 +175,9 @@ func getVersion(eventTemplate string, c *Config) uint64 {
 
 	body, _ := ioutil.ReadAll(res.Body)
 
-	var signedSnapshot publish.SignedSnapshot
-	json.Unmarshal(body, &signedSnapshot)
-	version := signedSnapshot.Snapshot.Version
+	var snapshot publish.Snapshot
+	json.Unmarshal(body, &snapshot)
+	version := snapshot.Version
 
 	io.Copy(ioutil.Discard, res.Body)
 

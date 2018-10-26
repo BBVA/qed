@@ -177,6 +177,7 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 }
 
 func (fsm *BalloonFSM) Close() error {
+	close(fsm.chanToPublishers)
 	return fsm.store.Close()
 }
 

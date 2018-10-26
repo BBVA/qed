@@ -44,9 +44,10 @@ type gossipPublisher struct {
 func newHttpPublisher(signer sign.Signer) *httpPublisher {
 	return &httpPublisher{
 		client: &http.Client{},
+		// TODO: temporal hardcoding until publisher final decission.
 		members: []string{
 			"http://127.0.0.1:4001",
-			// "http://127.0.0.1:4002",
+			// "http://127.0.0.1:4002", // Add members at will.
 		},
 		endpoint: "/gossip/add",
 		signer:   signer,
