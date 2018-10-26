@@ -28,6 +28,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/publish"
 )
 
 type fakeRaftBalloon struct {
@@ -122,6 +123,27 @@ func TestAdd(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusCreated)
 	}
+
+	// Check the body response
+	snapshot := &publish.Snapshot{}
+
+	json.Unmarshal([]byte(rr.Body.String()), snapshot)
+
+	if !bytes.Equal(snapshot.HyperDigest, []byte{0x1}) {
+		t.Errorf("HyperDigest is not consistent: %s", snapshot.HyperDigest)
+	}
+
+	if !bytes.Equal(snapshot.HistoryDigest, []byte{0x0}) {
+		t.Errorf("HistoryDigest is not consistent %s", snapshot.HistoryDigest)
+	}
+
+	if snapshot.Version != 0 {
+		t.Errorf("Version is not consistent")
+	}
+
+	// if !bytes.Equal(snapshot.Event, []byte("this is a sample event")) {
+	// 	t.Errorf("Event is not consistent ")
+	// }
 }
 
 func TestMembership(t *testing.T) {

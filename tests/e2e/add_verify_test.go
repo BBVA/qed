@@ -21,6 +21,7 @@ import (
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/publish"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/testutils/scope"
 	assert "github.com/stretchr/testify/require"
@@ -35,27 +36,27 @@ func TestAddVerify(t *testing.T) {
 	event := rand.RandomString(10)
 
 	scenario("Add one event and get its membership proof", func() {
-		var signedSnapshot *apihttp.SignedSnapshot
+		var snapshot *publish.Snapshot
 		var err error
 
 		let("Add event", func(t *testing.T) {
-			signedSnapshot, err = client.Add(event)
+			snapshot, err = client.Add(event)
 			assert.NoError(t, err)
 
-			assert.Equal(t, signedSnapshot.Snapshot.Event, []byte(event), "The snapshot's event doesn't match: expected %s, actual %s", event, signedSnapshot.Snapshot.Event)
-			assert.False(t, signedSnapshot.Snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
-			assert.False(t, len(signedSnapshot.Snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
-			assert.False(t, len(signedSnapshot.Snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empt")
+			// assert.Equal(t, snapshot.Event, []byte(event), "The snapshot's event doesn't match: expected %s, actual %s", event, snapshot.Snapshot.Event)
+			assert.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
+			assert.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
+			assert.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empt")
 		})
 
 		let("Get membership proof for first inserted event", func(t *testing.T) {
-			result, err := client.Membership([]byte(event), signedSnapshot.Snapshot.Version)
+			result, err := client.Membership([]byte(event), snapshot.Version)
 			assert.NoError(t, err)
 
 			assert.True(t, result.Exists, "The queried key should be a member")
-			assert.Equal(t, result.QueryVersion, signedSnapshot.Snapshot.Version, "The query version doest't match the queried one: expected %d, actual %d", signedSnapshot.Snapshot.Version, result.QueryVersion)
-			assert.Equal(t, result.ActualVersion, signedSnapshot.Snapshot.Version, "The actual version should match the queried one: expected %d, actual %d", signedSnapshot.Snapshot.Version, result.ActualVersion)
-			assert.Equal(t, result.CurrentVersion, signedSnapshot.Snapshot.Version, "The current version should match the queried one: expected %d, actual %d", signedSnapshot.Snapshot.Version, result.CurrentVersion)
+			assert.Equal(t, result.QueryVersion, snapshot.Version, "The query version doest't match the queried one: expected %d, actual %d", snapshot.Version, result.QueryVersion)
+			assert.Equal(t, result.ActualVersion, snapshot.Version, "The actual version should match the queried one: expected %d, actual %d", snapshot.Version, result.ActualVersion)
+			assert.Equal(t, result.CurrentVersion, snapshot.Version, "The current version should match the queried one: expected %d, actual %d", snapshot.Version, result.CurrentVersion)
 			assert.Equal(t, []byte(event), result.Key, "The returned event doesn't math the original one: expected %s, actual %s", event, result.Key)
 			assert.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
 			assert.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
@@ -67,24 +68,26 @@ func TestAddVerify(t *testing.T) {
 	scenario("Add two events, verify the first one", func() {
 		var result_first, result_last *apihttp.MembershipResult
 		var err error
-		var first, last *apihttp.SignedSnapshot
+		var first, last *publish.Snapshot
 
-		first, err = client.Add("Test event 1")
+		firstEvent := "Test event 1"
+		lastEvent := "Test event 2"
+		first, err = client.Add(firstEvent)
 		assert.NoError(t, err)
-		last, err = client.Add("Test event 2")
+		last, err = client.Add(lastEvent)
 		assert.NoError(t, err)
 
 		let("Get membership proof for first inserted event", func(t *testing.T) {
-			result_first, err = client.Membership(first.Snapshot.Event, first.Snapshot.Version)
+			result_first, err = client.Membership([]byte(firstEvent), first.Version)
 			assert.NoError(t, err)
-			result_last, err = client.Membership(last.Snapshot.Event, last.Snapshot.Version)
+			result_last, err = client.Membership([]byte(lastEvent), last.Version)
 			assert.NoError(t, err)
 		})
 
 		let("Verify first event", func(t *testing.T) {
-			first.Snapshot.HyperDigest = last.Snapshot.HyperDigest
-			assert.True(t, client.Verify(result_first, first.Snapshot, hashing.NewSha256Hasher), "The first proof should be valid")
-			assert.True(t, client.Verify(result_last, last.Snapshot, hashing.NewSha256Hasher), "The last proof should be valid")
+			first.HyperDigest = last.HyperDigest
+			assert.True(t, client.Verify(result_first, []byte(firstEvent), first, hashing.NewSha256Hasher), "The first proof should be valid")
+			assert.True(t, client.Verify(result_last, []byte(lastEvent), last, hashing.NewSha256Hasher), "The last proof should be valid")
 		})
 
 	})
@@ -94,7 +97,7 @@ func TestAddVerify(t *testing.T) {
 		var err error
 		const size int = 10
 
-		var s [size]*apihttp.SignedSnapshot
+		var s [size]*publish.Snapshot
 
 		for i := 0; i < size; i++ {
 			s[i], _ = client.Add(fmt.Sprintf("Test Event %d", i))
@@ -105,28 +108,28 @@ func TestAddVerify(t *testing.T) {
 		k := 9
 
 		let("Get proofs p1, p2 for event with index i in versions j and k", func(t *testing.T) {
-			p1, err = client.Membership(s[i].Snapshot.Event, s[j].Snapshot.Version)
+			p1, err = client.Membership([]byte(fmt.Sprintf("Test Event %d", i)), s[j].Version)
 			assert.NoError(t, err)
-			p2, err = client.Membership(s[i].Snapshot.Event, s[k].Snapshot.Version)
+			p2, err = client.Membership([]byte(fmt.Sprintf("Test Event %d", i)), s[k].Version)
 			assert.NoError(t, err)
 		})
 
 		let("Verify both proofs against index i event", func(t *testing.T) {
-			snap := &apihttp.Snapshot{
-				s[j].Snapshot.HistoryDigest,
-				s[9].Snapshot.HyperDigest,
-				s[j].Snapshot.Version,
-				s[i].Snapshot.Event,
+			snap := &publish.Snapshot{
+				s[j].HistoryDigest,
+				s[9].HyperDigest,
+				s[j].Version,
+				// s[i].Event,
 			}
-			assert.True(t, client.Verify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
+			assert.True(t, client.Verify(p1, []byte(fmt.Sprintf("Test Event %d", i)), snap, hashing.NewSha256Hasher), "p1 should be valid")
 
-			snap = &apihttp.Snapshot{
-				s[k].Snapshot.HistoryDigest,
-				s[9].Snapshot.HyperDigest,
-				s[k].Snapshot.Version,
-				s[i].Snapshot.Event,
+			snap = &publish.Snapshot{
+				s[k].HistoryDigest,
+				s[9].HyperDigest,
+				s[k].Version,
+				// s[i].Event,
 			}
-			assert.True(t, client.Verify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
+			assert.True(t, client.Verify(p2, []byte(fmt.Sprintf("Test Event %d", i)), snap, hashing.NewSha256Hasher), "p2 should be valid")
 
 		})
 

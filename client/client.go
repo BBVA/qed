@@ -103,16 +103,20 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 }
 
 // Add will do a request to the server with a post data to store a new event.
-func (c HttpClient) Add(event string) error {
+func (c HttpClient) Add(event string) (*publish.Snapshot, error) {
 
 	data, _ := json.Marshal(&apihttp.Event{[]byte(event)})
 
-	_, err := c.doReq("POST", "/events", data)
+	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	var snapshot publish.Snapshot
+	json.Unmarshal(body, &snapshot)
+
+	return &snapshot, nil
+
 }
 
 // Membership will ask for a Proof to the server.
@@ -175,19 +179,19 @@ func (c HttpClient) Verify(result *apihttp.MembershipResult, event []byte, snap 
 
 }
 
-func (c HttpClient) VerifyIncremental(result *apihttp.IncrementalResponse, startSnapshot, endSnapshot *publish.SignedSnapshot, hasher hashing.Hasher) bool {
+func (c HttpClient) VerifyIncremental(result *apihttp.IncrementalResponse, startSnapshot, endSnapshot *publish.Snapshot, hasher hashing.Hasher) bool {
 
 	proof := apihttp.ToIncrementalProof(result, hasher)
 
 	startCommitment := &balloon.Commitment{
-		startSnapshot.Snapshot.HistoryDigest,
-		startSnapshot.Snapshot.HyperDigest,
-		startSnapshot.Snapshot.Version,
+		startSnapshot.HistoryDigest,
+		startSnapshot.HyperDigest,
+		startSnapshot.Version,
 	}
 	endCommitment := &balloon.Commitment{
-		endSnapshot.Snapshot.HistoryDigest,
-		endSnapshot.Snapshot.HyperDigest,
-		endSnapshot.Snapshot.Version,
+		endSnapshot.HistoryDigest,
+		endSnapshot.HyperDigest,
+		endSnapshot.Version,
 	}
 
 	return proof.Verify(startCommitment, endCommitment)

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/publish"
 	"github.com/bbva/qed/raftwal"
 )
 
@@ -99,29 +100,27 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		_, err = balloon.Add(event.Event)
+		response, err := balloon.Add(event.Event)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// TODO: return snapshot info, or only status code?
+		snapshot := &publish.Snapshot{
+			response.HistoryDigest,
+			response.HyperDigest,
+			response.Version,
+			// event.Event,
+		}
 
-		// snapshot := &Snapshot{
-		// 	response.HistoryDigest,
-		// 	response.HyperDigest,
-		// 	response.Version,
-		// 	event.Event,
-		// }
-
-		// out, err := json.Marshal(snapshot)
-		// if err != nil {
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// 	return
-		// }
+		out, err := json.Marshal(snapshot)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		w.WriteHeader(http.StatusCreated)
-		// w.Write(out)
+		w.Write(out)
 		return
 
 	}

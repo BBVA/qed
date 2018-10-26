@@ -41,12 +41,7 @@ type httpPublisher struct {
 type gossipPublisher struct {
 }
 
-func newHttpPublisher(privateKeyPath string) *httpPublisher {
-	signer, err := sign.NewEd25519SignerFromFile(privateKeyPath)
-	if err != nil {
-		return nil
-	}
-
+func newHttpPublisher(signer sign.Signer) *httpPublisher {
 	return &httpPublisher{
 		client: &http.Client{},
 		members: []string{
@@ -58,18 +53,19 @@ func newHttpPublisher(privateKeyPath string) *httpPublisher {
 	}
 }
 
-func SpawnPublishers(ch <-chan *balloon.Commitment) {
-	numGoRoutines := 100
+func SpawnPublishers(signer sign.Signer, numPublishers int, ch <-chan *balloon.Commitment) {
+	pub := newHttpPublisher(signer)
 
-	pub := newHttpPublisher("/var/tmp/id_ed25519")
-
-	for i := 0; i < numGoRoutines; i++ {
+	for i := 0; i < numPublishers; i++ {
 		go func() {
 			for {
-				// <- ch
-				commitment := <-ch
-				sc, _ := pub.Sign(commitment)
-				pub.Publish(sc)
+				commitment, open := <-ch
+				if open {
+					sc, _ := pub.Sign(commitment)
+					pub.Publish(sc)
+				} else {
+					return
+				}
 			}
 		}()
 	}

@@ -35,7 +35,6 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/raftwal"
-	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/badger"
 )
@@ -65,7 +64,6 @@ type Server struct {
 	raftBalloon     *raftwal.RaftBalloon
 	tamperingServer *http.Server
 	profilingServer *http.Server
-	signer          sign.Signer
 }
 
 // NewServer synthesizes a new Server based on the parameters it receives.
@@ -117,7 +115,7 @@ func NewServer(
 	}
 
 	// Create RaftBalloon
-	server.raftBalloon, err = raftwal.NewRaftBalloon(raftPath, raftAddr, nodeID, store)
+	server.raftBalloon, err = raftwal.NewRaftBalloon(privateKeyPath, raftPath, raftAddr, nodeID, store)
 	if err != nil {
 		return nil, err
 	}

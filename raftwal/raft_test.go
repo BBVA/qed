@@ -51,7 +51,7 @@ func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	os.MkdirAll(raftPath, os.FileMode(0755))
-	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger)
+	r, err := NewRaftBalloon(privateKeyPath, raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger)
 	require.NoError(t, err)
 
 	return r, func() {

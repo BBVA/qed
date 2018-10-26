@@ -28,6 +28,7 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/publish"
 	"github.com/bbva/qed/raftwal/commands"
+	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage"
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/raft"
@@ -49,7 +50,7 @@ type BalloonFSM struct {
 	balloon *balloon.Balloon
 	state   *fsmState
 
-	chPublisher chan *balloon.Commitment
+	chanToPublishers chan *balloon.Commitment
 
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
@@ -69,7 +70,7 @@ func loadState(s storage.ManagedStore) (*fsmState, error) {
 	return &state, err
 }
 
-func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
+func NewBalloonFSM(privateKeyPath string, store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
 
 	b, err := balloon.NewBalloon(store, hasherF)
 	if err != nil {
@@ -81,15 +82,22 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 		return nil, err
 	}
 
-	chPublisher := make(chan *balloon.Commitment, 10000)
-	publish.SpawnPublishers(chPublisher)
+	signer, err := sign.NewEd25519SignerFromFile(privateKeyPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Publisher stuff: channel and goroutines.
+	chanToPublishers := make(chan *balloon.Commitment, 10000)
+	numPublishers := 100
+	publish.SpawnPublishers(signer, numPublishers, chanToPublishers)
 
 	return &BalloonFSM{
-		hasherF:     hasherF,
-		store:       store,
-		balloon:     b,
-		state:       state,
-		chPublisher: chPublisher,
+		hasherF:          hasherF,
+		store:            store,
+		balloon:          b,
+		state:            state,
+		chanToPublishers: chanToPublishers,
 	}, nil
 }
 
@@ -189,7 +197,7 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 	fsm.state = state
 
 	//Send snapshot to publishers
-	fsm.chPublisher <- commitment
+	fsm.chanToPublishers <- commitment
 
 	return &fsmAddResponse{commitment: commitment}
 }
