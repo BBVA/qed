@@ -16,10 +16,9 @@ import (
 
 type publisher interface {
 	Sign(c *balloon.Commitment) (*SignedSnapshot, error)
-	Publish(sc *SignedSnapshot)
+	Publish(sc *SignedSnapshot) error
 }
 
-// Snapshot is the public struct that apihttp.Add Handler call returns.
 type Snapshot struct {
 	HistoryDigest hashing.Digest
 	HyperDigest   hashing.Digest
@@ -39,23 +38,42 @@ type httpPublisher struct {
 }
 
 type gossipPublisher struct {
+	signer sign.Signer
 }
 
-func newHttpPublisher(signer sign.Signer) *httpPublisher {
+func doSign(signer sign.Signer, commitment *balloon.Commitment) (*SignedSnapshot, error) {
+	snapshot := &Snapshot{
+		commitment.HistoryDigest,
+		commitment.HyperDigest,
+		commitment.Version,
+	}
+
+	signature, err := signer.Sign([]byte(fmt.Sprintf("%v", snapshot)))
+	if err != nil {
+		fmt.Println("Publisher: error signing commitment")
+		return nil, err
+	}
+	return &SignedSnapshot{snapshot, signature}, nil
+}
+
+func newHttpPublisher(client http.Client, signer sign.Signer, members []string, endpoint string) *httpPublisher {
 	return &httpPublisher{
-		client: &http.Client{},
-		// TODO: temporal hardcoding until publisher final decission.
-		members: []string{
-			"http://127.0.0.1:4001",
-			// "http://127.0.0.1:4002", // Add members at will.
-		},
-		endpoint: "/gossip/add",
+		client:   &client,
+		members:  members,
+		endpoint: endpoint,
 		signer:   signer,
 	}
 }
 
 func SpawnPublishers(signer sign.Signer, numPublishers int, ch <-chan *balloon.Commitment) {
-	pub := newHttpPublisher(signer)
+
+	// TODO: temporal hardcoding until publisher final decission.
+	members := []string{
+		"http://127.0.0.1:4001",
+		// "http://127.0.0.1:4002", // Add members at will.
+	}
+	endpoint := "/gossip/add"
+	pub := newHttpPublisher(http.Client{}, signer, members, endpoint)
 
 	for i := 0; i < numPublishers; i++ {
 		go func() {
@@ -73,25 +91,14 @@ func SpawnPublishers(signer sign.Signer, numPublishers int, ch <-chan *balloon.C
 }
 
 func (p httpPublisher) Sign(commitment *balloon.Commitment) (*SignedSnapshot, error) {
-	snapshot := &Snapshot{
-		commitment.HistoryDigest,
-		commitment.HyperDigest,
-		commitment.Version,
-	}
-
-	signature, err := p.signer.Sign([]byte(fmt.Sprintf("%v", snapshot)))
-	if err != nil {
-		fmt.Println("Publisher: error signing commitment")
-		return nil, err
-	}
-	return &SignedSnapshot{snapshot, signature}, nil
+	return doSign(p.signer, commitment)
 }
 
-func (p httpPublisher) Publish(sc *SignedSnapshot) {
+func (p httpPublisher) Publish(sc *SignedSnapshot) error {
 	message, err := json.Marshal(&sc)
 	if err != nil {
 		fmt.Printf("\nPublisher: Error marshalling: %s", err.Error())
-		return
+		return err
 	}
 
 	// Random request distribution among publisher members.
@@ -103,21 +110,25 @@ func (p httpPublisher) Publish(sc *SignedSnapshot) {
 
 	if err != nil {
 		fmt.Printf("\nPublisher: Error when sending request to publishers: %s", err.Error())
-		return
+		return err
 	}
 	defer rs.Body.Close()
 	io.Copy(ioutil.Discard, rs.Body)
-}
 
-// GOSSIP
-func newGossipPublisher() *gossipPublisher {
 	return nil
 }
 
-func (p gossipPublisher) Publish(sc *SignedSnapshot) {
-
+// GOSSIP
+func newGossipPublisher(signer sign.Signer) *gossipPublisher {
+	return &gossipPublisher{
+		signer: signer,
+	}
 }
 
 func (p gossipPublisher) Sign(commitment *balloon.Commitment) (*SignedSnapshot, error) {
-	return nil, nil
+	return doSign(p.signer, commitment)
+}
+
+func (p gossipPublisher) Publish(sc *SignedSnapshot) error {
+	return nil
 }
