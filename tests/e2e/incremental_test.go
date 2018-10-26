@@ -21,6 +21,7 @@ import (
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/publish"
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/testutils/rand"
@@ -36,7 +37,7 @@ func TestIncrementalConsistency(t *testing.T) {
 	scenario("Add multiple events and verify consistency between two of them", func() {
 
 		events := make([]string, 10)
-		snapshots := make([]*apihttp.SignedSnapshot, 10)
+		snapshots := make([]*publish.Snapshot, 10)
 		var err error
 		var result *apihttp.IncrementalResponse
 

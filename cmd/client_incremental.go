@@ -19,8 +19,8 @@ package cmd
 import (
 	"encoding/hex"
 
-	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/publish"
 
 	"github.com/spf13/cobra"
 
@@ -62,8 +62,8 @@ func newIncrementalCommand(ctx *clientContext) *cobra.Command {
 			if verify {
 				sdBytes, _ := hex.DecodeString(startDigest)
 				edBytes, _ := hex.DecodeString(endDigest)
-				startSnapshot := &apihttp.SignedSnapshot{&apihttp.Snapshot{sdBytes, nil, start, nil}, nil}
-				endSnapshot := &apihttp.SignedSnapshot{&apihttp.Snapshot{edBytes, nil, end, nil}, nil}
+				startSnapshot := &publish.Snapshot{sdBytes, nil, start}
+				endSnapshot := &publish.Snapshot{edBytes, nil, end}
 
 				log.Infof("Verifying with commitments: \n\tStartDigest: %s\n\tEndDigest: %s\n",
 					startDigest, endDigest)

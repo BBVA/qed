@@ -12,11 +12,13 @@ import (
 	storage_utils "github.com/bbva/qed/testutils/storage"
 )
 
+var privateKeyPath = "/var/tmp/id_ed25519"
+
 func TestApply(t *testing.T) {
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
+	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test1.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(privateKeyPath, store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	// happy path
@@ -34,14 +36,13 @@ func TestApply(t *testing.T) {
 	// Error: Command out of order
 	r = fsm.Apply(newRaftLog(1, 1)).(*fsmAddResponse)
 	assert.Error(t, r.error)
-
 }
 
 func TestSnapshot(t *testing.T) {
 	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(privateKeyPath, store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	fsm.Apply(newRaftLog(0, 0))
@@ -65,7 +66,7 @@ func TestRestore(t *testing.T) {
 	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(privateKeyPath, store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	assert.NoError(t, fsm.Restore(&fakeRC{}))
@@ -75,7 +76,7 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(privateKeyPath, store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	fsm.Apply(newRaftLog(0, 0))
@@ -106,7 +107,7 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	defer close2F()
 
 	// New FSMStore
-	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher)
+	fsm2, err := NewBalloonFSM(privateKeyPath, store2, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	fsm2.Restore(r)

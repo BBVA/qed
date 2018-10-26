@@ -20,13 +20,12 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/publish"
 	"github.com/bbva/qed/raftwal"
-	"github.com/bbva/qed/sign"
 )
 
 // HealthCheckResponse contains the response from HealthCheckHandler.
@@ -78,7 +77,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //     "Version": 1,
 //     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
 //   }
-func Add(balloon raftwal.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
+func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -106,20 +105,15 @@ func Add(balloon raftwal.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		snapshot := &Snapshot{
+
+		snapshot := &publish.Snapshot{
 			response.HistoryDigest,
 			response.HyperDigest,
 			response.Version,
-			event.Event,
+			// event.Event,
 		}
 
-		signature, err := signer.Sign([]byte(fmt.Sprintf("%v", snapshot)))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		out, err := json.Marshal(SignedSnapshot{snapshot, signature})
+		out, err := json.Marshal(snapshot)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -251,11 +245,11 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/health-check -> HealthCheckHandler
 //	/events -> Add
 //	/proofs/membership -> Membership
-func NewApiHttp(balloon raftwal.RaftBalloonApi, signer sign.Signer) *http.ServeMux {
+func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
-	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon, signer)))
+	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
 

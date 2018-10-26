@@ -19,8 +19,8 @@ package cmd
 import (
 	"encoding/hex"
 
-	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/publish"
 
 	"github.com/spf13/cobra"
 
@@ -63,11 +63,11 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 			if verify {
 				hdBytes, _ := hex.DecodeString(hyperDigest)
 				htdBytes, _ := hex.DecodeString(historyDigest)
-				snapshot := &apihttp.Snapshot{htdBytes, hdBytes, version, event}
+				snapshot := &publish.Snapshot{htdBytes, hdBytes, version}
 
 				log.Infof("Verifying with commitment: \n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
 					hyperDigest, historyDigest, version)
-				if ctx.client.Verify(proof, snapshot, hashing.NewSha256Hasher) {
+				if ctx.client.Verify(proof, event, snapshot, hashing.NewSha256Hasher) {
 					log.Info("Verify: OK")
 				} else {
 					log.Info("Verify: KO")

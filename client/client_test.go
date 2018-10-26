@@ -19,7 +19,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,7 +26,7 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/sign"
+	"github.com/bbva/qed/publish"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,26 +54,20 @@ func TestAddSuccess(t *testing.T) {
 	defer tearDown()
 
 	event := "Hello world!"
-	snap := &apihttp.Snapshot{
+	snap := &publish.Snapshot{
 		[]byte("hyper"),
 		[]byte("history"),
 		0,
-		[]byte(event),
-	}
-	signer := sign.NewEd25519Signer()
-	sig, err := signer.Sign([]byte(fmt.Sprintf("%v", snap)))
-	fakeSignedSnapshot := &apihttp.SignedSnapshot{
-		snap,
-		sig,
+		// []byte(event),
 	}
 
-	result, _ := json.Marshal(fakeSignedSnapshot)
+	result, _ := json.Marshal(snap)
 	mux.HandleFunc("/events", okHandler(result))
 
-	signedSnapshot, err := client.Add(event)
+	snapshot, err := client.Add(event)
 	assert.NoError(t, err)
-	assert.Equal(t, fakeSignedSnapshot, signedSnapshot, "The snapshots should match")
-
+	assert.NotNil(t, snapshot)
+	assert.Equal(t, snap, snapshot, "The snapshots should match")
 }
 
 func TestAddWithServerFailure(t *testing.T) {
