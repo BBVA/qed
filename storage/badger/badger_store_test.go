@@ -18,7 +18,9 @@ package badger
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/bbva/qed/storage"
@@ -220,6 +222,41 @@ func TestGetLast(t *testing.T) {
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
 }
 
+func TestBackupLoad(t *testing.T) {
+	store, closeF := openBadgerStore(t)
+	defer closeF()
+
+	// insert
+	numElems := uint64(20)
+	prefixes := [][]byte{{storage.IndexPrefix}, {storage.HistoryCachePrefix}, {storage.HyperCachePrefix}}
+	for _, prefix := range prefixes {
+		for i := uint64(0); i < numElems; i++ {
+			key := util.Uint64AsBytes(i)
+			store.Mutate([]*storage.Mutation{
+				{prefix[0], key, key},
+			})
+		}
+	}
+
+	version, err := store.GetLastVersion()
+	require.NoError(t, err)
+
+	backupDir := mustTempDir()
+	defer os.RemoveAll(backupDir)
+	backupFile, err := os.Create(filepath.Join(backupDir, "backup"))
+	require.NoError(t, err)
+
+	store.Backup(backupFile, version)
+
+	restore, recloseF := openBadgerStore(t)
+	defer recloseF()
+	restore.Load(backupFile)
+	reversion, err := store.GetLastVersion()
+
+	require.NoError(t, err)
+	require.Equal(t, reversion, version, "Error in restored version")
+}
+
 func BenchmarkMutate(b *testing.B) {
 	store, closeF := openBadgerStore(b)
 	defer closeF()
@@ -296,15 +333,26 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 }
 
 func openBadgerStore(t require.TestingT) (*BadgerStore, func()) {
-	store, err := NewBadgerStore("/var/tmp/badger_store_test.db")
+	path := mustTempDir()
+
+	store, err := NewBadgerStore(filepath.Join(path, "backupbadger_store_test.db"))
 	if err != nil {
 		t.Errorf("Error opening badger store: %v", err)
 		t.FailNow()
 	}
 	return store, func() {
 		store.Close()
-		deleteFile("/var/tmp/badger_store_test.db")
+		defer os.RemoveAll(path)
 	}
+}
+
+func mustTempDir() string {
+	var err error
+	path, err := ioutil.TempDir("", "backup-test-")
+	if err != nil {
+		panic("failed to create temp dir")
+	}
+	return path
 }
 
 func deleteFile(path string) {
