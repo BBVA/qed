@@ -28,6 +28,13 @@ type FakePosition struct {
 	Hght uint16
 }
 
+func NewFakePosition(index []byte, height uint16) *FakePosition {
+	return &FakePosition{
+		Idx:  index,
+		Hght: height,
+	}
+}
+
 func (p FakePosition) Index() []byte {
 	return p.Idx
 }
