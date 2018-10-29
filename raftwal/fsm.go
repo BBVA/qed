@@ -70,7 +70,7 @@ func loadState(s storage.ManagedStore) (*fsmState, error) {
 	return &state, err
 }
 
-func NewBalloonFSM(privateKeyPath string, store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
+func NewBalloonFSM(privateKeyPath string, store storage.ManagedStore, hasherF func() hashing.Hasher, enablePublisher bool) (*BalloonFSM, error) {
 
 	b, err := balloon.NewBalloon(store, hasherF)
 	if err != nil {
@@ -90,7 +90,7 @@ func NewBalloonFSM(privateKeyPath string, store storage.ManagedStore, hasherF fu
 	// Publisher stuff: channel and goroutines.
 	chanToPublishers := make(chan *balloon.Commitment, 10000)
 	numPublishers := 100
-	publish.SpawnPublishers(signer, numPublishers, chanToPublishers)
+	publish.SpawnPublishers(signer, numPublishers, chanToPublishers, enablePublisher)
 
 	return &BalloonFSM{
 		hasherF:          hasherF,

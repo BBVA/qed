@@ -90,7 +90,7 @@ type RaftBalloon struct {
 }
 
 // New returns a new RaftBalloon.
-func NewRaftBalloon(privateKeyPath, path, addr, id string, store storage.ManagedStore) (*RaftBalloon, error) {
+func NewRaftBalloon(privateKeyPath, path, addr, id string, store storage.ManagedStore, enablePublisher bool) (*RaftBalloon, error) {
 
 	// Create the log store and stable store
 	badgerLogStore, err := raftbadger.New(raftbadger.Options{Path: path + "/logs", NoSync: true}) // raftbadger.NewBadgerStore(path + "/logs")
@@ -108,7 +108,7 @@ func NewRaftBalloon(privateKeyPath, path, addr, id string, store storage.Managed
 	}
 
 	// Instantiate balloon FSM
-	fsm, err := NewBalloonFSM(privateKeyPath, store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(privateKeyPath, store, hashing.NewSha256Hasher, enablePublisher)
 	if err != nil {
 		return nil, fmt.Errorf("new balloon fsm: %s", err)
 	}

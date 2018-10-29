@@ -79,6 +79,7 @@ func NewServer(
 	apiKey string,
 	enableProfiling bool,
 	enableTampering bool,
+	enablePublisher bool,
 ) (*Server, error) {
 
 	bootstrap := false
@@ -115,7 +116,7 @@ func NewServer(
 	}
 
 	// Create RaftBalloon
-	server.raftBalloon, err = raftwal.NewRaftBalloon(privateKeyPath, raftPath, raftAddr, nodeID, store)
+	server.raftBalloon, err = raftwal.NewRaftBalloon(privateKeyPath, raftPath, raftAddr, nodeID, store, enablePublisher)
 	if err != nil {
 		return nil, err
 	}

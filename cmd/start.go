@@ -29,7 +29,7 @@ func newStartCommand() *cobra.Command {
 	var (
 		nodeId, httpAddr, raftAddr, mgmtAddr, joinAddr string
 		dbPath, raftPath, privateKeyPath               string
-		profiling, tampering                           bool
+		profiling, tampering, publish                  bool
 	)
 
 	cmd := &cobra.Command{
@@ -52,6 +52,7 @@ func newStartCommand() *cobra.Command {
 				apiKey,
 				profiling,
 				tampering,
+				publish,
 			)
 
 			if err != nil {
@@ -76,6 +77,7 @@ func newStartCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&raftPath, "raftpath", "", "/var/tmp/qed/raft", "Set raft storage path")
 	cmd.Flags().StringVarP(&privateKeyPath, "keypath", "y", "~/.ssh/id_ed25519", "Path to the ed25519 key file")
 	cmd.Flags().BoolVarP(&profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
+	cmd.Flags().BoolVarP(&publish, "publish", "", false, "Enable/Disable publishing snapshots.")
 
 	// INFO: testing purposes
 	cmd.Flags().BoolVar(&tampering, "tampering", false, "Allow tampering api for proof demostrations")

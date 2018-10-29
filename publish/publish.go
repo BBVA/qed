@@ -65,7 +65,7 @@ func newHttpPublisher(client http.Client, signer sign.Signer, members []string, 
 	}
 }
 
-func SpawnPublishers(signer sign.Signer, numPublishers int, ch <-chan *balloon.Commitment) {
+func SpawnPublishers(signer sign.Signer, numPublishers int, ch <-chan *balloon.Commitment, enablaPublisher bool) {
 
 	// TODO: temporal hardcoding until publisher final decission.
 	members := []string{
@@ -81,10 +81,13 @@ func SpawnPublishers(signer sign.Signer, numPublishers int, ch <-chan *balloon.C
 				commitment, open := <-ch
 				if open {
 					sc, _ := pub.Sign(commitment)
-					pub.Publish(sc)
+					if enablaPublisher == true {
+						pub.Publish(sc)
+					}
 				} else {
 					return
 				}
+
 			}
 		}()
 	}
