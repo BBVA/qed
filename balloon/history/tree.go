@@ -29,15 +29,25 @@ import (
 )
 
 type HistoryTree struct {
-	hasherF func() hashing.Hasher
-	store   storage.Store
+	hasherF    func() hashing.Hasher
+	hasher     hashing.Hasher
+	writeCache cache.ModifiableCache
+	readCache  cache.Cache
 }
 
 func NewHistoryTree(hasherF func() hashing.Hasher, store storage.Store, cacheSize uint8) *HistoryTree {
+
+	// create cache for Adding
+	writeCache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, store, cacheSize)
+
+	// create cache for Membership and Incremental
+	readCache := cache.NewPassThroughCache(storage.HistoryCachePrefix, store)
+
 	return &HistoryTree{
-		hasherF:   hasherF,
-		store:     store,
-		cacheSize: uint8,
+		hasherF:    hasherF,
+		hasher:     hasherF(),
+		writeCache: writeCache,
+		readCache:  readCache,
 	}
 }
 
@@ -50,19 +60,16 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	// Activate metrics gathering
 	stats := metrics.History
 
-	// create cache for
-	cache := cache.NewFIFOReadThroughCache(storage.HistoryCachePrefix, t.store, t.cacheSize)
-
 	// visitors
-	computeHash := visitor.NewComputeHashVisitor(t.hasherF())
-	caching := visitor.NewCachingVisitor(computeHash, cache)
+	computeHash := visitor.NewComputeHashVisitor(t.hasher)
+	caching := visitor.NewCachingVisitor(computeHash, t.writeCache)
 	collect := visitor.NewCollectMutationsVisitor(caching, storage.HistoryCachePrefix)
 
 	// build pruning context
 	context := PruningContext{
 		navigator:     NewHistoryTreeNavigator(version),
 		cacheResolver: NewSingleTargetedCacheResolver(version),
-		cache:         cache,
+		cache:         t.writeCache,
 	}
 
 	// traverse from root and generate a visitable pruned tree
@@ -92,8 +99,6 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	computeHash := visitor.NewComputeHashVisitor(t.hasherF())
 	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
 
-	cache := cache.NewPassThroughCache(storage.HistoryCachePrefix, t.store)
-
 	// build pruning context
 	var resolver CacheResolver
 	switch index == version {
@@ -105,7 +110,7 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	context := PruningContext{
 		navigator:     NewHistoryTreeNavigator(version),
 		cacheResolver: resolver,
-		cache:         cache,
+		cache:         t.readCache,
 	}
 
 	// traverse from root and generate a visitable pruned tree
@@ -134,13 +139,11 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 	computeHash := visitor.NewComputeHashVisitor(t.hasherF())
 	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
 
-	cache := cache.NewPassThroughCache(storage.HistoryCachePrefix, t.store)
-
 	// build pruning context
 	context := PruningContext{
 		navigator:     NewHistoryTreeNavigator(end),
 		cacheResolver: NewIncrementalCacheResolver(start, end),
-		cache:         cache,
+		cache:         t.readCache,
 	}
 
 	// traverse from root and generate a visitable pruned tree
@@ -157,5 +160,7 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 }
 
 func (t *HistoryTree) Close() {
-	t.store = nil
+	t.hasher = nil
+	t.writeCache = nil
+	t.readCache = nil
 }
