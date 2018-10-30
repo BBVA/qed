@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
@@ -27,6 +28,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -41,6 +43,7 @@ type Config struct {
 	continuous     bool
 	balloonVersion uint64
 	counter        float64
+	delay_ms       time.Duration
 	req            HTTPClient
 }
 type HTTPClient struct {
@@ -109,8 +112,12 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 		if res.StatusCode != c.req.expectedStatusCode {
 			log.Fatalf("Server error: %v", err)
 		}
+
 		c.counter++
+
 		io.Copy(ioutil.Discard, res.Body)
+
+		time.Sleep(c.delay_ms * time.Millisecond)
 	}
 	c.counter = 0
 }
@@ -241,7 +248,6 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 	c.maxGoRoutines = writeConcurrency
 	c.req.expectedStatusCode = 201
 	c.req.endpoint += "/events"
-
 	fmt.Println("PRELOAD")
 	stats(c, addSampleEvents, "Preload")
 
@@ -273,6 +279,7 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 	fmt.Println("EXCLUSIVE QUERY MEMBERSHIP")
 	stats(config[0], queryMembership, "Follower 1 read")
 
+	go hotParams(config)
 	fmt.Println("QUERY MEMBERSHIP UNDER CONTINUOUS LOAD")
 	for i, c := range config {
 		queryWg.Add(1)
@@ -329,7 +336,7 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 		c := NewDefaultConfig()
 		c.req.client = client
 		c.numRequests = numReqests
-		c.maxGoRoutines = writeConcurrency
+		c.maxGoRoutines = readConcurrency
 		c.req.expectedStatusCode = 200
 		c.req.endpoint += "/proofs/incremental"
 
@@ -339,7 +346,7 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 		c := NewDefaultConfig()
 		c.req.client = client
 		c.numRequests = numReqests
-		c.maxGoRoutines = writeConcurrency
+		c.maxGoRoutines = readConcurrency
 		c.req.expectedStatusCode = 200
 		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
 		c.req.endpoint += "/proofs/incremental"
@@ -348,10 +355,10 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 	}
 
 	time.Sleep(1 * time.Second)
-
 	fmt.Println("EXCLUSIVE QUERY INCREMENTAL")
 	stats(config[0], queryIncremental, "Follower 1 read")
 
+	go hotParams(config)
 	fmt.Println("QUERY INCREMENTAL UNDER CONTINUOUS LOAD")
 	for i, c := range config {
 		queryWg.Add(1)
@@ -419,6 +426,34 @@ func init() {
 	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, usageWriteConcurrency)
 }
 
+func hotParams(config []*Config) {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	for scanner.Scan() {
+		value := scanner.Text()
+
+		switch t := value[0:2]; t {
+		case "mr":
+			i, _ := strconv.ParseInt(value[2:], 10, 64)
+			d := time.Duration(i)
+			for _, c := range config {
+				c.delay_ms = d
+			}
+			fmt.Printf("Read throughtput set to: %d\n", i)
+		case "ir":
+			i, _ := strconv.ParseInt(value[2:], 10, 64)
+			d := time.Duration(i)
+			for _, c := range config {
+				c.delay_ms = d
+			}
+			fmt.Printf("Read throughtput set to: %d\n", i)
+		default:
+			fmt.Println("Invalid command - Valid commands: mr100|ir200")
+		}
+
+	}
+}
+
 func main() {
 	var n int
 	switch m := os.Getenv("MULTINODE"); m {
@@ -433,7 +468,6 @@ func main() {
 	}
 
 	flag.Parse()
-
 	if wantMembership {
 		fmt.Println("Benchmark MEMBERSHIP")
 		benchmarkMembership(n, numRequests, readConcurrency, writeConcurrency)
