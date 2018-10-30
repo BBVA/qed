@@ -215,14 +215,15 @@ func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 	}
 
 	// Increment add hits and version
-	stats.Add("add_hits", 1)
+	stats.AddFloat("add_hits", 1)
 	stats.Set("version", metrics.Uint64ToVar(version))
 
 	return commitment, mutations, nil
 }
 
 func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
-
+	stats := metrics.Balloon
+	stats.AddFloat("QueryMembership", 1)
 	var proof MembershipProof
 	var wg sync.WaitGroup
 	var hyperErr, historyErr error
@@ -270,7 +271,8 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 }
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
-
+	stats := metrics.Balloon
+	stats.AddFloat("QueryConsistency", 1)
 	var proof IncrementalProof
 
 	proof.Start = start
