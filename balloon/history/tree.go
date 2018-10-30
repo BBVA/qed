@@ -94,7 +94,8 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, error) {
 
 	log.Debugf("Proving membership for index %d with version %d", index, version)
-
+	stats := metrics.History
+	stats.Add("ProveMembership_hits", 1)
 	// visitors
 	computeHash := visitor.NewComputeHashVisitor(t.hasherF())
 	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
@@ -134,6 +135,8 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, error) {
 
 	log.Debugf("Proving consistency between versions %d and %d", start, end)
+	stats := metrics.History
+	stats.Add("ProveConsistency_hits", 1)
 
 	// visitors
 	computeHash := visitor.NewComputeHashVisitor(t.hasherF())

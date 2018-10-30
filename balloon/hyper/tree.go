@@ -112,6 +112,9 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) 
 	t.Lock()
 	defer t.Unlock()
 
+	stats := metrics.Hyper
+	stats.Add("QueryMembership_hits", 1)
+
 	// visitors
 	computeHash := visitor.NewComputeHashVisitor(t.hasher)
 	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
@@ -143,7 +146,8 @@ func (t *HyperTree) VerifyMembership(proof *QueryProof, version uint64, eventDig
 	defer t.Unlock()
 
 	log.Debugf("Verifying membership for eventDigest %x", eventDigest)
-
+	stats := metrics.Hyper
+	stats.Add("VerifyMembership_hits", 1)
 	// visitors
 	computeHash := visitor.NewComputeHashVisitor(t.hasher)
 
@@ -204,6 +208,8 @@ func (t *HyperTree) RebuildCache() error {
 }
 
 func (t *HyperTree) populateCache(pos navigator.Position, nav navigator.TreeNavigator) hashing.Digest {
+	stats := metrics.Hyper
+	stats.Add("populateCache_hits", 1)
 	if pos.Height() == t.cacheLevel+1 {
 		cached, ok := t.cache.Get(pos)
 		if !ok {
