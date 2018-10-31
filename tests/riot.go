@@ -456,7 +456,7 @@ func hotParams(config []*Config) {
 
 func main() {
 	var n int
-	switch m := os.Getenv("MULTINODE"); m {
+	switch m := os.Getenv("CLUSTER_SIZE"); m {
 	case "":
 		n = 0
 	case "2":
