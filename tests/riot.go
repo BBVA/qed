@@ -396,6 +396,7 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 
 var (
 	wantMembership   bool
+	offload          bool
 	incrementalDelta int
 	numRequests      int
 	readConcurrency  int
@@ -412,6 +413,7 @@ func init() {
 		usageNumRequests        = "Number of requests for the attack"
 		usageReadConcurrency    = "Set read concurrency value"
 		usageWriteConcurrency   = "Set write concurrency value"
+		usageOffload            = "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be perofmed only on follower1)"
 	)
 
 	// Create a default config to use as default values in flags
@@ -424,6 +426,7 @@ func init() {
 	flag.IntVar(&numRequests, "n", defaultNumRequests, usageNumRequests)
 	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, usageReadConcurrency)
 	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, usageWriteConcurrency)
+	flag.BoolVar(&offload, "offload", false, usageOffload)
 }
 
 func hotParams(config []*Config) {
@@ -464,10 +467,16 @@ func main() {
 	case "4":
 		n = 4
 	default:
-		fmt.Println("Error: MULTINODE env var should have values 2 or 4, or not be defined at all.")
+		fmt.Println("Error: CLUSTER_SIZE env var should have values 2 or 4, or not be defined at all.")
 	}
 
 	flag.Parse()
+
+	if offload == true {
+		n = n / 2
+		fmt.Printf("Offload: %v | %d\n", offload, n)
+	}
+
 	if wantMembership {
 		fmt.Println("Benchmark MEMBERSHIP")
 		benchmarkMembership(n, numRequests, readConcurrency, writeConcurrency)
