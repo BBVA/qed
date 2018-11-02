@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/api/apihttp"
+	chart "github.com/wcharczuk/go-chart"
 )
 
 type Config struct {
@@ -190,7 +191,50 @@ func getVersion(eventTemplate string, c *Config) uint64 {
 	return version
 }
 
+type axis struct {
+	x, y []float64
+}
+
+func drawChart(m string, a *axis) {
+	graph := chart.Chart{
+		XAxis: chart.XAxis{
+			Name:      "Time",
+			NameStyle: chart.StyleShow(),
+			Style:     chart.StyleShow(),
+		},
+		YAxis: chart.YAxis{
+			Name:      "Reqests",
+			NameStyle: chart.StyleShow(),
+			Style:     chart.StyleShow(),
+		},
+		Series: []chart.Series{
+			chart.ContinuousSeries{
+				Style: chart.Style{
+					Show:        true,
+					StrokeColor: chart.GetDefaultColor(0).WithAlpha(64),
+					FillColor:   chart.GetDefaultColor(0).WithAlpha(64),
+				},
+
+				XValues: a.x,
+				YValues: a.y,
+			},
+		},
+	}
+
+	file, _ := os.Create("graph-" + m + ".png")
+	_ = graph.Render(chart.PNG, file)
+
+}
+
+func chartsData(a *axis, elapsed, reqs float64) *axis {
+	a.x = append(a.x, float64(elapsed))
+	a.y = append(a.y, float64(reqs))
+
+	return a
+}
+
 func summary(message string, numRequestsf, elapsed float64, c *Config) {
+
 	fmt.Printf(
 		"%s throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
 		message,
@@ -202,6 +246,7 @@ func summary(message string, numRequestsf, elapsed float64, c *Config) {
 }
 
 func summaryPerDuration(message string, numRequestsf, elapsed float64, c *Config) {
+
 	fmt.Printf(
 		"%s throughput: %.0f req/s | Concurrency: %d | Elapsed time: %.3f seconds\n",
 		message,
@@ -212,6 +257,7 @@ func summaryPerDuration(message string, numRequestsf, elapsed float64, c *Config
 }
 
 func stats(c *Config, t Task, message string) {
+	graph := &axis{}
 	ticker := time.NewTicker(1 * time.Second)
 	numRequestsf := float64(c.numRequests)
 	start := time.Now()
@@ -231,6 +277,9 @@ func stats(c *Config, t Task, message string) {
 		case t := <-ticker.C:
 			_ = t
 			elapsed := time.Now().Sub(start).Seconds()
+			if charts {
+				go drawChart(message, chartsData(graph, elapsed, c.counter/elapsed))
+			}
 			summaryPerDuration(message, numRequestsf, elapsed, c)
 		}
 	}
@@ -277,7 +326,7 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 	time.Sleep(1 * time.Second)
 
 	fmt.Println("EXCLUSIVE QUERY MEMBERSHIP")
-	stats(config[0], queryMembership, "Follower 1 read")
+	stats(config[0], queryMembership, "Follower-1-read")
 
 	go hotParams(config)
 	fmt.Println("QUERY MEMBERSHIP UNDER CONTINUOUS LOAD")
@@ -285,7 +334,7 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 		queryWg.Add(1)
 		go func(i int, c *Config) {
 			defer queryWg.Done()
-			stats(c, queryMembership, fmt.Sprintf("Follower %d read", i+1))
+			stats(c, queryMembership, fmt.Sprintf("Follower-%d-read-mixed", i+1))
 		}(i, c)
 	}
 
@@ -300,7 +349,7 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 	ca.continuous = true
 
 	start := time.Now()
-	go stats(ca, addSampleEvents, "Leader write")
+	go stats(ca, addSampleEvents, "Leader-write-mixed")
 	queryWg.Wait()
 	elapsed := time.Now().Sub(start).Seconds()
 
@@ -356,7 +405,7 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 
 	time.Sleep(1 * time.Second)
 	fmt.Println("EXCLUSIVE QUERY INCREMENTAL")
-	stats(config[0], queryIncremental, "Follower 1 read")
+	stats(config[0], queryIncremental, "Follower-1-read")
 
 	go hotParams(config)
 	fmt.Println("QUERY INCREMENTAL UNDER CONTINUOUS LOAD")
@@ -364,7 +413,7 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 		queryWg.Add(1)
 		go func(i int, c *Config) {
 			defer queryWg.Done()
-			stats(c, queryIncremental, fmt.Sprintf("Follower %d read", i+1))
+			stats(c, queryIncremental, fmt.Sprintf("Follower-%d-read-mixed", i+1))
 		}(i, c)
 	}
 
@@ -379,14 +428,14 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 	ca.continuous = true
 
 	start := time.Now()
-	go stats(ca, addSampleEvents, "Leader write")
+	go stats(ca, addSampleEvents, "Leader-write-mixed")
 	queryWg.Wait()
 	elapsed := time.Now().Sub(start).Seconds()
 
 	numRequestsf := float64(c.numRequests)
 	currentVersion := getVersion("last-event", c)
 	fmt.Printf(
-		"Leader write throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
+		"Leader-write-mixed throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
 		(float64(currentVersion)-numRequestsf)/elapsed,
 		currentVersion-uint64(c.numRequests),
 		elapsed,
@@ -397,6 +446,7 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 var (
 	wantMembership   bool
 	offload          bool
+	charts           bool
 	incrementalDelta int
 	numRequests      int
 	readConcurrency  int
@@ -414,6 +464,7 @@ func init() {
 		usageReadConcurrency    = "Set read concurrency value"
 		usageWriteConcurrency   = "Set write concurrency value"
 		usageOffload            = "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be perofmed only on follower1)"
+		usageCharts             = "Create charts while executing the benchmarks. Output: graph-$testname.png"
 	)
 
 	// Create a default config to use as default values in flags
@@ -421,12 +472,14 @@ func init() {
 
 	flag.BoolVar(&wantMembership, "membership", defaultWantMembership, usage)
 	flag.BoolVar(&wantMembership, "m", defaultWantMembership, usage+" (shorthand)")
+	flag.BoolVar(&offload, "offload", false, usageOffload)
+	flag.BoolVar(&charts, "charts", false, usageCharts)
 	flag.IntVar(&incrementalDelta, "delta", defaultIncrementalDelta, usageDelta)
 	flag.IntVar(&incrementalDelta, "d", defaultIncrementalDelta, usageDelta+" (shorthand)")
 	flag.IntVar(&numRequests, "n", defaultNumRequests, usageNumRequests)
 	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, usageReadConcurrency)
 	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, usageWriteConcurrency)
-	flag.BoolVar(&offload, "offload", false, usageOffload)
+
 }
 
 func hotParams(config []*Config) {
@@ -472,7 +525,7 @@ func main() {
 
 	flag.Parse()
 
-	if offload == true {
+	if offload {
 		n = n / 2
 		fmt.Printf("Offload: %v | %d\n", offload, n)
 	}
