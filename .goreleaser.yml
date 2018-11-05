@@ -1,0 +1,23 @@
+# Build customization
+before:
+  hooks:
+    - go mod download
+builds:
+  - main: ./cmd/
+    env:
+      - CGO_ENABLED=0
+      - GOOS=linux
+      - GO111MODULE=on
+    binary: qed
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - 5
+      - 6
+      - 7
+archive:
+  format: binary
