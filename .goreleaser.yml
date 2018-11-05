@@ -3,8 +3,7 @@ before:
   hooks:
     - go mod download
 builds:
-  - main: ./cmd/
-    env:
+  - env:
       - CGO_ENABLED=0
       - GOOS=linux
       - GO111MODULE=on
