@@ -221,7 +221,7 @@ func drawChart(m string, a *axis) {
 		},
 	}
 
-	file, _ := os.Create("graph-" + m + ".png")
+	file, _ := os.Create("results/graph-" + m + ".png")
 	_ = graph.Render(chart.PNG, file)
 
 }
@@ -278,6 +278,7 @@ func stats(c *Config, t Task, message string) {
 			_ = t
 			elapsed := time.Now().Sub(start).Seconds()
 			if charts {
+				os.Mkdir("results", 0755)
 				go drawChart(message, chartsData(graph, elapsed, c.counter/elapsed))
 			}
 			summaryPerDuration(message, numRequestsf, elapsed, c)
