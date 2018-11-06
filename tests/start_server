@@ -15,16 +15,35 @@
 # limitations under the License.
 
 echo "export CLUSTER_SIZE=N [2|4] env variable to execute the benchmark in replica mode. N number of folowers"
-echo "export PROFILING=true env variable to enable go profiling. Default profiling time is 60. Output: profile.svg"
+echo "export PROFILING=true env variable to enable go profiling. Default profiling rate is 30. Output: results/cpu|mem.pb.gz"
+echo "export PROFILING_RATE=30 (in seconds) env variable to set the default profiling delay"
 
 echo Create id_ed25519 key
 ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 
+function profiler_cmd {
+    ELAPSED=0
+    while curl -s -X POST http://localhost:8080/health-check 2>&1 > /dev/null ; do
+        (BALLOON_VERSION=$(curl -s http://localhost:6060/debug/vars | awk -F '"version": ' '/balloon_stats/ {print $2}' | tr -d '},')
+        # Avoid empty version beacause preload process is not already started... 
+        : ${BALLOON_VERSION:=0}
+        go tool pprof -proto -sample_index=alloc_objects -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-objects.pb.gz http://localhost:6060/debug/pprof/heap
+        go tool pprof -proto -sample_index=alloc_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-space-top.pb.gz http://localhost:6060/debug/pprof/heap
+        go tool pprof -proto -sample_index=inuse_objects -output results/$(date +%s)-${BALLOON_VERSION}-mem-inuse-objects.pb.gz http://localhost:6060/debug/pprof/heap
+        go tool pprof -proto -sample_index=inuse_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-inuse-space-top.pb.gz http://localhost:6060/debug/pprof/heap
+        go tool pprof -proto -seconds 30 -output results/$(date +%s)-${BALLOON_VERSION}-cpu-profile.pb.gz http://localhost:6060) 2>&1 > /dev/null
+        sleep $PROFILING_RATE
+    done
+}
+
 if [ ! -z "$PROFILING" ]
 then
-    echo PROFILING=enabled
+    echo "PROFILING=enabled"
+    : ${PROFILING_RATE:=30}
+    mkdir -p results
     PROFILING=--profiling
-    PROFILER_CMD="go tool pprof -svg -seconds 60 -output profile.svg http://localhost:6060"
+    echo "PROFILING_RATE=${PROFILING_RATE}s"
+    PROFILER_CMD="profiler_cmd"
 else
     echo PROFILING=disabled
     PROFILER_CMD="true"
@@ -33,7 +52,7 @@ fi
 if [ -z "$CLUSTER_SIZE" ]
 then
     echo Starting single server...
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l info  --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 $PROFILING &
+    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 $PROFILING &
     sleep 10
     $PROFILER_CMD &
     echo done.
