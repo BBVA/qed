@@ -13,7 +13,7 @@ cover.html
 tests/cloud/aws/outputs.tf
 tests/cloud/aws/results
 tests/cloud/aws/to_upload/rendered
-
+tests/results
 # Documents 
 *.pdf
 TODO.md
