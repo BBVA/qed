@@ -223,6 +223,7 @@ func drawChart(m string, a *axis) {
 
 	req := fmt.Sprint(numRequests)
 	file, _ := os.Create("results/graph-" + m + "-" + req + ".png")
+	defer file.Close()
 	_ = graph.Render(chart.PNG, file)
 
 }
