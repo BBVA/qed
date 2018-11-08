@@ -16,6 +16,7 @@
 
 
 ./start_server
+./start_profiler
 
 go run riot.go "$@"
 
