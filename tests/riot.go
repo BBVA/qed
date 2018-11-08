@@ -288,6 +288,22 @@ func stats(c *Config, t Task, message string) {
 	}
 }
 
+func benchmarkAdd(numFollowers, numReqests, readConcurrency, writeConcurrency, offset int) {
+	fmt.Println("\nStarting benchmark run...")
+
+	client := &http.Client{}
+
+	c := NewDefaultConfig()
+	c.req.client = client
+	c.numRequests = numReqests
+	c.maxGoRoutines = writeConcurrency
+	c.startVersion = offset
+	c.req.expectedStatusCode = 201
+	c.req.endpoint += "/events"
+	stats(c, addSampleEvents, "Add")
+
+}
+
 func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
 	fmt.Println("\nStarting benchmark run...")
 	var queryWg sync.WaitGroup
@@ -447,10 +463,13 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 }
 
 var (
+	wantAdd          bool
+	wantIncremental  bool
 	wantMembership   bool
 	offload          bool
 	charts           bool
 	incrementalDelta int
+	offset           int
 	numRequests      int
 	readConcurrency  int
 	writeConcurrency int
@@ -458,23 +477,34 @@ var (
 
 func init() {
 	const (
+		// Default values
+		defaultWantAdd          = false
+		defaultWantIncremental  = false
 		defaultWantMembership   = false
+		defaultOffset           = 0
 		defaultIncrementalDelta = 1000
 		defaultNumRequests      = 100000
-		usage                   = "Benchmark MembershipProof"
-		usageDelta              = "Specify delta for the IncrementalProof"
-		usageNumRequests        = "Number of requests for the attack"
-		usageReadConcurrency    = "Set read concurrency value"
-		usageWriteConcurrency   = "Set write concurrency value"
-		usageOffload            = "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be perofmed only on follower1)"
-		usageCharts             = "Create charts while executing the benchmarks. Output: graph-$testname.png"
+
+		// Usage
+		usage                 = "Benchmark MembershipProof"
+		usageDelta            = "Specify delta for the IncrementalProof"
+		usageNumRequests      = "Number of requests for the attack"
+		usageReadConcurrency  = "Set read concurrency value"
+		usageWriteConcurrency = "Set write concurrency value"
+		usageOffload          = "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be perofmed only on follower1)"
+		usageCharts           = "Create charts while executing the benchmarks. Output: graph-$testname.png"
+		usageOffset           = "The starting version from which we start the load"
+		usageWantAdd          = "Execute add benchmark"
+		usageWantIncremental  = "Execute Incremental benchmark"
 	)
 
 	// Create a default config to use as default values in flags
 	config := NewDefaultConfig()
 
+	flag.BoolVar(&wantAdd, "add", defaultWantAdd, usageWantAdd)
 	flag.BoolVar(&wantMembership, "membership", defaultWantMembership, usage)
 	flag.BoolVar(&wantMembership, "m", defaultWantMembership, usage+" (shorthand)")
+	flag.BoolVar(&wantIncremental, "incremental", defaultWantIncremental, usageWantIncremental)
 	flag.BoolVar(&offload, "offload", false, usageOffload)
 	flag.BoolVar(&charts, "charts", false, usageCharts)
 	flag.IntVar(&incrementalDelta, "delta", defaultIncrementalDelta, usageDelta)
@@ -482,6 +512,7 @@ func init() {
 	flag.IntVar(&numRequests, "n", defaultNumRequests, usageNumRequests)
 	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, usageReadConcurrency)
 	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, usageWriteConcurrency)
+	flag.IntVar(&offset, "offset", defaultOffset, usageOffset)
 
 }
 
@@ -533,11 +564,18 @@ func main() {
 		fmt.Printf("Offload: %v | %d\n", offload, n)
 	}
 
+	if wantAdd {
+		fmt.Print("Benchmark ADD")
+		benchmarkAdd(n, numRequests, readConcurrency, writeConcurrency, offset)
+	}
+
 	if wantMembership {
-		fmt.Println("Benchmark MEMBERSHIP")
+		fmt.Print("Benchmark MEMBERSHIP")
 		benchmarkMembership(n, numRequests, readConcurrency, writeConcurrency)
-	} else {
-		fmt.Println("Benchmark INCREMENTAL")
+	}
+
+	if wantIncremental {
+		fmt.Print("Benchmark INCREMENTAL")
 		benchmarkIncremental(n, numRequests, readConcurrency, writeConcurrency)
 	}
 }
