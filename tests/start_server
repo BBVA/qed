@@ -25,7 +25,7 @@ function profiler_cmd {
     ELAPSED=0
     while curl -s -X POST http://localhost:8080/health-check 2>&1 > /dev/null ; do
         (BALLOON_VERSION=$(curl -s http://localhost:6060/debug/vars | awk -F '"version": ' '/balloon_stats/ {print $2}' | tr -d '},')
-        # Avoid empty version beacause preload process is not already started... 
+        # Avoid empty version because preload process is not already started...
         : ${BALLOON_VERSION:=0}
         go tool pprof -proto -sample_index=alloc_objects -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-objects.pb.gz http://localhost:6060/debug/pprof/heap
         go tool pprof -proto -sample_index=alloc_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-space-top.pb.gz http://localhost:6060/debug/pprof/heap
