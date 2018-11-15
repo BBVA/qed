@@ -18,19 +18,26 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-// NodeTypeDelegate is an AliveDelegate...
+// eventDelegate is a simpler delegate that is used only to receive
+// notifications about members joining and leaving. The methods in this
+// delegate may be called by multiple goroutines, but never concurrently.
+// This allows you to reason about ordering.
 type eventDelegate struct {
 	node *Node
 }
 
+// NotifyJoin is invoked when a node is detected to have joined.
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
 	e.node.handleNodeJoin(n)
 }
 
+// NotifyLeave is invoked when a node is detected to have left.
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 	e.node.handleNodeLeave(n)
 }
 
+// NotifyUpdate is invoked when a node is detected to have
+// updated, usually involving the meta data.
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
 	e.node.handleNodeUpdate(n)
 }

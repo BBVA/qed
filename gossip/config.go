@@ -14,6 +14,7 @@ package gossip
 
 import (
 	"net"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -62,10 +63,12 @@ const DefaultBindPort int = 7946
 // DefaultConfig contains the defaults for configurations.
 func DefaultConfig() *Config {
 	return &Config{
-		BindAddr:          "0.0.0.0",
-		AdvertiseAddr:     "",
-		LeaveOnTerm:       true,
-		EnableCompression: false,
+		BindAddr:            "0.0.0.0",
+		AdvertiseAddr:       "",
+		LeaveOnTerm:         true,
+		EnableCompression:   false,
+		BroadcastTimeout:    5 * time.Second,
+		LeavePropagateDelay: 0,
 	}
 }
 
@@ -95,6 +98,19 @@ type Config struct {
 	// EnableCompression specifies whether message compression is enabled
 	// by `github.com/hashicorp/memberlist` when broadcasting events.
 	EnableCompression bool
+
+	// BroadcastTimeout is the amount of time to wait for a broadcast
+	// message to be sent to the cluster. Broadcast messages are used for
+	// things like leave messages and force remove messages. If this is not
+	// set, a timeout of 5 seconds will be set.
+	BroadcastTimeout time.Duration
+
+	// LeavePropagateDelay is for our leave (node dead) message to propagate
+	// through the cluster. In particular, we want to stay up long enough to
+	// service any probes from other nodes before they learn about us
+	// leaving and stop probing. Otherwise, we risk getting node failures as
+	// we leave.
+	LeavePropagateDelay time.Duration
 
 	// MemberlistConfig is the memberlist configuration that Aidotpr will
 	// use to do the underlying membership management and gossip. Some
