@@ -55,7 +55,8 @@ func newAgentStartCommand() *cobra.Command {
 			}
 			log.Debugf("Number of nodes contacted: %d", contacted)
 
-			awaitTermSignal(agent.Shutdown)
+			defer agent.Shutdown()
+			awaitTermSignal(agent.Leave)
 
 		},
 	}
