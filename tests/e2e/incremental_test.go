@@ -19,8 +19,8 @@ package e2e
 import (
 	"testing"
 
-	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/protocol"
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/testutils/rand"
@@ -36,9 +36,9 @@ func TestIncrementalConsistency(t *testing.T) {
 	scenario("Add multiple events and verify consistency between two of them", func() {
 
 		events := make([]string, 10)
-		snapshots := make([]*apihttp.SignedSnapshot, 10)
+		snapshots := make([]*protocol.SignedSnapshot, 10)
 		var err error
-		var result *apihttp.IncrementalResponse
+		var result *protocol.IncrementalResponse
 
 		let("Add ten events", func(t *testing.T) {
 			for i := 0; i < 10; i++ {

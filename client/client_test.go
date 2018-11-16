@@ -24,9 +24,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/sign"
 	"github.com/stretchr/testify/assert"
 )
@@ -55,7 +55,7 @@ func TestAddSuccess(t *testing.T) {
 	defer tearDown()
 
 	event := "Hello world!"
-	snap := &apihttp.Snapshot{
+	snap := &protocol.Snapshot{
 		[]byte("hyper"),
 		[]byte("history"),
 		0,
@@ -63,7 +63,7 @@ func TestAddSuccess(t *testing.T) {
 	}
 	signer := sign.NewEd25519Signer()
 	sig, err := signer.Sign([]byte(fmt.Sprintf("%v", snap)))
-	fakeSignedSnapshot := &apihttp.SignedSnapshot{
+	fakeSignedSnapshot := &protocol.SignedSnapshot{
 		snap,
 		sig,
 	}
@@ -95,7 +95,7 @@ func TestMembership(t *testing.T) {
 
 	event := "Hello world!"
 	version := uint64(0)
-	fakeResult := &apihttp.MembershipResult{
+	fakeResult := &protocol.MembershipResult{
 		Key:            []byte(event),
 		KeyDigest:      []byte("digest"),
 		Exists:         true,
@@ -132,7 +132,7 @@ func TestIncremental(t *testing.T) {
 
 	start := uint64(2)
 	end := uint64(8)
-	fakeResult := &apihttp.IncrementalResponse{
+	fakeResult := &protocol.IncrementalResponse{
 		start,
 		end,
 		visitor.AuditPath{"0|0": []uint8{0x0}},
