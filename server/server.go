@@ -32,8 +32,11 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/mgmthttp"
 	"github.com/bbva/qed/api/tampering"
+	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/gossip/sender"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage"
@@ -66,6 +69,8 @@ type Server struct {
 	tamperingServer *http.Server
 	profilingServer *http.Server
 	signer          sign.Signer
+	agent           *gossip.Node
+	agentsQueue     chan *protocol.Snapshot
 }
 
 // NewServer synthesizes a new Server based on the parameters it receives.
@@ -122,8 +127,17 @@ func NewServer(
 		return nil, err
 	}
 
+	// Create gossip agent
+	server.agent, err = gossip.Create(gossip.DefaultConfig(), gossip.NewFakeDelegate())
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: add queue size to config
+	server.agentsQueue = make(chan *protocol.Snapshot, 10000)
+
 	// Create RaftBalloon
-	server.raftBalloon, err = raftwal.NewRaftBalloon(raftPath, raftAddr, nodeID, store)
+	server.raftBalloon, err = raftwal.NewRaftBalloon(raftPath, raftAddr, nodeID, store, server.agentsQueue)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +156,6 @@ func NewServer(
 	}
 
 	return server, nil
-
 }
 
 func join(joinAddr, raftAddr, nodeID string) error {
@@ -210,6 +223,11 @@ func (s *Server) Start() error {
 		}
 	}
 
+	go func() {
+		log.Debug("	* Starting QED agent.")
+		sender.Start(s.agent, s.agentsQueue)
+	}()
+
 	awaitTermSignal(s.Stop)
 
 	log.Debug("Stopping server, about to exit...")
@@ -251,6 +269,15 @@ func (s *Server) Stop() {
 	if err != nil {
 		log.Error(err)
 	}
+
+	log.Debugf("Closing QED agent queue...")
+	close(s.agentsQueue)
+
+	log.Debugf("Stopping QED agent...")
+	if err := s.agent.Shutdown(); err != nil {
+		log.Error(err)
+	}
+
 	log.Debugf("Done. Exiting...\n")
 }
 

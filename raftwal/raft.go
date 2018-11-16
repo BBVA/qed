@@ -26,6 +26,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/storage"
 	raftbadger "github.com/bbva/raft-badger"
@@ -90,7 +91,7 @@ type RaftBalloon struct {
 }
 
 // New returns a new RaftBalloon.
-func NewRaftBalloon(path, addr, id string, store storage.ManagedStore) (*RaftBalloon, error) {
+func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, agentsQueue chan *protocol.Snapshot) (*RaftBalloon, error) {
 
 	// Create the log store and stable store
 	badgerLogStore, err := raftbadger.New(raftbadger.Options{Path: path + "/logs", NoSync: true, ValueLogGC: true}) // raftbadger.NewBadgerStore(path + "/logs")
@@ -108,7 +109,7 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore) (*RaftBal
 	}
 
 	// Instantiate balloon FSM
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, agentsQueue)
 	if err != nil {
 		return nil, fmt.Errorf("new balloon fsm: %s", err)
 	}

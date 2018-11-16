@@ -314,7 +314,7 @@ func newNodeBench(b *testing.B, id int) (*raftwal.RaftBalloon, func()) {
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	os.MkdirAll(raftPath, os.FileMode(0755))
-	r, err := raftwal.NewRaftBalloon(raftPath, ":8301", fmt.Sprintf("%d", id), badger)
+	r, err := raftwal.NewRaftBalloon(raftPath, ":8301", fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot))
 	assert.NoError(b, err)
 
 	return r, func() {
