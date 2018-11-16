@@ -112,6 +112,7 @@ type Member struct {
 	Port   uint16
 	Role   NodeType
 	Status MemberStatus
+	Node   *memberlist.Node
 }
 
 // MemberStatus is the state that a member is in.
@@ -307,6 +308,7 @@ func (n *Node) getMember(peer *memberlist.Node) *Member {
 		Addr: net.IP(peer.Addr),
 		Port: peer.Port,
 		Role: meta.Role,
+		Node: peer,
 	}
 }
 
@@ -346,4 +348,18 @@ func (n *Node) decodeMetadata(buf []byte) (*NodeMeta, error) {
 		return nil, err
 	}
 	return meta, nil
+}
+
+func (n *Node) GetPeers(numNodes int, nodeType NodeType) []*Member {
+	fullList := n.topology.Get(nodeType)
+	if len(fullList) <= numNodes {
+		return fullList
+	}
+
+	var filteredList []*Member
+	for i := 0; i < numNodes; i++ {
+		filteredList = append(filteredList, fullList[i])
+	}
+
+	return filteredList
 }
