@@ -8,6 +8,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal/commands"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 )
@@ -16,7 +17,7 @@ func TestApply(t *testing.T) {
 	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
 	assert.NoError(t, err)
 
 	// happy path
@@ -41,7 +42,7 @@ func TestSnapshot(t *testing.T) {
 	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
 	assert.NoError(t, err)
 
 	fsm.Apply(newRaftLog(0, 0))
@@ -65,7 +66,7 @@ func TestRestore(t *testing.T) {
 	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
 	assert.NoError(t, err)
 
 	assert.NoError(t, fsm.Restore(&fakeRC{}))
@@ -75,7 +76,7 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
 	assert.NoError(t, err)
 
 	fsm.Apply(newRaftLog(0, 0))
@@ -106,7 +107,7 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	defer close2F()
 
 	// New FSMStore
-	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher)
+	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
 	assert.NoError(t, err)
 
 	fsm2.Restore(r)

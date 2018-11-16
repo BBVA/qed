@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bbva/qed/protocol"
+
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/badger"
 	utilrand "github.com/bbva/qed/testutils/rand"
@@ -54,7 +56,7 @@ func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	os.MkdirAll(raftPath, os.FileMode(0755))
-	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger)
+	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot, 100))
 	require.NoError(t, err)
 
 	return r, func() {
@@ -359,7 +361,7 @@ func newNodeBench(b *testing.B, id int) (*RaftBalloon, func()) {
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	os.MkdirAll(raftPath, os.FileMode(0755))
-	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger)
+	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot, 100))
 	require.NoError(b, err)
 
 	return r, func() {

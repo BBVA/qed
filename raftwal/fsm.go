@@ -22,6 +22,8 @@ import (
 	"io"
 	"sync"
 
+	"github.com/bbva/qed/protocol"
+
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
@@ -47,6 +49,8 @@ type BalloonFSM struct {
 	balloon *balloon.Balloon
 	state   *fsmState
 
+	agentsQueue chan *protocol.Snapshot
+
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
 
@@ -65,9 +69,9 @@ func loadState(s storage.ManagedStore) (*fsmState, error) {
 	return &state, err
 }
 
-func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
+func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher, agentsQueue chan *protocol.Snapshot) (*BalloonFSM, error) {
 
-	balloon, err := balloon.NewBalloon(store, hasherF)
+	b, err := balloon.NewBalloon(store, hasherF)
 	if err != nil {
 		return nil, err
 	}
@@ -78,10 +82,11 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 	}
 
 	return &BalloonFSM{
-		hasherF: hasherF,
-		store:   store,
-		balloon: balloon,
-		state:   state,
+		hasherF:     hasherF,
+		store:       store,
+		balloon:     b,
+		state:       state,
+		agentsQueue: agentsQueue,
 	}, nil
 }
 
@@ -181,8 +186,20 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 	}
 
 	mutations = append(mutations, storage.NewMutation(storage.FSMStatePrefix, []byte{0xab}, stateBuff.Bytes()))
-	fsm.store.Mutate(mutations)
+	err = fsm.store.Mutate(mutations)
+	if err != nil {
+		return &fsmAddResponse{error: err}
+	}
 	fsm.state = state
+
+	//Send snapshot to gossip agents
+	fsm.agentsQueue <- &protocol.Snapshot{
+		HistoryDigest: commitment.HistoryDigest,
+		HyperDigest:   commitment.HyperDigest,
+		Version:       commitment.Version,
+		EventDigest:   event,
+	}
+
 	return &fsmAddResponse{commitment: commitment}
 }
 
