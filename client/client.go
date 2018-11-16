@@ -27,9 +27,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/protocol"
 )
 
 // HttpClient ist the stuct that has the required information for the cli.
@@ -102,16 +102,16 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 }
 
 // Add will do a request to the server with a post data to store a new event.
-func (c HttpClient) Add(event string) (*apihttp.SignedSnapshot, error) {
+func (c HttpClient) Add(event string) (*protocol.SignedSnapshot, error) {
 
-	data, _ := json.Marshal(&apihttp.Event{[]byte(event)})
+	data, _ := json.Marshal(&protocol.Event{[]byte(event)})
 
 	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
 		return nil, err
 	}
 
-	var signedSnapshot apihttp.SignedSnapshot
+	var signedSnapshot protocol.SignedSnapshot
 	json.Unmarshal(body, &signedSnapshot)
 
 	return &signedSnapshot, nil
@@ -119,9 +119,9 @@ func (c HttpClient) Add(event string) (*apihttp.SignedSnapshot, error) {
 }
 
 // Membership will ask for a Proof to the server.
-func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipResult, error) {
+func (c HttpClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
 
-	query, _ := json.Marshal(&apihttp.MembershipQuery{
+	query, _ := json.Marshal(&protocol.MembershipQuery{
 		key,
 		version,
 	})
@@ -131,7 +131,7 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipR
 		return nil, err
 	}
 
-	var proof *apihttp.MembershipResult
+	var proof *protocol.MembershipResult
 	json.Unmarshal(body, &proof)
 
 	return proof, nil
@@ -139,9 +139,9 @@ func (c HttpClient) Membership(key []byte, version uint64) (*apihttp.MembershipR
 }
 
 // Incremental will ask for an IncrementalProof to the server.
-func (c HttpClient) Incremental(start, end uint64) (*apihttp.IncrementalResponse, error) {
+func (c HttpClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
 
-	query, _ := json.Marshal(&apihttp.IncrementalRequest{
+	query, _ := json.Marshal(&protocol.IncrementalRequest{
 		start,
 		end,
 	})
@@ -151,7 +151,7 @@ func (c HttpClient) Incremental(start, end uint64) (*apihttp.IncrementalResponse
 		return nil, err
 	}
 
-	var response *apihttp.IncrementalResponse
+	var response *protocol.IncrementalResponse
 	json.Unmarshal(body, &response)
 
 	return response, nil
@@ -166,11 +166,11 @@ func uint2bytes(i uint64) []byte {
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
 
-func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snapshot, hasherF func() hashing.Hasher) bool {
+func (c HttpClient) Verify(result *protocol.MembershipResult, snap *protocol.Snapshot, hasherF func() hashing.Hasher) bool {
 
-	proof := apihttp.ToBalloonProof([]byte(c.apiKey), result, hasherF)
+	proof := protocol.ToBalloonProof([]byte(c.apiKey), result, hasherF)
 
-	return proof.Verify(snap.Event, &balloon.Commitment{
+	return proof.Verify(snap.EventDigest, &balloon.Commitment{
 		snap.HistoryDigest,
 		snap.HyperDigest,
 		snap.Version,
@@ -178,9 +178,9 @@ func (c HttpClient) Verify(result *apihttp.MembershipResult, snap *apihttp.Snaps
 
 }
 
-func (c HttpClient) VerifyIncremental(result *apihttp.IncrementalResponse, startSnapshot, endSnapshot *apihttp.SignedSnapshot, hasher hashing.Hasher) bool {
+func (c HttpClient) VerifyIncremental(result *protocol.IncrementalResponse, startSnapshot, endSnapshot *protocol.SignedSnapshot, hasher hashing.Hasher) bool {
 
-	proof := apihttp.ToIncrementalProof(result, hasher)
+	proof := protocol.ToIncrementalProof(result, hasher)
 
 	startCommitment := &balloon.Commitment{
 		startSnapshot.Snapshot.HistoryDigest,

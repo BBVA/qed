@@ -32,7 +32,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/protocol"
 	chart "github.com/wcharczuk/go-chart"
 )
 
@@ -126,7 +126,7 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
 
 	return json.Marshal(
-		&apihttp.Event{
+		&protocol.Event{
 			[]byte(fmt.Sprintf("event %d", eventIndex)),
 		},
 	)
@@ -134,7 +134,7 @@ func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
 
 func queryMembership(eventIndex int, c *Config) ([]byte, error) {
 	return json.Marshal(
-		&apihttp.MembershipQuery{
+		&protocol.MembershipQuery{
 			[]byte(fmt.Sprintf("event %d", eventIndex)),
 			c.balloonVersion,
 		},
@@ -146,7 +146,7 @@ func queryIncremental(eventIndex int, c *Config) ([]byte, error) {
 	start := uint64(math.Max(float64(eventIndex-incrementalDelta), 0.0))
 	// start := end >> 1
 	return json.Marshal(
-		&apihttp.IncrementalRequest{
+		&protocol.IncrementalRequest{
 			Start: start,
 			End:   end,
 		},
@@ -158,7 +158,7 @@ func getVersion(eventTemplate string, c *Config) uint64 {
 
 	buf := fmt.Sprintf(eventTemplate)
 
-	query, err := json.Marshal(&apihttp.Event{[]byte(buf)})
+	query, err := json.Marshal(&protocol.Event{[]byte(buf)})
 	if len(query) == 0 {
 		log.Fatalf("Empty query: %v", err)
 	}
@@ -182,7 +182,7 @@ func getVersion(eventTemplate string, c *Config) uint64 {
 
 	body, _ := ioutil.ReadAll(res.Body)
 
-	var signedSnapshot apihttp.SignedSnapshot
+	var signedSnapshot protocol.SignedSnapshot
 	json.Unmarshal(body, &signedSnapshot)
 	version := signedSnapshot.Snapshot.Version
 

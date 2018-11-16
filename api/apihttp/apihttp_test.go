@@ -29,6 +29,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/badger"
@@ -108,7 +109,7 @@ func TestHealthCheckHandler(t *testing.T) {
 func TestAdd(t *testing.T) {
 	// Create a request to pass to our handler. We pass a message as a data.
 	// If it's nil it will fail.
-	data, _ := json.Marshal(&Event{[]byte("this is a sample event")})
+	data, _ := json.Marshal(&protocol.Event{[]byte("this is a sample event")})
 
 	req, err := http.NewRequest("POST", "/events", bytes.NewBuffer(data))
 	if len(data) == 0 {
@@ -131,7 +132,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	// Check the body response
-	signedSnapshot := &SignedSnapshot{}
+	signedSnapshot := &protocol.SignedSnapshot{}
 
 	json.Unmarshal([]byte(rr.Body.String()), signedSnapshot)
 
@@ -147,7 +148,7 @@ func TestAdd(t *testing.T) {
 		t.Errorf("Version is not consistent")
 	}
 
-	if !bytes.Equal(signedSnapshot.Snapshot.Event, []byte("this is a sample event")) {
+	if !bytes.Equal(signedSnapshot.Snapshot.EventDigest, []byte("this is a sample event")) {
 		t.Errorf("Event is not consistent ")
 	}
 
@@ -162,7 +163,7 @@ func TestAdd(t *testing.T) {
 func TestMembership(t *testing.T) {
 	var version uint64 = 1
 	key := []byte("this is a sample event")
-	query, _ := json.Marshal(MembershipQuery{
+	query, _ := json.Marshal(protocol.MembershipQuery{
 		key,
 		version,
 	})
@@ -175,7 +176,7 @@ func TestMembership(t *testing.T) {
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	handler := Membership(fakeRaftBalloon{})
-	expectedResult := &MembershipResult{Exists: true, Hyper: visitor.AuditPath{}, History: visitor.AuditPath{}, CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
+	expectedResult := &protocol.MembershipResult{Exists: true, Hyper: visitor.AuditPath{}, History: visitor.AuditPath{}, CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -188,7 +189,7 @@ func TestMembership(t *testing.T) {
 	}
 
 	// Check the body response
-	actualResult := new(MembershipResult)
+	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
 	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
@@ -198,7 +199,7 @@ func TestMembership(t *testing.T) {
 func TestIncremental(t *testing.T) {
 	start := uint64(2)
 	end := uint64(8)
-	query, _ := json.Marshal(IncrementalRequest{
+	query, _ := json.Marshal(protocol.IncrementalRequest{
 		start,
 		end,
 	})
@@ -209,7 +210,7 @@ func TestIncremental(t *testing.T) {
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	handler := Incremental(fakeRaftBalloon{})
-	expectedResult := &IncrementalResponse{
+	expectedResult := &protocol.IncrementalResponse{
 		start,
 		end,
 		visitor.AuditPath{"0|0": []uint8{0x0}},
@@ -224,7 +225,7 @@ func TestIncremental(t *testing.T) {
 	assert.Equalf(t, http.StatusOK, status, "handler returned wrong status code: got %v want %v", status, http.StatusOK)
 
 	// Check the body response
-	actualResult := new(IncrementalResponse)
+	actualResult := new(protocol.IncrementalResponse)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
 	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
@@ -337,7 +338,7 @@ func BenchmarkApiAdd(b *testing.B) {
 	b.ResetTimer()
 	b.N = 10000
 	for i := 0; i < b.N; i++ {
-		data, _ := json.Marshal(&Event{rand.Bytes(128)})
+		data, _ := json.Marshal(&protocol.Event{rand.Bytes(128)})
 		req, _ := http.NewRequest("POST", "/events", bytes.NewBuffer(data))
 		rr := httptest.NewRecorder()
 		handler.ServeHTTP(rr, req)
