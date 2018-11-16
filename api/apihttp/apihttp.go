@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
 )
@@ -93,7 +94,7 @@ func Add(balloon raftwal.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
 			return
 		}
 
-		var event Event
+		var event protocol.Event
 		err := json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -106,7 +107,7 @@ func Add(balloon raftwal.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		snapshot := &Snapshot{
+		snapshot := &protocol.Snapshot{
 			response.HistoryDigest,
 			response.HyperDigest,
 			response.Version,
@@ -119,7 +120,7 @@ func Add(balloon raftwal.RaftBalloonApi, signer sign.Signer) http.HandlerFunc {
 			return
 		}
 
-		out, err := json.Marshal(SignedSnapshot{snapshot, signature})
+		out, err := json.Marshal(protocol.SignedSnapshot{snapshot, signature})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -156,7 +157,7 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		var query MembershipQuery
+		var query protocol.MembershipQuery
 		err := json.NewDecoder(r.Body).Decode(&query)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -170,7 +171,7 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		out, err := json.Marshal(ToMembershipResult(query.Key, proof))
+		out, err := json.Marshal(protocol.ToMembershipResult(query.Key, proof))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -203,7 +204,7 @@ func Incremental(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		var request IncrementalRequest
+		var request protocol.IncrementalRequest
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -217,7 +218,7 @@ func Incremental(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		out, err := json.Marshal(ToIncrementalResponse(proof))
+		out, err := json.Marshal(protocol.ToIncrementalResponse(proof))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
