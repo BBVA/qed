@@ -23,40 +23,40 @@ import (
 // delegate may be called by multiple goroutines, but never concurrently.
 // This allows you to reason about ordering.
 type eventDelegate struct {
-	node *Node
+	agent *Agent
 }
 
 // NotifyJoin is invoked when a node is detected to have joined.
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
-	e.node.handleNodeJoin(n)
+	e.agent.handleNodeJoin(n)
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
-	e.node.handleNodeLeave(n)
+	e.agent.handleNodeLeave(n)
 }
 
 // NotifyUpdate is invoked when a node is detected to have
 // updated, usually involving the meta data.
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
-	e.node.handleNodeUpdate(n)
+	e.agent.handleNodeUpdate(n)
 }
 
 func NewFakeDelegate() DelegateBuilder {
-	return func(n *Node) memberlist.Delegate {
+	return func(n *Agent) memberlist.Delegate {
 		return &fakeDelegate{n}
 	}
 }
 
 type fakeDelegate struct {
-	node *Node
+	agent *Agent
 }
 
 // NodeMeta is used to retrieve meta-data about the current node
 // when broadcasting an alive message. It's length is limited to
 // the given byte size. This metadata is available in the Node structure.
 func (d *fakeDelegate) NodeMeta(limit int) []byte {
-	meta, err := d.node.encodeMetadata()
+	meta, err := d.agent.encodeMetadata()
 	if err != nil {
 		log.Fatalf("Unable to encode node metadata: %v", err)
 	}
@@ -76,7 +76,7 @@ func (d *fakeDelegate) NotifyMsg([]byte) {}
 // the limit. Care should be taken that this method does not block,
 // since doing so would block the entire UDP packet receive loop.
 func (d *fakeDelegate) GetBroadcasts(overhead, limit int) [][]byte {
-	return d.node.broadcasts.GetBroadcasts(overhead, limit)
+	return d.agent.broadcasts.GetBroadcasts(overhead, limit)
 }
 
 // LocalState is used for a TCP Push/Pull. This is sent to
