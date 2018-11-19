@@ -25,6 +25,12 @@ import (
 	"github.com/hashicorp/go-msgpack/codec"
 )
 
+type Sender struct {
+	Agent  *gossip.Agent
+	Config *Config
+	quit   chan bool
+}
+
 type Config struct {
 	BatchSize     uint
 	BatchInterval time.Duration
@@ -39,7 +45,15 @@ func DefaultConfig() *Config {
 	}
 }
 
-func Start(n *gossip.Agent, ch chan *protocol.Snapshot) {
+func NewSender(a *gossip.Agent, c *Config) *Sender {
+	return &Sender{
+		Agent:  a,
+		Config: c,
+		quit:   make(chan bool),
+	}
+}
+
+func (s Sender) Start(ch chan *protocol.Snapshot) {
 	ticker := time.NewTicker(1 * time.Second)
 
 	for {
@@ -47,19 +61,24 @@ func Start(n *gossip.Agent, ch chan *protocol.Snapshot) {
 		case <-ticker.C:
 			msg, _ := encode(getBatch(ch))
 
-			peers := n.GetPeers(1, gossip.AuditorType)
-			peers = append(peers, n.GetPeers(1, gossip.MonitorType)...)
-			peers = append(peers, n.GetPeers(1, gossip.PublisherType)...)
+			peers := s.Agent.GetPeers(1, gossip.AuditorType)
+			peers = append(peers, s.Agent.GetPeers(1, gossip.MonitorType)...)
+			peers = append(peers, s.Agent.GetPeers(1, gossip.PublisherType)...)
 
 			for _, peer := range peers {
-				err := n.Memberlist().SendReliable(peer.Node, msg)
+				err := s.Agent.Memberlist().SendReliable(peer.Node, msg)
 				if err != nil {
 					log.Errorf("Failed send message: %v", err)
 				}
 			}
-			// TODO: Implement graceful shutdown.
+		case <-s.quit:
+			return
 		}
 	}
+}
+
+func (s Sender) Stop() {
+	s.quit <- true
 }
 
 func encode(msg protocol.BatchSnapshots) ([]byte, error) {
