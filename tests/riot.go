@@ -111,7 +111,7 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 		defer res.Body.Close()
 
 		if res.StatusCode != c.req.expectedStatusCode {
-			log.Fatalf("Server error: %v", err)
+			log.Fatalf("Server error: %v", res)
 		}
 
 		c.counter++
