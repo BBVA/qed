@@ -42,20 +42,22 @@ func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
 	e.agent.handleNodeUpdate(n)
 }
 
-func NewFakeDelegate() DelegateBuilder {
-	return func(n *Agent) memberlist.Delegate {
-		return &fakeDelegate{n}
-	}
+type agentDelegate struct {
+	agent   *Agent
+	handler MessageHandler
 }
 
-type fakeDelegate struct {
-	agent *Agent
+func newAgentDelegate(agent *Agent, handler MessageHandler) *agentDelegate {
+	return &agentDelegate{
+		agent:   agent,
+		handler: handler,
+	}
 }
 
 // NodeMeta is used to retrieve meta-data about the current node
 // when broadcasting an alive message. It's length is limited to
 // the given byte size. This metadata is available in the Node structure.
-func (d *fakeDelegate) NodeMeta(limit int) []byte {
+func (d *agentDelegate) NodeMeta(limit int) []byte {
 	meta, err := d.agent.encodeMetadata()
 	if err != nil {
 		log.Fatalf("Unable to encode node metadata: %v", err)
@@ -67,7 +69,9 @@ func (d *fakeDelegate) NodeMeta(limit int) []byte {
 // Care should be taken that this method does not block, since doing
 // so would block the entire UDP packet receive loop. Additionally, the byte
 // slice may be modified after the call returns, so it should be copied if needed
-func (d *fakeDelegate) NotifyMsg([]byte) {}
+func (d *agentDelegate) NotifyMsg(msg []byte) {
+	d.handler.HandleMsg(msg)
+}
 
 // GetBroadcasts is called when user data messages can be broadcast.
 // It can return a list of buffers to send. Each buffer should assume an
@@ -75,7 +79,7 @@ func (d *fakeDelegate) NotifyMsg([]byte) {}
 // The total byte size of the resulting data to send must not exceed
 // the limit. Care should be taken that this method does not block,
 // since doing so would block the entire UDP packet receive loop.
-func (d *fakeDelegate) GetBroadcasts(overhead, limit int) [][]byte {
+func (d *agentDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 	return d.agent.broadcasts.GetBroadcasts(overhead, limit)
 }
 
@@ -83,7 +87,7 @@ func (d *fakeDelegate) GetBroadcasts(overhead, limit int) [][]byte {
 // the remote side in addition to the membership information. Any
 // data can be sent here. See MergeRemoteState as well. The `join`
 // boolean indicates this is for a join instead of a push/pull.
-func (d *fakeDelegate) LocalState(join bool) []byte {
+func (d *agentDelegate) LocalState(join bool) []byte {
 	return []byte{}
 }
 
@@ -91,4 +95,4 @@ func (d *fakeDelegate) LocalState(join bool) []byte {
 // state received from the remote side and is the result of the
 // remote side's LocalState call. The 'join'
 // boolean indicates this is for a join instead of a push/pull.
-func (d *fakeDelegate) MergeRemoteState(buf []byte, join bool) {}
+func (d *agentDelegate) MergeRemoteState(buf []byte, join bool) {}

@@ -22,6 +22,7 @@ import (
 	"syscall"
 
 	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/gossip/auditor"
 	"github.com/bbva/qed/log"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,17 @@ func newAgentStartCommand() *cobra.Command {
 			config.AdvertiseAddr = advertiseAddr
 			config.Role = gossip.NewNodeType(role)
 
-			agent, err := gossip.Create(config, gossip.NewFakeDelegate())
+			var agent *gossip.Agent
+			var err error
+			switch config.Role {
+			case gossip.PublisherType:
+			case gossip.MonitorType:
+			case gossip.AuditorType:
+				conf := auditor.DefaultConfig()
+				agent, err = gossip.Create(config, auditor.NewAuditorHandlerBuilder(conf))
+			default:
+				log.Fatalf("Failed to start the QED agent: unknown role")
+			}
 			if err != nil {
 				log.Fatalf("Failed to start the QED agent: %v", err)
 			}
