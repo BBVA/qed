@@ -69,6 +69,7 @@ type Server struct {
 	tamperingServer *http.Server
 	profilingServer *http.Server
 	signer          sign.Signer
+	sender          *sender.Sender
 	agent           *gossip.Agent
 	agentsQueue     chan *protocol.Snapshot
 }
@@ -135,6 +136,9 @@ func NewServer(
 
 	// TODO: add queue size to config
 	server.agentsQueue = make(chan *protocol.Snapshot, 10000)
+
+	// Create sender
+	server.sender = sender.NewSender(server.agent, sender.DefaultConfig())
 
 	// Create RaftBalloon
 	server.raftBalloon, err = raftwal.NewRaftBalloon(raftPath, raftAddr, nodeID, store, server.agentsQueue)
@@ -225,7 +229,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		log.Debug("	* Starting QED agent.")
-		sender.Start(s.agent, s.agentsQueue)
+		s.sender.Start(s.agentsQueue)
 	}()
 
 	awaitTermSignal(s.Stop)
@@ -270,7 +274,8 @@ func (s *Server) Stop() {
 		log.Error(err)
 	}
 
-	log.Debugf("Closing QED agent queue...")
+	log.Debugf("Closing QED sender...")
+	s.sender.Stop()
 	close(s.agentsQueue)
 
 	log.Debugf("Stopping QED agent...")
