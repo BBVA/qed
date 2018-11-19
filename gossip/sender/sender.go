@@ -28,6 +28,7 @@ import (
 type Sender struct {
 	Agent  *gossip.Agent
 	Config *Config
+	signer sign.Signer
 	quit   chan bool
 }
 
@@ -45,10 +46,11 @@ func DefaultConfig() *Config {
 	}
 }
 
-func NewSender(a *gossip.Agent, c *Config) *Sender {
+func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
 	return &Sender{
 		Agent:  a,
 		Config: c,
+		signer: s,
 		quit:   make(chan bool),
 	}
 }
@@ -59,7 +61,7 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 	for {
 		select {
 		case <-ticker.C:
-			msg, _ := encode(getBatch(ch))
+			msg, _ := encode(s.getBatch(ch))
 
 			peers := s.Agent.GetPeers(1, gossip.AuditorType)
 			peers = append(peers, s.Agent.GetPeers(1, gossip.MonitorType)...)
@@ -91,7 +93,7 @@ func encode(msg protocol.BatchSnapshots) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func getBatch(ch chan *protocol.Snapshot) protocol.BatchSnapshots {
+func (s *Sender) getBatch(ch chan *protocol.Snapshot) protocol.BatchSnapshots {
 
 	var snapshot *protocol.Snapshot
 	var batch protocol.BatchSnapshots
@@ -108,7 +110,7 @@ func getBatch(ch chan *protocol.Snapshot) protocol.BatchSnapshots {
 			return batch
 		}
 
-		ss, err := doSign(sign.NewEd25519Signer(), snapshot)
+		ss, err := s.doSign(snapshot)
 		if err != nil {
 			log.Errorf("Failed signing message: %v", err)
 		}
@@ -122,9 +124,9 @@ func getBatch(ch chan *protocol.Snapshot) protocol.BatchSnapshots {
 
 }
 
-func doSign(signer sign.Signer, snapshot *protocol.Snapshot) (*protocol.SignedSnapshot, error) {
+func (s *Sender) doSign(snapshot *protocol.Snapshot) (*protocol.SignedSnapshot, error) {
 
-	signature, err := signer.Sign([]byte(fmt.Sprintf("%v", snapshot)))
+	signature, err := s.signer.Sign([]byte(fmt.Sprintf("%v", snapshot)))
 	if err != nil {
 		fmt.Println("Publisher: error signing commitment")
 		return nil, err

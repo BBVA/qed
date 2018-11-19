@@ -31,7 +31,6 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
-	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/testutils/rand"
 	assert "github.com/stretchr/testify/require"
@@ -118,8 +117,7 @@ func TestAdd(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	signer := sign.NewEd25519Signer()
-	handler := Add(fakeRaftBalloon{}, signer)
+	handler := Add(fakeRaftBalloon{})
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -132,32 +130,21 @@ func TestAdd(t *testing.T) {
 	}
 
 	// Check the body response
-	signedSnapshot := &protocol.SignedSnapshot{}
+	snapshot := &protocol.Snapshot{}
 
-	json.Unmarshal([]byte(rr.Body.String()), signedSnapshot)
+	json.Unmarshal([]byte(rr.Body.String()), snapshot)
 
-	if !bytes.Equal(signedSnapshot.Snapshot.HyperDigest, []byte{0x1}) {
-		t.Errorf("HyperDigest is not consistent: %s", signedSnapshot.Snapshot.HyperDigest)
+	if !bytes.Equal(snapshot.HyperDigest, []byte{0x1}) {
+		t.Errorf("HyperDigest is not consistent: %s", snapshot.HyperDigest)
 	}
 
-	if !bytes.Equal(signedSnapshot.Snapshot.HistoryDigest, []byte{0x0}) {
-		t.Errorf("HistoryDigest is not consistent %s", signedSnapshot.Snapshot.HistoryDigest)
+	if !bytes.Equal(snapshot.HistoryDigest, []byte{0x0}) {
+		t.Errorf("HistoryDigest is not consistent %s", snapshot.HistoryDigest)
 	}
 
-	if signedSnapshot.Snapshot.Version != 0 {
+	if snapshot.Version != 0 {
 		t.Errorf("Version is not consistent")
 	}
-
-	if !bytes.Equal(signedSnapshot.Snapshot.EventDigest, []byte("this is a sample event")) {
-		t.Errorf("Event is not consistent ")
-	}
-
-	signature, err := signer.Sign([]byte(fmt.Sprintf("%v", signedSnapshot.Snapshot)))
-
-	if !bytes.Equal(signedSnapshot.Signature, signature) {
-		t.Errorf("Signature is not consistent")
-	}
-
 }
 
 func TestMembership(t *testing.T) {
@@ -325,14 +312,13 @@ func newNodeBench(b *testing.B, id int) (*raftwal.RaftBalloon, func()) {
 }
 func BenchmarkApiAdd(b *testing.B) {
 
-	signer := sign.NewEd25519Signer()
 	r, clean := newNodeBench(b, 1)
 	defer clean()
 
 	err := r.Open(true)
 	assert.NoError(b, err)
 
-	handler := Add(r, signer)
+	handler := Add(r)
 
 	time.Sleep(2 * time.Second)
 	b.ResetTimer()
