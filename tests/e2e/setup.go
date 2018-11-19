@@ -53,9 +53,11 @@ func setup(id int, joinAddr string, t *testing.T) (scope.TestF, scope.TestF) {
 		httpAddr := fmt.Sprintf("127.0.0.1:850%d", id)
 		raftAddr := fmt.Sprintf("127.0.0.1:830%d", id)
 		mgmtAddr := fmt.Sprintf("127.0.0.1:840%d", id)
+		gossipAddr := fmt.Sprintf("127.0.0.1:860%d", id)
+		gossipJoinAddr := []string{}
 		dbPath := path + "data"
 		raftPath := path + "raft"
-		srv, err = server.NewServer(nodeId, httpAddr, raftAddr, mgmtAddr, joinAddr, dbPath, raftPath, keyFile, apiKey, true, true)
+		srv, err = server.NewServer(nodeId, httpAddr, raftAddr, mgmtAddr, joinAddr, dbPath, raftPath, gossipAddr, gossipJoinAddr, keyFile, apiKey, true, true)
 		if err != nil {
 			t.Fatalf("Unable to create a new server: %v", err)
 		}
