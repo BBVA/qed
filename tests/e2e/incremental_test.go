@@ -36,7 +36,7 @@ func TestIncrementalConsistency(t *testing.T) {
 	scenario("Add multiple events and verify consistency between two of them", func() {
 
 		events := make([]string, 10)
-		snapshots := make([]*protocol.SignedSnapshot, 10)
+		snapshots := make([]*protocol.Snapshot, 10)
 		var err error
 		var result *protocol.IncrementalResponse
 

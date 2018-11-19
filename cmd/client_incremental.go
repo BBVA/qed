@@ -62,8 +62,8 @@ func newIncrementalCommand(ctx *clientContext) *cobra.Command {
 			if verify {
 				sdBytes, _ := hex.DecodeString(startDigest)
 				edBytes, _ := hex.DecodeString(endDigest)
-				startSnapshot := &protocol.SignedSnapshot{&protocol.Snapshot{sdBytes, nil, start, nil}, nil}
-				endSnapshot := &protocol.SignedSnapshot{&protocol.Snapshot{edBytes, nil, end, nil}, nil}
+				startSnapshot := &protocol.Snapshot{sdBytes, nil, start, nil}
+				endSnapshot := &protocol.Snapshot{edBytes, nil, end, nil}
 
 				log.Infof("Verifying with commitments: \n\tStartDigest: %s\n\tEndDigest: %s\n",
 					startDigest, endDigest)
