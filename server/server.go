@@ -52,14 +52,16 @@ type Store interface {
 
 // Server encapsulates the data and login to start/stop a QED server
 type Server struct {
-	nodeID         string // unique name for node. If not set, fallback to hostname
-	httpAddr       string // HTTP server bind address
-	raftAddr       string // Raft communication bind address
-	mgmtAddr       string // Management server bind address
-	joinAddr       string // Comma-delimited list of nodes, through which a cluster can be joined (protocol://host:port)
-	dbPath         string // Path to storage directory
-	raftPath       string // Path to Raft storage directory
-	privateKeyPath string // Path to the private key file used to sign commitments
+	nodeID         string   // unique name for node. If not set, fallback to hostname
+	httpAddr       string   // HTTP server bind address
+	raftAddr       string   // Raft communication bind address
+	mgmtAddr       string   // Raft: management server bind address
+	joinAddr       string   // Comma-delimited list of nodes, through which a cluster can be joined (protocol://host:port)
+	dbPath         string   // Path to storage directory
+	raftPath       string   // Path to Raft storage directory
+	gossipAddr     string   // Gossip: management server bind address
+	gossipJoinAddr []string // Gossip: Comma-delimited list of nodes, through which a cluster can be joined (protocol://host:port)
+	privateKeyPath string   // Path to the private key file used to sign commitments
 	apiKey         string
 	bootstrap      bool // Set bootstrap to true when bringing up the first node as a master
 
@@ -83,6 +85,8 @@ func NewServer(
 	joinAddr string,
 	dbPath string,
 	raftPath string,
+	gossipAddr string,
+	gossipJoinAddr []string,
 	privateKeyPath string,
 	apiKey string,
 	enableProfiling bool,
@@ -95,15 +99,17 @@ func NewServer(
 	}
 
 	server := &Server{
-		nodeID:    nodeID,
-		httpAddr:  httpAddr,
-		raftAddr:  raftAddr,
-		mgmtAddr:  mgmtAddr,
-		joinAddr:  joinAddr,
-		dbPath:    dbPath,
-		raftPath:  raftPath,
-		apiKey:    apiKey,
-		bootstrap: bootstrap,
+		nodeID:         nodeID,
+		httpAddr:       httpAddr,
+		raftAddr:       raftAddr,
+		mgmtAddr:       mgmtAddr,
+		joinAddr:       joinAddr,
+		dbPath:         dbPath,
+		raftPath:       raftPath,
+		gossipAddr:     gossipAddr,
+		gossipJoinAddr: gossipJoinAddr,
+		apiKey:         apiKey,
+		bootstrap:      bootstrap,
 	}
 
 	log.Infof("ensuring directory at %s exists", dbPath)
@@ -129,9 +135,15 @@ func NewServer(
 	}
 
 	// Create gossip agent
-	server.agent, err = gossip.Create(gossip.DefaultConfig(), gossip.NewFakeDelegate())
+	config := gossip.DefaultConfig()
+	config.BindAddr = gossipAddr
+	server.agent, err = gossip.Create(config, gossip.NewFakeDelegate())
 	if err != nil {
 		return nil, err
+	}
+
+	if len(gossipJoinAddr) > 0 {
+		server.agent.Join(gossipJoinAddr)
 	}
 
 	// TODO: add queue size to config
