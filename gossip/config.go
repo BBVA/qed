@@ -19,9 +19,9 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-type NodeType int
+type AgentType int
 
-func (t NodeType) String() string {
+func (t AgentType) String() string {
 	switch t {
 	case AuditorType:
 		return "auditor"
@@ -36,7 +36,7 @@ func (t NodeType) String() string {
 	}
 }
 
-func NewNodeType(value string) NodeType {
+func NewNodeType(value string) AgentType {
 	switch value {
 	case "auditor":
 		return AuditorType
@@ -50,7 +50,7 @@ func NewNodeType(value string) NodeType {
 }
 
 const (
-	AuditorType NodeType = iota
+	AuditorType AgentType = iota
 	MonitorType
 	PublisherType
 	ServerType
@@ -78,7 +78,7 @@ type Config struct {
 	// is not set, Auditor will set it to the hostname of the running machine.
 	NodeName string
 
-	Role NodeType
+	Role AgentType
 
 	// BindAddr is the address that the Auditor agent's communication ports
 	// will bind to. Auditor will use this address to bind to for both TCP

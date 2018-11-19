@@ -39,7 +39,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-func Start(n *gossip.Node, ch chan *protocol.Snapshot) {
+func Start(n *gossip.Agent, ch chan *protocol.Snapshot) {
 	ticker := time.NewTicker(1 * time.Second)
 
 	for {

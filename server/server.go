@@ -69,7 +69,7 @@ type Server struct {
 	tamperingServer *http.Server
 	profilingServer *http.Server
 	signer          sign.Signer
-	agent           *gossip.Node
+	agent           *gossip.Agent
 	agentsQueue     chan *protocol.Snapshot
 }
 
