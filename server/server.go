@@ -137,7 +137,7 @@ func NewServer(
 	// Create gossip agent
 	config := gossip.DefaultConfig()
 	config.BindAddr = gossipAddr
-	server.agent, err = gossip.Create(config, gossip.NewFakeDelegate())
+	server.agent, err = gossip.Create(config, gossip.NewNopMessageHandler)
 	if err != nil {
 		return nil, err
 	}

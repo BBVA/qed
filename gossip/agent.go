@@ -28,6 +28,16 @@ type AgentMeta struct {
 	Role AgentType
 }
 
+func (m *AgentMeta) Encode() ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
+	if err := encoder.Encode(m); err != nil {
+		log.Errorf("Failed to encode agent metadata: %v", err)
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
 type Agent struct {
 	config     *Config
 	meta       *AgentMeta
@@ -41,7 +51,7 @@ type Agent struct {
 	state     AgentState
 }
 
-// AgentState is the state of the Node instance.
+// AgentState is the state of the Agent instance.
 type AgentState int
 
 const (
@@ -143,9 +153,22 @@ func (s MemberStatus) String() string {
 	}
 }
 
-type DelegateBuilder func(*Agent) memberlist.Delegate
+type MessageHandler interface {
+	HandleMsg([]byte)
+}
 
-func Create(conf *Config, delegate DelegateBuilder) (agent *Agent, err error) {
+type MessageHandlerBuilder func(*Agent) MessageHandler
+
+type NopMessageHanler struct {
+}
+
+func (h *NopMessageHanler) HandleMsg([]byte) {}
+
+func NewNopMessageHandler(*Agent) MessageHandler {
+	return nil // &NopMessageHanler{}
+}
+
+func Create(conf *Config, handler MessageHandlerBuilder) (agent *Agent, err error) {
 
 	meta := &AgentMeta{
 		Role: conf.Role,
@@ -181,7 +204,7 @@ func Create(conf *Config, delegate DelegateBuilder) (agent *Agent, err error) {
 	conf.MemberlistConfig.Logger = log.GetLogger()
 
 	// Configure delegates
-	conf.MemberlistConfig.Delegate = delegate(agent)
+	conf.MemberlistConfig.Delegate = newAgentDelegate(agent, handler(agent))
 	conf.MemberlistConfig.Events = &eventDelegate{agent}
 
 	agent.memberlist, err = memberlist.Create(conf.MemberlistConfig)
@@ -204,11 +227,11 @@ func Create(conf *Config, delegate DelegateBuilder) (agent *Agent, err error) {
 	return agent, nil
 }
 
-// Join asks the Node instance to join.
+// Join asks the Agent instance to join.
 func (a *Agent) Join(addrs []string) (int, error) {
 
 	if a.State() != AgentAlive {
-		return 0, fmt.Errorf("Node can't join after Leave or Shutdown")
+		return 0, fmt.Errorf("Agent can't join after Leave or Shutdown")
 	}
 
 	if len(addrs) > 0 {
@@ -245,7 +268,7 @@ func (a *Agent) Leave() error {
 	// timeout is how long we wait for the message to go out from our own
 	// queue, but this wait is for that message to propagate through the
 	// cluster. In particular, we want to stay up long enough to service
-	// any probes from other nodes before they learn about us leaving.
+	// any probes from other agents before they learn about us leaving.
 	time.Sleep(a.config.LeavePropagateDelay)
 
 	// Transition to Left only if we not already shutdown
@@ -258,12 +281,12 @@ func (a *Agent) Leave() error {
 
 }
 
-// Shutdown forcefully shuts down the Node instance, stopping all network
+// Shutdown forcefully shuts down the Agent instance, stopping all network
 // activity and background maintenance associated with the instance.
 //
 // This is not a graceful shutdown, and should be preceded by a call
-// to Leave. Otherwise, other nodes in the cluster will detect this node's
-// exit as a node failure.
+// to Leave. Otherwise, other agents in the cluster will detect this agent's
+// exit as a agent failure.
 //
 // It is safe to call this method multiple times.
 func (a *Agent) Shutdown() error {
@@ -276,7 +299,7 @@ func (a *Agent) Shutdown() error {
 	}
 
 	if a.state != AgentLeft {
-		log.Info("node: Shutdown without a Leave")
+		log.Info("agent: Shutdown without a Leave")
 	}
 
 	a.state = AgentShutdown
@@ -290,6 +313,14 @@ func (a *Agent) Shutdown() error {
 
 func (a *Agent) Memberlist() *memberlist.Memberlist {
 	return a.memberlist
+}
+
+func (a *Agent) Metadata() *AgentMeta {
+	return a.meta
+}
+
+func (a *Agent) Broadcasts() *memberlist.TransmitLimitedQueue {
+	return a.broadcasts
 }
 
 func (a *Agent) State() AgentState {
@@ -333,7 +364,7 @@ func (a *Agent) encodeMetadata() ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
 	if err := encoder.Encode(a.meta); err != nil {
-		log.Errorf("Failed to encode node metadata: %v", err)
+		log.Errorf("Failed to encode agent metadata: %v", err)
 		return nil, err
 	}
 	return buf.Bytes(), nil
@@ -344,7 +375,7 @@ func (a *Agent) decodeMetadata(buf []byte) (*AgentMeta, error) {
 	reader := bytes.NewReader(buf)
 	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
 	if err := decoder.Decode(meta); err != nil {
-		log.Errorf("Failed to decode node metadata: %v", err)
+		log.Errorf("Failed to decode agent metadata: %v", err)
 		return nil, err
 	}
 	return meta, nil
