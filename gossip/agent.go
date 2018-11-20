@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/memberlist"
 )
@@ -323,6 +324,11 @@ func (a *Agent) Broadcasts() *memberlist.TransmitLimitedQueue {
 	return a.broadcasts
 }
 
+func (a *Agent) GetAddrPort() (net.IP, uint16) {
+	n := a.memberlist.LocalNode()
+	return n.Addr, n.Port
+}
+
 func (a *Agent) State() AgentState {
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
@@ -388,17 +394,36 @@ func memberToNode(members []*Member) []*memberlist.Node {
 	return list
 }
 
-func (a *Agent) GetPeers(max int, agentType AgentType) []*memberlist.Node {
+func (a *Agent) GetPeers(max int, agentType AgentType, excluded *protocol.Source) []*memberlist.Node {
 
 	fullList := a.topology.Get(agentType)
-	if len(fullList) <= max {
-		return memberToNode(fullList)
+
+	var included []*Member
+	if excluded != nil && agentType.String() == excluded.Role {
+		included = excludePeers(fullList, excluded)
+	} else {
+		included = fullList
+	}
+
+	if len(included) <= max {
+		return memberToNode(included)
 	}
 
 	var filteredList []*Member
 	for i := 0; i < max; i++ {
-		filteredList = append(filteredList, fullList[i])
+		filteredList = append(filteredList, included[i])
 	}
 
 	return memberToNode(filteredList)
+}
+
+func excludePeers(peers []*Member, excluded *protocol.Source) []*Member {
+	result := make([]*Member, 0)
+	for _, p := range peers {
+		if bytes.Equal(p.Addr, excluded.Addr) && p.Port == excluded.Port {
+			continue
+		}
+		result = append(result, p)
+	}
+	return result
 }
