@@ -19,7 +19,13 @@ sleep 1s
 for i in `seq 1 $1`;
 do
 	xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/main.go agent -k key -l debug --bind 127.0.0.1:910$i --join $master --node auditor$i --role auditor" &
-	pids[${i}]=$!
+	pids+=($!)
+done 
+
+for i in `seq 1 $2`;
+do
+	xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/main.go agent -k key -l debug --bind 127.0.0.1:920$i --join $master --node monitor$i --role monitor" &
+	pids+=($!)
 done 
 
 for pid in ${pids[*]}; do
