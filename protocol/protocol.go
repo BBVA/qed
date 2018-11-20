@@ -17,12 +17,16 @@
 package protocol
 
 import (
+	"bytes"
+
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
+	"github.com/hashicorp/go-msgpack/codec"
 )
 
 // Event is the public struct that Add handler function uses to
@@ -54,6 +58,26 @@ type SignedSnapshot struct {
 type BatchSnapshots struct {
 	Snapshots []*SignedSnapshot
 	TTL       int
+}
+
+func (b *BatchSnapshots) Encode() ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
+	if err := encoder.Encode(b); err != nil {
+		log.Errorf("Failed to encode message: %v", err)
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (b *BatchSnapshots) Decode(msg []byte) error {
+	reader := bytes.NewReader(msg)
+	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
+	if err := decoder.Decode(b); err != nil {
+		log.Errorf("Failed to decode snapshots batch: %v", err)
+		return err
+	}
+	return nil
 }
 
 type MembershipResult struct {
