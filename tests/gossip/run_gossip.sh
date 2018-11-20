@@ -11,14 +11,14 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-master="127.0.0.1:9000"
-go run $GOPATH/src/github.com/bbva/qed/main.go agent  -k key -l silent --bind $master  --node 0 --role server &
+master="127.0.0.1:9100"
+go run $GOPATH/src/github.com/bbva/qed/main.go start  -k key -l debug  --node-id server0 --gossip-addr $master --raft-addr 127.0.0.1:9000 -y $HOME/.ssh/id_ed25519 &
 pids[0]=$!
 sleep 1s
 
 for i in `seq 1 $1`;
 do
-	xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/main.go agent -k key -l silent --bind 127.0.0.1:900$i --join $master --node $i --role monitor" &
+	xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/main.go agent -k key -l debug --bind 127.0.0.1:910$i --join $master --node auditor$i --role auditor" &
 	pids[${i}]=$!
 done 
 

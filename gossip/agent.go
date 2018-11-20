@@ -94,6 +94,7 @@ func NewTopology() *Topology {
 func (t *Topology) Update(m *Member) error {
 	t.Lock()
 	defer t.Unlock()
+	log.Debugf("Updating topology with member: %+v", m)
 	t.members[m.Role][m.Name] = m
 	return nil
 }
@@ -122,7 +123,6 @@ type Member struct {
 	Port   uint16
 	Role   AgentType
 	Status MemberStatus
-	Node   *memberlist.Node
 }
 
 // MemberStatus is the state that a member is in.
@@ -165,7 +165,7 @@ type NopMessageHanler struct {
 func (h *NopMessageHanler) HandleMsg([]byte) {}
 
 func NewNopMessageHandler(*Agent) MessageHandler {
-	return nil // &NopMessageHanler{}
+	return &NopMessageHanler{}
 }
 
 func Create(conf *Config, handler MessageHandlerBuilder) (agent *Agent, err error) {
@@ -339,7 +339,6 @@ func (a *Agent) getMember(peer *memberlist.Node) *Member {
 		Addr: net.IP(peer.Addr),
 		Port: peer.Port,
 		Role: meta.Role,
-		Node: peer,
 	}
 }
 
