@@ -1,13 +1,14 @@
 package auditor
 
 import (
-	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
-	"github.com/hashicorp/go-msgpack/codec"
-	"github.com/hashicorp/memberlist"
 )
 
 type Auditor struct {
@@ -35,14 +36,16 @@ func NewAuditorHandlerBuilder(c *Config) gossip.MessageHandlerBuilder {
 }
 
 func (a *Auditor) HandleMsg(msg []byte) {
-
-	batch, err := a.decode(msg)
+	var batch protocol.BatchSnapshots
+	err := batch.Decode(msg)
 	if err != nil {
 		log.Errorf("Unable to decode message: %v", err)
 		return
 	}
 
-	log.Infof("Batch received, TTL: %d: %v", batch.TTL, *batch)
+	log.Infof("Batch received, TTL: %d: %v", batch.TTL, batch)
+
+	a.Process(&batch)
 
 	if batch.TTL <= 0 {
 		return
@@ -53,34 +56,28 @@ func (a *Auditor) HandleMsg(msg []byte) {
 	peers = append(peers, a.Agent.GetPeers(2, gossip.PublisherType)...)
 
 	batch.TTL--
-	newBatch, _ := encode(batch)
+	newMsg, _ := batch.Encode()
 
 	for _, peer := range peers {
-		err := a.Agent.Memberlist().SendReliable(&memberlist.Node{Addr: peer.Addr, Port: peer.Port}, newBatch)
+		err := a.Agent.Memberlist().SendReliable(peer, newMsg)
 		if err != nil {
 			log.Errorf("Failed send message: %v", err)
 		}
 	}
 
 }
+func (a *Auditor) Process(b *protocol.BatchSnapshots) {
+	for i := 0; i < len(b.Snapshots); i++ {
+		res, err := http.Get(fmt.Sprintf("http://127.0.0.1:8888/?nodeType=auditor&id=%d", b.Snapshots[0].Snapshot.Version))
+		if err != nil || res == nil {
+			log.Debugf("Error contacting service with error %v", err)
+		}
+		// to reuse connections we need to do this
+		io.Copy(ioutil.Discard, res.Body)
+		res.Body.Close()
 
-func (a *Auditor) decode(buf []byte) (*protocol.BatchSnapshots, error) {
-	batch := &protocol.BatchSnapshots{}
-	reader := bytes.NewReader(buf)
-	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
-	if err := decoder.Decode(batch); err != nil {
-		log.Errorf("Failed to decode snapshots batch: %v", err)
-		return nil, err
+		// time.Sleep(1 * time.Second)
 	}
-	return batch, nil
-}
 
-func encode(msg *protocol.BatchSnapshots) ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-	if err := encoder.Encode(msg); err != nil {
-		log.Errorf("Failed to encode message: %v", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	log.Debugf("process(): Processed %v elements of batch id %v", len(b.Snapshots), b.Snapshots[0].Snapshot.Version)
 }
