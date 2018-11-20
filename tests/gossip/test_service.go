@@ -77,7 +77,7 @@ func main() {
 			select {
 			case <-ticker.C:
 				c := atomic.LoadUint64(&count)
-				fmt.Println("Reuqest per second: ", c/2)
+				fmt.Println("Request per second: ", c/2)
 				s.Print()
 				atomic.StoreUint64(&count, 0)
 			}

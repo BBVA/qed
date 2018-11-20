@@ -68,9 +68,9 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 			log.Debugf("Encoding batch: %+v", batch)
 			msg, _ := batch.Encode()
 
-			peers := s.Agent.GetPeers(1, gossip.AuditorType)
-			peers = append(peers, s.Agent.GetPeers(1, gossip.MonitorType)...)
-			peers = append(peers, s.Agent.GetPeers(1, gossip.PublisherType)...)
+			peers := s.Agent.GetPeers(2, gossip.AuditorType, nil)
+			peers = append(peers, s.Agent.GetPeers(2, gossip.MonitorType, nil)...)
+			peers = append(peers, s.Agent.GetPeers(2, gossip.PublisherType, nil)...)
 			log.Debugf("Peers selected: %+v", peers)
 
 			for _, peer := range peers {
@@ -113,6 +113,12 @@ func (s *Sender) getBatch(ch chan *protocol.Snapshot) *protocol.BatchSnapshots {
 	var counter int = 0
 	batch.Snapshots = make([]*protocol.SignedSnapshot, 0)
 	batch.TTL = s.Config.TTL
+	addr, port := s.Agent.GetAddrPort()
+	batch.From = &protocol.Source{
+		Addr: addr,
+		Port: port,
+		Role: s.Agent.Metadata().Role.String(),
+	}
 
 	for {
 		select {

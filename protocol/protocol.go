@@ -18,6 +18,7 @@ package protocol
 
 import (
 	"bytes"
+	"net"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
@@ -58,6 +59,13 @@ type SignedSnapshot struct {
 type BatchSnapshots struct {
 	Snapshots []*SignedSnapshot
 	TTL       int
+	From      *Source
+}
+
+type Source struct {
+	Addr net.IP
+	Port uint16
+	Role string
 }
 
 func (b *BatchSnapshots) Encode() ([]byte, error) {
