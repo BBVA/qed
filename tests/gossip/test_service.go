@@ -14,6 +14,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,36 +26,50 @@ import (
 
 type stats struct {
 	sync.Mutex
-	batch []int
+	batch map[string][]int
 }
 
-func (s *stats) Add(i, v int) {
+func (s *stats) Add(nodeType string, id, v int) {
 	s.Lock()
 	defer s.Unlock()
-	s.batch[i] = s.batch[i] + v
+	if s.batch[nodeType] == nil {
+		s.batch[nodeType] = make([]int, 10)
+	}
+	s.batch[nodeType][id] += v
 }
 
-func (s stats) Get(i int) int {
+func (s stats) Get(nodeType string, id int) int {
 	s.Lock()
 	defer s.Unlock()
-	return s.batch[i]
+	return s.batch[nodeType][id]
+}
+
+func (s stats) Print() {
+	s.Lock()
+	defer s.Unlock()
+	b, err := json.MarshalIndent(s.batch, "", "  ")
+	if err == nil {
+		fmt.Println(string(b))
+	}
+	return
 }
 
 var count uint64
 var s stats
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	key := r.URL.Path[1:]
-	i, _ := strconv.Atoi(key)
+	q := r.URL.Query()
+	nodeType := q.Get("nodeType")
+	id, _ := strconv.Atoi(q.Get("id"))
 
-	s.Add(i, 1)
+	s.Add(nodeType, id, 1)
 
 	atomic.AddUint64(&count, 1)
 }
 
 func main() {
 
-	s.batch = make([]int, 10000)
+	s.batch = make(map[string][]int, 0)
 
 	go func() {
 		ticker := time.NewTicker(2 * time.Second)
@@ -63,16 +78,11 @@ func main() {
 			case <-ticker.C:
 				c := atomic.LoadUint64(&count)
 				fmt.Println("Reuqest per second: ", c/2)
-				for i := 0; i < len(s.batch); i++ {
-					if s.batch[i] == 0 {
-						break
-					}
-					fmt.Println("Batch ", i, " visited ", s.Get(i))
-				}
+				s.Print()
 				atomic.StoreUint64(&count, 0)
 			}
 		}
 	}()
 	http.HandleFunc("/", handler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe("127.0.0.1:8888", nil))
 }
