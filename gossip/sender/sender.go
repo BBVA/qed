@@ -23,7 +23,6 @@ import (
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/sign"
 	"github.com/hashicorp/go-msgpack/codec"
-	"github.com/hashicorp/memberlist"
 )
 
 type Sender struct {
@@ -67,7 +66,7 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 				continue
 			}
 			log.Debugf("Encoding batch: %+v", batch)
-			msg, _ := encode(batch)
+			msg, _ := batch.Encode()
 
 			peers := s.Agent.GetPeers(1, gossip.AuditorType)
 			peers = append(peers, s.Agent.GetPeers(1, gossip.MonitorType)...)
@@ -77,7 +76,7 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 			for _, peer := range peers {
 				log.Debugf("%+v", peer)
 				log.Debugf("Sending batch to peer: %s:%d", peer.Addr, peer.Port)
-				err := s.Agent.Memberlist().SendReliable(&memberlist.Node{Addr: peer.Addr, Port: peer.Port}, msg)
+				err := s.Agent.Memberlist().SendReliable(peer, msg)
 				if err != nil {
 					log.Errorf("Failed send message: %v", err)
 				}
