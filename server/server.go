@@ -137,6 +137,7 @@ func NewServer(
 	// Create gossip agent
 	config := gossip.DefaultConfig()
 	config.BindAddr = gossipAddr
+	config.Role = gossip.ServerType
 	server.agent, err = gossip.Create(config, gossip.NewNopMessageHandler)
 	if err != nil {
 		return nil, err
@@ -233,7 +234,7 @@ func (s *Server) Start() error {
 	log.Debugf(" ready on %s and %s\n", s.httpAddr, s.mgmtAddr)
 
 	if !s.bootstrap {
-		log.Debug("	* Joining existen cluster QED MGMT HTTP server in addr: ", s.mgmtAddr)
+		log.Debug("	* Joining existent cluster QED MGMT HTTP server in addr: ", s.mgmtAddr)
 		if err := join(s.joinAddr, s.raftAddr, s.nodeID); err != nil {
 			log.Fatalf("failed to join node at %s: %s", s.joinAddr, err.Error())
 		}

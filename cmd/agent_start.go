@@ -44,6 +44,7 @@ func newAgentStartCommand() *cobra.Command {
 			config.BindAddr = bindAddr
 			config.AdvertiseAddr = advertiseAddr
 			config.Role = gossip.NewNodeType(role)
+			config.EnableCompression = true
 
 			var agent *gossip.Agent
 			var err error

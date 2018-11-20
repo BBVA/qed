@@ -23,6 +23,7 @@ import (
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/sign"
 	"github.com/hashicorp/go-msgpack/codec"
+	"github.com/hashicorp/memberlist"
 )
 
 type Sender struct {
@@ -61,14 +62,22 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 	for {
 		select {
 		case <-ticker.C:
-			msg, _ := encode(s.getBatch(ch))
+			batch := s.getBatch(ch)
+			if batch == nil {
+				continue
+			}
+			log.Debugf("Encoding batch: %+v", batch)
+			msg, _ := encode(batch)
 
 			peers := s.Agent.GetPeers(1, gossip.AuditorType)
 			peers = append(peers, s.Agent.GetPeers(1, gossip.MonitorType)...)
 			peers = append(peers, s.Agent.GetPeers(1, gossip.PublisherType)...)
+			log.Debugf("Peers selected: %+v", peers)
 
 			for _, peer := range peers {
-				err := s.Agent.Memberlist().SendReliable(peer.Node, msg)
+				log.Debugf("%+v", peer)
+				log.Debugf("Sending batch to peer: %s:%d", peer.Addr, peer.Port)
+				err := s.Agent.Memberlist().SendReliable(&memberlist.Node{Addr: peer.Addr, Port: peer.Port}, msg)
 				if err != nil {
 					log.Errorf("Failed send message: %v", err)
 				}
@@ -83,7 +92,7 @@ func (s Sender) Stop() {
 	s.quit <- true
 }
 
-func encode(msg protocol.BatchSnapshots) ([]byte, error) {
+func encode(msg *protocol.BatchSnapshots) ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
 	if err := encoder.Encode(msg); err != nil {
@@ -93,21 +102,25 @@ func encode(msg protocol.BatchSnapshots) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (s *Sender) getBatch(ch chan *protocol.Snapshot) protocol.BatchSnapshots {
+func (s *Sender) getBatch(ch chan *protocol.Snapshot) *protocol.BatchSnapshots {
+
+	if len(ch) == 0 {
+		return nil
+	}
 
 	var snapshot *protocol.Snapshot
 	var batch protocol.BatchSnapshots
 	var batchSize int = 100
 	var counter int = 0
 	batch.Snapshots = make([]*protocol.SignedSnapshot, 0)
-	batch.TTL = 3
+	batch.TTL = s.Config.TTL
 
 	for {
 		select {
 		case snapshot = <-ch:
 			counter++
 		default:
-			return batch
+			return &batch
 		}
 
 		ss, err := s.doSign(snapshot)
@@ -117,7 +130,7 @@ func (s *Sender) getBatch(ch chan *protocol.Snapshot) protocol.BatchSnapshots {
 		batch.Snapshots = append(batch.Snapshots, ss)
 
 		if counter == batchSize {
-			return batch
+			return &batch
 		}
 
 	}
