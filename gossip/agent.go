@@ -380,10 +380,19 @@ func (a *Agent) decodeMetadata(buf []byte) (*AgentMeta, error) {
 	return meta, nil
 }
 
-func (a *Agent) GetPeers(max int, agentType AgentType) []*Member {
+func memberToNode(members []*Member) []*memberlist.Node {
+	list := make([]*memberlist.Node, 0)
+	for _, m := range members {
+		list = append(list, &memberlist.Node{Addr: m.Addr, Port: m.Port})
+	}
+	return list
+}
+
+func (a *Agent) GetPeers(max int, agentType AgentType) []*memberlist.Node {
+
 	fullList := a.topology.Get(agentType)
 	if len(fullList) <= max {
-		return fullList
+		return memberToNode(fullList)
 	}
 
 	var filteredList []*Member
@@ -391,5 +400,5 @@ func (a *Agent) GetPeers(max int, agentType AgentType) []*Member {
 		filteredList = append(filteredList, fullList[i])
 	}
 
-	return filteredList
+	return memberToNode(filteredList)
 }
