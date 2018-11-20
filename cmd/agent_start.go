@@ -23,6 +23,7 @@ import (
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/gossip/auditor"
+	"github.com/bbva/qed/gossip/monitor"
 	"github.com/bbva/qed/log"
 	"github.com/spf13/cobra"
 )
@@ -51,6 +52,8 @@ func newAgentStartCommand() *cobra.Command {
 			switch config.Role {
 			case gossip.PublisherType:
 			case gossip.MonitorType:
+				conf := monitor.DefaultConfig()
+				agent, err = gossip.Create(config, monitor.NewMonitorHandlerBuilder(conf))
 			case gossip.AuditorType:
 				conf := auditor.DefaultConfig()
 				agent, err = gossip.Create(config, auditor.NewAuditorHandlerBuilder(conf))
