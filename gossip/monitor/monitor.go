@@ -51,11 +51,17 @@ func (m *Monitor) HandleMsg(msg []byte) {
 		return
 	}
 
-	peers := m.Agent.GetPeers(2, gossip.AuditorType)
-	peers = append(peers, m.Agent.GetPeers(2, gossip.MonitorType)...)
-	peers = append(peers, m.Agent.GetPeers(2, gossip.PublisherType)...)
+	peers := m.Agent.GetPeers(2, gossip.AuditorType, batch.From)
+	peers = append(peers, m.Agent.GetPeers(2, gossip.MonitorType, batch.From)...)
+	peers = append(peers, m.Agent.GetPeers(2, gossip.PublisherType, batch.From)...)
 
 	batch.TTL--
+	addr, port := m.Agent.GetAddrPort()
+	batch.From = &protocol.Source{
+		Addr: addr,
+		Port: port,
+		Role: m.Agent.Metadata().Role.String(),
+	}
 	newMsg, _ := batch.Encode()
 
 	for _, peer := range peers {
