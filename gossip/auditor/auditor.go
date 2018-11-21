@@ -51,17 +51,23 @@ func (a *Auditor) HandleMsg(msg []byte) {
 		return
 	}
 
-	peers := a.Agent.GetPeers(2, gossip.AuditorType, batch.From)
-	peers = append(peers, a.Agent.GetPeers(2, gossip.MonitorType, batch.From)...)
-	peers = append(peers, a.Agent.GetPeers(2, gossip.PublisherType, batch.From)...)
-
-	batch.TTL--
+	// Exclude origin and myself from peer list to send message.
+	var excludedPeers []*protocol.Source
+	excludedPeers = append(excludedPeers, batch.From)
 	addr, port := a.Agent.GetAddrPort()
-	batch.From = &protocol.Source{
+	myself := &protocol.Source{
 		Addr: addr,
 		Port: port,
 		Role: a.Agent.Metadata().Role.String(),
 	}
+	excludedPeers = append(excludedPeers, myself)
+
+	peers := a.Agent.GetPeers(2, gossip.AuditorType, excludedPeers)
+	peers = append(peers, a.Agent.GetPeers(2, gossip.MonitorType, excludedPeers)...)
+	peers = append(peers, a.Agent.GetPeers(2, gossip.PublisherType, excludedPeers)...)
+
+	batch.TTL--
+	batch.From = myself
 	newMsg, _ := batch.Encode()
 
 	for _, peer := range peers {
