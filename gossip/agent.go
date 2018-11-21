@@ -394,36 +394,42 @@ func memberToNode(members []*Member) []*memberlist.Node {
 	return list
 }
 
-func (a *Agent) GetPeers(max int, agentType AgentType, excluded *protocol.Source) []*memberlist.Node {
-
+func (a *Agent) GetPeers(max int, agentType AgentType, excluded []*protocol.Source) []*memberlist.Node {
 	fullList := a.topology.Get(agentType)
+	fullList = excludePeers(fullList, excluded)
 
-	var included []*Member
-	if excluded != nil && agentType.String() == excluded.Role {
-		included = excludePeers(fullList, excluded)
-	} else {
-		included = fullList
+	if len(fullList) <= max {
+		return memberToNode(fullList)
 	}
 
-	if len(included) <= max {
-		return memberToNode(included)
-	}
-
-	var filteredList []*Member
+	var randomPeers []*Member
 	for i := 0; i < max; i++ {
-		filteredList = append(filteredList, included[i])
+		randomPeers = append(randomPeers, fullList[i])
 	}
 
-	return memberToNode(filteredList)
+	return memberToNode(randomPeers)
 }
 
-func excludePeers(peers []*Member, excluded *protocol.Source) []*Member {
-	result := make([]*Member, 0)
-	for _, p := range peers {
-		if bytes.Equal(p.Addr, excluded.Addr) && p.Port == excluded.Port {
-			continue
-		}
-		result = append(result, p)
+func excludePeers(peers []*Member, excluded []*protocol.Source) []*Member {
+	if excluded == nil {
+		return peers
 	}
-	return result
+
+	filteredList := make([]*Member, 0)
+	var exclude bool
+
+	for _, p := range peers {
+		exclude = false
+		for _, e := range excluded {
+			if bytes.Equal(p.Addr, e.Addr) && p.Port == e.Port {
+				exclude = true
+			}
+		}
+
+		if !exclude {
+			filteredList = append(filteredList, p)
+		}
+	}
+
+	return filteredList
 }
