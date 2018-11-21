@@ -111,7 +111,7 @@ func NewServer(
 	}
 
 	// Open badger store
-	store, err := badger.NewBadgerStore(dbPath)
+	store, err := badger.NewBadgerStoreOpts(&badger.Options{Path: dbPath, ValueLogGC: true})
 	if err != nil {
 		return nil, err
 	}
