@@ -10,6 +10,8 @@ github.com/bbva/raft-badger v0.0.0-20180802070646-9b665fa3e1ff h1:bkOdo7w7F6eieF
 github.com/bbva/raft-badger v0.0.0-20180802070646-9b665fa3e1ff/go.mod h1:hy/EU1/708ip3lfr52RzJbSRc6RCtrNpnuTDrIMolr4=
 github.com/bbva/raft-badger v0.1.0 h1:2Rs2cE84pYaqE4IqI6ZZr/wXUvetZ8jV4doOH0Yaw8k=
 github.com/bbva/raft-badger v0.1.0/go.mod h1:/XINu34Us6PULTVQn0D6I/WtniWHHjut9lnsfFVECDA=
+github.com/bbva/raft-badger v0.1.1 h1:v0BlEP2glTd3o1U4ShD4HtyGc08PXt4gcEBdO6Fh7Oc=
+github.com/bbva/raft-badger v0.1.1/go.mod h1:KqKb1IrW6hsgFSzXTavxddJH+5E3TmDxBbFhitk0vpY=
 github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
 github.com/coreos/bbolt v1.3.0 h1:HIgH5xUWXT914HCI671AxuTTqjj64UOFr7pHn48LUTI=

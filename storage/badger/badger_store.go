@@ -20,37 +20,101 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
-	"log"
+
+	"time"
 
 	b "github.com/dgraph-io/badger"
 	bo "github.com/dgraph-io/badger/options"
 	"github.com/dgraph-io/badger/protos"
 	"github.com/dgraph-io/badger/y"
 
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
 type BadgerStore struct {
-	db *b.DB
+	db                  *b.DB
+	vlogTicker          *time.Ticker // runs every 1m, check size of vlog and run GC conditionally.
+	mandatoryVlogTicker *time.Ticker // runs every 10m, we always run vlog GC.
+}
+
+// Options contains all the configuration used to open the Badger db
+type Options struct {
+	// Path is the directory path to the Badger db to use.
+	Path string
+
+	// BadgerOptions contains any specific Badger options you might
+	// want to specify.
+	BadgerOptions *b.Options
+
+	// NoSync causes the database to skip fsync calls after each
+	// write to the log. This is unsafe, so it should be used
+	// with caution.
+	NoSync bool
+
+	// ValueLogGC enables a periodic goroutine that does a garbage
+	// collection of the value log while the underlying Badger is online.
+	ValueLogGC bool
+
+	// GCInterval is the interval between conditionally running the garbage
+	// collection process, based on the size of the vlog. By default, runs every 1m.
+	GCInterval time.Duration
+
+	// GCInterval is the interval between mandatory running the garbage
+	// collection process. By default, runs every 10m.
+	MandatoryGCInterval time.Duration
+
+	// GCThreshold sets threshold in bytes for the vlog size to be included in the
+	// garbage collection cycle. By default, 1GB.
+	GCThreshold int64
 }
 
 func NewBadgerStore(path string) (*BadgerStore, error) {
-	opts := b.DefaultOptions
-	opts.TableLoadingMode = bo.MemoryMap
-	opts.ValueLogLoadingMode = bo.FileIO
-	opts.Dir = path
-	opts.ValueDir = path
-	opts.SyncWrites = false
-
-	return NewBadgerStoreOpts(path, opts)
+	return NewBadgerStoreOpts(&Options{Path: path})
 }
 
-func NewBadgerStoreOpts(path string, opts b.Options) (*BadgerStore, error) {
-	db, err := b.Open(opts)
+func NewBadgerStoreOpts(opts *Options) (*BadgerStore, error) {
+
+	var bOpts b.Options
+	if bOpts = b.DefaultOptions; opts.BadgerOptions != nil {
+		bOpts = *opts.BadgerOptions
+	}
+
+	bOpts.TableLoadingMode = bo.MemoryMap
+	bOpts.ValueLogLoadingMode = bo.FileIO
+	bOpts.Dir = opts.Path
+	bOpts.ValueDir = opts.Path
+	bOpts.SyncWrites = false
+
+	db, err := b.Open(bOpts)
 	if err != nil {
 		return nil, err
 	}
-	return &BadgerStore{db}, nil
+
+	store := &BadgerStore{db: db}
+	// Start GC routine
+	if opts.ValueLogGC {
+
+		var gcInterval time.Duration
+		var mandatoryGCInterval time.Duration
+		var threshold int64
+
+		if gcInterval = 1 * time.Minute; opts.GCInterval != 0 {
+			gcInterval = opts.GCInterval
+		}
+		if mandatoryGCInterval = 10 * time.Minute; opts.MandatoryGCInterval != 0 {
+			mandatoryGCInterval = opts.MandatoryGCInterval
+		}
+		if threshold = int64(1 << 30); opts.GCThreshold != 0 {
+			threshold = opts.GCThreshold
+		}
+
+		store.vlogTicker = time.NewTicker(gcInterval)
+		store.mandatoryVlogTicker = time.NewTicker(mandatoryGCInterval)
+		go store.runVlogGC(db, threshold)
+	}
+
+	return store, nil
 }
 
 func (s BadgerStore) Mutate(mutations []*storage.Mutation) error {
@@ -196,6 +260,12 @@ func (s BadgerStore) GetAll(prefix byte) storage.KVPairReader {
 }
 
 func (s BadgerStore) Close() error {
+	if s.vlogTicker != nil {
+		s.vlogTicker.Stop()
+	}
+	if s.mandatoryVlogTicker != nil {
+		s.mandatoryVlogTicker.Stop()
+	}
 	return s.db.Close()
 }
 
@@ -237,7 +307,7 @@ func (s *BadgerStore) Backup(w io.Writer, until uint64) error {
 			}
 			val, err := item.Value()
 			if err != nil {
-				log.Printf("Key [%x]. Error while fetching value [%v]\n", item.Key(), err)
+				log.Infof("Key [%x]. Error while fetching value [%v]\n", item.Key(), err)
 				continue
 			}
 
@@ -281,4 +351,33 @@ func (s *BadgerStore) GetLastVersion() (uint64, error) {
 		return nil
 	})
 	return version, err
+}
+
+func (b *BadgerStore) runVlogGC(db *b.DB, threshold int64) {
+	// Get initial size on start.
+	_, lastVlogSize := db.Size()
+
+	runGC := func() {
+		var err error
+		for err == nil {
+			// If a GC is successful, immediately run it again.
+			log.Debug("VlogGC task: running...")
+			err = db.RunValueLogGC(0.7)
+		}
+		log.Debug("VlogGC task: done.")
+		_, lastVlogSize = db.Size()
+	}
+
+	for {
+		select {
+		case <-b.vlogTicker.C:
+			_, currentVlogSize := db.Size()
+			if currentVlogSize < lastVlogSize+threshold {
+				continue
+			}
+			runGC()
+		case <-b.mandatoryVlogTicker.C:
+			runGC()
+		}
+	}
 }

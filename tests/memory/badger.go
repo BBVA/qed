@@ -35,6 +35,7 @@ import (
 )
 
 func newBadgerTest(path string) (*badger.BadgerStore, error) {
+
 	opts := b.DefaultOptions
 	opts.Dir = path
 	opts.ValueDir = path
@@ -52,7 +53,8 @@ func newBadgerTest(path string) (*badger.BadgerStore, error) {
 
 	opts.SyncWrites = false
 
-	return badger.NewBadgerStoreOpts(path, opts)
+	storeOptions := &badger.Options{Path: path, BadgerOptions: &opts}
+	return badger.NewBadgerStoreOpts(storeOptions)
 }
 
 func cleanup(db *b.DB) {
