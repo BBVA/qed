@@ -1,7 +1,7 @@
 module github.com/bbva/qed
 
 require (
-	github.com/bbva/raft-badger v0.1.0
+	github.com/bbva/raft-badger v0.1.1
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/coreos/bbolt v1.3.0
 	github.com/dgraph-io/badger v1.5.4
