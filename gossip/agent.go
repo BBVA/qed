@@ -13,173 +13,50 @@
 package gossip
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 	"sync"
 	"time"
 
+	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
-	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/memberlist"
 )
 
-type AgentMeta struct {
-	Role AgentType
-}
-
-func (m *AgentMeta) Encode() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-	if err := encoder.Encode(m); err != nil {
-		log.Errorf("Failed to encode agent metadata: %v", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
+type Alert struct {
+	id  string
+	msg string
 }
 
 type Agent struct {
-	config     *Config
-	meta       *AgentMeta
+	config *Config
+	Self   *member.Peer
+
 	memberlist *memberlist.Memberlist
 	broadcasts *memberlist.TransmitLimitedQueue
 
-	topology     *Topology
-	topologyLock sync.RWMutex
+	Topology *Topology
 
 	stateLock sync.Mutex
-	state     AgentState
+
+	processors []Processor
+
+	In     chan *protocol.BatchSnapshots
+	Out    chan *protocol.BatchSnapshots
+	Alerts chan Alert
+	quit   chan bool
 }
 
-// AgentState is the state of the Agent instance.
-type AgentState int
-
-const (
-	AgentAlive AgentState = iota
-	AgentLeaving
-	AgentLeft
-	AgentShutdown
-)
-
-func (s AgentState) String() string {
-	switch s {
-	case AgentAlive:
-		return "alive"
-	case AgentLeaving:
-		return "leaving"
-	case AgentLeft:
-		return "left"
-	case AgentShutdown:
-		return "shutdown"
-	default:
-		return "unknown"
-	}
-}
-
-type Topology struct {
-	members map[AgentType]map[string]*Member
-	sync.Mutex
-}
-
-func NewTopology() *Topology {
-	members := make(map[AgentType]map[string]*Member)
-	for i := 0; i < int(MaxType); i++ {
-		members[AgentType(i)] = make(map[string]*Member)
-	}
-	return &Topology{
-		members: members,
-	}
-}
-
-func (t *Topology) Update(m *Member) error {
-	t.Lock()
-	defer t.Unlock()
-	log.Debugf("Updating topology with member: %+v", m)
-	t.members[m.Role][m.Name] = m
-	return nil
-}
-
-func (t *Topology) Delete(m *Member) error {
-	t.Lock()
-	defer t.Unlock()
-	delete(t.members[m.Role], m.Name)
-	return nil
-}
-
-func (t *Topology) Get(kind AgentType) []*Member {
-	t.Lock()
-	defer t.Unlock()
-	members := make([]*Member, 0)
-	for _, member := range t.members[kind] {
-		members = append(members, member)
-	}
-	return members
-}
-
-// Member is a single member of the gossip cluster.
-type Member struct {
-	Name   string
-	Addr   net.IP
-	Port   uint16
-	Role   AgentType
-	Status MemberStatus
-}
-
-// MemberStatus is the state that a member is in.
-type MemberStatus int
-
-const (
-	StatusNone MemberStatus = iota
-	StatusAlive
-	StatusLeaving
-	StatusLeft
-	StatusFailed
-)
-
-func (s MemberStatus) String() string {
-	switch s {
-	case StatusNone:
-		return "none"
-	case StatusAlive:
-		return "alive"
-	case StatusLeaving:
-		return "leaving"
-	case StatusLeft:
-		return "left"
-	case StatusFailed:
-		return "failed"
-	default:
-		panic(fmt.Sprintf("unknown MemberStatus: %d", s))
-	}
-}
-
-type MessageHandler interface {
-	HandleMsg([]byte)
-}
-
-type MessageHandlerBuilder func(*Agent) MessageHandler
-
-type NopMessageHanler struct {
-}
-
-func (h *NopMessageHanler) HandleMsg([]byte) {}
-
-func NewNopMessageHandler(*Agent) MessageHandler {
-	return &NopMessageHanler{}
-}
-
-func Create(conf *Config, handler MessageHandlerBuilder) (agent *Agent, err error) {
-
-	meta := &AgentMeta{
-		Role: conf.Role,
-	}
+func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 
 	agent = &Agent{
 		config:   conf,
-		meta:     meta,
-		topology: NewTopology(),
-		state:    AgentAlive,
+		Topology: NewTopology(),
+		In:       make(chan *protocol.BatchSnapshots, 1000),
+		Out:      make(chan *protocol.BatchSnapshots, 1000),
+		Alerts:   make(chan Alert, 100),
+		quit:     make(chan bool),
 	}
 
 	bindIP, bindPort, err := conf.AddrParts(conf.BindAddr)
@@ -205,7 +82,7 @@ func Create(conf *Config, handler MessageHandlerBuilder) (agent *Agent, err erro
 	conf.MemberlistConfig.Logger = log.GetLogger()
 
 	// Configure delegates
-	conf.MemberlistConfig.Delegate = newAgentDelegate(agent, handler(agent))
+	conf.MemberlistConfig.Delegate = newAgentDelegate(agent)
 	conf.MemberlistConfig.Events = &eventDelegate{agent}
 
 	agent.memberlist, err = memberlist.Create(conf.MemberlistConfig)
@@ -214,8 +91,8 @@ func Create(conf *Config, handler MessageHandlerBuilder) (agent *Agent, err erro
 	}
 
 	// Print local member info
-	localNode := agent.memberlist.LocalNode()
-	log.Infof("Local member %s:%d", localNode.Addr, localNode.Port)
+	agent.Self = member.ParsePeer(agent.memberlist.LocalNode())
+	log.Infof("Local member %+v", agent.Self)
 
 	// Set broadcast queue
 	agent.broadcasts = &memberlist.TransmitLimitedQueue{
@@ -228,10 +105,66 @@ func Create(conf *Config, handler MessageHandlerBuilder) (agent *Agent, err erro
 	return agent, nil
 }
 
+func (a *Agent) Start() {
+
+	outTicker := time.NewTimer(2 * time.Second)
+	alertTicker := time.NewTimer(1 * time.Second)
+
+	for {
+		select {
+		case batch := <-a.In:
+			for _, p := range a.processors {
+				go p.Process(batch)
+			}
+
+			a.Out <- batch
+		case <-outTicker.C:
+			a.sendOutQueue()
+		case <-alertTicker.C:
+			a.processAlertQueue()
+		case <-a.quit:
+			return
+		}
+
+	}
+
+}
+
+func (a *Agent) processAlertQueue() {
+
+}
+
+func (a *Agent) sendOutQueue() {
+	var batch *protocol.BatchSnapshots
+	for {
+		select {
+		case batch = <-a.Out:
+		default:
+			return
+		}
+
+		if batch.TTL <= 0 {
+			continue
+		}
+
+		batch.TTL--
+
+		for _, dst := range a.route(batch.From) {
+			msg, _ := batch.Encode()
+			a.memberlist.SendReliable(dst, msg)
+		}
+	}
+
+}
+
+func (a Agent) route(s *member.Peer) []*memberlist.Node {
+	return nil
+}
+
 // Join asks the Agent instance to join.
 func (a *Agent) Join(addrs []string) (int, error) {
 
-	if a.State() != AgentAlive {
+	if a.State() != member.Alive {
 		return 0, fmt.Errorf("Agent can't join after Leave or Shutdown")
 	}
 
@@ -246,18 +179,20 @@ func (a *Agent) Leave() error {
 
 	// Check the current state
 	a.stateLock.Lock()
-	if a.state == AgentLeft {
+	switch a.Self.Status {
+	case member.Left:
 		a.stateLock.Unlock()
 		return nil
-	} else if a.state == AgentLeaving {
+	case member.Leaving:
 		a.stateLock.Unlock()
 		return fmt.Errorf("Leave already in progress")
-	} else if a.state == AgentShutdown {
+	case member.Shutdown:
 		a.stateLock.Unlock()
 		return fmt.Errorf("Leave called after Shutdown")
+	default:
+		a.Self.Status = member.Leaving
+		a.stateLock.Unlock()
 	}
-	a.state = AgentLeaving
-	a.stateLock.Unlock()
 
 	// Attempt the memberlist leave
 	err := a.memberlist.Leave(a.config.BroadcastTimeout)
@@ -274,8 +209,8 @@ func (a *Agent) Leave() error {
 
 	// Transition to Left only if we not already shutdown
 	a.stateLock.Lock()
-	if a.state != AgentShutdown {
-		a.state = AgentLeft
+	if a.Self.Status != member.Shutdown {
+		a.Self.Status = member.Left
 	}
 	a.stateLock.Unlock()
 	return nil
@@ -295,15 +230,15 @@ func (a *Agent) Shutdown() error {
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
 
-	if a.state == AgentShutdown {
+	if a.Self.Status == member.Shutdown {
 		return nil
 	}
 
-	if a.state != AgentLeft {
+	if a.Self.Status != member.Left {
 		log.Info("agent: Shutdown without a Leave")
 	}
 
-	a.state = AgentShutdown
+	a.Self.Status = member.Shutdown
 	err := a.memberlist.Shutdown()
 	if err != nil {
 		return err
@@ -316,10 +251,6 @@ func (a *Agent) Memberlist() *memberlist.Memberlist {
 	return a.memberlist
 }
 
-func (a *Agent) Metadata() *AgentMeta {
-	return a.meta
-}
-
 func (a *Agent) Broadcasts() *memberlist.TransmitLimitedQueue {
 	return a.broadcasts
 }
@@ -329,107 +260,8 @@ func (a *Agent) GetAddrPort() (net.IP, uint16) {
 	return n.Addr, n.Port
 }
 
-func (a *Agent) State() AgentState {
+func (a *Agent) State() member.Status {
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
-	return a.state
-}
-
-func (a *Agent) getMember(peer *memberlist.Node) *Member {
-	meta, err := a.decodeMetadata(peer.Meta)
-	if err != nil {
-		panic(err)
-	}
-	return &Member{
-		Name: peer.Name,
-		Addr: net.IP(peer.Addr),
-		Port: peer.Port,
-		Role: meta.Role,
-	}
-}
-
-func (a *Agent) handleNodeJoin(peer *memberlist.Node) {
-	member := a.getMember(peer)
-	member.Status = StatusAlive
-	a.topology.Update(member)
-	log.Debugf("%s member joined: %s %s:%d", member.Role, member.Name, member.Addr, member.Port)
-}
-
-func (a *Agent) handleNodeLeave(peer *memberlist.Node) {
-	member := a.getMember(peer)
-	a.topology.Delete(member)
-	log.Debugf("%s member left: %s %s:%d", member.Role, member.Name, member.Addr, member.Port)
-}
-
-func (a *Agent) handleNodeUpdate(peer *memberlist.Node) {
-	// ignore
-}
-
-func (a *Agent) encodeMetadata() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-	if err := encoder.Encode(a.meta); err != nil {
-		log.Errorf("Failed to encode agent metadata: %v", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func (a *Agent) decodeMetadata(buf []byte) (*AgentMeta, error) {
-	meta := &AgentMeta{}
-	reader := bytes.NewReader(buf)
-	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
-	if err := decoder.Decode(meta); err != nil {
-		log.Errorf("Failed to decode agent metadata: %v", err)
-		return nil, err
-	}
-	return meta, nil
-}
-
-func memberToNode(members []*Member) []*memberlist.Node {
-	list := make([]*memberlist.Node, 0)
-	for _, m := range members {
-		list = append(list, &memberlist.Node{Addr: m.Addr, Port: m.Port})
-	}
-	return list
-}
-
-func (a *Agent) GetPeers(max int, agentType AgentType, excluded []*protocol.Source) []*memberlist.Node {
-	fullList := a.topology.Get(agentType)
-	fullList = excludePeers(fullList, excluded)
-
-	if len(fullList) <= max {
-		return memberToNode(fullList)
-	}
-
-	var randomPeers []*Member
-	for i := 0; i < max; i++ {
-		randomPeers = append(randomPeers, fullList[i])
-	}
-
-	return memberToNode(randomPeers)
-}
-
-func excludePeers(peers []*Member, excluded []*protocol.Source) []*Member {
-	if excluded == nil {
-		return peers
-	}
-
-	filteredList := make([]*Member, 0)
-	var exclude bool
-
-	for _, p := range peers {
-		exclude = false
-		for _, e := range excluded {
-			if bytes.Equal(p.Addr, e.Addr) && p.Port == e.Port {
-				exclude = true
-			}
-		}
-
-		if !exclude {
-			filteredList = append(filteredList, p)
-		}
-	}
-
-	return filteredList
+	return a.Self.Status
 }
