@@ -24,6 +24,7 @@ import (
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/balloon/visitor"
+	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
@@ -59,7 +60,7 @@ type SignedSnapshot struct {
 type BatchSnapshots struct {
 	Snapshots []*SignedSnapshot
 	TTL       int
-	From      *Source
+	From      *member.Peer
 }
 
 type Source struct {
