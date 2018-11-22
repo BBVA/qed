@@ -14,7 +14,6 @@
 package sender
 
 import (
-	"bytes"
 	"fmt"
 	"time"
 
@@ -22,7 +21,6 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/sign"
-	"github.com/hashicorp/go-msgpack/codec"
 )
 
 type Sender struct {
@@ -36,13 +34,15 @@ type Config struct {
 	BatchSize     uint
 	BatchInterval time.Duration
 	TTL           int
+	EachN         int
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		100,
-		1 * time.Second,
-		2,
+		BatchSize:     100,
+		BatchInterval: 1 * time.Second,
+		TTL:           2,
+		EachN:         2,
 	}
 }
 
@@ -68,15 +68,10 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 			log.Debugf("Encoding batch: %+v", batch)
 			msg, _ := batch.Encode()
 
-			peers := s.Agent.GetPeers(2, gossip.AuditorType, nil)
-			peers = append(peers, s.Agent.GetPeers(2, gossip.MonitorType, nil)...)
-			peers = append(peers, s.Agent.GetPeers(2, gossip.PublisherType, nil)...)
-			log.Debugf("Peers selected: %+v", peers)
+			peers := s.Agent.Topology.Each(s.Config.EachN, nil)
 
-			for _, peer := range peers {
-				log.Debugf("%+v", peer)
-				log.Debugf("Sending batch to peer: %s:%d", peer.Addr, peer.Port)
-				err := s.Agent.Memberlist().SendReliable(peer, msg)
+			for _, peer := range peers.L {
+				err := s.Agent.Memberlist().SendReliable(peer.Node(), msg)
 				if err != nil {
 					log.Errorf("Failed send message: %v", err)
 				}
@@ -91,16 +86,6 @@ func (s Sender) Stop() {
 	s.quit <- true
 }
 
-func encode(msg *protocol.BatchSnapshots) ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-	if err := encoder.Encode(msg); err != nil {
-		log.Errorf("Failed to encode message: %v", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
 func (s *Sender) getBatch(ch chan *protocol.Snapshot) *protocol.BatchSnapshots {
 
 	if len(ch) == 0 {
@@ -109,16 +94,13 @@ func (s *Sender) getBatch(ch chan *protocol.Snapshot) *protocol.BatchSnapshots {
 
 	var snapshot *protocol.Snapshot
 	var batch protocol.BatchSnapshots
+
 	var batchSize int = 100
 	var counter int = 0
+
 	batch.Snapshots = make([]*protocol.SignedSnapshot, 0)
 	batch.TTL = s.Config.TTL
-	addr, port := s.Agent.GetAddrPort()
-	batch.From = &protocol.Source{
-		Addr: addr,
-		Port: port,
-		Role: s.Agent.Metadata().Role.String(),
-	}
+	batch.From = s.Agent.Self
 
 	for {
 		select {

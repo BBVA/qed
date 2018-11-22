@@ -13,8 +13,9 @@
 package gossip
 
 import (
-	"log"
-
+	"github.com/bbva/qed/gossip/member"
+	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -28,29 +29,32 @@ type eventDelegate struct {
 
 // NotifyJoin is invoked when a node is detected to have joined.
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
-	e.agent.handleNodeJoin(n)
+	peer := member.ParsePeer(n)
+	peer.Status = member.Alive
+	e.agent.Topology.Update(peer)
+	log.Debugf("%s member joined: %+v", peer)
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
-	e.agent.handleNodeLeave(n)
+	peer := member.ParsePeer(n)
+	e.agent.Topology.Delete(peer)
+	log.Debugf("%s member left:  %+v", peer)
 }
 
 // NotifyUpdate is invoked when a node is detected to have
 // updated, usually involving the meta data.
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
-	e.agent.handleNodeUpdate(n)
+	// ignore
 }
 
 type agentDelegate struct {
-	agent   *Agent
-	handler MessageHandler
+	agent *Agent
 }
 
-func newAgentDelegate(agent *Agent, handler MessageHandler) *agentDelegate {
+func newAgentDelegate(agent *Agent) *agentDelegate {
 	return &agentDelegate{
-		agent:   agent,
-		handler: handler,
+		agent: agent,
 	}
 }
 
@@ -58,7 +62,7 @@ func newAgentDelegate(agent *Agent, handler MessageHandler) *agentDelegate {
 // when broadcasting an alive message. It's length is limited to
 // the given byte size. This metadata is available in the Node structure.
 func (d *agentDelegate) NodeMeta(limit int) []byte {
-	meta, err := d.agent.encodeMetadata()
+	meta, err := d.agent.Self.Meta.Encode()
 	if err != nil {
 		log.Fatalf("Unable to encode node metadata: %v", err)
 	}
@@ -70,7 +74,15 @@ func (d *agentDelegate) NodeMeta(limit int) []byte {
 // so would block the entire UDP packet receive loop. Additionally, the byte
 // slice may be modified after the call returns, so it should be copied if needed
 func (d *agentDelegate) NotifyMsg(msg []byte) {
-	d.handler.HandleMsg(msg)
+	var batch protocol.BatchSnapshots
+	err := batch.Decode(msg)
+	if err != nil {
+		log.Errorf("Unable to decode message: %v", err)
+		return
+	}
+
+	log.Infof("Batch received, TTL: %d: %v", batch.TTL, batch)
+	d.agent.In <- &batch
 }
 
 // GetBroadcasts is called when user data messages can be broadcast.
