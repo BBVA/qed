@@ -22,8 +22,7 @@ import (
 	"syscall"
 
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/gossip/auditor"
-	"github.com/bbva/qed/gossip/monitor"
+	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
 	"github.com/spf13/cobra"
 )
@@ -44,19 +43,20 @@ func newAgentStartCommand() *cobra.Command {
 			config.NodeName = nodeName
 			config.BindAddr = bindAddr
 			config.AdvertiseAddr = advertiseAddr
-			config.Role = gossip.NewNodeType(role)
+			config.Role = member.ParseType(role)
 			config.EnableCompression = true
 
 			var agent *gossip.Agent
 			var err error
+
 			switch config.Role {
-			case gossip.PublisherType:
-			case gossip.MonitorType:
-				conf := monitor.DefaultConfig()
-				agent, err = gossip.Create(config, monitor.NewMonitorHandlerBuilder(conf))
-			case gossip.AuditorType:
-				conf := auditor.DefaultConfig()
-				agent, err = gossip.Create(config, auditor.NewAuditorHandlerBuilder(conf))
+			case member.Publisher:
+			case member.Monitor:
+				// conf := monitor.DefaultConfig()
+				agent, err = gossip.NewAgent(config, []gossip.Processor{gossip.DummyProcessor{}})
+			case member.Auditor:
+				// conf := auditor.DefaultConfig()
+				agent, err = gossip.NewAgent(config, []gossip.Processor{gossip.DummyProcessor{}})
 			default:
 				log.Fatalf("Failed to start the QED agent: unknown role")
 			}
@@ -70,6 +70,7 @@ func newAgentStartCommand() *cobra.Command {
 			}
 			log.Debugf("Number of nodes contacted: %d", contacted)
 
+			agent.Start()
 			defer agent.Shutdown()
 			awaitTermSignal(agent.Leave)
 
