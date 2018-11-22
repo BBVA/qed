@@ -33,6 +33,7 @@ import (
 	"github.com/bbva/qed/api/mgmthttp"
 	"github.com/bbva/qed/api/tampering"
 	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/sender"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
@@ -137,8 +138,8 @@ func NewServer(
 	// Create gossip agent
 	config := gossip.DefaultConfig()
 	config.BindAddr = gossipAddr
-	config.Role = gossip.ServerType
-	server.agent, err = gossip.Create(config, gossip.NewNopMessageHandler)
+	config.Role = member.Server
+	server.agent, err = gossip.NewAgent(config, nil)
 	if err != nil {
 		return nil, err
 	}
