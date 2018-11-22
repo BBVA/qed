@@ -13,7 +13,6 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-
 package cache
 
 import (
@@ -25,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSimpleCache(t *testing.T) {
+func TestFreeCache(t *testing.T) {
 
 	testCases := []struct {
 		pos    navigator.Position
@@ -37,7 +36,7 @@ func TestSimpleCache(t *testing.T) {
 		{&navigator.FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x3}, false},
 	}
 
-	cache := NewSimpleCache(0)
+	cache := NewFreeCache(100 * 1024)
 
 	for i, c := range testCases {
 		if c.cached {
@@ -55,10 +54,10 @@ func TestSimpleCache(t *testing.T) {
 	}
 }
 
-func TestFillSimpleCache(t *testing.T) {
+func TestFillFreeCache(t *testing.T) {
 
 	numElems := uint64(10000)
-	cache := NewSimpleCache(0)
+	cache := NewFreeCache(10000 * 1024)
 	reader := NewFakeKVPairReader(numElems)
 
 	err := cache.Fill(reader)

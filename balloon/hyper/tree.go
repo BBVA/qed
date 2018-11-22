@@ -31,6 +31,10 @@ import (
 	"github.com/bbva/qed/util"
 )
 
+const (
+	CacheSize int = (1 << 26) * 68 // 2^26 elements * 68 bytes for entry
+)
+
 type HyperTree struct {
 	store         storage.Store
 	cache         cache.ModifiableCache

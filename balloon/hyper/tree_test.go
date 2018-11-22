@@ -289,8 +289,8 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 
 	hasher := hashing.NewSha256Hasher()
-	simpleCache := cache.NewSimpleCache(0)
-	tree := NewHyperTree(hashing.NewSha256Hasher, store, simpleCache)
+	freeCache := cache.NewFreeCache(CacheSize)
+	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
 	b.ResetTimer()
 	b.N = 100000
@@ -299,4 +299,5 @@ func BenchmarkAdd(b *testing.B) {
 		_, mutations, _ := tree.Add(key, uint64(i))
 		store.Mutate(mutations)
 	}
+
 }
