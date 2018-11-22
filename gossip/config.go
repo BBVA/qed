@@ -16,45 +16,8 @@ import (
 	"net"
 	"time"
 
+	"github.com/bbva/qed/gossip/member"
 	"github.com/hashicorp/memberlist"
-)
-
-type AgentType int
-
-func (t AgentType) String() string {
-	switch t {
-	case AuditorType:
-		return "auditor"
-	case MonitorType:
-		return "monitor"
-	case PublisherType:
-		return "publisher"
-	case ServerType:
-		return "server"
-	default:
-		return "unknown"
-	}
-}
-
-func NewNodeType(value string) AgentType {
-	switch value {
-	case "auditor":
-		return AuditorType
-	case "monitor":
-		return MonitorType
-	case "publisher":
-		return PublisherType
-	default:
-		return ServerType
-	}
-}
-
-const (
-	AuditorType AgentType = iota
-	MonitorType
-	PublisherType
-	ServerType
-	MaxType
 )
 
 // This is the default port that we use for the Agent communication
@@ -78,7 +41,7 @@ type Config struct {
 	// is not set, Auditor will set it to the hostname of the running machine.
 	NodeName string
 
-	Role AgentType
+	Role member.Type
 
 	// BindAddr is the address that the Auditor agent's communication ports
 	// will bind to. Auditor will use this address to bind to for both TCP
