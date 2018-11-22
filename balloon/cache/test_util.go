@@ -20,6 +20,8 @@ import (
 	"github.com/bbva/qed/balloon/navigator"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
+	"github.com/bbva/qed/testutils/rand"
+	"github.com/bbva/qed/util"
 )
 
 type FakeCache struct {
@@ -39,3 +41,25 @@ func (c *FakeCache) Put(pos navigator.Position, value hashing.Digest) {}
 func (c *FakeCache) Fill(r storage.KVPairReader) error { return nil }
 
 func (c FakeCache) Size() int { return 1 }
+
+type FakeKVPairReader struct {
+	Remaining uint64
+	index     uint64
+}
+
+func NewFakeKVPairReader(numElems uint64) *FakeKVPairReader {
+	return &FakeKVPairReader{numElems, 0}
+}
+
+func (r *FakeKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
+	for n = 0; r.Remaining > 0 && n < len(buffer); n++ {
+		pos := &navigator.FakePosition{util.Uint64AsBytes(r.index), 0}
+		buffer[n] = &storage.KVPair{pos.Bytes(), rand.Bytes(8)}
+		r.Remaining--
+		r.index++
+	}
+	return n, nil
+}
+func (r *FakeKVPairReader) Close() {
+	r.Remaining = 0
+}
