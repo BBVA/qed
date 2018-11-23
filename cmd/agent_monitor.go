@@ -55,7 +55,7 @@ func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&qedEndpoints, "endpoints", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
-	cmd.MarkPersistentFlagRequired("endpoints")
+	cmd.MarkFlagRequired("endpoints")
 
 	return cmd
 }
