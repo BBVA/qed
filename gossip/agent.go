@@ -158,8 +158,19 @@ func (a *Agent) sendOutQueue() {
 
 }
 
-func (a Agent) route(s *member.Peer) []*memberlist.Node {
-	return nil
+func (a Agent) route(src *member.Peer) []*memberlist.Node {
+	var excluded PeerList
+
+	dst := make([]*memberlist.Node, 0)
+
+	excluded.L = append(excluded.L, src)
+	excluded.L = append(excluded.L, a.Self)
+
+	peers := a.Topology.Each(2, &excluded)
+	for _, p := range peers.L {
+		dst = append(dst, p.Node())
+	}
+	return dst
 }
 
 // Join asks the Agent instance to join.
@@ -170,7 +181,6 @@ func (a *Agent) Join(addrs []string) (int, error) {
 	}
 
 	if len(addrs) > 0 {
-		log.Debugf("Trying to join the cluster using members: %v", addrs)
 		return a.memberlist.Join(addrs)
 	}
 	return 0, nil
