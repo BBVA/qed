@@ -32,14 +32,14 @@ func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
 	peer := member.ParsePeer(n)
 	peer.Status = member.Alive
 	e.agent.Topology.Update(peer)
-	log.Debugf("%s member joined: %+v", peer)
+	log.Debugf("member joined: %+v ", peer)
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 	peer := member.ParsePeer(n)
 	e.agent.Topology.Delete(peer)
-	log.Debugf("%s member left:  %+v", peer)
+	log.Debugf("member left:  %+v", peer)
 }
 
 // NotifyUpdate is invoked when a node is detected to have
