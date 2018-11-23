@@ -48,7 +48,7 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 			if err != nil {
 				log.Fatalf("Failed to join the cluster: %v", err)
 			}
-			log.Debugf("Number of nodes contacted: %d", contacted)
+			log.Debugf("Number of nodes contacted: %d (%v)", contacted, agentConfig.StartJoin)
 
 			agent.Start()
 			defer agent.Shutdown()
