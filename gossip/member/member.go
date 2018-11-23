@@ -15,6 +15,7 @@ package member
 import (
 	"net"
 
+	"github.com/bbva/qed/log"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -53,7 +54,7 @@ const (
 	Monitor
 	Publisher
 	Server
-	MaxType
+	Unknown
 )
 
 // Member is a single member of the gossip cluster.
@@ -61,7 +62,7 @@ type Peer struct {
 	Name   string
 	Addr   net.IP
 	Port   uint16
-	Meta   *Meta
+	Meta   Meta
 	Status Status
 }
 
@@ -74,7 +75,7 @@ func (p Peer) Node() *memberlist.Node {
 }
 
 func NewPeer(name, addr string, port uint16, role Type) *Peer {
-	meta := &Meta{
+	meta := Meta{
 		Role: role,
 	}
 
@@ -87,5 +88,15 @@ func NewPeer(name, addr string, port uint16, role Type) *Peer {
 }
 
 func ParsePeer(node *memberlist.Node) *Peer {
-	return nil
+	var meta Meta
+	err := meta.Decode(node.Meta)
+	if err != nil {
+		log.Errorf("Error parsing peer: unable to decode meta. %v", err)
+	}
+	return &Peer{
+		Name: node.Name,
+		Addr: node.Addr,
+		Port: node.Port,
+		Meta: meta,
+	}
 }
