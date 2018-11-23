@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
 	"github.com/spf13/cobra"
@@ -34,15 +35,16 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 
 			log.SetLogger("QedAuditor", logLevel)
 
-			config := ctx.config
+			agentConfig := ctx.config
+			agentConfig.Role = member.Auditor
 			//auditorConfig := auditor.DefaultConfig()
 
-			agent, err := gossip.NewAgent(config, []gossip.Processor{gossip.DummyProcessor{}})
+			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{gossip.DummyProcessor{}})
 			if err != nil {
 				log.Fatalf("Failed to start the QED auditor: %v", err)
 			}
 
-			contacted, err := agent.Join(config.StartJoin)
+			contacted, err := agent.Join(agentConfig.StartJoin)
 			if err != nil {
 				log.Fatalf("Failed to join the cluster: %v", err)
 			}

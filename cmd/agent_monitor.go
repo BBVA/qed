@@ -15,6 +15,8 @@ package cmd
 
 import (
 	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/gossip/member"
+	"github.com/bbva/qed/gossip/monitor"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
 	"github.com/spf13/cobra"
@@ -34,15 +36,23 @@ func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 
 			log.SetLogger("QedMonitor", logLevel)
 
-			config := ctx.config
-			//monitorConfig := monitor.DefaultConfig()
+			agentConfig := ctx.config
+			agentConfig.Role = member.Monitor
+			monitorConfig := monitor.DefaultConfig()
+			monitorConfig.APIKey = apiKey
+			monitorConfig.QEDEndpoints = qedEndpoints
 
-			agent, err := gossip.NewAgent(config, []gossip.Processor{gossip.DummyProcessor{}})
+			monitor, err := monitor.NewMonitor(monitorConfig)
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
 
-			contacted, err := agent.Join(config.StartJoin)
+			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{monitor})
+			if err != nil {
+				log.Fatalf("Failed to start the QED monitor: %v", err)
+			}
+
+			contacted, err := agent.Join(agentConfig.StartJoin)
 			if err != nil {
 				log.Fatalf("Failed to join the cluster: %v", err)
 			}
