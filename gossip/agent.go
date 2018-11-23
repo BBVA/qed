@@ -84,6 +84,7 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 	// Configure delegates
 	conf.MemberlistConfig.Delegate = newAgentDelegate(agent)
 	conf.MemberlistConfig.Events = &eventDelegate{agent}
+	agent.Self = member.NewPeer(conf.NodeName, advertiseIP, uint16(advertisePort), conf.Role)
 
 	agent.memberlist, err = memberlist.Create(conf.MemberlistConfig)
 	if err != nil {

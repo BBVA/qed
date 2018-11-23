@@ -88,8 +88,8 @@ type Topology struct {
 }
 
 func NewTopology() *Topology {
-	m := make([]PeerList, member.MaxType)
-	for i := member.Auditor; i < member.MaxType; i++ {
+	m := make([]PeerList, member.Unknown)
+	for i := member.Auditor; i < member.Unknown; i++ {
 		m[i] = PeerList{
 			L: make([]*member.Peer, 0),
 		}
