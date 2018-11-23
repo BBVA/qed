@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/gossip/member"
+	"github.com/go-redis/redis"
 )
 
 type stats struct {
@@ -52,6 +53,14 @@ type BatchSnapshots struct {
 	From      *member.Peer
 }
 
+type StoreClient interface {
+	Put(key, value string)
+}
+
+type RedisCli struct {
+	rcli *redis.Client
+}
+
 func (s *stats) Add(nodeType string, id, v int) {
 	s.Lock()
 	defer s.Unlock()
@@ -60,6 +69,28 @@ func (s *stats) Add(nodeType string, id, v int) {
 	}
 	s.batch[nodeType][id] += v
 }
+
+func NewRedisClient() *RedisCli {
+	c := redis.NewClient(&redis.Options{
+		Addr:     "127.0.0.1:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	pong, err := c.Ping().Result()
+	fmt.Println(pong, err)
+	// Output: PONG <nil>
+	return &RedisCli{rcli: c}
+}
+
+func (c *RedisCli) Put(key, value string) {
+	err := c.rcli.Set(key, value, 0).Err()
+	if err != nil {
+		panic(err)
+	}
+}
+
+// TODO: SeMaaS
 
 func (s stats) Get(nodeType string, id int) int {
 	s.Lock()
