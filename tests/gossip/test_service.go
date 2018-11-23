@@ -14,6 +14,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,11 +23,33 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/bbva/qed/gossip/member"
 )
 
 type stats struct {
 	sync.Mutex
 	batch map[string][]int
+}
+
+type Digest []byte
+
+type Snapshot struct {
+	HistoryDigest Digest
+	HyperDigest   Digest
+	Version       uint64
+	EventDigest   Digest
+}
+
+type SignedSnapshot struct {
+	Snapshot  *Snapshot
+	Signature []byte
+}
+
+type BatchSnapshots struct {
+	Snapshots []*SignedSnapshot
+	TTL       int
+	From      *member.Peer
 }
 
 func (s *stats) Add(nodeType string, id, v int) {
@@ -67,9 +90,30 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	atomic.AddUint64(&count, 1)
 }
 
-func main() {
+func PublishHandler(w http.ResponseWriter, r *http.Request, client StoreClient) {
+	if r.Method == "POST" {
+		var b BatchSnapshots
+		err := json.NewDecoder(r.Body).Decode(&b)
+		if err != nil {
+			fmt.Println("Error unmarshalling: ", err)
+		}
 
+		// TODO: Insert the whole batch. Not snapshot by snapshot.
+		for _, s := range b.Snapshots {
+			key := strconv.FormatUint(s.Snapshot.Version, 10)
+			v := sha256.Sum256(s.Snapshot.HistoryDigest)
+			val := string(v[:])
+			go client.Put(key, val)
+		}
+
+	} else {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	}
+}
+
+func main() {
 	s.batch = make(map[string][]int, 0)
+	client := NewRedisClient()
 
 	go func() {
 		ticker := time.NewTicker(2 * time.Second)
@@ -83,6 +127,8 @@ func main() {
 			}
 		}
 	}()
+
 	http.HandleFunc("/", handler)
+	http.HandleFunc("/publish", func(w http.ResponseWriter, r *http.Request) { PublishHandler(w, r, client) })
 	log.Fatal(http.ListenAndServe("127.0.0.1:8888", nil))
 }
