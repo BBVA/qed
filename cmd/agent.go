@@ -42,6 +42,7 @@ func newAgentCommand() *cobra.Command {
 			config.NodeName = nodeName
 			config.BindAddr = bindAddr
 			config.AdvertiseAddr = advertiseAddr
+			config.StartJoin = startJoin
 			config.EnableCompression = true
 			ctx.config = config
 		},
