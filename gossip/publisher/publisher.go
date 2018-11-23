@@ -32,10 +32,10 @@ func DefaultConfig() *Config {
 }
 
 func NewConfig(c *fasthttp.Client, to []string) *Config {
-	return &Config{
-		Client: c,
-		SendTo: to,
-	}
+	cfg := DefaultConfig()
+	cfg.Client = c
+	cfg.SendTo = to
+	return cfg
 }
 
 type Publisher struct {
