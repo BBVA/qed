@@ -58,6 +58,11 @@ type Config struct {
 	// the TERM signal. Defaults false. This can be changed on reload.
 	LeaveOnTerm bool
 
+	// StartJoin is a list of addresses to attempt to join when the
+	// agent starts. If the agent is unable to communicate with any of these
+	// addresses, then the agent will error and exit.
+	StartJoin []string
+
 	// EnableCompression specifies whether message compression is enabled
 	// by `github.com/hashicorp/memberlist` when broadcasting events.
 	EnableCompression bool
