@@ -17,7 +17,6 @@ import (
 	"sync"
 
 	"github.com/bbva/qed/gossip/member"
-	"github.com/bbva/qed/log"
 )
 
 type PeerList struct {
@@ -39,6 +38,9 @@ func (l *PeerList) Filter(f Filter) *PeerList {
 }
 
 func (l *PeerList) Exclude(list *PeerList) *PeerList {
+	if list == nil {
+		return l
+	}
 	return l.Filter(func(p *member.Peer) bool {
 		for _, x := range list.L {
 			if x.Name == p.Name {
@@ -54,19 +56,22 @@ func (l PeerList) All() PeerList {
 }
 
 func (l *PeerList) Shuffle() *PeerList {
-	var s PeerList
-	s.L = l.L[:0]
 	rand.Shuffle(len(l.L), func(i, j int) {
-		s.L[i], s.L[j] = s.L[j], s.L[i]
+		l.L[i], l.L[j] = l.L[j], l.L[i]
 	})
-	return &s
+	return l
 }
 
 func (l *PeerList) Update(m *member.Peer) error {
+	var add bool = true
 	for _, e := range l.L {
 		if e.Name == m.Name {
 			e = m
+			add = false
 		}
+	}
+	if add {
+		l.L = append(l.L, m)
 	}
 	return nil
 }
@@ -102,7 +107,6 @@ func NewTopology() *Topology {
 func (t *Topology) Update(p *member.Peer) error {
 	t.Lock()
 	defer t.Unlock()
-	log.Debugf("Updating topology with member: %+v", p)
 	t.m[p.Meta.Role].Update(p)
 	return nil
 }
@@ -123,9 +127,9 @@ func (t *Topology) Get(kind member.Type) PeerList {
 func (t *Topology) Each(n int, p *PeerList) *PeerList {
 	var b PeerList
 
-	auditors := t.m[member.Auditor].Exclude(p)
-	monitors := t.m[member.Monitor].Exclude(p)
-	publishers := t.m[member.Publisher].Exclude(p)
+	auditors := t.m[member.Auditor].Exclude(p).Shuffle()
+	monitors := t.m[member.Monitor].Exclude(p).Shuffle()
+	publishers := t.m[member.Publisher].Exclude(p).Shuffle()
 
 	if len(auditors.L) > n {
 		auditors.L = auditors.L[:n]
@@ -139,5 +143,6 @@ func (t *Topology) Each(n int, p *PeerList) *PeerList {
 	b.L = append(b.L, auditors.L...)
 	b.L = append(b.L, auditors.L...)
 	b.L = append(b.L, auditors.L...)
+
 	return &b
 }
