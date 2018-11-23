@@ -27,7 +27,7 @@ func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
 	var endpoints []string
 
 	cmd := &cobra.Command{
-		Use:   "monitor",
+		Use:   "publisher",
 		Short: "Start a QED publisher",
 		Long: `Start a QED publisher that reacts to snapshot batches 
 		propagated by QED servers and periodically publishes them to
@@ -57,7 +57,7 @@ func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&endpoints, "endpoints", "", []string{}, "Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
-	cmd.MarkPersistentFlagRequired("endpoints")
+	cmd.MarkFlagRequired("endpoints")
 
 	return cmd
 }
