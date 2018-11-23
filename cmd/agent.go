@@ -48,10 +48,10 @@ func newAgentCommand() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	cmd.Flags().StringVarP(&nodeName, "node", "", "", "Unique name for node. If not set, fallback to hostname")
-	cmd.Flags().StringVarP(&bindAddr, "bind", "", "", "Bind address for TCP/UDP gossip on (host:port)")
-	cmd.Flags().StringVarP(&advertiseAddr, "advertise", "", "", "Address to advertise to cluster")
-	cmd.Flags().StringSliceVarP(&startJoin, "join", "", []string{}, "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
+	cmd.PersistentFlags().StringVarP(&nodeName, "node", "", "", "Unique name for node. If not set, fallback to hostname")
+	cmd.PersistentFlags().StringVarP(&bindAddr, "bind", "", "", "Bind address for TCP/UDP gossip on (host:port)")
+	cmd.PersistentFlags().StringVarP(&advertiseAddr, "advertise", "", "", "Address to advertise to cluster")
+	cmd.PersistentFlags().StringSliceVarP(&startJoin, "join", "", []string{}, "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 
 	cmd.MarkPersistentFlagRequired("node")
 	cmd.MarkPersistentFlagRequired("bind")
