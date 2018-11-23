@@ -25,7 +25,7 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 	var qedEndpoints []string
 
 	cmd := &cobra.Command{
-		Use:   "monitor",
+		Use:   "auditor",
 		Short: "Start a QED auditor",
 		Long: `Start a QED auditor that reacts to snapshot batches 
 		propagated by QED servers and periodically executes membership 
@@ -55,7 +55,7 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVarP(&qedEndpoints, "endpoints", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
-	cmd.MarkPersistentFlagRequired("endpoints")
+	cmd.MarkFlagRequired("endpoints")
 
 	return cmd
 }
