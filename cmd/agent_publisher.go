@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
@@ -36,15 +37,16 @@ func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
 
 			log.SetLogger("QedPublisher", logLevel)
 
-			config := ctx.config
+			agentConfig := ctx.config
+			agentConfig.Role = member.Publisher
 			publisherConfig := publisher.NewConfig(&fasthttp.Client{}, endpoints)
 
-			agent, err := gossip.NewAgent(config, []gossip.Processor{publisher.NewPublisher(publisherConfig)})
+			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{publisher.NewPublisher(publisherConfig)})
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
 
-			contacted, err := agent.Join(config.StartJoin)
+			contacted, err := agent.Join(agentConfig.StartJoin)
 			if err != nil {
 				log.Fatalf("Failed to join the cluster: %v", err)
 			}
