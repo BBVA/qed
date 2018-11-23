@@ -26,6 +26,7 @@ require (
 	github.com/streadway/quantile v0.0.0-20150917103942-b0c588724d25 // indirect
 	github.com/stretchr/testify v1.2.2
 	github.com/tsenart/vegeta v8.0.1-0.20181009223527-f25ac6abb70a+incompatible
+	github.com/valyala/fasthttp v1.0.0
 	github.com/wcharczuk/go-chart v2.0.1+incompatible
 	golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b
 	golang.org/x/image v0.0.0-20181102021609-63626fb251ce // indirect
