@@ -7,6 +7,8 @@ require (
 	github.com/coocood/freecache v1.0.1
 	github.com/coreos/bbolt v1.3.0
 	github.com/dgraph-io/badger v1.5.4
+	github.com/fatih/color v1.7.0
+	github.com/go-redis/redis v6.14.2+incompatible
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 	github.com/hashicorp/go-msgpack v0.0.0-20150518234257-fa3f63826f7c
@@ -19,7 +21,10 @@ require (
 	github.com/kr/pty v1.1.3 // indirect
 	github.com/lucasb-eyer/go-colorful v0.0.0-20180709185858-c7842319cf3a // indirect
 	github.com/mailru/easyjson v0.0.0-20180823135443-60711f1a8329 // indirect
+	github.com/mattn/go-colorable v0.0.9 // indirect
+	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/miekg/dns v1.0.15 // indirect
+	github.com/pborman/uuid v1.2.0
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
@@ -27,6 +32,7 @@ require (
 	github.com/stretchr/testify v1.2.2
 	github.com/tsenart/vegeta v8.0.1-0.20181009223527-f25ac6abb70a+incompatible
 	github.com/valyala/fasthttp v1.0.0
+	github.com/vmihailenco/msgpack v4.0.1+incompatible
 	github.com/wcharczuk/go-chart v2.0.1+incompatible
 	golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b
 	golang.org/x/image v0.0.0-20181102021609-63626fb251ce // indirect
