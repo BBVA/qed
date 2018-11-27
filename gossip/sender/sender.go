@@ -42,7 +42,7 @@ func DefaultConfig() *Config {
 		BatchSize:     100,
 		BatchInterval: 1 * time.Second,
 		TTL:           2,
-		EachN:         2,
+		EachN:         1,
 	}
 }
 
@@ -71,7 +71,9 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 			peers := s.Agent.Topology.Each(s.Config.EachN, nil)
 
 			for _, peer := range peers.L {
-				err := s.Agent.Memberlist().SendReliable(peer.Node(), msg)
+				dst := peer.Node()
+				fmt.Printf("sender(): Sending batch %+v to node %+v\n", batch, dst.Name)
+				err := s.Agent.Memberlist().SendReliable(dst, msg)
 				if err != nil {
 					log.Errorf("Failed send message: %v", err)
 				}

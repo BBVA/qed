@@ -51,12 +51,13 @@ type Agent struct {
 func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 
 	agent = &Agent{
-		config:   conf,
-		Topology: NewTopology(),
-		In:       make(chan *protocol.BatchSnapshots, 1000),
-		Out:      make(chan *protocol.BatchSnapshots, 1000),
-		Alerts:   make(chan Alert, 100),
-		quit:     make(chan bool),
+		config:     conf,
+		Topology:   NewTopology(),
+		processors: p,
+		In:         make(chan *protocol.BatchSnapshots, 1000),
+		Out:        make(chan *protocol.BatchSnapshots, 1000),
+		Alerts:     make(chan Alert, 100),
+		quit:       make(chan bool),
 	}
 
 	bindIP, bindPort, err := conf.AddrParts(conf.BindAddr)
@@ -108,8 +109,8 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 
 func (a *Agent) Start() {
 
-	outTicker := time.NewTimer(2 * time.Second)
-	alertTicker := time.NewTimer(1 * time.Second)
+	outTicker := time.NewTicker(2 * time.Second)
+	alertTicker := time.NewTicker(1 * time.Second)
 
 	for {
 		select {
@@ -117,7 +118,6 @@ func (a *Agent) Start() {
 			for _, p := range a.processors {
 				go p.Process(batch)
 			}
-
 			a.Out <- batch
 		case <-outTicker.C:
 			a.sendOutQueue()
@@ -135,6 +135,10 @@ func (a *Agent) processAlertQueue() {
 
 }
 
+func batchId(b *protocol.BatchSnapshots) string {
+	return fmt.Sprintf("( ttl %d, lv %d)", b.TTL, b.Snapshots[len(b.Snapshots)-1].Snapshot.Version)
+}
+
 func (a *Agent) sendOutQueue() {
 	var batch *protocol.BatchSnapshots
 	for {
@@ -149,8 +153,11 @@ func (a *Agent) sendOutQueue() {
 		}
 
 		batch.TTL--
+		from := batch.From
+		batch.From = a.Self
 		msg, _ := batch.Encode()
-		for _, dst := range a.route(batch.From) {
+		for _, dst := range a.route(from) {
+			fmt.Printf("agent.sendOutQueue(): sending %+v to %+v\n", batchId(batch), dst.Name)
 			a.memberlist.SendReliable(dst, msg)
 		}
 	}
@@ -164,7 +171,7 @@ func (a Agent) route(src *member.Peer) []*memberlist.Node {
 	excluded.L = append(excluded.L, src)
 	excluded.L = append(excluded.L, a.Self)
 
-	peers := a.Topology.Each(2, &excluded)
+	peers := a.Topology.Each(1, &excluded)
 	for _, p := range peers.L {
 		dst = append(dst, p.Node())
 	}
