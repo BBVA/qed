@@ -61,47 +61,47 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
      - add event
 
     ```
-    go run                                               \
-                main.go                                  \
-                --apikey my-key                          \
-                client                                   \
-                --endpoint http://localhost:8080         \
-                add                                      \
-                --key 'test event'                       \
-                --value 2                                \
-                --log info
+    go run \
+        main.go \
+        --apikey my-key \
+        client \
+        --endpoint http://localhost:8080 \
+        add \
+        --key 'test event' \
+        --value 2 \
+        --log info
     ```
 
      - membership event
 
     ```
-    go run                                                                                              \
-                main.go                                                                                 \
-                --apikey my-key                                                                         \
-                client                                                                                  \
-                --endpoint http://localhost:8080                                                        \
-                membership                                                                              \
-                --hyperDigest   10aa40be23fb739332e2b9c849f2f110b2d209346500c24f70db442022ef38f2        \
-                --historyDigest 776b33eab8ed829ecffab3d579bf7ccbcc126b94bac1aaca7d5d8b0a2687bdec        \
-                --version 0                                                                             \
-                --key 'test event'                                                                      \
-                --log info
+    go run \
+        main.go \
+        --apikey my-key \
+        client \
+        --endpoint http://localhost:8080 \
+        membership \
+        --hyperDigest   10aa40be23fb739332e2b9c849f2f110b2d209346500c24f70db442022ef38f2 \
+        --historyDigest 776b33eab8ed829ecffab3d579bf7ccbcc126b94bac1aaca7d5d8b0a2687bdec \
+        --version 0 \
+        --key 'test event' \
+        --log info
     ```
 
      - verify event
 
     ```
-    go run                                                                                              \
-                main.go                                                                                 \
-                --apikey my-key                                                                         \
-                client                                                                                  \
-                --endpoint http://localhost:8080                                                        \
-                membership                                                                              \
-                --hyperDigest   10aa40be23fb739332e2b9c849f2f110b2d209346500c24f70db442022ef38f2        \
-                --historyDigest 776b33eab8ed829ecffab3d579bf7ccbcc126b94bac1aaca7d5d8b0a2687bdec        \
-                --version 0                                                                             \
-                --key 'test event'                                                                      \
-                --log info
+    go run \
+        main.go \
+        --apikey my-key \
+        client \
+        --endpoint http://localhost:8080 \
+        membership \
+        --hyperDigest   10aa40be23fb739332e2b9c849f2f110b2d209346500c24f70db442022ef38f2 \
+        --historyDigest 776b33eab8ed829ecffab3d579bf7ccbcc126b94bac1aaca7d5d8b0a2687bdec \
+        --version 0 \
+        --key 'test event' \
+        --log info
     ```
 
 ## Useful commands

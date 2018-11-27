@@ -17,7 +17,9 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"os/user"
 
 	"github.com/spf13/cobra"
 
@@ -26,6 +28,8 @@ import (
 )
 
 func newStartCommand() *cobra.Command {
+	const defaultKeyPath = "~/.ssh/id_ed25519"
+
 	var (
 		nodeId, httpAddr, raftAddr, mgmtAddr, joinAddr string
 		dbPath, raftPath, privateKeyPath               string
@@ -41,6 +45,11 @@ func newStartCommand() *cobra.Command {
 		// Args:  cobra.NoArgs(),
 
 		Run: func(cmd *cobra.Command, args []string) {
+
+			if privateKeyPath == defaultKeyPath {
+				usr, _ := user.Current()
+				privateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
+			}
 
 			srv, err := server.NewServer(
 				nodeId,
@@ -80,7 +89,7 @@ func newStartCommand() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&gossipJoinAddr, "gossip-join-addr", "", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 	cmd.Flags().StringVarP(&dbPath, "dbpath", "p", "/var/tmp/qed/data", "Set default storage path")
 	cmd.Flags().StringVarP(&raftPath, "raftpath", "", "/var/tmp/qed/raft", "Set raft storage path")
-	cmd.Flags().StringVarP(&privateKeyPath, "keypath", "y", "~/.ssh/id_ed25519", "Path to the ed25519 key file")
+	cmd.Flags().StringVarP(&privateKeyPath, "keypath", "y", defaultKeyPath, "Path to the ed25519 key file")
 	cmd.Flags().BoolVarP(&profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 
 	// INFO: testing purposes
