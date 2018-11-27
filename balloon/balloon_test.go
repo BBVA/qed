@@ -43,14 +43,14 @@ func TestAdd(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := uint64(0); i < 9; i++ {
-		commitment, mutations, err := balloon.Add(rand.Bytes(128))
+		snapshot, mutations, err := balloon.Add(rand.Bytes(128))
 		store.Mutate(mutations)
 
 		require.NoError(t, err)
 		assert.Truef(t, len(mutations) > 0, "There should be some mutations in test %d", i)
-		assert.Equalf(t, i, commitment.Version, "Wrong version in test %d", i)
-		assert.NotNil(t, commitment.HyperDigest, "The HyperDigest shouldn't be nil in test %d", i)
-		assert.NotNil(t, commitment.HistoryDigest, "The HistoryDigest shouldn't be nil in test %d", i)
+		assert.Equalf(t, i, snapshot.Version, "Wrong version in test %d", i)
+		assert.NotNil(t, snapshot.HyperDigest, "The HyperDigest shouldn't be nil in test %d", i)
+		assert.NotNil(t, snapshot.HistoryDigest, "The HistoryDigest shouldn't be nil in test %d", i)
 	}
 
 }
@@ -122,7 +122,7 @@ func TestMembershipProofVerify(t *testing.T) {
 
 	for i, c := range testCases {
 		event := []byte("Yadda yadda")
-		commitment := &Commitment{
+		snapshot := &Snapshot{
 			event, //TODO: should be eventDigest and used in the test
 			hashing.Digest("Some hyperDigest"),
 			hashing.Digest("Some historyDigest"),
@@ -139,7 +139,7 @@ func TestMembershipProofVerify(t *testing.T) {
 			hashing.NewSha256Hasher(),
 		)
 
-		result := proof.Verify(event, commitment)
+		result := proof.Verify(event, snapshot)
 
 		require.Equalf(t, c.expectedResult, result, "Unexpected result '%v' in test case '%d'", result, i)
 	}
@@ -193,15 +193,15 @@ func TestAddQueryAndVerify(t *testing.T) {
 	event := hashing.Digest("Never knows best")
 
 	// Add event
-	commitment, mutations, err := b.Add(event)
+	snapshot, mutations, err := b.Add(event)
 	store.Mutate(mutations)
 
 	// Query event
-	proof, err := b.QueryMembership(event, commitment.Version)
+	proof, err := b.QueryMembership(event, snapshot.Version)
 	assert.NoError(t, err)
 
 	// Verify
-	assert.True(t, proof.Verify(event, commitment), "The proof should verify correctly")
+	assert.True(t, proof.Verify(event, snapshot), "The proof should verify correctly")
 }
 
 func TestCacheWarmingUp(t *testing.T) {
@@ -216,11 +216,11 @@ func TestCacheWarmingUp(t *testing.T) {
 	require.NoError(t, err)
 
 	// add 100 elements
-	var lastCommitment *Commitment
+	var lastSnapshot *Snapshot
 	for i := uint64(0); i < 100; i++ {
-		commitment, mutations, err := balloon.Add(util.Uint64AsBytes(i))
+		snapshot, mutations, err := balloon.Add(util.Uint64AsBytes(i))
 		require.NoError(t, err)
-		lastCommitment = commitment
+		lastSnapshot = snapshot
 		store.Mutate(mutations)
 	}
 
@@ -235,9 +235,9 @@ func TestCacheWarmingUp(t *testing.T) {
 	// query for all elements
 	for i := uint64(0); i < 100; i++ {
 		key := util.Uint64AsBytes(i)
-		proof, err := balloon.QueryMembership(key, lastCommitment.Version)
+		proof, err := balloon.QueryMembership(key, lastSnapshot.Version)
 		require.NoError(t, err)
-		require.Truef(t, proof.Verify(key, lastCommitment), "The proof should verify correctly for element %d", i)
+		require.Truef(t, proof.Verify(key, lastSnapshot), "The proof should verify correctly for element %d", i)
 	}
 }
 
@@ -253,12 +253,12 @@ func TestTamperAndVerify(t *testing.T) {
 	event := hashing.Digest("Never knows best")
 	eventDigest := b.hasher.Do(event)
 
-	commitment, mutations, err := b.Add(event)
+	snapshot, mutations, err := b.Add(event)
 	store.Mutate(mutations)
 
-	memProof, err := b.QueryMembership(event, commitment.Version)
+	memProof, err := b.QueryMembership(event, snapshot.Version)
 	assert.NoError(t, err)
-	assert.True(t, memProof.Verify(event, commitment), "The proof should verify correctly")
+	assert.True(t, memProof.Verify(event, snapshot), "The proof should verify correctly")
 
 	original, err := store.Get(storage.IndexPrefix, eventDigest)
 	assert.NoError(t, err)
@@ -275,7 +275,7 @@ func TestTamperAndVerify(t *testing.T) {
 	assert.Equal(t, tpBytes, tampered.Value, "Tamper unsuccessful")
 	assert.NotEqual(t, original.Value, tampered.Value, "Tamper unsuccessful")
 
-	_, err = b.QueryMembership(event, commitment.Version)
+	_, err = b.QueryMembership(event, snapshot.Version)
 	require.Error(t, err)
 }
 
@@ -291,18 +291,18 @@ func TestDeleteAndVerify(t *testing.T) {
 	event := hashing.Digest("Never knows best")
 	eventDigest := b.hasher.Do(event)
 
-	commitment, mutations, err := b.Add(event)
+	snapshot, mutations, err := b.Add(event)
 	store.Mutate(mutations)
 
-	memProof, err := b.QueryMembership(event, commitment.Version)
+	memProof, err := b.QueryMembership(event, snapshot.Version)
 	assert.NoError(t, err)
-	assert.True(t, memProof.Verify(event, commitment), "The proof should verify correctly")
+	assert.True(t, memProof.Verify(event, snapshot), "The proof should verify correctly")
 	assert.NoError(t, store.Delete(storage.IndexPrefix, eventDigest), "store delete returned non nil value")
 
 	tampered, _ := store.Get(storage.IndexPrefix, eventDigest)
 	assert.Nil(t, tampered)
 
-	proof, err := b.QueryMembership(event, commitment.Version)
+	proof, err := b.QueryMembership(event, snapshot.Version)
 	assert.Nil(t, proof)
 	assert.Error(t, err, "ballon should not return a proof")
 }
@@ -317,12 +317,12 @@ func TestGenIncrementalAndVerify(t *testing.T) {
 	assert.NoError(t, err)
 
 	size := 10
-	c := make([]*Commitment, size)
+	s := make([]*Snapshot, size)
 	for i := 0; i < size; i++ {
 		event := hashing.Digest(fmt.Sprintf("Never knows %d best", i))
-		commitment, mutations, _ := b.Add(event)
+		snapshot, mutations, _ := b.Add(event)
 		store.Mutate(mutations)
-		c[i] = commitment
+		s[i] = snapshot
 	}
 
 	start := uint64(1)
@@ -330,7 +330,7 @@ func TestGenIncrementalAndVerify(t *testing.T) {
 	proof, err := b.QueryConsistency(start, end)
 	assert.NoError(t, err)
 
-	correct := proof.Verify(c[start], c[end])
+	correct := proof.Verify(s[start], s[end])
 	assert.True(t, correct, "Unable to verify incremental proof")
 }
 

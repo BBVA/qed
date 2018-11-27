@@ -41,7 +41,7 @@ func NewFakeVerifiable(result bool) *FakeVerifiable {
 	return &FakeVerifiable{result}
 }
 
-func (f FakeVerifiable) Verify(key []byte, commitment hashing.Digest) bool {
+func (f FakeVerifiable) Verify(key []byte, snapshot hashing.Digest) bool {
 	return f.result
 }
 

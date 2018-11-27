@@ -31,7 +31,7 @@ func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 		Short: "Start a QED monitor",
 		Long: `Start a QED monitor that reacts to snapshot batches 
 		propagated by QED servers and periodically executes incremental 
-		queries to verify the consistency between commitments`,
+		queries to verify the consistency between snaphots`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			log.SetLogger("QedMonitor", logLevel)

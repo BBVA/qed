@@ -52,7 +52,7 @@ var (
 
 // RaftBalloon is the interface Raft-backed balloons must implement.
 type RaftBalloonApi interface {
-	Add(event []byte) (*balloon.Commitment, error)
+	Add(event []byte) (*balloon.Snapshot, error)
 	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
 	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
@@ -396,13 +396,13 @@ func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interf
 
 */
 
-func (b *RaftBalloon) Add(event []byte) (*balloon.Commitment, error) {
+func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	cmd := &commands.AddEventCommand{event}
 	resp, err := b.raftApply(commands.AddEventCommandType, cmd)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*fsmAddResponse).commitment, nil
+	return resp.(*fsmAddResponse).snapshot, nil
 }
 
 func (b *RaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
