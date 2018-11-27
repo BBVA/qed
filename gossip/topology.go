@@ -141,8 +141,8 @@ func (t *Topology) Each(n int, p *PeerList) *PeerList {
 		publishers.L = publishers.L[:n]
 	}
 	b.L = append(b.L, auditors.L...)
-	b.L = append(b.L, auditors.L...)
-	b.L = append(b.L, auditors.L...)
+	b.L = append(b.L, monitors.L...)
+	b.L = append(b.L, publishers.L...)
 
 	return &b
 }
