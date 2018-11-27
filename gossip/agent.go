@@ -149,13 +149,11 @@ func (a *Agent) sendOutQueue() {
 		}
 
 		batch.TTL--
-
+		msg, _ := batch.Encode()
 		for _, dst := range a.route(batch.From) {
-			msg, _ := batch.Encode()
 			a.memberlist.SendReliable(dst, msg)
 		}
 	}
-
 }
 
 func (a Agent) route(src *member.Peer) []*memberlist.Node {
