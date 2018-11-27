@@ -209,6 +209,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 	mutations = append(mutations, historyMutations...)
 
 	commitment := &Commitment{
+		EventDigest:   eventDigest,
 		HistoryDigest: historyDigest,
 		HyperDigest:   hyperDigest,
 		Version:       version,
