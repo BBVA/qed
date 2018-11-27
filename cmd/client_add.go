@@ -38,8 +38,17 @@ func newAddCommand(ctx *clientContext) *cobra.Command {
 				return err
 			}
 
-			log.Infof("Received snapshot with values: \n\tEvent: %s\n\tHyperDigest: %x\n\tHistoryDigest: %x\n\tVersion: %d\n",
-				snapshot.EventDigest, snapshot.HyperDigest, snapshot.HistoryDigest, snapshot.Version)
+			log.Infof(`
+Received snapshot with values:
+	EventDigest: %s
+	HyperDigest: %x
+	HistoryDigest: %x
+	Version: %d
+`,
+				snapshot.EventDigest,
+				snapshot.HyperDigest,
+				snapshot.HistoryDigest,
+				snapshot.Version)
 
 			return nil
 		},

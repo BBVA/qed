@@ -123,6 +123,7 @@ func TestMembershipProofVerify(t *testing.T) {
 	for i, c := range testCases {
 		event := []byte("Yadda yadda")
 		commitment := &Commitment{
+			event, //TODO: should be eventDigest and used in the test
 			hashing.Digest("Some hyperDigest"),
 			hashing.Digest("Some historyDigest"),
 			c.actualVersion,
