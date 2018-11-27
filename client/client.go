@@ -170,7 +170,7 @@ func (c HttpClient) Verify(result *protocol.MembershipResult, snap *protocol.Sna
 
 	proof := protocol.ToBalloonProof([]byte(c.apiKey), result, hasherF)
 
-	return proof.Verify(snap.EventDigest, &balloon.Commitment{
+	return proof.Verify(snap.EventDigest, &balloon.Snapshot{
 		snap.EventDigest,
 		snap.HistoryDigest,
 		snap.HyperDigest,
@@ -183,19 +183,19 @@ func (c HttpClient) VerifyIncremental(result *protocol.IncrementalResponse, star
 
 	proof := protocol.ToIncrementalProof(result, hasher)
 
-	startCommitment := &balloon.Commitment{
+	start := &balloon.Snapshot{
 		startSnapshot.EventDigest,
 		startSnapshot.HistoryDigest,
 		startSnapshot.HyperDigest,
 		startSnapshot.Version,
 	}
-	endCommitment := &balloon.Commitment{
+	end := &balloon.Snapshot{
 		endSnapshot.EventDigest,
 		endSnapshot.HistoryDigest,
 		endSnapshot.HyperDigest,
 		endSnapshot.Version,
 	}
 
-	return proof.Verify(startCommitment, endCommitment)
+	return proof.Verify(start, end)
 
 }

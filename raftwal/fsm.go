@@ -38,8 +38,8 @@ type fsmGenericResponse struct {
 }
 
 type fsmAddResponse struct {
-	commitment *balloon.Commitment
-	error      error
+	snapshot *balloon.Snapshot
+	error    error
 }
 
 type BalloonFSM struct {
@@ -175,7 +175,7 @@ func (fsm *BalloonFSM) Close() error {
 
 func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 
-	commitment, mutations, err := fsm.balloon.Add(event)
+	snapshot, mutations, err := fsm.balloon.Add(event)
 	if err != nil {
 		return &fsmAddResponse{error: err}
 	}
@@ -194,13 +194,13 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 
 	//Send snapshot to gossip agents
 	fsm.agentsQueue <- &protocol.Snapshot{
-		HistoryDigest: commitment.HistoryDigest,
-		HyperDigest:   commitment.HyperDigest,
-		Version:       commitment.Version,
+		HistoryDigest: snapshot.HistoryDigest,
+		HyperDigest:   snapshot.HyperDigest,
+		Version:       snapshot.Version,
 		EventDigest:   event,
 	}
 
-	return &fsmAddResponse{commitment: commitment}
+	return &fsmAddResponse{snapshot: snapshot}
 }
 
 // Decode reverses the encode operation on a byte slice input

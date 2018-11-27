@@ -62,7 +62,7 @@ type Server struct {
 	raftPath       string   // Path to Raft storage directory
 	gossipAddr     string   // Gossip: management server bind address
 	gossipJoinAddr []string // Gossip: Comma-delimited list of nodes, through which a cluster can be joined (protocol://host:port)
-	privateKeyPath string   // Path to the private key file used to sign commitments
+	privateKeyPath string   // Path to the private key file used to sign snapshot
 	apiKey         string
 	bootstrap      bool // Set bootstrap to true when bringing up the first node as a master
 

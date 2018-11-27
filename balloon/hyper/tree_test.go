@@ -59,10 +59,10 @@ func TestAdd(t *testing.T) {
 
 	for i, c := range testCases {
 		index := uint64(i)
-		commitment, mutations, err := tree.Add(c.eventDigest, index)
+		snapshot, mutations, err := tree.Add(c.eventDigest, index)
 		tree.store.Mutate(mutations)
 		require.NoErrorf(t, err, "This should not fail for index %d", i)
-		assert.Equalf(t, c.expectedRootHash, commitment, "Incorrect root hash for index %d", i)
+		assert.Equalf(t, c.expectedRootHash, snapshot, "Incorrect root hash for index %d", i)
 
 	}
 }
@@ -154,7 +154,7 @@ func TestAddAndVerify(t *testing.T) {
 		tree := NewHyperTree(c.hasherF, store, simpleCache)
 
 		key := hasher.Do(hashing.Digest("a test event"))
-		commitment, mutations, err := tree.Add(key, value)
+		snapshot, mutations, err := tree.Add(key, value)
 		tree.store.Mutate(mutations)
 		require.NoErrorf(t, err, "This should not fail for index %d", i)
 
@@ -165,7 +165,7 @@ func TestAddAndVerify(t *testing.T) {
 		require.Nilf(t, err, "Error must be nil for index %d", i)
 		assert.Equalf(t, util.Uint64AsBytes(value), proof.Value, "Incorrect actual value for index %d", i)
 
-		correct := tree.VerifyMembership(proof, value, key, commitment)
+		correct := tree.VerifyMembership(proof, value, key, snapshot)
 		assert.Truef(t, correct, "Key %x should be a member for index %d", key, i)
 	}
 }

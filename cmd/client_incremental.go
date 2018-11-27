@@ -65,7 +65,7 @@ func newIncrementalCommand(ctx *clientContext) *cobra.Command {
 				startSnapshot := &protocol.Snapshot{sdBytes, nil, start, nil}
 				endSnapshot := &protocol.Snapshot{edBytes, nil, end, nil}
 
-				log.Infof("Verifying with commitments: \n\tStartDigest: %s\n\tEndDigest: %s\n",
+				log.Infof("Verifying with snapshots: \n\tStartDigest: %s\n\tEndDigest: %s\n",
 					startDigest, endDigest)
 				if ctx.client.VerifyIncremental(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
 					log.Info("Verify: OK")
