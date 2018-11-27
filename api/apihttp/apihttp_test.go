@@ -44,7 +44,7 @@ type fakeRaftBalloon struct {
 }
 
 func (b fakeRaftBalloon) Add(event []byte) (*balloon.Commitment, error) {
-	return &balloon.Commitment{hashing.Digest{0x00}, hashing.Digest{0x01}, 0}, nil
+	return &balloon.Commitment{hashing.Digest{0x02}, hashing.Digest{0x00}, hashing.Digest{0x01}, 0}, nil
 }
 
 func (b fakeRaftBalloon) Join(nodeID, addr string) error {
