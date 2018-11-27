@@ -34,18 +34,18 @@ add_event(){
 #	Version: 0
 
 verify_event() {
-	local commitment="$1"; shift
-	echo "${commitment}"
-	local event=$(echo "${commitment}" | grep "Event: " | awk -F': ' '{print $2;}')
-	local history=$(echo "${commitment}" | grep "HistoryDigest" | awk -F': ' '{print $2;}')
-	local hyper=$(echo "${commitment}" | grep "HyperDigest: " | awk -F': ' '{print $2;}')
-	local version=$(echo "${commitment}" | grep "Version: " | awk -F': ' '{print $2;}')
+	local snapshot="$1"; shift
+	echo "${snapshot}"
+	local event=$(echo "${snapshot}" | grep "Event: " | awk -F': ' '{print $2;}')
+	local history=$(echo "${snapshot}" | grep "HistoryDigest" | awk -F': ' '{print $2;}')
+	local hyper=$(echo "${snapshot}" | grep "HyperDigest: " | awk -F': ' '{print $2;}')
+	local version=$(echo "${snapshot}" | grep "Version: " | awk -F': ' '{print $2;}')
 	$QED client membership --historyDigest ${history}   --hyperDigest ${hyper}  --version ${version} --key ${event} --verify
 }
 
 for i in $(seq 1 1000); do
 	event=$(cat /dev/urandom | xxd -l 120 -ps -c 120)
-	commitment=$(add_event "${event}" "42")
-	verify_event "${commitment}"
+	snapshot=$(add_event "${event}" "42")
+	verify_event "${snapshot}"
 done
 

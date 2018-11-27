@@ -68,9 +68,10 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 	return balloon, nil
 }
 
-// Commitment is the struct that has both history and hyper digest and the
+// Snapshot is the struct that has both history and hyper digest and the
 // current version for that rootNode digests.
-type Commitment struct {
+type Snapshot struct {
+	EventDigest   hashing.Digest
 	HistoryDigest hashing.Digest
 	HyperDigest   hashing.Digest
 	Version       uint64
@@ -111,17 +112,17 @@ func NewMembershipProof(
 // Verify verifies a proof and answer from QueryMembership. Returns true if the
 // answer and proof are correct and consistent, otherwise false.
 // Run by a client on input that should be verified.
-func (p MembershipProof) Verify(event []byte, commitment *Commitment) bool {
+func (p MembershipProof) Verify(event []byte, snapshot *Snapshot) bool {
 	if p.HyperProof == nil || p.HistoryProof == nil {
 		return false
 	}
 
 	digest := p.Hasher.Do(event)
-	hyperCorrect := p.HyperProof.Verify(digest, commitment.HyperDigest)
+	hyperCorrect := p.HyperProof.Verify(digest, snapshot.HyperDigest)
 
 	if p.Exists {
 		if p.QueryVersion <= p.ActualVersion {
-			historyCorrect := p.HistoryProof.Verify(digest, commitment.HistoryDigest)
+			historyCorrect := p.HistoryProof.Verify(digest, snapshot.HistoryDigest)
 			return hyperCorrect && historyCorrect
 		}
 	}
@@ -148,9 +149,9 @@ func NewIncrementalProof(
 	}
 }
 
-func (p IncrementalProof) Verify(commitmentStart, commitmentEnd *Commitment) bool {
+func (p IncrementalProof) Verify(snapshotStart, snapshotEnd *Snapshot) bool {
 	ip := history.NewIncrementalProof(p.Start, p.End, p.AuditPath, p.Hasher)
-	return ip.Verify(commitmentStart.HistoryDigest, commitmentEnd.HistoryDigest)
+	return ip.Verify(snapshotStart.HistoryDigest, snapshotEnd.HistoryDigest)
 }
 
 func (b Balloon) Version() uint64 {
@@ -170,7 +171,7 @@ func (b *Balloon) RefreshVersion() error {
 	return nil
 }
 
-func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
+func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 
 	// Activate metrics gathering
 	stats := metrics.Balloon
@@ -208,7 +209,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 	// Append trees mutations
 	mutations = append(mutations, historyMutations...)
 
-	commitment := &Commitment{
+	snapshot := &Snapshot{
 		EventDigest:   eventDigest,
 		HistoryDigest: historyDigest,
 		HyperDigest:   hyperDigest,
@@ -219,7 +220,7 @@ func (b *Balloon) Add(event []byte) (*Commitment, []*storage.Mutation, error) {
 	stats.AddFloat("add_hits", 1)
 	stats.Set("version", metrics.Uint64ToVar(version))
 
-	return commitment, mutations, nil
+	return snapshot, mutations, nil
 }
 
 func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {

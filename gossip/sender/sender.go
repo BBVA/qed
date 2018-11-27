@@ -128,7 +128,7 @@ func (s *Sender) doSign(snapshot *protocol.Snapshot) (*protocol.SignedSnapshot, 
 
 	signature, err := s.signer.Sign([]byte(fmt.Sprintf("%v", snapshot)))
 	if err != nil {
-		fmt.Println("Publisher: error signing commitment")
+		fmt.Println("Publisher: error signing snapshot")
 		return nil, err
 	}
 	return &protocol.SignedSnapshot{snapshot, signature}, nil
