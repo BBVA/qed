@@ -96,7 +96,8 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	_, trans := raft.NewInmemTransport(raft.NewInmemAddr())
 	sink, _ := snap.Create(raft.SnapshotVersionMax, 10, 3, configuration, 2, trans)
 
-	fsmsnap.Persist(sink)
+	err = fsmsnap.Persist(sink)
+	assert.NoError(t, err)
 	// fsm.Close()
 
 	// Read the latest snapshot
@@ -110,7 +111,8 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
 	assert.NoError(t, err)
 
-	fsm2.Restore(r)
+	err = fsm2.Restore(r)
+	assert.NoError(t, err)
 
 	// Error: Command already applied
 	e := fsm2.Apply(newRaftLog(0, 0)).(*fsmAddResponse)
@@ -119,6 +121,6 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 
 func newRaftLog(index, term uint64) *raft.Log {
 	event := []byte("All's right with the world")
-	data, _ := commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{event})
-	return &raft.Log{index, term, raft.LogCommand, data}
+	data, _ := commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{Event: event})
+	return &raft.Log{Index: index, Term: term, Type: raft.LogCommand, Data: data}
 }

@@ -35,7 +35,6 @@ import (
 
 const (
 	retainSnapshotCount = 2
-	raftTimeout         = 10 * time.Second
 	leaderWaitDelay     = 100 * time.Millisecond
 	raftLogCacheSize    = 512
 )
@@ -373,7 +372,7 @@ func (b *RaftBalloon) remove(id string) error {
 		return f.Error()
 	}
 
-	cmd := &commands.MetadataDeleteCommand{id}
+	cmd := &commands.MetadataDeleteCommand{Id: id}
 	_, err := b.raftApply(commands.MetadataDeleteCommandType, cmd)
 
 	return err
@@ -397,7 +396,7 @@ func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interf
 */
 
 func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
-	cmd := &commands.AddEventCommand{event}
+	cmd := &commands.AddEventCommand{Event: event}
 	resp, err := b.raftApply(commands.AddEventCommandType, cmd)
 	if err != nil {
 		return nil, err
