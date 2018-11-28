@@ -47,7 +47,7 @@ type Balloon struct {
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// create caches
-	hyperCache := cache.NewFreeCache(hyper.CacheSize)
+	hyperCache := cache.NewFreeCache(int(hyper.CacheSize))
 
 	// create trees
 	historyTree := history.NewHistoryTree(hasherF, store, 30)
