@@ -12,7 +12,7 @@
 #  limitations under the License.
 
 master="127.0.0.1:9100"
-qed="127.0.0.1:8080"
+qed="http://127.0.0.1:8080"
 go run $GOPATH/src/github.com/bbva/qed/main.go start  -k key -l silent  --node-id server0 --gossip-addr $master --raft-addr 127.0.0.1:9000 -y $HOME/.ssh/id_ed25519 &
 pids[0]=$!
 sleep 1s
