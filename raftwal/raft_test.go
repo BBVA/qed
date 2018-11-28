@@ -38,25 +38,25 @@ import (
 
 func init() {
 	log.SetLogger("testRaft", log.DEBUG)
+
 }
 
 func raftAddr(id int) string {
 	return fmt.Sprintf(":830%d", id)
 }
-func joinAddr(id int) string {
-	return fmt.Sprintf(":840%d", id)
-}
 
 func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
 	badgerPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
 
-	os.MkdirAll(badgerPath, os.FileMode(0755))
+	err := os.MkdirAll(badgerPath, os.FileMode(0755))
+	require.NoError(t, err)
 	badger, err := badger.NewBadgerStore(badgerPath)
 	require.NoError(t, err)
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
-	os.MkdirAll(raftPath, os.FileMode(0755))
-	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot, 100))
+	err = os.MkdirAll(raftPath, os.FileMode(0755))
+	require.NoError(t, err)
+	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot, 25000))
 	require.NoError(t, err)
 
 	return r, func() {
@@ -355,12 +355,14 @@ func mustTempDir() string {
 func newNodeBench(b *testing.B, id int) (*RaftBalloon, func()) {
 	badgerPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
 
-	os.MkdirAll(badgerPath, os.FileMode(0755))
+	err := os.MkdirAll(badgerPath, os.FileMode(0755))
+	require.NoError(b, err)
 	badger, err := badger.NewBadgerStore(badgerPath)
 	require.NoError(b, err)
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
-	os.MkdirAll(raftPath, os.FileMode(0755))
+	err = os.MkdirAll(raftPath, os.FileMode(0755))
+	require.NoError(b, err)
 	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot, 100))
 	require.NoError(b, err)
 
