@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	CacheSize int = (1 << 26) * 68 // 2^26 elements * 68 bytes for entry
+	CacheSize int64 = (1 << 26) * 68 // 2^26 elements * 68 bytes for entry
 )
 
 type HyperTree struct {

@@ -289,7 +289,7 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 
 	hasher := hashing.NewSha256Hasher()
-	freeCache := cache.NewFreeCache(CacheSize)
+	freeCache := cache.NewFreeCache(int(CacheSize))
 	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
 	b.ResetTimer()
