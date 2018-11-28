@@ -14,6 +14,7 @@
 package monitor
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bbva/qed/client"
@@ -62,8 +63,8 @@ func NewMonitor(conf *Config) (*Monitor, error) {
 }
 
 type QueryTask struct {
-	Start, End             uint64
-	StartDigest, EndDigest hashing.Digest
+	Start, End                 uint64
+	StartSnapshot, EndSnapshot *protocol.Snapshot
 }
 
 func (m Monitor) Process(b *protocol.BatchSnapshots) {
@@ -74,10 +75,10 @@ func (m Monitor) Process(b *protocol.BatchSnapshots) {
 	log.Debugf("Processing batch from versions %d to %d", first.Version, last.Version)
 
 	task := &QueryTask{
-		Start:       first.Version,
-		End:         last.Version,
-		StartDigest: first.HistoryDigest,
-		EndDigest:   last.HistoryDigest,
+		Start:         first.Version,
+		End:           last.Version,
+		StartSnapshot: first,
+		EndSnapshot:   last,
 	}
 
 	m.taskCh <- task
@@ -105,25 +106,30 @@ func (m *Monitor) Shutdown() {
 
 func (m *Monitor) dispatchTasks() {
 	count := 0
-	for i := 0; i < m.conf.MaxInFlightTasks; i++ {
-		task := <-m.taskCh
-		go m.executeTask(task)
-		count++
+	var task *QueryTask
+	defer log.Debugf("%d tasks dispatched", count)
+	for {
+		select {
+		case task = <-m.taskCh:
+			go m.executeTask(task)
+			count++
+		default:
+			return
+		}
+		if count >= m.conf.MaxInFlightTasks {
+			return
+		}
 	}
-	// var task *QueryTask
-
-	// for {
-	// 	select {
-	// 	case task = <-m.taskCh:
-	// 		go m.executeTask(task)
-	// 		count++
-	// 	default:
-	// 		return
-	// 	}
-	// }
-	log.Debugf("%d tasks dispatched")
 }
 
 func (m *Monitor) executeTask(task *QueryTask) {
-	log.Debug("Executing task: %v", task)
+	log.Debug("Executing task: %+v", task)
+	fmt.Printf("Executing task: %+v\n", task)
+	resp, err := m.client.Incremental(task.Start, task.End)
+	if err != nil {
+		// retry
+		log.Errorf("Error executing incremental query: %v", err)
+	}
+	ok := m.client.VerifyIncremental(resp, task.StartSnapshot, task.EndSnapshot, hashing.NewSha256Hasher())
+	fmt.Printf("Consistency between versions %d and %d: %v\n", task.Start, task.End, ok)
 }
