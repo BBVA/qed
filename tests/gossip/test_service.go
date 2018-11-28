@@ -14,7 +14,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -53,21 +52,8 @@ type BatchSnapshots struct {
 	From      *member.Peer
 }
 
-type StoreClient interface {
-	Put(key, value string)
-}
-
 type RedisCli struct {
 	rcli *redis.Client
-}
-
-func (s *stats) Add(nodeType string, id, v int) {
-	s.Lock()
-	defer s.Unlock()
-	if s.batch[nodeType] == nil {
-		s.batch[nodeType] = make([]int, 10)
-	}
-	s.batch[nodeType][id] += v
 }
 
 func NewRedisClient() *RedisCli {
@@ -83,8 +69,16 @@ func NewRedisClient() *RedisCli {
 	return &RedisCli{rcli: c}
 }
 
-func (c *RedisCli) Put(key, value string) {
-	err := c.rcli.Set(key, value, 0).Err()
+func (c *RedisCli) QueueCommands(key string, value []byte) {
+	err := c.rcli.Pipeline().Set(key, value, 0).Err()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c *RedisCli) Execute() {
+	// err := c.rcli.Set(key, value, 0).Err()
+	_, err := c.rcli.Pipeline().Exec()
 	if err != nil {
 		panic(err)
 	}
@@ -92,13 +86,22 @@ func (c *RedisCli) Put(key, value string) {
 
 // TODO: SeMaaS
 
-func (s stats) Get(nodeType string, id int) int {
+func (s *stats) Add(nodeType string, id, v int) {
+	s.Lock()
+	defer s.Unlock()
+	if s.batch[nodeType] == nil {
+		s.batch[nodeType] = make([]int, 10)
+	}
+	s.batch[nodeType][id] += v
+}
+
+func (s *stats) Get(nodeType string, id int) int {
 	s.Lock()
 	defer s.Unlock()
 	return s.batch[nodeType][id]
 }
 
-func (s stats) Print() {
+func (s *stats) Print() {
 	s.Lock()
 	defer s.Unlock()
 	b, err := json.MarshalIndent(s.batch, "", "  ")
@@ -121,7 +124,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	atomic.AddUint64(&count, 1)
 }
 
-func PublishHandler(w http.ResponseWriter, r *http.Request, client StoreClient) {
+func PublishHandler(w http.ResponseWriter, r *http.Request, client *RedisCli) {
 	if r.Method == "POST" {
 		var b BatchSnapshots
 		err := json.NewDecoder(r.Body).Decode(&b)
@@ -129,12 +132,13 @@ func PublishHandler(w http.ResponseWriter, r *http.Request, client StoreClient) 
 			fmt.Println("Error unmarshalling: ", err)
 		}
 
-		// TODO: Insert the whole batch. Not snapshot by snapshot.
-		for _, s := range b.Snapshots {
+		for i, s := range b.Snapshots {
 			key := strconv.FormatUint(s.Snapshot.Version, 10)
-			v := sha256.Sum256(s.Snapshot.HistoryDigest)
-			val := string(v[:])
-			go client.Put(key, val)
+			encSnap, _ := json.Marshal(s)
+			client.QueueCommands(key, encSnap)
+			if i%len(b.Snapshots) == 0 {
+				go client.Execute()
+			}
 		}
 
 	} else {
