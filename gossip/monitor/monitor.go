@@ -42,7 +42,7 @@ type Monitor struct {
 
 	taskCh          chan *QueryTask
 	quitCh          chan bool
-	executionTicker *time.Timer
+	executionTicker *time.Ticker
 }
 
 func NewMonitor(conf *Config) (*Monitor, error) {
@@ -84,7 +84,7 @@ func (m Monitor) Process(b *protocol.BatchSnapshots) {
 }
 
 func (m *Monitor) runTaskDispatcher() {
-	m.executionTicker = time.NewTimer(m.conf.TaskExecutionInterval)
+	m.executionTicker = time.NewTicker(m.conf.TaskExecutionInterval)
 	for {
 		select {
 		case <-m.executionTicker.C:
