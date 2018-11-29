@@ -60,6 +60,7 @@ func newAgentCommand() *cobra.Command {
 
 	cmd.AddCommand(newAgentMonitorCommand(ctx))
 	cmd.AddCommand(newAgentAuditorCommand(ctx))
+	cmd.AddCommand(newAgentPublisherCommand(ctx))
 
 	return cmd
 
