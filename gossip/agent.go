@@ -104,10 +104,14 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 		RetransmitMult: 2,
 	}
 
+	if p != nil {
+		go agent.start()
+	}
+
 	return agent, nil
 }
 
-func (a *Agent) Start() {
+func (a *Agent) start() {
 
 	outTicker := time.NewTicker(2 * time.Second)
 	alertTicker := time.NewTicker(1 * time.Second)

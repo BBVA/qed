@@ -9,10 +9,6 @@ import (
 	"github.com/bbva/qed/gossip/member"
 )
 
-func TestStart(t *testing.T) {
-
-}
-
 func TestJoin(t *testing.T) {
 	conf := DefaultConfig()
 	conf.NodeName = "testNode"
