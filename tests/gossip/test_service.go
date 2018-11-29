@@ -14,6 +14,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/bbva/qed/gossip/member"
 	"github.com/go-redis/redis"
+	"github.com/hashicorp/go-msgpack/codec"
 )
 
 type stats struct {
@@ -64,8 +66,9 @@ func NewRedisClient() *RedisCli {
 	})
 
 	pong, err := c.Ping().Result()
-	fmt.Println(pong, err)
-	// Output: PONG <nil>
+	if err == nil {
+		fmt.Printf("%s: Redis successfully connected in %s \n", pong, c.Options().Addr)
+	}
 	return &RedisCli{rcli: c}
 }
 
@@ -126,16 +129,23 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func PublishHandler(w http.ResponseWriter, r *http.Request, client *RedisCli) {
 	if r.Method == "POST" {
+		// Decode batch to get signed snapshots and batch version.
 		var b BatchSnapshots
 		err := json.NewDecoder(r.Body).Decode(&b)
 		if err != nil {
 			fmt.Println("Error unmarshalling: ", err)
 		}
 
+		// Encode each signed snapshot for sending it to DB.
+		var buf bytes.Buffer
+		encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
+
 		for i, s := range b.Snapshots {
 			key := strconv.FormatUint(s.Snapshot.Version, 10)
-			encSnap, _ := json.Marshal(s)
-			client.QueueCommands(key, encSnap)
+
+			_ = encoder.Encode(s)
+
+			client.QueueCommands(key, buf.Bytes())
 			if i%len(b.Snapshots) == 0 {
 				go client.Execute()
 			}
