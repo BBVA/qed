@@ -52,7 +52,6 @@ func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
 			}
 			log.Debugf("Number of nodes contacted: %d", contacted)
 
-			agent.Start()
 			defer agent.Shutdown()
 			util.AwaitTermSignal(agent.Leave)
 		},

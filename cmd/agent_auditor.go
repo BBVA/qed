@@ -50,7 +50,6 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 			}
 			log.Debugf("Number of nodes contacted: %d (%v)", contacted, agentConfig.StartJoin)
 
-			agent.Start()
 			defer agent.Shutdown()
 			util.AwaitTermSignal(agent.Leave)
 		},
