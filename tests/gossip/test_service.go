@@ -14,9 +14,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,71 +24,29 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bbva/qed/gossip/member"
-	"github.com/go-redis/redis"
-	"github.com/hashicorp/go-msgpack/codec"
+	"github.com/bbva/qed/protocol"
 )
 
-type stats struct {
+type kv struct {
 	sync.Mutex
-	batch map[string][]int
+	d map[uint64]*protocol.SignedSnapshot
 }
 
-type Digest []byte
+func (kv *kv) Put(b *protocol.BatchSnapshots) {
+	kv.Lock()
+	defer kv.Unlock()
 
-type Snapshot struct {
-	HistoryDigest Digest
-	HyperDigest   Digest
-	Version       uint64
-	EventDigest   Digest
-}
-
-type SignedSnapshot struct {
-	Snapshot  *Snapshot
-	Signature []byte
-}
-
-type BatchSnapshots struct {
-	Snapshots []*SignedSnapshot
-	TTL       int
-	From      *member.Peer
-}
-
-type RedisCli struct {
-	rcli *redis.Client
-}
-
-func NewRedisClient() *RedisCli {
-	c := redis.NewClient(&redis.Options{
-		Addr:     "127.0.0.1:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-
-	pong, err := c.Ping().Result()
-	if err == nil {
-		fmt.Printf("%s: Redis successfully connected in %s \n", pong, c.Options().Addr)
+	for _, s := range b.Snapshots {
+		kv.d[s.Snapshot.Version] = s
 	}
-	return &RedisCli{rcli: c}
+
 }
 
-func (c *RedisCli) QueueCommands(key string, value []byte) {
-	err := c.rcli.Pipeline().Set(key, value, 0).Err()
-	if err != nil {
-		panic(err)
-	}
+func (kv *kv) Get(version uint64) *protocol.SignedSnapshot {
+	kv.Lock()
+	defer kv.Unlock()
+	return kv.d[version]
 }
-
-func (c *RedisCli) Execute() {
-	// err := c.rcli.Set(key, value, 0).Err()
-	cmds, err := c.rcli.Pipeline().Exec()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(cmds)
-}
-
-// TODO: SeMaaS
 
 func (s *stats) Add(nodeType string, id, v int) {
 	s.Lock()
@@ -97,6 +55,11 @@ func (s *stats) Add(nodeType string, id, v int) {
 		s.batch[nodeType] = make([]int, 10)
 	}
 	s.batch[nodeType][id] += v
+}
+
+type stats struct {
+	sync.Mutex
+	batch map[string][]int
 }
 
 func (s *stats) Get(nodeType string, id int) int {
@@ -119,7 +82,7 @@ func (s *stats) Print() {
 var count uint64
 var s stats
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func statHandler(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	nodeType := q.Get("nodeType")
 	id, _ := strconv.Atoi(q.Get("id"))
@@ -129,39 +92,54 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	atomic.AddUint64(&count, 1)
 }
 
-func PublishHandler(w http.ResponseWriter, r *http.Request, client *RedisCli) {
-	if r.Method == "POST" {
-		// Decode batch to get signed snapshots and batch version.
-		var b BatchSnapshots
-		err := json.NewDecoder(r.Body).Decode(&b)
-		if err != nil {
-			fmt.Println("Error unmarshalling: ", err)
+func putHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			// Decode batch to get signed snapshots and batch version.
+			var b protocol.BatchSnapshots
+			buf, err := ioutil.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			err = b.Decode(buf)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			kv.Put(&b)
+			return
 		}
-
-		// Encode each signed snapshot for sending it to DB.
-		var buf bytes.Buffer
-		encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-
-		for _, s := range b.Snapshots {
-			key := strconv.FormatUint(s.Snapshot.Version, 10)
-
-			_ = encoder.Encode(s)
-			_ = client.rcli.Set(key, buf.Bytes(), 0).Err()
-
-			// client.QueueCommands(key, buf.Bytes())
-			// if i%len(b.Snapshots) == 0 {
-			// 	go client.Execute()
-			// }
-		}
-
-	} else {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 	}
 }
-
+func getHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			q := r.URL.Query()
+			version, err := strconv.ParseInt(q.Get("v"), 10, 64)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			b := kv.Get(uint64(version))
+			buf, err := b.Encode()
+			_, err = w.Write(buf)
+			if err != nil {
+				fmt.Println("ERROR: %v", err)
+			}
+			return
+		}
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	}
+}
 func main() {
+	var store kv
+
+	store.d = make(map[uint64]*protocol.SignedSnapshot, 0)
 	s.batch = make(map[string][]int, 0)
-	client := NewRedisClient()
 
 	go func() {
 		ticker := time.NewTicker(2 * time.Second)
@@ -176,7 +154,8 @@ func main() {
 		}
 	}()
 
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/publish", func(w http.ResponseWriter, r *http.Request) { PublishHandler(w, r, client) })
+	http.HandleFunc("/stat", statHandler)
+	http.HandleFunc("/put", putHandler(&store))
+	http.HandleFunc("/get", getHandler(&store))
 	log.Fatal(http.ListenAndServe("127.0.0.1:8888", nil))
 }
