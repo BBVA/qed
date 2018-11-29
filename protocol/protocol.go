@@ -57,6 +57,26 @@ type SignedSnapshot struct {
 	Signature []byte
 }
 
+func (b *SignedSnapshot) Encode() ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
+	if err := encoder.Encode(b); err != nil {
+		log.Errorf("Failed to encode message: %v", err)
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (b *SignedSnapshot) Decode(msg []byte) error {
+	reader := bytes.NewReader(msg)
+	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
+	if err := decoder.Decode(b); err != nil {
+		log.Errorf("Failed to decode snapshots batch: %v", err)
+		return err
+	}
+	return nil
+}
+
 type BatchSnapshots struct {
 	Snapshots []*SignedSnapshot
 	TTL       int

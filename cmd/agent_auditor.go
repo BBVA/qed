@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/gossip/auditor"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
@@ -37,9 +38,16 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 
 			agentConfig := ctx.config
 			agentConfig.Role = member.Auditor
-			//auditorConfig := auditor.DefaultConfig()
+			auditorConfig := auditor.DefaultConfig()
+			auditorConfig.APIKey = apiKey
+			auditorConfig.QEDEndpoints = qedEndpoints
 
-			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{gossip.DummyProcessor{}})
+			auditor, err := monitor.NewAuditor(auditorConfig)
+			if err != nil {
+				log.Fatalf("Failed to start the QED monitor: %v", err)
+			}
+
+			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{auditor})
 			if err != nil {
 				log.Fatalf("Failed to start the QED auditor: %v", err)
 			}
