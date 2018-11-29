@@ -29,6 +29,12 @@ do
 	pids+=($!)
 done 
 
+for i in `seq 1 $3`;
+do
+	xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/main.go agent publisher -k key -l silent --bind 127.0.0.1:930$i --join $master --endpoints $qed --node publisher$i" &
+	pids+=($!)
+done 
+
 for pid in ${pids[*]}; do
 	echo waiting for pid $pid
 	wait $pid
