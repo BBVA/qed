@@ -50,7 +50,7 @@ func NewPublisher(conf *Config) *Publisher {
 	}
 }
 
-func (p Publisher) Process(b *protocol.BatchSnapshots) {
+func (p *Publisher) Process(b *protocol.BatchSnapshots) {
 	body, err := json.Marshal(&b)
 	if err != nil {
 		log.Debug("\nPublisher: Error marshalling: %s", err.Error())
@@ -59,16 +59,15 @@ func (p Publisher) Process(b *protocol.BatchSnapshots) {
 
 	req := fasthttp.AcquireRequest()
 	// TODO: Implement send to different endpoints
-	req.SetRequestURI(p.Config.SendTo[0])
+	req.SetRequestURI(p.Config.SendTo[0] + "/publish")
 	req.Header.SetMethodBytes([]byte("POST"))
 	req.Header.Add("Content-Type", "application/json")
 	req.SetBody(body)
-
 	res := fasthttp.AcquireResponse()
 
 	err = p.Config.Client.Do(req, res)
 	if err != nil {
-		log.Debug("\nPublisher: Error sending request to publishers: %s", err.Error())
+		log.Info("\nPublisher: Error sending request to publishers: %s", err.Error())
 		return
 	}
 
