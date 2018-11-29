@@ -15,8 +15,8 @@ master="127.0.0.1:9100"
 publisher="http://127.0.0.1:8888"
 qed="http://127.0.0.1:8080"
 echo Create id_ed25519 key
-echo -e 'y\n' | ssh-keygen -t rsa -N '' -f /var/tmp/id_ed25519
-go run $GOPATH/src/github.com/bbva/qed/main.go start  -k key -l silent  --node-id server0 --gossip-addr $master --raft-addr 127.0.0.1:9000 &
+echo -e 'y\n' | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+go run $GOPATH/src/github.com/bbva/qed/main.go start  -k key -l silent --node-id server0 --gossip-addr $master --raft-addr 127.0.0.1:9000 -y /var/tmp/id_ed25519 &
 pids[0]=$!
 sleep 1s
 
