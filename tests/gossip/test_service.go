@@ -107,7 +107,8 @@ func (s *stats) Get(nodeType string, id int) int {
 func (s *stats) Print() {
 	s.Lock()
 	defer s.Unlock()
-	b, err := json.MarshalIndent(s.batch, "", "  ")
+	b, err := json.Marshal(s.batch)
+	//b, err := json.MarshalIndent(s.batch, "", "  ")
 	if err == nil {
 		fmt.Println(string(b))
 	}
