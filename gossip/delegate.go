@@ -48,6 +48,9 @@ func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 // updated, usually involving the meta data.
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
 	// ignore
+	peer := member.ParsePeer(n)
+	e.agent.Topology.Update(peer)
+	log.Debugf("member updated: %+v ", peer)
 }
 
 type agentDelegate struct {
