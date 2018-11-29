@@ -81,10 +81,11 @@ func (c *RedisCli) QueueCommands(key string, value []byte) {
 
 func (c *RedisCli) Execute() {
 	// err := c.rcli.Set(key, value, 0).Err()
-	_, err := c.rcli.Pipeline().Exec()
+	cmds, err := c.rcli.Pipeline().Exec()
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(cmds)
 }
 
 // TODO: SeMaaS
@@ -141,15 +142,16 @@ func PublishHandler(w http.ResponseWriter, r *http.Request, client *RedisCli) {
 		var buf bytes.Buffer
 		encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
 
-		for i, s := range b.Snapshots {
+		for _, s := range b.Snapshots {
 			key := strconv.FormatUint(s.Snapshot.Version, 10)
 
 			_ = encoder.Encode(s)
+			_ = client.rcli.Set(key, buf.Bytes(), 0).Err()
 
-			client.QueueCommands(key, buf.Bytes())
-			if i%len(b.Snapshots) == 0 {
-				go client.Execute()
-			}
+			// client.QueueCommands(key, buf.Bytes())
+			// if i%len(b.Snapshots) == 0 {
+			// 	go client.Execute()
+			// }
 		}
 
 	} else {
