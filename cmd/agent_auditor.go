@@ -42,7 +42,7 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 			auditorConfig.APIKey = apiKey
 			auditorConfig.QEDEndpoints = qedEndpoints
 
-			auditor, err := monitor.NewAuditor(auditorConfig)
+			auditor, err := auditor.NewAuditor(auditorConfig)
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
