@@ -59,7 +59,7 @@ func (p *Publisher) Process(b *protocol.BatchSnapshots) {
 
 	req := fasthttp.AcquireRequest()
 	// TODO: Implement send to different endpoints
-	req.SetRequestURI(p.Config.SendTo[0] + "/publish")
+	req.SetRequestURI(p.Config.SendTo[0] + "/batch")
 	req.Header.SetMethodBytes([]byte("POST"))
 	req.Header.Add("Content-Type", "application/json")
 	req.SetBody(body)
