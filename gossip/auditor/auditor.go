@@ -23,6 +23,14 @@ import (
 	"github.com/bbva/qed/protocol"
 )
 
+type QueryTask struct {
+	Start, End                 uint64
+	StartSnapshot, EndSnapshot *protocol.Snapshot
+}
+
+func (q *QueryTask) Do() {
+}
+
 type Config struct {
 	QEDEndpoints          []string
 	APIKey                string
@@ -62,7 +70,7 @@ func NewAuditor(conf *Config) (*Auditor, error) {
 	return auditor, nil
 }
 
-type QuerTask interface {
+type QuerTasker interface {
 	Do(*protocol.BatchSnapshots)
 }
 
@@ -97,8 +105,8 @@ func (t *MembershipTask) Do() {
 		// retry
 		log.Errorf("Error executing incremental query: %v", err)
 	}
-	ok := t.client.Verify(resp, t.StartSnapshot, t.S.Snapshot., hashing.NewSha256Hasher())
-	fmt.Printf("Membership\n", t.Start, t.End, ok)
+	ok := t.client.Verify(resp, t.S.Snapshot, hashing.NewSha256Hasher)
+	fmt.Printf("Membership\n" /*t.Start, t.End,*/, ok)
 }
 
 func (m Auditor) Process(b *protocol.BatchSnapshots) {
