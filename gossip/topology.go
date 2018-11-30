@@ -124,12 +124,12 @@ func (t *Topology) Get(kind member.Type) PeerList {
 	return t.m[kind]
 }
 
-func (t *Topology) Each(n int, p *PeerList) *PeerList {
+func (t *Topology) Each(n int, exclude *PeerList) *PeerList {
 	var b PeerList
 
-	auditors := t.m[member.Auditor].Exclude(p).Shuffle()
-	monitors := t.m[member.Monitor].Exclude(p).Shuffle()
-	publishers := t.m[member.Publisher].Exclude(p).Shuffle()
+	auditors := t.m[member.Auditor].Exclude(exclude).Shuffle()
+	monitors := t.m[member.Monitor].Exclude(exclude).Shuffle()
+	publishers := t.m[member.Publisher].Exclude(exclude).Shuffle()
 
 	if len(auditors.L) > n {
 		auditors.L = auditors.L[:n]
