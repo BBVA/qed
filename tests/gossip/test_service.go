@@ -92,7 +92,7 @@ func statHandler(w http.ResponseWriter, r *http.Request) {
 	atomic.AddUint64(&count, 1)
 }
 
-func putHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
+func postBatchHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
@@ -115,7 +115,8 @@ func putHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 	}
 }
-func getHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
+
+func getSnapshotHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			q := r.URL.Query()
@@ -135,6 +136,7 @@ func getHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 	}
 }
+
 func main() {
 	var store kv
 
@@ -155,7 +157,7 @@ func main() {
 	}()
 
 	http.HandleFunc("/stat", statHandler)
-	http.HandleFunc("/put", putHandler(&store))
-	http.HandleFunc("/get", getHandler(&store))
+	http.HandleFunc("/batch", postBatchHandler(&store))
+	http.HandleFunc("/snapshot/{id}", getSnapshotHandler(&store))
 	log.Fatal(http.ListenAndServe("127.0.0.1:8888", nil))
 }
