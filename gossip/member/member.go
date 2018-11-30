@@ -81,7 +81,7 @@ func NewPeer(name, addr string, port uint16, role Type) *Peer {
 
 	return &Peer{
 		Name: name,
-		Addr: net.IP(addr),
+		Addr: net.ParseIP(addr),
 		Port: port,
 		Meta: meta,
 	}
