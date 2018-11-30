@@ -27,7 +27,7 @@ type Filter func(m *member.Peer) bool
 
 func (l *PeerList) Filter(f Filter) *PeerList {
 	var b PeerList
-	b.L = l.L[:0]
+	b.L = make([]*member.Peer, 0)
 	for _, x := range l.L {
 		if f(x) {
 			b.L = append(b.L, x)
@@ -62,29 +62,29 @@ func (l *PeerList) Shuffle() *PeerList {
 	return l
 }
 
-func (l *PeerList) Update(m *member.Peer) error {
-	var add bool = true
-	for _, e := range l.L {
-		if e.Name == m.Name {
-			e = m
-			add = false
-		}
-	}
-	if add {
-		l.L = append(l.L, m)
-	}
-	return nil
-}
-
-func (l *PeerList) Delete(m *member.Peer) error {
+func (l *PeerList) Update(m *member.Peer) {
 	for i, e := range l.L {
 		if e.Name == m.Name {
-			l.L[i] = l.L[len(l.L)-1]
-			l.L[len(l.L)-1] = nil
-			l.L = l.L[:len(l.L)-1]
+			l.L[i] = m
+			return
 		}
 	}
-	return nil
+	l.L = append(l.L, m)
+}
+
+func (l *PeerList) Delete(m *member.Peer) {
+	for i, e := range l.L {
+		if e.Name == m.Name {
+			copy(l.L[i:], l.L[i+1:])
+			l.L[len(l.L)-1] = nil
+			l.L = l.L[:len(l.L)-1]
+			return
+		}
+	}
+}
+
+func (l PeerList) Size() int {
+	return len(l.L)
 }
 
 type Topology struct {
