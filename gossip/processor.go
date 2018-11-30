@@ -37,7 +37,7 @@ type DummyProcessor struct {
 
 func (d DummyProcessor) Process(b *protocol.BatchSnapshots) {
 	for i := 0; i < len(b.Snapshots); i++ {
-		res, err := http.Get(fmt.Sprintf("http://127.0.0.1:8888/?nodeType=auditor&id=%d", b.Snapshots[0].Snapshot.Version))
+		res, err := http.Get(fmt.Sprintf("http://127.0.0.1:8888/stat/?nodeType=auditor&id=%d", b.Snapshots[0].Snapshot.Version))
 		if err != nil || res == nil {
 			log.Debugf("Error contacting service with error %v", err)
 		}
