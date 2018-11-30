@@ -21,6 +21,18 @@ func setupPeerList(size int) *PeerList {
 	return &PeerList{peers}
 }
 
+func setupTopology(size int) *Topology {
+	topology := NewTopology()
+	for i := 0; i < size; i++ {
+		name := fmt.Sprintf("name%d", i)
+		port, _ := strconv.Atoi(fmt.Sprintf("900%d", i))
+		role := member.Type(i % int(member.Unknown))
+		peer := member.NewPeer(name, "127.0.0.1", uint16(port), role)
+		topology.Update(peer)
+	}
+	return topology
+}
+
 func TestFilterPeerList(t *testing.T) {
 	list := setupPeerList(10)
 
@@ -126,4 +138,76 @@ func TestDeleteNotIncludedPeerList(t *testing.T) {
 
 	require.Truef(t, 10 == list.Size(), "The new list should have the same size")
 
+}
+
+func TestShufflePeerList(t *testing.T) {
+	list := setupPeerList(10)
+
+	shuffled := list.Shuffle()
+
+	require.Truef(t, 10 == shuffled.Size(), "The new list should have the same size")
+	for _, e := range list.L {
+		require.Containsf(t, shuffled.L, e, "The element should remain in the list")
+	}
+}
+
+func TestUpdateAndDeleteTopology(t *testing.T) {
+	topology := NewTopology()
+
+	peer := member.NewPeer("auditor", "127.0.0.1", 9000, member.Auditor)
+	topology.Update(peer)
+
+	auditors := topology.Get(member.Auditor)
+	require.Truef(t, 1 == auditors.Size(), "The topology must include one auditor")
+
+	topology.Delete(peer)
+
+	auditors = topology.Get(member.Auditor)
+	require.Truef(t, 0 == auditors.Size(), "The topology must include zero auditor")
+
+}
+
+func TestEachWithoutExclusionsTopology(t *testing.T) {
+	topology := setupTopology(10)
+
+	each := topology.Each(1, nil)
+
+	require.Truef(t, 3 == each.Size(), "It must include only 3 elements")
+
+	auditors := each.Filter(func(m *member.Peer) bool {
+		return m.Meta.Role == member.Auditor
+	})
+	monitors := each.Filter(func(m *member.Peer) bool {
+		return m.Meta.Role == member.Monitor
+	})
+	publishers := each.Filter(func(m *member.Peer) bool {
+		return m.Meta.Role == member.Publisher
+	})
+
+	require.Truef(t, 1 == auditors.Size(), "It must include only one auditor")
+	require.Truef(t, 1 == monitors.Size(), "It must include only one monitor")
+	require.Truef(t, 1 == publishers.Size(), "It must include only one publisher")
+}
+
+func TestEachWithExclusionsTopology(t *testing.T) {
+	topology := setupTopology(10)
+
+	excluded := topology.Get(member.Auditor)
+	each := topology.Each(1, &excluded)
+
+	require.Truef(t, 2 == each.Size(), "It must include only 2 elements")
+
+	auditors := each.Filter(func(m *member.Peer) bool {
+		return m.Meta.Role == member.Auditor
+	})
+	monitors := each.Filter(func(m *member.Peer) bool {
+		return m.Meta.Role == member.Monitor
+	})
+	publishers := each.Filter(func(m *member.Peer) bool {
+		return m.Meta.Role == member.Publisher
+	})
+
+	require.Truef(t, 0 == auditors.Size(), "It must not include any auditor")
+	require.Truef(t, 1 == monitors.Size(), "It must include only one monitor")
+	require.Truef(t, 1 == publishers.Size(), "It must include only one publisher")
 }
