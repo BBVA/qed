@@ -11,30 +11,36 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-master="127.0.0.1:9100"
-publisher="http://127.0.0.1:8888"
-qed="http://127.0.0.1:8080"
-echo Create id_ed25519 key
-echo -e 'y\n' | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
-go run $GOPATH/src/github.com/bbva/qed/main.go start -k key -l silent --node-id server0 --gossip-addr $master --raft-addr 127.0.0.1:9000 -y /var/tmp/id_ed25519 &
+masterEndpoint="127.0.0.1:9100"
+publisherEndpoint="http://127.0.0.1:8888"
+qedEndpoint="http://127.0.0.1:8080"
+keyFile="/var/tmp/id_ed25519"
+QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
+
+if [ ! -f "$keyFile" ]; then 
+	echo Create id_ed25519 key
+	echo -e 'y\n' | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+fi
+
+$QED start -k key -l silent --node-id server0 --gossip-addr $masterEndpoint --raft-addr 127.0.0.1:9000 -y $keyFile &
 pids[0]=$!
-sleep 1s
+sleep 2s
 
 for i in `seq 1 $1`;
 do
-	xterm -geometry +0-0 -hold -e "go run $GOPATH/src/github.com/bbva/qed/main.go agent auditor -k key -l info --bind 127.0.0.1:910$i --join $master --endpoints $qed --node auditor$i" &
+	xterm -hold -e "$QED agent auditor -k key -l info --bind 127.0.0.1:910$i --join $masterEndpoint --qedUrls $qedEndpoint --pubUrls $publisherEndpoint --node auditor$i" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $2`;
 do
-	xterm -geometry -0+0 -hold -e "go run $GOPATH/src/github.com/bbva/qed/main.go agent monitor -k key -l info --bind 127.0.0.1:920$i --join $master --endpoints $qed --node monitor$i" &
+	xterm  -hold -e "$QED agent monitor -k key -l info --bind 127.0.0.1:920$i --join $masterEndpoint --endpoints $qedEndpoint --node monitor$i" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $3`;
 do
-	xterm -geometry -0-0 -hold -e "go run $GOPATH/src/github.com/bbva/qed/main.go agent publisher -k key -l info --bind 127.0.0.1:930$i --join $master --endpoints $publisher --node publisher$i" &
+	xterm -hold -e "$QED agent publisher -k key -l info --bind 127.0.0.1:930$i --join $masterEndpoint --endpoints $publisherEndpoint --node publisher$i" &
 	pids+=($!)
 done 
 
