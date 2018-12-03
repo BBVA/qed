@@ -17,7 +17,7 @@
 package publisher
 
 import (
-	"encoding/json"
+	"encoding/base64"
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
@@ -54,11 +54,12 @@ func NewPublisher(conf *Config) *Publisher {
 }
 
 func (p *Publisher) Process(b *protocol.BatchSnapshots) {
-	body, err := json.Marshal(&b)
+	buf, err := b.Encode()
 	if err != nil {
 		log.Debug("\nPublisher: Error marshalling: %s", err.Error())
 		return
 	}
+	body := []byte(base64.StdEncoding.EncodeToString(buf))
 
 	req := fasthttp.AcquireRequest()
 	// TODO: Implement send to different endpoints
