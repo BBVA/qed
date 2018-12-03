@@ -14,6 +14,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -37,15 +38,17 @@ func (kv *kv) Put(b *protocol.BatchSnapshots) {
 	defer kv.Unlock()
 
 	for _, s := range b.Snapshots {
+		fmt.Println("Storing ", s.Snapshot.Version, " snapshot")
 		kv.d[s.Snapshot.Version] = s
 	}
 
 }
 
-func (kv *kv) Get(version uint64) *protocol.SignedSnapshot {
+func (kv *kv) Get(version uint64) (v *protocol.SignedSnapshot, ok bool) {
 	kv.Lock()
 	defer kv.Unlock()
-	return kv.d[version]
+	v, ok = kv.d[version]
+	return v, ok
 }
 
 func (s *stats) Add(nodeType string, id, v int) {
@@ -93,7 +96,6 @@ func statHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func postBatchHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			// Decode batch to get signed snapshots and batch version.
@@ -103,7 +105,12 @@ func postBatchHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			err = b.Decode(buf)
+			sDec, err := base64.StdEncoding.DecodeString(string(buf))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			err = b.Decode(sDec)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -125,9 +132,13 @@ func getSnapshotHandler(kv *kv) func(http.ResponseWriter, *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			b := kv.Get(uint64(version))
+			b, ok := kv.Get(uint64(version))
+			if !ok {
+				http.Error(w, fmt.Sprintf("Version not found: %v", version), http.StatusMethodNotAllowed)
+				return
+			}
 			buf, err := b.Encode()
-			_, err = w.Write(buf)
+			_, err = w.Write([]byte(base64.StdEncoding.EncodeToString(buf)))
 			if err != nil {
 				fmt.Println("ERROR: %v", err)
 			}
@@ -158,6 +169,6 @@ func main() {
 
 	http.HandleFunc("/stat", statHandler)
 	http.HandleFunc("/batch", postBatchHandler(&store))
-	http.HandleFunc("/snapshot/{id}", getSnapshotHandler(&store))
+	http.HandleFunc("/snapshot", getSnapshotHandler(&store))
 	log.Fatal(http.ListenAndServe("127.0.0.1:8888", nil))
 }
