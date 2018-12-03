@@ -14,10 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+pattern="$1"
+dir="$2"
+metric="$3"
 
-./start_server
-./start_profiler &
+case $3 in
+  cum|c)
+    parse='$6'
+  ;;
+  flat|f)
+    parse='$5'
+    PPROF_EXTRA_ARGS='-unit ms'
+  ;;
+  *)
+    echo "Usage: $0 pattern metrics_dir percent|time"
+    exit 1
+  ;;
+esac
 
-go run riot.go "$@"
+profiles='cpu'
 
-./stop_server
+(for prof in $(find $dir -type f -name "*$profiles*.pb.gz" | sort )
+do
+    x=$(echo "$prof" | cut -d- -f2)
+    y=$(go tool pprof -top $PPROF_EXTRA_ARGS -show "$pattern" "$prof" 2>/dev/null | awk "/^Showing nodes accounting for / { print $parse }" | tr -d '%,' )
+    echo $x $y
+done) | gnuplot -e 'set terminal dumb; plot "-" using 1:2 with lines; pause -1'
