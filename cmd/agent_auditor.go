@@ -24,7 +24,7 @@ import (
 
 func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 
-	var qedEndpoints []string
+	var qedUrls, pubUrls []string
 
 	cmd := &cobra.Command{
 		Use:   "auditor",
@@ -40,7 +40,8 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 			agentConfig.Role = member.Auditor
 			auditorConfig := auditor.DefaultConfig()
 			auditorConfig.APIKey = apiKey
-			auditorConfig.QEDEndpoints = qedEndpoints
+			auditorConfig.QEDUrls = qedUrls
+			auditorConfig.PubUrls = pubUrls
 
 			auditor, err := auditor.NewAuditor(auditorConfig)
 			if err != nil {
@@ -63,7 +64,8 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&qedEndpoints, "endpoints", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
+	cmd.Flags().StringSliceVarP(&qedUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
+	cmd.Flags().StringSliceVarP(&pubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
 	cmd.MarkFlagRequired("endpoints")
 
 	return cmd
