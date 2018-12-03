@@ -89,6 +89,26 @@ type Source struct {
 	Role string
 }
 
+func (b *Snapshot) Encode() ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
+	if err := encoder.Encode(b); err != nil {
+		log.Errorf("Failed to encode message: %v", err)
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (b *Snapshot) Decode(msg []byte) error {
+	reader := bytes.NewReader(msg)
+	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
+	if err := decoder.Decode(b); err != nil {
+		log.Errorf("Failed to decode snapshot batch: %v", err)
+		return err
+	}
+	return nil
+}
+
 func (b *BatchSnapshots) Encode() ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
