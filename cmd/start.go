@@ -30,13 +30,7 @@ import (
 func newStartCommand() *cobra.Command {
 	const defaultKeyPath = "~/.ssh/id_ed25519"
 
-	var (
-		nodeId, httpAddr, raftAddr, mgmtAddr, joinAddr string
-		dbPath, raftPath, privateKeyPath               string
-		gossipAddr                                     string
-		gossipJoinAddr                                 []string
-		profiling, tampering                           bool
-	)
+	conf := server.DefaultConfig()
 
 	cmd := &cobra.Command{
 		Use:   "start",
@@ -46,26 +40,12 @@ func newStartCommand() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, args []string) {
 
-			if privateKeyPath == defaultKeyPath {
+			if conf.PrivateKeyPath == defaultKeyPath {
 				usr, _ := user.Current()
-				privateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
+				conf.PrivateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
 			}
 
-			srv, err := server.NewServer(
-				nodeId,
-				httpAddr,
-				raftAddr,
-				mgmtAddr,
-				joinAddr,
-				dbPath,
-				raftPath,
-				gossipAddr,
-				gossipJoinAddr,
-				privateKeyPath,
-				apiKey,
-				profiling,
-				tampering,
-			)
+			srv, err := server.NewServer(conf)
 
 			if err != nil {
 				log.Fatalf("Can't start QED server: %v", err)
@@ -80,20 +60,20 @@ func newStartCommand() *cobra.Command {
 	}
 
 	hostname, _ := os.Hostname()
-	cmd.Flags().StringVarP(&nodeId, "node-id", "", hostname, "Unique name for node. If not set, fallback to hostname")
-	cmd.Flags().StringVarP(&httpAddr, "http-addr", "", ":8080", "Endpoint for REST requests on (host:port)")
-	cmd.Flags().StringVarP(&raftAddr, "raft-addr", "", ":9000", "Raft bind address (host:port)")
-	cmd.Flags().StringVarP(&mgmtAddr, "mgmt-addr", "", ":8090", "Management endpoint bind address (host:port)")
-	cmd.Flags().StringVarP(&joinAddr, "join-addr", "", "", "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
-	cmd.Flags().StringVarP(&gossipAddr, "gossip-addr", "", ":9100", "Gossip: management endpoint bind address (host:port)")
-	cmd.Flags().StringSliceVarP(&gossipJoinAddr, "gossip-join-addr", "", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
-	cmd.Flags().StringVarP(&dbPath, "dbpath", "p", "/var/tmp/qed/data", "Set default storage path")
-	cmd.Flags().StringVarP(&raftPath, "raftpath", "", "/var/tmp/qed/raft", "Set raft storage path")
-	cmd.Flags().StringVarP(&privateKeyPath, "keypath", "y", defaultKeyPath, "Path to the ed25519 key file")
-	cmd.Flags().BoolVarP(&profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
+	cmd.Flags().StringVar(&conf.NodeID, "node-id", hostname, "Unique name for node. If not set, fallback to hostname")
+	cmd.Flags().StringVar(&conf.HttpAddr, "http-addr", ":8080", "Endpoint for REST requests on (host:port)")
+	cmd.Flags().StringVar(&conf.RaftAddr, "raft-addr", ":9000", "Raft bind address (host:port)")
+	cmd.Flags().StringVar(&conf.MgmtAddr, "mgmt-addr", ":8090", "Management endpoint bind address (host:port)")
+	cmd.Flags().StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
+	cmd.Flags().StringVar(&conf.GossipAddr, "gossip-addr", ":9100", "Gossip: management endpoint bind address (host:port)")
+	cmd.Flags().StringSliceVar(&conf.GossipJoinAddr, "gossip-join-addr", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
+	cmd.Flags().StringVarP(&conf.DBPath, "dbpath", "p", "/var/tmp/qed/data", "Set default storage path")
+	cmd.Flags().StringVar(&conf.RaftPath, "raftpath", "/var/tmp/qed/raft", "Set raft storage path")
+	cmd.Flags().StringVarP(&conf.PrivateKeyPath, "keypath", "y", defaultKeyPath, "Path to the ed25519 key file")
+	cmd.Flags().BoolVarP(&conf.EnableProfiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 
 	// INFO: testing purposes
-	cmd.Flags().BoolVar(&tampering, "tampering", false, "Allow tampering api for proof demostrations")
+	cmd.Flags().BoolVar(&conf.EnableTampering, "tampering", false, "Allow tampering api for proof demostrations")
 	cmd.Flags().MarkHidden("tampering")
 
 	return cmd
