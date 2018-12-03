@@ -83,7 +83,7 @@ type Config struct {
 	// we leave.
 	LeavePropagateDelay time.Duration
 
-	// MemberlistConfig is the memberlist configuration that Aidotpr will
+	// MemberlistConfig is the memberlist configuration that Agent will
 	// use to do the underlying membership management and gossip. Some
 	// fields in the MemberlistConfig will be overwritten by Auditor no
 	// matter what:

@@ -49,15 +49,21 @@ func setup(id int, joinAddr string, t *testing.T) (scope.TestF, scope.TestF) {
 		os.MkdirAll(path, os.FileMode(0755))
 
 		hostname, _ := os.Hostname()
-		nodeId := fmt.Sprintf("%s-%d", hostname, id)
-		httpAddr := fmt.Sprintf("127.0.0.1:850%d", id)
-		raftAddr := fmt.Sprintf("127.0.0.1:830%d", id)
-		mgmtAddr := fmt.Sprintf("127.0.0.1:840%d", id)
-		gossipAddr := fmt.Sprintf("127.0.0.1:860%d", id)
-		gossipJoinAddr := []string{}
-		dbPath := path + "data"
-		raftPath := path + "raft"
-		srv, err = server.NewServer(nodeId, httpAddr, raftAddr, mgmtAddr, joinAddr, dbPath, raftPath, gossipAddr, gossipJoinAddr, keyFile, apiKey, true, true)
+		conf := server.DefaultConfig()
+		conf.NodeID = fmt.Sprintf("%s-%d", hostname, id)
+		conf.HttpAddr = fmt.Sprintf("127.0.0.1:850%d", id)
+		conf.RaftAddr = fmt.Sprintf("127.0.0.1:830%d", id)
+		conf.MgmtAddr = fmt.Sprintf("127.0.0.1:840%d", id)
+		conf.GossipAddr = fmt.Sprintf("127.0.0.1:860%d", id)
+		conf.DBPath = path + "data"
+		conf.RaftPath = path + "raft"
+		conf.PrivateKeyPath = keyFile
+		conf.EnableProfiling = true
+		conf.EnableTampering = true
+
+		fmt.Printf("%+v", conf)
+
+		srv, err = server.NewServer(conf)
 		if err != nil {
 			t.Fatalf("Unable to create a new server: %v", err)
 		}

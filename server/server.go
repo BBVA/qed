@@ -44,27 +44,10 @@ import (
 	"github.com/bbva/qed/storage/badger"
 )
 
-type Store interface {
-	Add(key []byte, value []byte) error
-	GetRange(start, end []byte) [][]byte
-	Get(key []byte) ([]byte, error)
-	Close() error
-}
-
 // Server encapsulates the data and login to start/stop a QED server
 type Server struct {
-	nodeID         string   // unique name for node. If not set, fallback to hostname
-	httpAddr       string   // HTTP server bind address
-	raftAddr       string   // Raft communication bind address
-	mgmtAddr       string   // Raft: management server bind address
-	joinAddr       string   // Comma-delimited list of nodes, through which a cluster can be joined (protocol://host:port)
-	dbPath         string   // Path to storage directory
-	raftPath       string   // Path to Raft storage directory
-	gossipAddr     string   // Gossip: management server bind address
-	gossipJoinAddr []string // Gossip: Comma-delimited list of nodes, through which a cluster can be joined (protocol://host:port)
-	privateKeyPath string   // Path to the private key file used to sign snapshot
-	apiKey         string
-	bootstrap      bool // Set bootstrap to true when bringing up the first node as a master
+	conf      *Config
+	bootstrap bool // Set bootstrap to true when bringing up the first node as a master
 
 	httpServer      *http.Server
 	mgmtServer      *http.Server
@@ -77,75 +60,52 @@ type Server struct {
 	agentsQueue     chan *protocol.Snapshot
 }
 
-// NewServer synthesizes a new Server based on the parameters it receives.
-func NewServer(
-	nodeID string,
-	httpAddr string,
-	raftAddr string,
-	mgmtAddr string,
-	joinAddr string,
-	dbPath string,
-	raftPath string,
-	gossipAddr string,
-	gossipJoinAddr []string,
-	privateKeyPath string,
-	apiKey string,
-	enableProfiling bool,
-	enableTampering bool,
-) (*Server, error) {
+// NewServer creates a new Server based on the parameters it receives.
+func NewServer(conf *Config) (*Server, error) {
 
 	bootstrap := false
-	if joinAddr == "" {
+	if len(conf.RaftJoinAddr) <= 0 {
 		bootstrap = true
 	}
 
 	server := &Server{
-		nodeID:         nodeID,
-		httpAddr:       httpAddr,
-		raftAddr:       raftAddr,
-		mgmtAddr:       mgmtAddr,
-		joinAddr:       joinAddr,
-		dbPath:         dbPath,
-		raftPath:       raftPath,
-		gossipAddr:     gossipAddr,
-		gossipJoinAddr: gossipJoinAddr,
-		apiKey:         apiKey,
-		bootstrap:      bootstrap,
+		conf:      conf,
+		bootstrap: bootstrap,
 	}
 
-	log.Infof("ensuring directory at %s exists", dbPath)
-	if err := os.MkdirAll(dbPath, 0755); err != nil {
+	log.Infof("ensuring directory at %s exists", conf.DBPath)
+	if err := os.MkdirAll(conf.DBPath, 0755); err != nil {
 		return nil, err
 	}
 
-	log.Infof("ensuring directory at %s exists", raftPath)
-	if err := os.MkdirAll(raftPath, 0755); err != nil {
+	log.Infof("ensuring directory at %s exists", conf.RaftPath)
+	if err := os.MkdirAll(conf.RaftPath, 0755); err != nil {
 		return nil, err
 	}
 
 	// Open badger store
-	store, err := badger.NewBadgerStoreOpts(&badger.Options{Path: dbPath, ValueLogGC: true})
+	store, err := badger.NewBadgerStoreOpts(&badger.Options{Path: conf.DBPath, ValueLogGC: true})
 	if err != nil {
 		return nil, err
 	}
 
 	// Create signer
-	server.signer, err = sign.NewEd25519SignerFromFile(privateKeyPath)
+	server.signer, err = sign.NewEd25519SignerFromFile(conf.PrivateKeyPath)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create gossip agent
 	config := gossip.DefaultConfig()
-	config.BindAddr = gossipAddr
+	config.BindAddr = conf.GossipAddr
 	config.Role = member.Server
 	server.agent, err = gossip.NewAgent(config, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(gossipJoinAddr) > 0 {
-		server.agent.Join(gossipJoinAddr)
+	if len(conf.GossipJoinAddr) > 0 {
+		server.agent.Join(conf.GossipJoinAddr)
 	}
 
 	// TODO: add queue size to config
@@ -155,21 +115,21 @@ func NewServer(
 	server.sender = sender.NewSender(server.agent, sender.DefaultConfig(), server.signer)
 
 	// Create RaftBalloon
-	server.raftBalloon, err = raftwal.NewRaftBalloon(raftPath, raftAddr, nodeID, store, server.agentsQueue)
+	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.agentsQueue)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create http endpoints
-	server.httpServer = newHTTPServer(server.httpAddr, server.raftBalloon)
+	server.httpServer = newHTTPServer(conf.HttpAddr, server.raftBalloon)
 
 	// Create management endpoints
-	server.mgmtServer = newMgmtServer(server.mgmtAddr, server.raftBalloon)
+	server.mgmtServer = newMgmtServer(conf.MgmtAddr, server.raftBalloon)
 
-	if enableTampering {
+	if conf.EnableTampering {
 		server.tamperingServer = newTamperingServer("localhost:8081", store, hashing.NewSha256Hasher())
 	}
-	if enableProfiling {
+	if conf.EnableProfiling {
 		server.profilingServer = newProfilingServer("localhost:6060")
 	}
 
@@ -219,25 +179,25 @@ func (s *Server) Start() error {
 	}
 
 	go func() {
-		log.Debug("	* Starting QED API HTTP server in addr: ", s.httpAddr)
+		log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.HttpAddr)
 		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
 			log.Errorf("Can't start QED API HTTP Server: %s", err)
 		}
 	}()
 
 	go func() {
-		log.Debug("	* Starting QED MGMT HTTP server in addr: ", s.mgmtAddr)
+		log.Debug("	* Starting QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
 		if err := s.mgmtServer.ListenAndServe(); err != http.ErrServerClosed {
 			log.Errorf("Can't start QED MGMT HTTP Server: %s", err)
 		}
 	}()
 
-	log.Debugf(" ready on %s and %s\n", s.httpAddr, s.mgmtAddr)
+	log.Debugf(" ready on %s and %s\n", s.conf.HttpAddr, s.conf.MgmtAddr)
 
 	if !s.bootstrap {
-		log.Debug("	* Joining existent cluster QED MGMT HTTP server in addr: ", s.mgmtAddr)
-		if err := join(s.joinAddr, s.raftAddr, s.nodeID); err != nil {
-			log.Fatalf("failed to join node at %s: %s", s.joinAddr, err.Error())
+		log.Debug("	* Joining existent cluster QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
+		if err := join(s.conf.RaftJoinAddr[0], s.conf.RaftAddr, s.conf.NodeID); err != nil {
+			log.Fatalf("failed to join node at %s: %s", s.conf.RaftJoinAddr[0], err.Error())
 		}
 	}
 
