@@ -17,7 +17,10 @@
 package auditor
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/bbva/qed/client"
