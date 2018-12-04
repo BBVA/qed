@@ -165,7 +165,7 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 			buf, err := b.Encode()
 			_, err = w.Write([]byte(base64.StdEncoding.EncodeToString(buf)))
 			if err != nil {
-				fmt.Println("ERROR: %v", err)
+				fmt.Printf("ERROR: %v", err)
 			}
 			return
 		}
@@ -183,7 +183,7 @@ func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 			}
 			_, err = w.Write(b)
 			if err != nil {
-				fmt.Println("ERROR: %v", err)
+				fmt.Printf("ERROR: %v", err)
 			}
 			return
 		} else if r.Method == "POST" {
