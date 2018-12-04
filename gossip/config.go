@@ -96,6 +96,9 @@ type Config struct {
 	//   * Delegate - Auditor uses a custom delegate.
 	//
 	MemberlistConfig *memberlist.Config
+
+	// Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts
+	AlertsUrls []string
 }
 
 // AddrParts returns the parts of the BindAddr that should be
