@@ -491,7 +491,7 @@ func init() {
 		usageNumRequests      = "Number of requests for the attack"
 		usageReadConcurrency  = "Set read concurrency value"
 		usageWriteConcurrency = "Set write concurrency value"
-		usageOffload          = "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be perofmed only on follower1)"
+		usageOffload          = "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)"
 		usageCharts           = "Create charts while executing the benchmarks. Output: graph-$testname.png"
 		usageOffset           = "The starting version from which we start the load"
 		usageWantAdd          = "Execute add benchmark"
