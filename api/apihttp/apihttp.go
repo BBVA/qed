@@ -109,7 +109,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			response.HistoryDigest,
 			response.HyperDigest,
 			response.Version,
-			event.Event,
+			response.EventDigest,
 		}
 
 		out, err := json.Marshal(snapshot)
@@ -164,6 +164,60 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		out, err := json.Marshal(protocol.ToMembershipResult(query.Key, proof))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write(out)
+		return
+
+	}
+}
+
+// DigestMembership returns a membershipProof from the system
+// The http post url is:
+//   POST /proofs/digest-membership
+//
+// Differs from Membership in that instead of sending the raw event we query
+// with the keyDigest which is the digest of the event.
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 201 and the body contains:
+//   {
+//     "key": "TG9yZW0gaXBzdW0gZGF0dW0gbm9uIGNvcnJ1cHR1bSBlc3QK",
+//     "keyDigest": "NDRkMmY3MjEzYjlhMTI4ZWRhZjQzNWFhNjcyMzUxMGE0YTRhOGY5OWEzOWNiYTVhN2FhMWI5OWEwYTlkYzE2NCAgLQo=",
+//     "isMember": "true",
+//     "proofs": ["<truncated for clarity in docs>"],
+//     "queryVersion": "1",
+//     "actualVersion": "2",
+//   }
+func DigestMembership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Make sure we can only be called with an HTTP POST request.
+		if r.Method != "POST" {
+			w.Header().Set("Allow", "POST")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		var query protocol.MembershipDigest
+		err := json.NewDecoder(r.Body).Decode(&query)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Wait for the response
+		proof, err := balloon.QueryDigestMembership(query.KeyDigest, query.Version)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		out, err := json.Marshal(protocol.ToMembershipResult([]byte(nil), proof))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -250,6 +304,7 @@ func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
 	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
+	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
 
 	return api

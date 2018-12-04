@@ -17,10 +17,7 @@
 package auditor
 
 import (
-	"encoding/base64"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"time"
 
 	"github.com/bbva/qed/client"
@@ -100,6 +97,7 @@ type MembershipTask struct {
 func (t *MembershipTask) Do() {
 	proof, err := t.qed.Membership(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
+		// retry
 		log.Errorf("Error executing incremental query: %v", err)
 	}
 

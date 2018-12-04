@@ -97,6 +97,7 @@ func NewMembershipProof(
 	currentVersion, queryVersion, actualVersion uint64,
 	keyDigest hashing.Digest,
 	Hasher hashing.Hasher) *MembershipProof {
+
 	return &MembershipProof{
 		exists,
 		hyperProof,
@@ -109,15 +110,14 @@ func NewMembershipProof(
 	}
 }
 
-// Verify verifies a proof and answer from QueryMembership. Returns true if the
+// DigestVerify verifies a proof and answer from QueryMembership. Returns true if the
 // answer and proof are correct and consistent, otherwise false.
 // Run by a client on input that should be verified.
-func (p MembershipProof) Verify(event []byte, snapshot *Snapshot) bool {
+func (p MembershipProof) DigestVerify(digest hashing.Digest, snapshot *Snapshot) bool {
 	if p.HyperProof == nil || p.HistoryProof == nil {
 		return false
 	}
 
-	digest := p.Hasher.Do(event)
 	hyperCorrect := p.HyperProof.Verify(digest, snapshot.HyperDigest)
 
 	if p.Exists {
@@ -128,6 +128,13 @@ func (p MembershipProof) Verify(event []byte, snapshot *Snapshot) bool {
 	}
 
 	return hyperCorrect
+}
+
+// Verify verifies a proof and answer from QueryMembership. Returns true if the
+// answer and proof are correct and consistent, otherwise false.
+// Run by a client on input that should be verified.
+func (p MembershipProof) Verify(event []byte, snapshot *Snapshot) bool {
+	return p.DigestVerify(p.Hasher.Do(event), snapshot)
 }
 
 type IncrementalProof struct {
@@ -223,7 +230,7 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 	return snapshot, mutations, nil
 }
 
-func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
 	stats := metrics.Balloon
 	stats.AddFloat("QueryMembership", 1)
 	var proof MembershipProof
@@ -233,7 +240,7 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 	var historyProof *history.MembershipProof
 
 	proof.Hasher = b.hasherF()
-	proof.KeyDigest = proof.Hasher.Do(event)
+	proof.KeyDigest = keyDigest
 	proof.QueryVersion = version
 	proof.CurrentVersion = b.version - 1
 
@@ -270,6 +277,10 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 	proof.HistoryProof = historyProof
 	proof.Exists = true
 	return &proof, nil
+}
+
+func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+	return b.QueryDigestMembership(b.hasher.Do(event), version)
 }
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
