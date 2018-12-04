@@ -13,6 +13,7 @@
 
 masterEndpoint="127.0.0.1:9100"
 publisherEndpoint="http://127.0.0.1:8888"
+alertsEndpoint="http://127.0.0.1:8888"
 qedEndpoint="http://127.0.0.1:8080"
 keyFile="/var/tmp/id_ed25519"
 QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
@@ -28,19 +29,19 @@ sleep 2s
 
 for i in `seq 1 $1`;
 do
-	xterm -hold -e "$QED agent auditor -k key -l info --bind 127.0.0.1:910$i --join $masterEndpoint --qedUrls $qedEndpoint --pubUrls $publisherEndpoint --node auditor$i" &
+	xterm -hold -e "$QED agent --alertsUrls $alertsEndpoint auditor -k key -l info --bind 127.0.0.1:910$i --join $masterEndpoint --qedUrls $qedEndpoint --pubUrls $publisherEndpoint --node auditor$i" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $2`;
 do
-	xterm  -hold -e "$QED agent monitor -k key -l info --bind 127.0.0.1:920$i --join $masterEndpoint --endpoints $qedEndpoint --node monitor$i" &
+	xterm  -hold -e "$QED agent --alertsUrls $alertsEndpoint monitor -k key -l info --bind 127.0.0.1:920$i --join $masterEndpoint --endpoints $qedEndpoint --node monitor$i" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $3`;
 do
-	xterm -hold -e "$QED agent publisher -k key -l info --bind 127.0.0.1:930$i --join $masterEndpoint --endpoints $publisherEndpoint --node publisher$i" &
+	xterm -hold -e "$QED agent --alertsUrls $alertsEndpoint publisher -k key -l info --bind 127.0.0.1:930$i --join $masterEndpoint --endpoints $publisherEndpoint --node publisher$i" &
 	pids+=($!)
 done 
 
