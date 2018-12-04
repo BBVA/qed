@@ -37,6 +37,7 @@ type alertStore struct {
 func (a *alertStore) Append(n *gossip.Alert) {
 	a.Lock()
 	defer a.Unlock()
+	fmt.Println("Storing alert: ", n)
 	a.d = append(a.d, n)
 }
 
@@ -58,7 +59,6 @@ func (s *snapStore) Put(b *protocol.BatchSnapshots) {
 	defer s.Unlock()
 
 	for _, snap := range b.Snapshots {
-		fmt.Println("Storing ", snap.Snapshot.Version, " snapshot")
 		s.d[snap.Snapshot.Version] = snap
 	}
 }
