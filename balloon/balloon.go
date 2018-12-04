@@ -280,7 +280,8 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 }
 
 func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
-	return b.QueryDigestMembership(b.hasher.Do(event), version)
+	hasher := b.hasherF()
+	return b.QueryDigestMembership(hasher.Do(event), version)
 }
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
