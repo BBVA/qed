@@ -16,20 +16,43 @@
 package gossip
 
 import (
+	"bytes"
 	"fmt"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/memberlist"
 )
 
 type Alert struct {
 	id  string
 	msg string
+}
+
+func (b *Alert) Encode() ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
+	if err := encoder.Encode(b); err != nil {
+		log.Errorf("Failed to encode alert into message: %v", err)
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func (b *Alert) Decode(msg []byte) error {
+	reader := bytes.NewReader(msg)
+	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
+	if err := decoder.Decode(b); err != nil {
+		log.Errorf("Failed to decode alert: %v", err)
+		return err
+	}
+	return nil
 }
 
 type Agent struct {
@@ -139,7 +162,24 @@ func (a *Agent) start() {
 }
 
 func (a *Agent) processAlertQueue() {
+	url := fmt.Sprintf("%s/alerts", a.config.AlertsUrls[0])
+	var al Alert
+	for {
+		select {
+		case al = <-a.Alerts:
+		default:
+			return
+		}
+		buf, err := al.Encode()
+		if err != nil {
+			log.Errorf("Error encoding alert!", err)
+		}
 
+		resp, err := http.Post(url, "application/octet-stream", bytes.NewBuffer(buf))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			log.Errorf("Error posting alert!", err)
+		}
+	}
 }
 
 func batchId(b *protocol.BatchSnapshots) string {

@@ -28,7 +28,7 @@ type agentContext struct {
 func newAgentCommand() *cobra.Command {
 	var (
 		nodeName, bindAddr, advertiseAddr string
-		startJoin                         []string
+		startJoin, alertsUrls             []string
 	)
 
 	ctx := &agentContext{}
@@ -44,6 +44,7 @@ func newAgentCommand() *cobra.Command {
 			config.AdvertiseAddr = advertiseAddr
 			config.StartJoin = startJoin
 			config.EnableCompression = true
+			config.AlertsUrls = alertsUrls
 			ctx.config = config
 		},
 		TraverseChildren: true,
@@ -53,10 +54,12 @@ func newAgentCommand() *cobra.Command {
 	cmd.PersistentFlags().StringVarP(&bindAddr, "bind", "", "", "Bind address for TCP/UDP gossip on (host:port)")
 	cmd.PersistentFlags().StringVarP(&advertiseAddr, "advertise", "", "", "Address to advertise to cluster")
 	cmd.PersistentFlags().StringSliceVarP(&startJoin, "join", "", []string{}, "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
+	cmd.Flags().StringSliceVarP(&alertsUrls, "alertsUrls", "", []string{}, "Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts")
 
 	cmd.MarkPersistentFlagRequired("node")
 	cmd.MarkPersistentFlagRequired("bind")
 	cmd.MarkPersistentFlagRequired("join")
+	cmd.MarkFlagRequired("alertUrls")
 
 	cmd.AddCommand(newAgentMonitorCommand(ctx))
 	cmd.AddCommand(newAgentAuditorCommand(ctx))
