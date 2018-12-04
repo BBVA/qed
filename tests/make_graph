@@ -17,14 +17,48 @@
 pattern="$1"
 dir="$2"
 metric="$3"
+profiles='cpu'
 
-case $3 in
+all() {
+  z=$(go tool pprof -top $dir/*-0-cpu-profile.pb.gz | awk "/%.*%.*%/ { if ( NF == 6 ) { print $parse } }" | sed -e 's/(/\\\(/g' -e 's/)/\\\)/g' -e 's/\*/\\\*/g')
+  for i in $z
+  do
+    echo "Graph for $i"
+    (for prof in $(find $dir -type f -name "*$profiles*.pb.gz" | sort )
+    do
+        x=$(echo "$prof" | cut -d- -f2)
+        y=$(go tool pprof -top $PPROF_EXTRA_ARGS -show "$i" "$prof" 2>/dev/null | awk "/^Showing nodes accounting for / { print $parse }" | tr -d '%,' )
+        echo $x $y
+    done) | gnuplot -e 'set terminal dumb; plot "-" using 1:2 with lines; pause -1'
+  done
+}
+
+single() {
+  (for prof in $(find $dir -type f -name "*$profiles*.pb.gz" | sort )
+  do
+      x=$(echo "$prof" | cut -d- -f2)
+      y=$(go tool pprof -top $PPROF_EXTRA_ARGS -show "$pattern" "$prof" 2>/dev/null | awk "/^Showing nodes accounting for / { print $parse }" | tr -d '%,' )
+      echo $x $y
+  done) | gnuplot -e 'set terminal dumb; plot "-" using 1:2 with lines; pause -1'
+}
+
+case $1 in
+  all)
+    echo "Usage: $0 all(generate graph for each entry in the reference profile) metrics_dir)"
+    parse='$6'
+    all
+  ;;
+esac
+
+case $metric in
   cum|c)
     parse='$6'
+    single
   ;;
   flat|f)
     parse='$5'
     PPROF_EXTRA_ARGS='-unit ms'
+    single
   ;;
   *)
     echo "Usage: $0 pattern metrics_dir percent|time"
@@ -32,11 +66,3 @@ case $3 in
   ;;
 esac
 
-profiles='cpu'
-
-(for prof in $(find $dir -type f -name "*$profiles*.pb.gz" | sort )
-do
-    x=$(echo "$prof" | cut -d- -f2)
-    y=$(go tool pprof -top $PPROF_EXTRA_ARGS -show "$pattern" "$prof" 2>/dev/null | awk "/^Showing nodes accounting for / { print $parse }" | tr -d '%,' )
-    echo $x $y
-done) | gnuplot -e 'set terminal dumb; plot "-" using 1:2 with lines; pause -1'
