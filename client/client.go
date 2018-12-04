@@ -138,6 +138,26 @@ func (c HttpClient) Membership(key []byte, version uint64) (*protocol.Membership
 
 }
 
+// Membership will ask for a Proof to the server.
+func (c HttpClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
+
+	query, _ := json.Marshal(&protocol.MembershipDigest{
+		keyDigest,
+		version,
+	})
+
+	body, err := c.doReq("POST", "/proofs/digest-membership", query)
+	if err != nil {
+		return nil, err
+	}
+
+	var proof *protocol.MembershipResult
+	json.Unmarshal(body, &proof)
+
+	return proof, nil
+
+}
+
 // Incremental will ask for an IncrementalProof to the server.
 func (c HttpClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
 
@@ -165,10 +185,9 @@ func uint2bytes(i uint64) []byte {
 
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
-
 func (c HttpClient) Verify(result *protocol.MembershipResult, snap *protocol.Snapshot, hasherF func() hashing.Hasher) bool {
 
-	proof := protocol.ToBalloonProof([]byte(c.apiKey), result, hasherF)
+	proof := protocol.ToBalloonProof(result, hasherF)
 
 	return proof.Verify(snap.EventDigest, &balloon.Snapshot{
 		snap.EventDigest,
@@ -179,6 +198,20 @@ func (c HttpClient) Verify(result *protocol.MembershipResult, snap *protocol.Sna
 
 }
 
+// Verify will compute the Proof given in Membership and the snapshot from the
+// add and returns a proof of existence.
+func (c HttpClient) DigestVerify(result *protocol.MembershipResult, snap *protocol.Snapshot, hasherF func() hashing.Hasher) bool {
+
+	proof := protocol.ToBalloonProof(result, hasherF)
+
+	return proof.DigestVerify(snap.EventDigest, &balloon.Snapshot{
+		snap.EventDigest,
+		snap.HistoryDigest,
+		snap.HyperDigest,
+		snap.Version,
+	})
+
+}
 func (c HttpClient) VerifyIncremental(result *protocol.IncrementalResponse, startSnapshot, endSnapshot *protocol.Snapshot, hasher hashing.Hasher) bool {
 
 	proof := protocol.ToIncrementalProof(result, hasher)

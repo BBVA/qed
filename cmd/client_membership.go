@@ -29,9 +29,10 @@ import (
 
 func newMembershipCommand(ctx *clientContext) *cobra.Command {
 
+	hasherF := hashing.NewSha256Hasher
 	var version uint64
 	var verify bool
-	var key, hyperDigest, historyDigest string
+	var key, eventDigest, hyperDigest, historyDigest string
 
 	cmd := &cobra.Command{
 		Use:   "membership",
@@ -50,28 +51,38 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Infof("Querying key [ %s ] with version [ %d ]\n", key, version)
+			var membershipResult *protocol.MembershipResult
+			var digest hashing.Digest
+			var err error
 
-			event := []byte(key)
-			proof, err := ctx.client.Membership(event, version)
+			if eventDigest == "" {
+				log.Infof("Querying key [ %s ] with version [ %d ]\n", key, version)
+				digest = hasherF().Do([]byte(key))
+
+			} else {
+				log.Infof("Querying digest [ %s ] with version [ %d ]\n", eventDigest, version)
+				digest, _ = hex.DecodeString(eventDigest)
+			}
+
+			membershipResult, err = ctx.client.MembershipDigest(digest, version)
 			if err != nil {
 				return err
 			}
 
-			log.Infof("Received proof: %+v\n", proof)
-
 			if verify {
 				hdBytes, _ := hex.DecodeString(hyperDigest)
 				htdBytes, _ := hex.DecodeString(historyDigest)
-				snapshot := &protocol.Snapshot{htdBytes, hdBytes, version, event}
+				snapshot := &protocol.Snapshot{htdBytes, hdBytes, version, digest}
 
-				log.Infof("Verifying with Snapshot: \n\tEventDigest:%s\n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
-					event, hyperDigest, historyDigest, version)
-				if ctx.client.Verify(proof, snapshot, hashing.NewSha256Hasher) {
+				log.Infof("Verifying with Snapshot: \n\tEventDigest:%x\n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
+					digest, hyperDigest, historyDigest, version)
+
+				if ctx.client.Verify(membershipResult, snapshot, hasherF) {
 					log.Info("Verify: OK")
 				} else {
 					log.Info("Verify: KO")
 				}
+
 			}
 
 			return nil
@@ -81,10 +92,10 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 	cmd.Flags().StringVar(&key, "key", "", "Key to query")
 	cmd.Flags().Uint64Var(&version, "version", 0, "Version to query")
 	cmd.Flags().BoolVar(&verify, "verify", false, "Do verify received proof")
+	cmd.Flags().StringVar(&eventDigest, "eventDigest", "", "Digest of the event")
 	cmd.Flags().StringVar(&hyperDigest, "hyperDigest", "", "Digest of the hyper tree")
 	cmd.Flags().StringVar(&historyDigest, "historyDigest", "", "Digest of the history tree")
 
-	cmd.MarkFlagRequired("key")
 	cmd.MarkFlagRequired("version")
 
 	return cmd

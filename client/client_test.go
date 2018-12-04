@@ -106,6 +106,30 @@ func TestMembership(t *testing.T) {
 
 }
 
+func TestDigestMembership(t *testing.T) {
+	tearDown := setup()
+	defer tearDown()
+
+	event := "Hello world!"
+	version := uint64(0)
+	fakeResult := &protocol.MembershipResult{
+		Key:            []byte(event),
+		KeyDigest:      []byte("digest"),
+		Exists:         true,
+		Hyper:          make(visitor.AuditPath),
+		History:        make(visitor.AuditPath),
+		CurrentVersion: version,
+		QueryVersion:   version,
+		ActualVersion:  version,
+	}
+	resultJSON, _ := json.Marshal(fakeResult)
+	mux.HandleFunc("/proofs/digest-membership", okHandler(resultJSON))
+
+	result, err := client.MembershipDigest([]byte("digest"), version)
+	assert.NoError(t, err)
+	assert.Equal(t, fakeResult, result, "The results should match")
+}
+
 func TestMembershipWithServerFailure(t *testing.T) {
 	tearDown := setup()
 	defer tearDown()
