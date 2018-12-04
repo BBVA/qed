@@ -42,7 +42,7 @@ func TestAddVerify(t *testing.T) {
 			snapshot, err = client.Add(event)
 			assert.NoError(t, err)
 
-			assert.Equal(t, snapshot.EventDigest, hashing.Digest(event),
+			assert.Equal(t, snapshot.EventDigest, hashing.NewSha256Hasher().Do([]byte(event)),
 				"The snapshot's event doesn't match: expected %s, actual %s", event, snapshot.EventDigest)
 			assert.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
 			assert.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
@@ -81,16 +81,16 @@ func TestAddVerify(t *testing.T) {
 		assert.NoError(t, err)
 
 		let("Get membership proof for first inserted event", func(t *testing.T) {
-			result_first, err = client.Membership(first.EventDigest, first.Version)
+			result_first, err = client.MembershipDigest(first.EventDigest, first.Version)
 			assert.NoError(t, err)
-			result_last, err = client.Membership(last.EventDigest, last.Version)
+			result_last, err = client.MembershipDigest(last.EventDigest, last.Version)
 			assert.NoError(t, err)
 		})
 
 		let("Verify first event", func(t *testing.T) {
 			first.HyperDigest = last.HyperDigest
-			assert.True(t, client.Verify(result_first, first, hashing.NewSha256Hasher), "The first proof should be valid")
-			assert.True(t, client.Verify(result_last, last, hashing.NewSha256Hasher), "The last proof should be valid")
+			assert.True(t, client.DigestVerify(result_first, first, hashing.NewSha256Hasher), "The first proof should be valid")
+			assert.True(t, client.DigestVerify(result_last, last, hashing.NewSha256Hasher), "The last proof should be valid")
 		})
 
 	})
@@ -111,9 +111,9 @@ func TestAddVerify(t *testing.T) {
 		k := 9
 
 		let("Get proofs p1, p2 for event with index i in versions j and k", func(t *testing.T) {
-			p1, err = client.Membership(s[i].EventDigest, s[j].Version)
+			p1, err = client.MembershipDigest(s[i].EventDigest, s[j].Version)
 			assert.NoError(t, err)
-			p2, err = client.Membership(s[i].EventDigest, s[k].Version)
+			p2, err = client.MembershipDigest(s[i].EventDigest, s[k].Version)
 			assert.NoError(t, err)
 		})
 
@@ -124,7 +124,7 @@ func TestAddVerify(t *testing.T) {
 				s[j].Version,
 				s[i].EventDigest,
 			}
-			assert.True(t, client.Verify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
+			assert.True(t, client.DigestVerify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
 
 			snap = &protocol.Snapshot{
 				s[k].HistoryDigest,
@@ -132,7 +132,7 @@ func TestAddVerify(t *testing.T) {
 				s[k].Version,
 				s[i].EventDigest,
 			}
-			assert.True(t, client.Verify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
+			assert.True(t, client.DigestVerify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
 
 		})
 
