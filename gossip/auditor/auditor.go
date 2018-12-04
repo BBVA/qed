@@ -79,7 +79,6 @@ func (t *MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, 
 	buf, err := ioutil.ReadAll(resp.Body)
 	sDec, err := base64.StdEncoding.DecodeString(string(buf))
 	if err != nil {
-		fmt.Println("##########################", buf)
 		return nil, fmt.Errorf("Error decoding signed snapshot %d base64", t.s.Snapshot.Version)
 	}
 	var s protocol.SignedSnapshot
@@ -101,7 +100,7 @@ func (t *MembershipTask) Do() {
 	proof, err := t.qed.Membership(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
 		// retry
-		log.Errorf("Error executing incremental query: %v", err)
+		log.Errorf("Error executing membership query: %v", err)
 	}
 
 	snap, err := t.getSnapshot(proof.CurrentVersion)
