@@ -44,6 +44,13 @@ type MembershipQuery struct {
 	Version uint64
 }
 
+// MembershipDigest is the public struct that apihttp.DigestMembership
+// Handler uses to parse the post params.
+type MembershipDigest struct {
+	KeyDigest hashing.Digest
+	Version   uint64
+}
+
 // Snapshot is the public struct that apihttp.Add Handler call returns.
 type Snapshot struct {
 	HistoryDigest hashing.Digest
@@ -166,14 +173,34 @@ func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResu
 	}
 }
 
-// ToBaloonProof translate public protocol.MembershipResult:w to internal
+// ToBaloonProof translate public protocol.MembershipResult to internal
 // balloon.Proof.
-func ToBalloonProof(id []byte, mr *MembershipResult, hasherF func() hashing.Hasher) *balloon.MembershipProof {
+func ToBalloonProof(mr *MembershipResult, hasherF func() hashing.Hasher) *balloon.MembershipProof {
 
-	historyProof := history.NewMembershipProof(mr.ActualVersion, mr.QueryVersion, mr.History, hasherF())
-	hyperProof := hyper.NewQueryProof(mr.KeyDigest, util.Uint64AsBytes(mr.ActualVersion), mr.Hyper, hasherF())
+	historyProof := history.NewMembershipProof(
+		mr.ActualVersion,
+		mr.QueryVersion,
+		mr.History,
+		hasherF(),
+	)
 
-	return balloon.NewMembershipProof(mr.Exists, hyperProof, historyProof, mr.CurrentVersion, mr.ActualVersion, mr.QueryVersion, mr.KeyDigest, hasherF())
+	hyperProof := hyper.NewQueryProof(
+		mr.KeyDigest,
+		util.Uint64AsBytes(mr.ActualVersion),
+		mr.Hyper,
+		hasherF(),
+	)
+
+	return balloon.NewMembershipProof(
+		mr.Exists,
+		hyperProof,
+		historyProof,
+		mr.CurrentVersion,
+		mr.ActualVersion,
+		mr.QueryVersion,
+		mr.KeyDigest,
+		hasherF(),
+	)
 
 }
 

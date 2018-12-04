@@ -90,6 +90,10 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher, ag
 	}, nil
 }
 
+func (fsm *BalloonFSM) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
+	return fsm.balloon.QueryDigestMembership(keyDigest, version)
+}
+
 func (fsm *BalloonFSM) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	return fsm.balloon.QueryMembership(event, version)
 }

@@ -51,18 +51,21 @@ func (b fakeRaftBalloon) Join(nodeID, addr string) error {
 	return nil
 }
 
-func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
-	mp := &balloon.MembershipProof{
+func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
+	return &balloon.MembershipProof{
 		true,
 		visitor.NewFakeVerifiable(true),
 		visitor.NewFakeVerifiable(true),
 		1,
 		1,
 		2,
-		hashing.Digest{0x0},
+		keyDigest,
 		hashing.NewFakeXorHasher(),
-	}
-	return mp, nil
+	}, nil
+}
+
+func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
+	return b.QueryDigestMembership(event, version)
 }
 
 func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
@@ -163,7 +166,64 @@ func TestMembership(t *testing.T) {
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
 	handler := Membership(fakeRaftBalloon{})
-	expectedResult := &protocol.MembershipResult{Exists: true, Hyper: visitor.AuditPath{}, History: visitor.AuditPath{}, CurrentVersion: 0x1, QueryVersion: 0x1, ActualVersion: 0x2, KeyDigest: []uint8{0x0}, Key: []uint8{0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x73, 0x61, 0x6d, 0x70, 0x6c, 0x65, 0x20, 0x65, 0x76, 0x65, 0x6e, 0x74}}
+	expectedResult := &protocol.MembershipResult{
+		Exists:         true,
+		Hyper:          visitor.AuditPath{},
+		History:        visitor.AuditPath{},
+		CurrentVersion: 0x1,
+		QueryVersion:   0x1,
+		ActualVersion:  0x2,
+		KeyDigest:      []uint8{0x0},
+		Key:            key,
+	}
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Fatalf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the body response
+	actualResult := new(protocol.MembershipResult)
+	json.Unmarshal([]byte(rr.Body.String()), actualResult)
+
+	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
+
+}
+
+func TestDigestMembership(t *testing.T) {
+
+	version := uint64(1)
+	hasher := hashing.NewSha256Hasher()
+	eventDigest := hasher.Do([]byte("this is a sample event"))
+
+	query, _ := json.Marshal(protocol.MembershipDigest{
+		eventDigest,
+		version,
+	})
+
+	req, err := http.NewRequest("POST", "/proofs/digest-membership", bytes.NewBuffer(query))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := DigestMembership(fakeRaftBalloon{})
+	expectedResult := &protocol.MembershipResult{
+		Exists:         true,
+		Hyper:          visitor.AuditPath{},
+		History:        visitor.AuditPath{},
+		CurrentVersion: 0x1,
+		QueryVersion:   0x1,
+		ActualVersion:  0x2,
+		KeyDigest:      eventDigest,
+		Key:            []byte(nil),
+	}
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
