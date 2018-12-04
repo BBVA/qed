@@ -65,7 +65,17 @@ func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version
 }
 
 func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
-	return b.QueryDigestMembership(event, version)
+	hasher := hashing.NewFakeXorHasher()
+	return &balloon.MembershipProof{
+		true,
+		visitor.NewFakeVerifiable(true),
+		visitor.NewFakeVerifiable(true),
+		1,
+		1,
+		2,
+		hasher.Do(event),
+		hasher,
+	}, nil
 }
 
 func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
@@ -173,7 +183,7 @@ func TestMembership(t *testing.T) {
 		CurrentVersion: 0x1,
 		QueryVersion:   0x1,
 		ActualVersion:  0x2,
-		KeyDigest:      []uint8{0x0},
+		KeyDigest:      []uint8{0x17},
 		Key:            key,
 	}
 
