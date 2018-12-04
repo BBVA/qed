@@ -16,7 +16,7 @@
 
 echo "export PROFILING_RATE_HZ=30 (in seconds) env variable to set the default profiling delay. Default profiling rate is 30. Output: results/cpu|mem.pb.gz"
 
-function check_profiling {
+check_profiling() {
     while ps ux | grep [p]prof > /dev/null
     do
         echo "Profiler running"
@@ -25,7 +25,7 @@ function check_profiling {
     echo "Profiler stopped"
 }
 
-function profiler_cmd {
+profiler_cmd() {
     ELAPSED=0
     while curl -s -X POST http://localhost:8080/health-check 2>&1 > /dev/null ; do
         (BALLOON_VERSION=$(curl -s http://localhost:6060/debug/vars | awk -F '"version": ' '/balloon_stats/ {print $2}' | tr -d '},')
