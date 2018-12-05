@@ -75,11 +75,13 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 
 			for _, peer := range peers.L {
 				dst := peer.Node()
-				fmt.Printf("sender(): Sending batch %+v to node %+v\n", batch, dst.Name)
-				err := s.Agent.Memberlist().SendReliable(dst, msg)
-				if err != nil {
-					log.Errorf("Failed send message: %v", err)
-				}
+				log.Infof("Sending batch %+v to node %+v\n", batch, dst.Name)
+				go func() {
+					err := s.Agent.Memberlist().SendReliable(dst, msg)
+					if err != nil {
+						log.Errorf("Failed send message: %v", err)
+					}
+				}()
 			}
 		case <-s.quit:
 			return
