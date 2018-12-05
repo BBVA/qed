@@ -16,44 +16,16 @@
 package gossip
 
 import (
-	"bytes"
 	"fmt"
 	"net"
-	"net/http"
 	"sync"
 	"time"
 
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
-	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/memberlist"
 )
-
-type Alert struct {
-	id  string
-	msg string
-}
-
-func (b *Alert) Encode() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-	if err := encoder.Encode(b); err != nil {
-		log.Errorf("Failed to encode alert into message: %v", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func (b *Alert) Decode(msg []byte) error {
-	reader := bytes.NewReader(msg)
-	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
-	if err := decoder.Decode(b); err != nil {
-		log.Errorf("Failed to decode alert: %v", err)
-		return err
-	}
-	return nil
-}
 
 type Agent struct {
 	config *Config
@@ -68,10 +40,9 @@ type Agent struct {
 
 	processors []Processor
 
-	In     chan *protocol.BatchSnapshots
-	Out    chan *protocol.BatchSnapshots
-	Alerts chan Alert
-	quit   chan bool
+	In   chan *protocol.BatchSnapshots
+	Out  chan *protocol.BatchSnapshots
+	quit chan bool
 }
 
 func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
@@ -82,7 +53,6 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 		processors: p,
 		In:         make(chan *protocol.BatchSnapshots, 1000),
 		Out:        make(chan *protocol.BatchSnapshots, 1000),
-		Alerts:     make(chan Alert, 100),
 		quit:       make(chan bool),
 	}
 
@@ -139,8 +109,6 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 
 func (a *Agent) start() {
 	outTicker := time.NewTicker(2 * time.Second)
-	alertTicker := time.NewTicker(1 * time.Second)
-
 	for {
 		select {
 		case batch := <-a.In:
@@ -150,31 +118,8 @@ func (a *Agent) start() {
 			a.Out <- batch
 		case <-outTicker.C:
 			go a.sendOutQueue()
-		case <-alertTicker.C:
-			go a.processAlertQueue()
 		case <-a.quit:
 			return
-		}
-	}
-}
-
-func (a *Agent) processAlertQueue() {
-	url := fmt.Sprintf("%s/alerts", a.config.AlertsUrls[0])
-	var al Alert
-	for {
-		select {
-		case al = <-a.Alerts:
-		default:
-			return
-		}
-		buf, err := al.Encode()
-		if err != nil {
-			log.Errorf("Error encoding alert!", err)
-		}
-
-		resp, err := http.Post(url, "application/octet-stream", bytes.NewBuffer(buf))
-		if err != nil || resp.StatusCode != http.StatusOK {
-			log.Errorf("Error posting alert!", err)
 		}
 	}
 }
