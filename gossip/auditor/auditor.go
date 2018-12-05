@@ -17,6 +17,7 @@
 package auditor
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -117,9 +118,18 @@ func (t *MembershipTask) Do() {
 	}
 	ok := t.qed.Verify(proof, checkSnap, hashing.NewSha256Hasher)
 	if !ok {
-		log.Errorf("Unable to verify snapshot %v", t.s.Snapshot)
+		t.sendAlert(fmt.Sprintf("Unable to verify snapshot %v", t.s.Snapshot))
+		log.Infof("Unable to verify snapshot %v", t.s.Snapshot)
 	}
 	log.Infof("MembershipTask.Do(): Snapshot %v has been verified by QED", t.s.Snapshot)
+}
+
+func (t *MembershipTask) sendAlert(msg string) {
+
+	go func() {
+		http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/octet-stream", bytes.NewBufferString(msg))
+	}()
+
 }
 
 func (m Auditor) Process(b *protocol.BatchSnapshots) {

@@ -25,26 +25,24 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/protocol"
 )
 
 type alertStore struct {
 	sync.Mutex
-	d []*gossip.Alert
+	d []string
 }
 
-func (a *alertStore) Append(n *gossip.Alert) {
+func (a *alertStore) Append(msg string) {
 	a.Lock()
 	defer a.Unlock()
-	fmt.Println("Storing alert: ", n)
-	a.d = append(a.d, n)
+	a.d = append(a.d, msg)
 }
 
-func (a *alertStore) GetAll() []*gossip.Alert {
+func (a *alertStore) GetAll() []string {
 	a.Lock()
 	defer a.Unlock()
-	n := make([]*gossip.Alert, len(a.d))
+	n := make([]string, len(a.d))
 	copy(n, a.d)
 	return n
 }
@@ -74,11 +72,12 @@ const (
 	STAT int = iota
 	SNAP
 	ALERT
+	RPS
 )
 
 type statStore struct {
 	sync.Mutex
-	count [3]uint64
+	count [4]uint64
 	batch map[string][]int
 }
 
@@ -120,6 +119,7 @@ func (s *Service) statHandler() func(http.ResponseWriter, *http.Request) {
 
 func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddUint64(&s.stats.count[RPS], 1)
 		atomic.AddUint64(&s.stats.count[SNAP], 1)
 		if r.Method == "POST" {
 			// Decode batch to get signed snapshots and batch version.
@@ -149,6 +149,7 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 
 func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddUint64(&s.stats.count[RPS], 1)
 		atomic.AddUint64(&s.stats.count[SNAP], 1)
 		if r.Method == "GET" {
 			q := r.URL.Query()
@@ -174,6 +175,7 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 }
 func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddUint64(&s.stats.count[RPS], 1)
 		atomic.AddUint64(&s.stats.count[ALERT], 1)
 		if r.Method == "GET" {
 			b, err := json.Marshal(s.alerts.GetAll())
@@ -187,24 +189,12 @@ func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 			}
 			return
 		} else if r.Method == "POST" {
-			var b gossip.Alert
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			sDec, err := base64.StdEncoding.DecodeString(string(buf))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			err = b.Decode(sDec)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			s.alerts.Append(&b)
+			s.alerts.Append(string(buf))
 			return
 		}
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -223,7 +213,7 @@ func NewService() *Service {
 	var stats statStore
 	snaps.d = make(map[uint64]*protocol.SignedSnapshot, 0)
 	stats.batch = make(map[string][]int, 0)
-	alerts.d = make([]*gossip.Alert, 0)
+	alerts.d = make([]string, 0)
 	return &Service{
 		snaps:  &snaps,
 		alerts: &alerts,
@@ -233,13 +223,14 @@ func NewService() *Service {
 
 func (s *Service) Start() {
 	go func() {
-		ticker := time.NewTicker(2 * time.Second)
+		ticker := time.NewTicker(1 * time.Second)
 		for {
 			select {
 			case <-ticker.C:
-				c := atomic.LoadUint64(&s.stats.count[STAT])
-				fmt.Println("Request per second: ", c/2)
-				atomic.StoreUint64(&s.stats.count[STAT], 0)
+				c := atomic.LoadUint64(&s.stats.count[RPS])
+				fmt.Println("Request per second: ", c)
+				fmt.Println("Counters ", s.stats.count)
+				atomic.StoreUint64(&s.stats.count[RPS], 0)
 			}
 		}
 	}()
