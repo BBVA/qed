@@ -207,7 +207,7 @@ func (a *Agent) sendOutQueue() {
 	}
 }
 
-func (a Agent) route(src *member.Peer) []*memberlist.Node {
+func (a *Agent) route(src *member.Peer) []*memberlist.Node {
 	var excluded PeerList
 
 	dst := make([]*memberlist.Node, 0)
