@@ -27,7 +27,7 @@ all() {
     done | awk '{ sub("ms", "", $5); sub("%", "", $6); print }' | sort -k7,7 -k1,1n > /tmp/data
     
   
-    while dialog --stdout --menu 'Choose function' 80 93 100 $(cat /tmp/data | awk '{ print $7; }' | sort -u | awk 'BEGIN { OFS=" \""; ORS="\" ";} {print $0, ++n}') > /tmp/function
+    while dialog --stdout --menu 'Choose function' 80 93 100 $(cat /tmp/data | awk '{ print $7; }' | sort -u | awk '{print $0, ++n}') > /tmp/function
     do
         func_name=$(cat /tmp/data | grep -o -F $(cat /tmp/function) | uniq)
         echo $func_name
