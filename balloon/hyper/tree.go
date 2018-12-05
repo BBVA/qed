@@ -214,7 +214,7 @@ func (t *HyperTree) RebuildCache() error {
 func (t *HyperTree) populateCache(pos navigator.Position, nav navigator.TreeNavigator) hashing.Digest {
 	stats := metrics.Hyper
 	stats.Add("populateCache_hits", 1)
-	if pos.Height() == t.cacheLevel+1 {
+	if pos.Height() == t.cacheLevel {
 		cached, ok := t.cache.Get(pos)
 		if !ok {
 			return nil

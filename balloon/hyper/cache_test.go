@@ -33,7 +33,7 @@ func TestShouldBeInCache(t *testing.T) {
 		expectedResult bool
 	}{
 		{"Position on path", 8, 3, []byte{0}, NewPosition([]byte{0}, 2), false},
-		{"Height <= cacheLevel", 8, 3, []byte{0}, NewPosition([]byte{8}, 3), false},
+		{"Height <= cacheLevel", 8, 3, []byte{0}, NewPosition([]byte{8}, 4), false},
 		{"All conditions", 8, 3, []byte{0}, NewPosition([]byte{16}, 4), true},
 	}
 
@@ -53,8 +53,8 @@ func TestShouldCache(t *testing.T) {
 		expectedResult bool
 	}{
 		{8, 3, []byte{0}, NewPosition([]byte{0}, 0), false},
-		{8, 3, []byte{0}, NewPosition([]byte{0}, 3), false},
-		{8, 3, []byte{0}, NewPosition([]byte{0}, 4), true},
+		{8, 3, []byte{0}, NewPosition([]byte{0}, 4), false},
+		{8, 3, []byte{0}, NewPosition([]byte{0}, 3), true},
 	}
 
 	for i, test := range testCases {
