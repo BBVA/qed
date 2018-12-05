@@ -50,5 +50,5 @@ func (d DummyProcessor) Process(b *protocol.BatchSnapshots) {
 
 		// time.Sleep(1 * time.Second)
 	}
-	fmt.Printf("process(): Processed %v elements of batch id %v\n", len(b.Snapshots), b.Snapshots[0].Snapshot.Version)
+	log.Infof("Processed %v elements of batch id %v\n", len(b.Snapshots), b.Snapshots[0].Snapshot.Version)
 }

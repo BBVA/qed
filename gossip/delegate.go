@@ -16,8 +16,6 @@
 package gossip
 
 import (
-	"fmt"
-
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
@@ -89,7 +87,7 @@ func (d *agentDelegate) NotifyMsg(msg []byte) {
 		return
 	}
 
-	fmt.Printf("agentDelegate.NotifyMsg(): got batch  %+v\n", batchId(&batch))
+	log.Infof("Notifying batch  %+v\n", batchId(&batch))
 	d.agent.In <- &batch
 }
 
