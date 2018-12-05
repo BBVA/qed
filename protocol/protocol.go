@@ -17,7 +17,7 @@
 package protocol
 
 import (
-	"bytes"
+	"encoding/json"
 	"net"
 
 	"github.com/bbva/qed/balloon"
@@ -26,9 +26,7 @@ import (
 	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
-	"github.com/hashicorp/go-msgpack/codec"
 )
 
 // Event is the public struct that Add handler function uses to
@@ -65,23 +63,12 @@ type SignedSnapshot struct {
 }
 
 func (b *SignedSnapshot) Encode() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-	if err := encoder.Encode(b); err != nil {
-		log.Errorf("Failed to encode signed snapshot into message: %v", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return json.Marshal(b)
 }
 
 func (b *SignedSnapshot) Decode(msg []byte) error {
-	reader := bytes.NewReader(msg)
-	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
-	if err := decoder.Decode(b); err != nil {
-		log.Errorf("Failed to decode signed snapshot: %v", err)
-		return err
-	}
-	return nil
+	err := json.Unmarshal(msg, b)
+	return err
 }
 
 type BatchSnapshots struct {
@@ -97,43 +84,21 @@ type Source struct {
 }
 
 func (b *Snapshot) Encode() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-	if err := encoder.Encode(b); err != nil {
-		log.Errorf("Failed to encode message: %v", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return json.Marshal(b)
 }
 
 func (b *Snapshot) Decode(msg []byte) error {
-	reader := bytes.NewReader(msg)
-	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
-	if err := decoder.Decode(b); err != nil {
-		log.Errorf("Failed to decode snapshot batch: %v", err)
-		return err
-	}
-	return nil
+	err := json.Unmarshal(msg, b)
+	return err
 }
 
 func (b *BatchSnapshots) Encode() ([]byte, error) {
-	var buf bytes.Buffer
-	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
-	if err := encoder.Encode(b); err != nil {
-		log.Errorf("Failed to encode message: %v", err)
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return json.Marshal(b)
 }
 
 func (b *BatchSnapshots) Decode(msg []byte) error {
-	reader := bytes.NewReader(msg)
-	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
-	if err := decoder.Decode(b); err != nil {
-		log.Errorf("Failed to decode snapshots batch: %v", err)
-		return err
-	}
-	return nil
+	err := json.Unmarshal(msg, b)
+	return err
 }
 
 type MembershipResult struct {
