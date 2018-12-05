@@ -377,7 +377,7 @@ func BenchmarkAdd(b *testing.B) {
 	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/history_tree_test.db")
 	defer closeF()
 
-	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 30)
+	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 300)
 
 	b.N = 100000
 	b.ResetTimer()
