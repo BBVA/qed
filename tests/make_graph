@@ -14,55 +14,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-pattern="$1"
-dir="$2"
-metric="$3"
+dir="$1"
+metric="$2"
 profiles='cpu'
 
 all() {
-  z=$(go tool pprof -top $dir/*-0-cpu-profile.pb.gz | awk "/%.*%.*%/ { if ( NF == 6 ) { print $parse } }" | sed -e 's/(/\\\(/g' -e 's/)/\\\)/g' -e 's/\*/\\\*/g')
-  for i in $z
-  do
-    echo "Graph for $i"
-    (for prof in $(find $dir -type f -name "*$profiles*.pb.gz" | sort )
+
+    for prof in $(find $dir -type f -name "*$profiles*.pb.gz" | sort )
     do
         x=$(echo "$prof" | cut -d- -f2)
-        y=$(go tool pprof -top $PPROF_EXTRA_ARGS -show "$i" "$prof" 2>/dev/null | awk "/^Showing nodes accounting for / { print $parse }" | tr -d '%,' )
-        echo $x $y
-    done) | gnuplot -e 'set terminal dumb; plot "-" using 1:2 with lines; pause -1'
-  done
+        go tool pprof -top -unit ms $prof | awk "/%.*%.*%/ && NF == 6" | sed "s/^/$x /"
+    done | awk '{ sub("ms", "", $5); sub("%", "", $6); print }' | sort -k7,7 -k1,1n > /tmp/data
+    
+  
+    while dialog --stdout --menu 'Choose function' 80 93 100 $(cat /tmp/data | awk '{ print $7; }' | sort -u | awk 'BEGIN { OFS=" \""; ORS="\" ";} {print $0, ++n}') > /tmp/function
+    do
+        func_name=$(cat /tmp/data | grep -o -F $(cat /tmp/function) | uniq)
+        echo $func_name
+        cat /tmp/data | grep -F $(cat /tmp/function) | gnuplot -e "set terminal dumb; set title \"$func_name\" ; plot \"-\" using 1:$parse with lines; pause -1"
+        read -p "Press Enter to continue"
+    done
 }
-
-single() {
-  (for prof in $(find $dir -type f -name "*$profiles*.pb.gz" | sort )
-  do
-      x=$(echo "$prof" | cut -d- -f2)
-      y=$(go tool pprof -top $PPROF_EXTRA_ARGS -show "$pattern" "$prof" 2>/dev/null | awk "/^Showing nodes accounting for / { print $parse }" | tr -d '%,' )
-      echo $x $y
-  done) | gnuplot -e 'set terminal dumb; plot "-" using 1:2 with lines; pause -1'
-}
-
-case $1 in
-  all)
-    echo "Usage: $0 all(generate graph for each entry in the reference profile) metrics_dir)"
-    parse='$6'
-    all
-  ;;
-esac
 
 case $metric in
-  cum|c)
-    parse='$6'
-    single
+  cumulative|cum|c)
+    parse='6'
+    all
   ;;
   flat|f)
-    parse='$5'
-    PPROF_EXTRA_ARGS='-unit ms'
-    single
+    parse='5'
+    all
   ;;
   *)
-    echo "Usage: $0 pattern metrics_dir percent|time"
+    echo "Usage: $0 results_dir cumulative|flat"
     exit 1
   ;;
 esac
+
 
