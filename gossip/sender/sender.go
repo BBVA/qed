@@ -18,6 +18,7 @@ package sender
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/bbva/qed/gossip"
@@ -57,32 +58,70 @@ func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
 		quit:   make(chan bool),
 	}
 }
+func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool) {
+	batch := &protocol.BatchSnapshots{
+		TTL:       s.Config.TTL,
+		From:      s.Agent.Self,
+		Snapshots: make([]*protocol.SignedSnapshot, 0),
+	}
+
+	for {
+		select {
+		case snap := <-ch:
+			// batchSize 100 must be configurable
+			if len(batch.Snapshots) == 100 {
+				go s.sender(batch)
+				batch = &protocol.BatchSnapshots{
+					TTL:       s.Config.TTL,
+					From:      s.Agent.Self,
+					Snapshots: make([]*protocol.SignedSnapshot, 0),
+				}
+			}
+			ss, err := s.doSign(snap)
+			if err != nil {
+				log.Errorf("Failed signing message: %v", err)
+			}
+			batch.Snapshots = append(batch.Snapshots, ss)
+		case <-quit:
+			return
+			// default:
+			// fmt.Println("Doing nothing", id)
+		}
+	}
+
+}
+func (s Sender) sender(batch *protocol.BatchSnapshots) {
+	var wg sync.WaitGroup
+	msg, _ := batch.Encode()
+
+	peers := s.Agent.Topology.Each(s.Config.EachN, nil)
+
+	for _, peer := range peers.L {
+		dst := peer.Node()
+		log.Infof("Sending batch %+v to node %+v\n", batch, dst.Name)
+		wg.Add(1)
+		go func() {
+			err := s.Agent.Memberlist().SendReliable(dst, msg)
+			if err != nil {
+				log.Errorf("Failed send message: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+	log.Infof("Sent batch %+v to nodes %+v\n", batch, peers.L)
+}
 
 func (s Sender) Start(ch chan *protocol.Snapshot) {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(1000 * time.Millisecond)
+
+	for i := 0; i < 10; i++ {
+		go s.batcherSender(i, ch, s.quit)
+	}
 
 	for {
 		select {
 		case <-ticker.C:
-			batch := s.getBatch(ch)
-			if batch == nil {
-				continue
-			}
-			log.Debugf("Encoding batch: %+v", batch)
-			msg, _ := batch.Encode()
-
-			peers := s.Agent.Topology.Each(s.Config.EachN, nil)
-
-			for _, peer := range peers.L {
-				dst := peer.Node()
-				log.Infof("Sending batch %+v to node %+v\n", batch, dst.Name)
-				go func() {
-					err := s.Agent.Memberlist().SendReliable(dst, msg)
-					if err != nil {
-						log.Errorf("Failed send message: %v", err)
-					}
-				}()
-			}
+			fmt.Println("QUEUE LENGTH: ", len(ch))
 		case <-s.quit:
 			return
 		}
@@ -117,11 +156,7 @@ func (s *Sender) getBatch(ch chan *protocol.Snapshot) *protocol.BatchSnapshots {
 			return &batch
 		}
 
-		ss, err := s.doSign(snapshot)
-		if err != nil {
-			log.Errorf("Failed signing message: %v", err)
-		}
-		batch.Snapshots = append(batch.Snapshots, ss)
+		batch.Snapshots = append(batch.Snapshots, &protocol.SignedSnapshot{snapshot, []byte{0x0}})
 
 		if counter == batchSize {
 			return &batch
