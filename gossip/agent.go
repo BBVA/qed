@@ -138,7 +138,6 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 }
 
 func (a *Agent) start() {
-
 	outTicker := time.NewTicker(2 * time.Second)
 	alertTicker := time.NewTicker(1 * time.Second)
 
@@ -150,15 +149,13 @@ func (a *Agent) start() {
 			}
 			a.Out <- batch
 		case <-outTicker.C:
-			a.sendOutQueue()
+			go a.sendOutQueue()
 		case <-alertTicker.C:
-			a.processAlertQueue()
+			go a.processAlertQueue()
 		case <-a.quit:
 			return
 		}
-
 	}
-
 }
 
 func (a *Agent) processAlertQueue() {
@@ -204,7 +201,7 @@ func (a *Agent) sendOutQueue() {
 		batch.From = a.Self
 		msg, _ := batch.Encode()
 		for _, dst := range a.route(from) {
-			fmt.Printf("agent.sendOutQueue(): sending %+v to %+v\n", batchId(batch), dst.Name)
+			log.Debugf("Sending %+v to %+v\n", batchId(batch), dst.Name)
 			a.memberlist.SendReliable(dst, msg)
 		}
 	}
