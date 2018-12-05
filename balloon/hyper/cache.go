@@ -36,15 +36,15 @@ func NewSingleTargetedCacheResolver(numBits, cacheLevel uint16, targetKey []byte
 }
 
 func (r SingleTargetedCacheResolver) ShouldBeInCache(pos navigator.Position) bool {
-	return pos.Height() > r.cacheLevel && !r.IsOnPath(pos)
+	return pos.Height() >= r.cacheLevel && !r.IsOnPath(pos)
 }
 
 func (r SingleTargetedCacheResolver) ShouldCache(pos navigator.Position) bool {
-	return pos.Height() > r.cacheLevel
+	return pos.Height() == r.cacheLevel
 }
 
 func (r SingleTargetedCacheResolver) ShouldCollect(pos navigator.Position) bool {
-	return pos.Height() == r.cacheLevel+1
+	return pos.Height() == r.cacheLevel
 }
 
 /*
