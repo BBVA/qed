@@ -18,7 +18,6 @@ package auditor
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -78,12 +77,8 @@ func (t *MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, 
 	}
 	defer resp.Body.Close()
 	buf, err := ioutil.ReadAll(resp.Body)
-	sDec, err := base64.StdEncoding.DecodeString(string(buf))
-	if err != nil {
-		return nil, fmt.Errorf("Error decoding signed snapshot %d base64", t.s.Snapshot.Version)
-	}
 	var s protocol.SignedSnapshot
-	err = s.Decode(sDec)
+	err = s.Decode(buf)
 	if err != nil {
 		return nil, fmt.Errorf("Error decoding signed snapshot %d codec", t.s.Snapshot.Version)
 	}
@@ -127,7 +122,15 @@ func (t *MembershipTask) Do() {
 func (t *MembershipTask) sendAlert(msg string) {
 
 	go func() {
-		http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/octet-stream", bytes.NewBufferString(msg))
+		resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json", bytes.NewBufferString(msg))
+		if err != nil {
+			log.Infof("Error saving batch in alertStore: %v", err)
+		}
+		defer resp.Body.Close()
+		_, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Infof("Error getting response from alertStore saving a batch: %v", err)
+		}
 	}()
 
 }

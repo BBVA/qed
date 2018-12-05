@@ -14,7 +14,6 @@
 package e2e
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -129,12 +128,7 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			sDec, err := base64.StdEncoding.DecodeString(string(buf))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			err = b.Decode(sDec)
+			err = b.Decode(buf)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -164,7 +158,7 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 				return
 			}
 			buf, err := b.Encode()
-			_, err = w.Write([]byte(base64.StdEncoding.EncodeToString(buf)))
+			_, err = w.Write(buf)
 			if err != nil {
 				fmt.Printf("ERROR: %v", err)
 			}

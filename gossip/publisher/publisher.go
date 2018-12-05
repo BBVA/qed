@@ -17,7 +17,10 @@
 package publisher
 
 import (
-	"encoding/base64"
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
@@ -59,22 +62,14 @@ func (p *Publisher) Process(b *protocol.BatchSnapshots) {
 		log.Debug("\nPublisher: Error marshalling: %s", err.Error())
 		return
 	}
-	body := []byte(base64.StdEncoding.EncodeToString(buf))
-
-	req := fasthttp.AcquireRequest()
-	// TODO: Implement send to different endpoints
-	req.SetRequestURI(p.Config.SendTo[0] + "/batch")
-	req.Header.SetMethodBytes([]byte("POST"))
-	req.Header.Add("Content-Type", "application/json")
-	req.SetBody(body)
-	res := fasthttp.AcquireResponse()
-
-	err = p.Config.Client.Do(req, res)
+	resp, err := http.Post(fmt.Sprintf("%s/batch", p.Config.SendTo[0]), "application/json", bytes.NewBuffer(buf))
 	if err != nil {
-		log.Info("\nPublisher: Error sending request to publishers: %s", err.Error())
-		return
+		log.Infof("Error saving batch in snapStore: %v", err)
+	}
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Infof("Error getting response from snapStore saving a batch: %v", err)
 	}
 
-	fasthttp.ReleaseRequest(req)
-	fasthttp.ReleaseResponse(res)
 }
