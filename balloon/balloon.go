@@ -50,7 +50,7 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 	hyperCache := cache.NewFastCache(hyper.CacheSize)
 
 	// create trees
-	historyTree := history.NewHistoryTree(hasherF, store, 30)
+	historyTree := history.NewHistoryTree(hasherF, store, 300)
 	hyperTree := hyper.NewHyperTree(hasherF, store, hyperCache)
 
 	balloon := &Balloon{

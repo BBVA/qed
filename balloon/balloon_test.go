@@ -338,7 +338,7 @@ func BenchmarkAddBadger(b *testing.B) {
 
 	log.SetLogger("BenchmarkAddBadger", log.SILENT)
 
-	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/ballon_bench.db")
+	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/balloon_bench.db")
 	defer closeF()
 
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
