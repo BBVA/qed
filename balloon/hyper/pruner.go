@@ -68,7 +68,9 @@ func (p *InsertPruner) traverse(pos navigator.Position, leaves storage.KVRange) 
 	}
 
 	// if we are over the cache level, we need to do a range query to get the leaves
-	if !p.cacheResolver.ShouldCache(pos) {
+	var atLastLevel bool
+	if atLastLevel = p.cacheResolver.ShouldCache(pos); atLastLevel {
+		//fmt.Println(pos.Height())
 		first := p.navigator.DescendToFirst(pos)
 		last := p.navigator.DescendToLast(pos)
 
@@ -79,17 +81,28 @@ func (p *InsertPruner) traverse(pos navigator.Position, leaves storage.KVRange) 
 			kvRange = kvRange.InsertSorted(l)
 		}
 		leaves = kvRange
-
-		return p.traverseWithoutCache(pos, leaves)
 	}
 
 	rightPos := p.navigator.GoToRight(pos)
+	leftPos := p.navigator.GoToLeft(pos)
 	leftSlice, rightSlice := leaves.Split(rightPos.Index())
-	left, err := p.traverse(p.navigator.GoToLeft(pos), leftSlice)
-	if err != nil {
-		return nil, err
+
+	var left, right visitor.Visitable
+	var err error
+	if atLastLevel {
+		left, err = p.traverseWithoutCache(leftPos, leftSlice)
+		if err != nil {
+			return nil, err
+		}
+		right, err = p.traverseWithoutCache(rightPos, rightSlice)
+
+	} else {
+		left, err = p.traverse(leftPos, leftSlice)
+		if err != nil {
+			return nil, err
+		}
+		right, err = p.traverse(rightPos, rightSlice)
 	}
-	right, err := p.traverse(rightPos, rightSlice)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +175,8 @@ func (p *SearchPruner) traverseCache(pos navigator.Position, leaves storage.KVRa
 	}
 
 	// if we are over the cache level, we need to do a range query to get the leaves
-	if !p.cacheResolver.ShouldCache(pos) {
+	var atLastLevel bool
+	if atLastLevel = p.cacheResolver.ShouldCache(pos); atLastLevel {
 		first := p.navigator.DescendToFirst(pos)
 		last := p.navigator.DescendToLast(pos)
 		kvRange, _ := p.store.GetRange(storage.IndexPrefix, first.Index(), last.Index())
@@ -172,17 +186,27 @@ func (p *SearchPruner) traverseCache(pos navigator.Position, leaves storage.KVRa
 			kvRange = kvRange.InsertSorted(l)
 		}
 		leaves = kvRange
-		return p.traverse(pos, leaves)
 	}
 
 	rightPos := p.navigator.GoToRight(pos)
+	leftPos := p.navigator.GoToLeft(pos)
 	leftSlice, rightSlice := leaves.Split(rightPos.Index())
-	left, err := p.traverseCache(p.navigator.GoToLeft(pos), leftSlice)
-	if err != nil {
-		return nil, err
-	}
 
-	right, err := p.traverseCache(rightPos, rightSlice)
+	var left, right visitor.Visitable
+	var err error
+	if atLastLevel {
+		left, err = p.traverse(leftPos, leftSlice)
+		if err != nil {
+			return nil, err
+		}
+		right, err = p.traverse(rightPos, rightSlice)
+	} else {
+		left, err = p.traverseCache(leftPos, leftSlice)
+		if err != nil {
+			return nil, err
+		}
+		right, err = p.traverseCache(rightPos, rightSlice)
+	}
 	if err != nil {
 		return nil, err
 	}
