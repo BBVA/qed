@@ -121,7 +121,7 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("QUEUE LENGTH: ", len(ch))
+			log.Debug("QUEUE LENGTH: ", len(ch))
 		case <-s.quit:
 			return
 		}
