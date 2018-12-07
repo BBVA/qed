@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+lines=$(tput lines)
+columns=$(tput cols)
+
 dir="$1"
 metric="$2"
 
@@ -30,7 +33,7 @@ all() {
     do
         func_name=$(cat /tmp/data | grep -o -F $(cat /tmp/function) | uniq)
         echo $func_name
-        cat /tmp/data | grep -F $(cat /tmp/function) | gnuplot -e "set terminal dumb; set title \"$func_name\" ; plot \"-\" using 1:$parse with lines; pause -1"
+        cat /tmp/data | grep -F $(cat /tmp/function) | gnuplot -e "set terminal dumb size $columns $lines enhanced ansi256; set title \"$func_name\" ; plot \"-\" using 1:$parse with lines; pause -1"
         read -p "Press Enter to continue"
     done
 }
