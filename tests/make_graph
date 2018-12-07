@@ -33,7 +33,15 @@ all() {
     do
         func_name=$(cat /tmp/data | grep -o -F $(cat /tmp/function) | uniq)
         echo $func_name
-        cat /tmp/data | grep -F $(cat /tmp/function) | gnuplot -e "set terminal dumb size $columns $lines enhanced ansi256; set title \"$func_name\" ; plot \"-\" using 1:$parse with lines; pause -1"
+        cat /tmp/data | grep -F $(cat /tmp/function) | \
+          gnuplot -e "
+            set terminal dumb size $columns $lines enhanced ansi256;
+            set title '$func_name';
+            set xlabel '# of events';
+            set ylabel '$unit';
+            plot '-' using 1:$parse with lines;
+            pause -1
+          "
         read -p "Press Enter to continue"
     done
 }
@@ -41,6 +49,7 @@ all() {
 case $metric in
   cumulative|cum|c)
     parse='6'
+    unit='%'
     all
   ;;
   flat|f)
