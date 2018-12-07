@@ -17,49 +17,65 @@
 lines=$(tput lines)
 columns=$(tput cols)
 
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 results_dir"
+    exit 1
+fi
+
+
 dir="$1"
 metric="$2"
 
-all() {
+for prof in $(find $dir -type f -name "*.pb.gz" | sort)
+do
+    x=$(echo $prof | cut -d- -f2)
+    go tool pprof -top -unit ms "$prof" | awk '/%.*%.*%/ && NF == 6' | sed "s/^/$x /"
+done | awk '
+     { sub("ms", "", $2);
+       sub("ms", "", $5);
+       sub("%", "", $3);
+       sub("%", "", $6);
+       print }
+' | sort -k7,7 -k1,1n > /tmp/data
 
-    for prof in $(find $dir -type f -name "*.pb.gz" | sort )
+while dialog --menu 'Choose function'                                                   \
+             25 95 100                                                                  \
+             $(cat /tmp/data | awk '{ print $7 }' | sort -u | awk '{ print $0, ++n }')  \
+             2> /tmp/function
+do
+    while dialog --radiolist 'Choose field'     \
+                 12 20 5                        \
+                 1 flat  on                     \
+                 2 flat% off                    \
+                 3 sum% off                     \
+                 4 cum off                      \
+                 5 cum% off                     \
+                 2> /tmp/field
     do
-        x=$(echo "$prof" | cut -d- -f2)
-        go tool pprof -top -unit ms $prof | awk "/%.*%.*%/ && NF == 6" | sed "s/^/$x /"
-    done | awk '{ sub("ms", "", $5); sub("%", "", $6); print }' | sort -k7,7 -k1,1n > /tmp/data
-    
-  
-    while dialog --stdout --menu 'Choose function' 80 93 100 $(cat /tmp/data | awk '{ print $7; }' | sort -u | awk '{print $0, ++n}') > /tmp/function
-    do
+        field=$(expr $(cat /tmp/field) + 1 )
+        case $field in
+            2|5)
+                unit=ms
+                ;;
+
+            3|4|6)
+                unit=%
+                ;;
+
+            *)
+                ;;
+        esac
+
         func_name=$(cat /tmp/data | grep -o -F $(cat /tmp/function) | uniq)
-        echo $func_name
-        cat /tmp/data | grep -F $(cat /tmp/function) | \
-          gnuplot -e "
-            set terminal dumb size $columns $lines enhanced ansi256;
-            set title '$func_name';
-            set xlabel '# of events';
-            set ylabel '$unit';
-            plot '-' using 1:$parse with lines;
-            pause -1
-          "
+        cat /tmp/data | grep -F "$func_name" | tee /tmp/datasel | \
+            gnuplot -e "
+                set terminal dumb size $columns $lines enhanced ansi256;
+                set title '$func_name';
+                set xlabel '# of events';
+                set y2label '$unit';
+                plot '-' using 1:$field with lines;
+                pause -1;
+            "
         read -p "Press Enter to continue"
     done
-}
-
-case $metric in
-  cumulative|cum|c)
-    parse='6'
-    unit='%'
-    all
-  ;;
-  flat|f)
-    parse='5'
-    all
-  ;;
-  *)
-    echo "Usage: $0 results_dir cumulative|flat"
-    exit 1
-  ;;
-esac
-
-
+done
