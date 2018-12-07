@@ -16,11 +16,10 @@
 
 dir="$1"
 metric="$2"
-profiles='cpu'
 
 all() {
 
-    for prof in $(find $dir -type f -name "*$profiles*.pb.gz" | sort )
+    for prof in $(find $dir -type f -name "*.pb.gz" | sort )
     do
         x=$(echo "$prof" | cut -d- -f2)
         go tool pprof -top -unit ms $prof | awk "/%.*%.*%/ && NF == 6" | sed "s/^/$x /"
