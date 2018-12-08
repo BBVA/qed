@@ -26,9 +26,18 @@ matrix:
     - go: master
   fast_finish: true
 
-# Don't email me the results of the test runs.
+# Do email the team the results of the test runs.
 notifications:
-  email: false
+  email:
+    recipients:
+      - alvaro.alda@bbva.com
+      - g.diaz.lopezllave@bbva.com
+      - enrique@iknite.com
+      - joseluis.lucas.simarro@bbva.com
+      - martin.evgeniev@bbva.com
+      - pedrofelipe.horrillo@bbva.com
+    on_success: change
+    on_failure: always
 
 before_script:
   - ssh-keygen -t ed25519 -f $HOME/.ssh/id_ed25519 -P ''
