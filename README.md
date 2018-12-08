@@ -106,12 +106,11 @@ Our work draws strongly from the **Balloon proposals**, with some modifications 
 
 ## Useful commands
 
-- Go documentation server
+- Go [documentation server](http://localhost:6061/pkg/github.com/bbva/qed/)
 
 ```
-godoc -http=:6061 # http://localhost:6061/pkg/qed/
+godoc -http=:6061 # http://localhost:6061/pkg/github.com/bbva/qed/
 ```
-[http://localhost:6061/pkg/github.com/bbva/qed/]
 
 - Test everything
 
