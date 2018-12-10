@@ -35,7 +35,7 @@ profiler_cmd() {
         go tool pprof -proto -sample_index=alloc_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-space-top.pb.gz http://localhost:6060/debug/pprof/heap
         go tool pprof -proto -sample_index=inuse_objects -output results/$(date +%s)-${BALLOON_VERSION}-mem-inuse-objects.pb.gz http://localhost:6060/debug/pprof/heap
         go tool pprof -proto -sample_index=inuse_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-inuse-space-top.pb.gz http://localhost:6060/debug/pprof/heap
-        go tool pprof -proto -seconds 30 -output results/$(date +%s)-${BALLOON_VERSION}-cpu-profile.pb.gz http://localhost:6060) 2>&1 > /dev/null
+        go tool pprof -proto -seconds 100 -output results/$(date +%s)-${BALLOON_VERSION}-cpu-profile.pb.gz http://localhost:6060) 2>&1 > /dev/null
         sleep $PROFILING_RATE_HZ
     done
 }
