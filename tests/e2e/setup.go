@@ -31,7 +31,7 @@ var apiKey, storageType, listenAddr, keyFile string
 var cacheSize uint64
 
 func init() {
-	apiKey = "my-awesome-api-key"
+	apiKey = "my-key"
 	cacheSize = 50000
 	storageType = "badger"
 
