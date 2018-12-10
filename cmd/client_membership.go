@@ -40,6 +40,9 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 		Long: `Query for membership of an event to the authenticated data structure.
 			It also verifies the proofs provided by the server if flag enabled.`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if key == "" && eventDigest == "" {
+				log.Errorf("Error: trying to get membership without either key or eventDigest")
+			}
 			if verify {
 				if hyperDigest == "" {
 					log.Errorf("Error: trying to verify proof without hyper digest")
@@ -68,6 +71,24 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			log.Debugf(`MembershipResult:
+	Exists: %b
+	Hyper: <TRUNCATED>
+	History: <TRUNCATED>
+	CurrentVersion: %d
+	QueryVersion: %d
+	ActualVersion: %d
+	KeyDigest: %x
+	Key: %s`,
+				membershipResult.Exists,
+				// membershipResult.Hyper,
+				// membershipResult.History,
+				membershipResult.CurrentVersion,
+				membershipResult.QueryVersion,
+				membershipResult.ActualVersion,
+				membershipResult.KeyDigest,
+				membershipResult.Key,
+			)
 
 			if verify {
 				hdBytes, _ := hex.DecodeString(hyperDigest)
@@ -77,7 +98,7 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 				log.Infof("Verifying with Snapshot: \n\tEventDigest:%x\n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
 					digest, hyperDigest, historyDigest, version)
 
-				if ctx.client.Verify(membershipResult, snapshot, hasherF) {
+				if ctx.client.DigestVerify(membershipResult, snapshot, hasherF) {
 					log.Info("Verify: OK")
 				} else {
 					log.Info("Verify: KO")
