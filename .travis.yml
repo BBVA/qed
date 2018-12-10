@@ -30,12 +30,7 @@ matrix:
 notifications:
   email:
     recipients:
-      - alvaro.alda@bbva.com
-      - g.diaz.lopezllave@bbva.com
-      - enrique@iknite.com
-      - joseluis.lucas.simarro@bbva.com
-      - martin.evgeniev@bbva.com
-      - pedrofelipe.horrillo@bbva.com
+      - bbva-labs.tree-men.group@bbva.com
     on_success: change
     on_failure: always
 
