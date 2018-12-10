@@ -67,7 +67,7 @@ do
         esac
 
         func_name=$(cat /tmp/function)
-        cat /tmp/data | grep -F "$func_name" | tee /tmp/datasel | \
+        cat /tmp/data | awk "\$7 == \"$func_name\"" | tee /tmp/datasel | \
             gnuplot -e "
                 set terminal dumb size $columns $lines enhanced ansi256;
                 set title '$func_name';
