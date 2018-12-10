@@ -26,17 +26,23 @@ fi
 dir="$1"
 metric="$2"
 
-for prof in $(find $dir -type f -name "*.pb.gz" | sort)
-do
-    x=$(echo $prof | cut -d- -f2)
-    go tool pprof -top -unit ms "$prof" | awk '/%.*%.*%/ && NF == 6' | sed "s/^/$x /"
-done | awk '
+if [ ! -z "$(find "$dir" -name '*pb.gz' -newer /tmp/data)" ]; then
+    echo -n 'Refreshing /tmp/data...'
+    for prof in $(find $dir -type f -name "*.pb.gz" | sort)
+    do
+        x=$(echo $prof | cut -d- -f2)
+        go tool pprof -top -unit ms "$prof" | awk '/%.*%.*%/ && NF == 6' | sed "s/^/$x /"
+    done | awk '
      { sub("ms", "", $2);
        sub("ms", "", $5);
        sub("%", "", $3);
        sub("%", "", $6);
        print }
-' | sort -k7,7 -k1,1n > /tmp/data
+    ' | sort -k7,7 -k1,1n > /tmp/data
+    echo 'done.'
+else
+    echo 'Using cached /tmp/data.'
+fi
 
 while dialog --separate-output                                                                \
              --buildlist 'Choose functions'                                                   \
@@ -83,6 +89,5 @@ do
                 plot $plots;
                 pause -1;
         "
-        read -p "Press Enter to continue"
     done
 done
