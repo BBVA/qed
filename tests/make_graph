@@ -38,12 +38,14 @@ done | awk '
        print }
 ' | sort -k7,7 -k1,1n > /tmp/data
 
-while dialog --menu 'Choose function'                                                   \
-             25 95 100                                                                  \
-             $(cat /tmp/data | awk '{ print $7 }' | sort -u | awk '{ print $0, ++n }')  \
-             2> /tmp/function
+while dialog --separate-output                                                                \
+             --buildlist 'Choose functions'                                                   \
+             $lines $columns $lines                                                           \
+             $(cat /tmp/data | awk '{ print $7 }' | sort -u | awk '{ print $0, $0, "off" }')  \
+             2> /tmp/functions
 do
-    while dialog --radiolist 'Choose field'     \
+    while dialog --radiolist                    \
+                 'Choose field'                 \
                  12 20 5                        \
                  1 flat  on                     \
                  2 flat% off                    \
@@ -66,16 +68,21 @@ do
                 ;;
         esac
 
-        func_name=$(cat /tmp/function)
-        cat /tmp/data | awk "\$7 == \"$func_name\"" | tee /tmp/datasel | \
-            gnuplot -e "
+
+        plots=$(
+            for func_name in $(cat /tmp/functions)
+            do
+                echo \"\< awk \'\$7 == \\\"$func_name\\\"\' /tmp/data\" using 1:$field with lines title \"$func_name\",
+            done
+        )
+        gnuplot -e "
                 set terminal dumb size $columns $lines enhanced ansi256;
                 set title '$func_name';
                 set xlabel '# of events';
                 set y2label '$unit';
-                plot '-' using 1:$field with lines title '$func_name';
+                plot $plots;
                 pause -1;
-            "
+        "
         read -p "Press Enter to continue"
     done
 done
