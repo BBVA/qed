@@ -73,7 +73,7 @@ do
                 set title '$func_name';
                 set xlabel '# of events';
                 set y2label '$unit';
-                plot '-' using 1:$field with lines;
+                plot '-' using 1:$field with lines title '$func_name';
                 pause -1;
             "
         read -p "Press Enter to continue"
