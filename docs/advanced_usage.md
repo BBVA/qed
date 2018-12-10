@@ -2,18 +2,19 @@
 
 ## Overview
 
-Besides the standalone example given in the README.md, QED are created to be a
+Besides the standalone example given in the [README](../README.md), QED are created to be a
 production-ready cluster. Here you can find some detailed examples.
 
 ## QED cluster
 
 In order to garantee reliability and High Availabity QED storage servers are 
 created around hashicorp's [raft](https://github.com/hashicorp/raft) implementation.
+An architectural perspective can be found at [raft](architecture/raft.md) doc. file. 
+
+To have identified the leader beforehand, it is recommended to launch a server and then some
+disposable followers.
 
 ### Starting cluster mode
-
-To have identified the leader beforehand, we launch a server and then some
-disposable followers.
 
 ```bash
 go run main.go start \
@@ -51,19 +52,31 @@ any follower (and it's the way to go).
 A Quick example could be use the README standalone client example changing the
 endpoint port `--endpoint http://localhost:8081` in the verify event command.
 
+
 ## Agents
 
 In order to allow public `auditors`, we need to ensure a public storage in which 
 QED server sends the snapshot information. `publisher` agents are designed to do 
 it. Finally `monitors` agents are check internal consitency.
 
-## test_service
-To use a demo public log-storage QED provides a small helper wich uses a in-memory
-structure to store signed snapshots.
+QED sends signed snapshots to, at least, one agent of each type. 
+QED uses Gossip protocol for message passing between server and agents, and between
+agents themselves.
+An architectural perspective can be found at [gossip](architecture/gossip.md) doc. file. 
+
+
+### Aux service
+
+For demo purposes, QED provides an auxiliary service which uses 
+an in-memory structure to store signed snapshots that acts as a public log-storage.
+
+Moreover, it provides an alert endpoint to allow agents register its alerts.
 
 ```bash
 go run tests/e2e/gossip/test_service.go
 ```
+
+To be production-ready, both services must be developed and deployed separatelly.
 
 ### Publisher
 
@@ -87,7 +100,8 @@ go run main.go agent \
     -l info
 ```
 
-### auditor
+### Auditor
+
 ```bash
 go run main.go agent \
     --alertsUrls $alertsEndpoint \
@@ -101,15 +115,16 @@ go run main.go agent \
     -l info
 ```
 
-### monitor
+### Monitor
+
 ```bash
 go run main.go agent \
     --alertsUrls $alertsEndpoint \
-     monitor \
-     -k my-key \
-     --bind 127.0.0.1:920$i \
-     --join $masterEndpoint \
-     --endpoints $qedEndpoint \
-     --node monitor0 \
-     -l info
+    monitor \
+    -k my-key \
+    --bind 127.0.0.1:9200 \
+    --join $masterEndpoint \
+    --endpoints $qedEndpoint \
+    --node monitor0 \
+    -l info
 ```
