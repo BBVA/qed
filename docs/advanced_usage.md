@@ -15,7 +15,7 @@ created around hashicorp's [raft](https://github.com/hashicorp/raft) implementat
 To have identified the leader beforehand, we launch a server and then some
 disposable followers.
 
-```
+```bash
 go run main.go start \
     -k my-key \
     -p $(mktemp -d /var/tmp/demo.XXX) \
@@ -28,7 +28,7 @@ go run main.go start \
 ```
 
 ### Starting two followers
-```
+```bash
 CLUSTER_SIZE=2
 for i in $(seq 1 $CLUSTER_SIZE); do
     go run main.go start \
@@ -61,13 +61,13 @@ it. Finally `monitors` agents are check internal consitency.
 To use a demo public log-storage QED provides a small helper wich uses a in-memory
 structure to store signed snapshots.
 
-```
+```bash
 go run tests/e2e/gossip/test_service.go
 ```
 
 ### Publisher
 
-```
+```bash
 # this variables will be used in all the publiser, auditor and monitor examples.
 export masterEndpoint="127.0.0.1:9100"
 export publisherEndpoint="http://127.0.0.1:8888"
@@ -75,7 +75,7 @@ export alertsEndpoint="http://127.0.0.1:8888"
 export qedEndpoint="http://127.0.0.1:8080"
 ```
 
-```
+```bash
 go run main.go agent \
     --alertsUrls $alertsEndpoint \
     publisher \
@@ -88,7 +88,7 @@ go run main.go agent \
 ```
 
 ### auditor
-```
+```bash
 go run main.go agent \
     --alertsUrls $alertsEndpoint \
     auditor \
@@ -102,7 +102,7 @@ go run main.go agent \
 ```
 
 ### monitor
-```
+```bash
 go run main.go agent \
     --alertsUrls $alertsEndpoint \
      monitor \
