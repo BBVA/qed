@@ -28,7 +28,7 @@ import (
 )
 
 func TestAddVerify(t *testing.T) {
-	before, after := setup(0, "", t)
+	before, after := setupServer(0, "", t)
 	scenario, let := scope.Scope(t, before, after)
 
 	client := getClient(0)
@@ -120,18 +120,18 @@ func TestAddVerify(t *testing.T) {
 
 		let("Verify both proofs against index i event", func(t *testing.T) {
 			snap := &protocol.Snapshot{
-				s[j].HistoryDigest,
-				s[9].HyperDigest,
-				s[j].Version,
-				s[i].EventDigest,
+				HistoryDigest: s[j].HistoryDigest,
+				HyperDigest:   s[9].HyperDigest,
+				Version:       s[j].Version,
+				EventDigest:   s[i].EventDigest,
 			}
 			assert.True(t, client.DigestVerify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
 
 			snap = &protocol.Snapshot{
-				s[k].HistoryDigest,
-				s[9].HyperDigest,
-				s[k].Version,
-				s[i].EventDigest,
+				HistoryDigest: s[k].HistoryDigest,
+				HyperDigest:   s[9].HyperDigest,
+				Version:       s[k].Version,
+				EventDigest:   s[i].EventDigest,
 			}
 			assert.True(t, client.DigestVerify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
 
