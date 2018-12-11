@@ -20,7 +20,6 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
 	"github.com/spf13/cobra"
-	"github.com/valyala/fasthttp"
 )
 
 func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
@@ -39,9 +38,14 @@ func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
 
 			agentConfig := ctx.config
 			agentConfig.Role = member.Publisher
-			publisherConfig := publisher.NewConfig(&fasthttp.Client{}, endpoints)
+			publisherConfig := publisher.NewConfig(endpoints)
 
-			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{publisher.NewPublisher(publisherConfig)})
+			publisher, err := publisher.NewPublisher(publisherConfig)
+			if err != nil {
+				log.Fatalf("Failed to start the QED publisher: %v", err)
+			}
+
+			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{publisher})
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}

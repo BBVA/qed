@@ -22,48 +22,115 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"time"
 
-	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/valyala/fasthttp"
 )
 
 type Config struct {
-	Client *fasthttp.Client
-	SendTo []string
+	PubUrls               []string
+	TaskExecutionInterval time.Duration
+	MaxInFlightTasks      int
 }
 
 func DefaultConfig() *Config {
-	return &Config{}
+	return &Config{
+		TaskExecutionInterval: 200 * time.Millisecond,
+		MaxInFlightTasks:      10,
+	}
 }
 
-func NewConfig(c *fasthttp.Client, to []string) *Config {
+func NewConfig(PubUrls []string) *Config {
 	cfg := DefaultConfig()
-	cfg.Client = c
-	cfg.SendTo = to
+	cfg.PubUrls = PubUrls
 	return cfg
 }
 
 type Publisher struct {
-	Agent  *gossip.Agent
-	Config *Config
-	quit   chan bool
+	client *fasthttp.Client
+	conf   *Config
+
+	taskCh          chan PublishTask
+	quitCh          chan bool
+	executionTicker *time.Ticker
 }
 
-func NewPublisher(conf *Config) *Publisher {
-	return &Publisher{
-		Config: conf,
+func NewPublisher(conf *Config) (*Publisher, error) {
+
+	publisher := &Publisher{
+		client: &fasthttp.Client{},
+		conf:   conf,
+		taskCh: make(chan PublishTask, 100),
+		quitCh: make(chan bool),
 	}
+
+	go publisher.runTaskDispatcher()
+
+	return publisher, nil
+}
+
+type PublishTask struct {
+	Batch *protocol.BatchSnapshots
 }
 
 func (p *Publisher) Process(b *protocol.BatchSnapshots) {
-	buf, err := b.Encode()
+	task := &PublishTask{
+		Batch: b,
+	}
+	p.taskCh <- *task
+}
+
+func (p *Publisher) runTaskDispatcher() {
+	p.executionTicker = time.NewTicker(p.conf.TaskExecutionInterval)
+	for {
+		select {
+		case <-p.executionTicker.C:
+			log.Debug("Dispatching tasks...")
+			p.dispatchTasks()
+		case <-p.quitCh:
+			return
+		}
+	}
+}
+
+func (p *Publisher) Shutdown() {
+	p.executionTicker.Stop()
+	p.quitCh <- true
+	close(p.quitCh)
+	close(p.taskCh)
+}
+
+func (p *Publisher) dispatchTasks() {
+	count := 0
+	var task PublishTask
+	defer log.Debugf("%d tasks dispatched", count)
+	for {
+		select {
+		case task = <-p.taskCh:
+			go p.executeTask(&task)
+			count++
+		default:
+			return
+		}
+		if count >= p.conf.MaxInFlightTasks {
+			return
+		}
+	}
+}
+
+func (p *Publisher) executeTask(task *PublishTask) {
+	log.Debug("Executing task: %+v", task)
+	fmt.Printf("Executing task: %+v\n", task)
+
+	buf, err := task.Batch.Encode()
 	if err != nil {
 		log.Debug("\nPublisher: Error marshalling: %s", err.Error())
 		return
 	}
-	resp, err := http.Post(fmt.Sprintf("%s/batch", p.Config.SendTo[0]), "application/json", bytes.NewBuffer(buf))
+	resp, err := http.Post(fmt.Sprintf("%s/batch", p.conf.PubUrls[0]),
+		"application/json", bytes.NewBuffer(buf))
 	if err != nil {
 		log.Infof("Error saving batch in snapStore: %v", err)
 	}
