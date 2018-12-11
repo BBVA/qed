@@ -29,7 +29,7 @@ The graph is saved in 'results/graph-Add-$number_events.png (results/graph-Add-1
 
 This script use 'riot.go'. It's a tool we've develop to stress QED. It's also capable of generating charts, start with specific offset or even run Membership|Incremental Proofs for the events into QED.
 
-If you install Dialog and Gnuplot you can generate usage graphs for each function collected by Golang pprof tool. ei:
+If you install Dialog and Gnuplot you can generate usage graphs for each function collected by Golang pprof tool. e.g.:
 ```bash
 ./make_graph results
 ```
