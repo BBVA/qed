@@ -2,17 +2,17 @@
 
 ## Overview
 
-Besides the standalone example given in the [README](../README.md), QED are created to be a
-production-ready cluster. Here you can find some detailed examples.
+Besides the standalone example given in the [README](../README.md), QED is also designed 
+to be a production-ready cluster. Here you can find some detailed examples.
 
 ## QED cluster
 
-In order to garantee reliability and High Availabity QED storage servers are 
-created around hashicorp's [raft](https://github.com/hashicorp/raft) implementation.
+In order to guarantee reliability and high availabity, QED servers include
+hashicorp's [raft](https://github.com/hashicorp/raft) consensus protocol implementation.
 An architectural perspective can be found at [raft](architecture/raft.md) doc. file. 
 
-To have identified the leader beforehand, it is recommended to launch a server and then some
-disposable followers.
+To have identified the leader beforehand (demo purpose), launch first a single 
+cluster-ready server, and then some disposable followers.
 
 ### Starting cluster mode
 
@@ -30,8 +30,8 @@ go run main.go start \
 
 ### Starting two followers
 ```bash
-CLUSTER_SIZE=2
-for i in $(seq 1 $CLUSTER_SIZE); do
+FOLLOWERS=2
+for i in $(seq 1 $FOLLOWERS); do
     go run main.go start \
         -k my-key \
         -p $(mktemp -d /var/tmp/demo.XXX) \
