@@ -28,8 +28,6 @@ import (
 	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
-
-	"github.com/valyala/fasthttp"
 )
 
 var apiKey, storageType, keyFile string
@@ -109,19 +107,27 @@ func setupMonitor(t *testing.T) (scope.TestF, scope.TestF) {
 
 func setupPublisher(t *testing.T) (scope.TestF, scope.TestF) {
 	var pu *publisher.Publisher
+	var err error
 
 	before := func(t *testing.T) {
 		conf := publisher.DefaultConfig()
-		conf.Client = &fasthttp.Client{}
-		conf.SendTo = []string{PubUrl}
+		conf.PubUrls = []string{PubUrl}
 
 		go (func() {
-			pu = publisher.NewPublisher(conf)
+			pu, err = publisher.NewPublisher(conf)
+			if err != nil {
+				t.Fatalf("Unable to create a new publisher: %v", err)
+			}
 		})()
 		time.Sleep(2 * time.Second)
 	}
 
 	after := func(t *testing.T) {
+		if pu != nil {
+			pu.Shutdown()
+		} else {
+			t.Fatalf("Unable to shutdown the publisher!")
+		}
 	}
 	return before, after
 }
