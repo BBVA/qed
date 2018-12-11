@@ -64,7 +64,7 @@ do
                  5 cum% off                     \
                  2> /tmp/field
     do
-        field=$(expr $(cat /tmp/field) + 1 )
+        field=$(expr $(cat /tmp/field) + 1)
         case $field in
             2|5)
                 unit=ms
