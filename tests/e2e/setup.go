@@ -23,15 +23,26 @@ import (
 	"time"
 
 	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/gossip/auditor"
+	"github.com/bbva/qed/gossip/monitor"
+	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
+
+	"github.com/valyala/fasthttp"
 )
 
-var apiKey, storageType, listenAddr, keyFile string
+var apiKey, storageType, keyFile string
 var cacheSize uint64
 
+const (
+	QEDUrl = "http://127.0.0.1:9000"
+	PubUrl = "http://127.0.0.1:9000"
+	APIKey = "my-key"
+)
+
 func init() {
-	apiKey = "my-key"
+	apiKey = APIKey
 	cacheSize = 50000
 	storageType = "badger"
 
@@ -39,14 +50,90 @@ func init() {
 	keyFile = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
 }
 
-func setup(id int, joinAddr string, t *testing.T) (scope.TestF, scope.TestF) {
+func setupAuditor(t *testing.T) (scope.TestF, scope.TestF) {
+	var au *auditor.Auditor
+	var err error
+
+	before := func(t *testing.T) {
+		conf := auditor.DefaultConfig()
+		conf.QEDUrls = []string{QEDUrl}
+		conf.PubUrls = []string{PubUrl}
+		conf.APIKey = APIKey
+
+		go (func() {
+			au, err = auditor.NewAuditor(conf)
+			if err != nil {
+				t.Fatalf("Unable to create a new auditor: %v", err)
+			}
+		})()
+		time.Sleep(2 * time.Second)
+	}
+
+	after := func(t *testing.T) {
+		if au != nil {
+			au.Shutdown()
+		} else {
+			t.Fatalf("Unable to shutdown the auditor!")
+		}
+	}
+	return before, after
+}
+
+func setupMonitor(t *testing.T) (scope.TestF, scope.TestF) {
+	var mn *monitor.Monitor
+	var err error
+
+	before := func(t *testing.T) {
+		conf := monitor.DefaultConfig()
+		conf.QEDEndpoints = []string{QEDUrl}
+		conf.APIKey = APIKey
+
+		go (func() {
+			mn, err = monitor.NewMonitor(conf)
+			if err != nil {
+				t.Fatalf("Unable to create a new monitor: %v", err)
+			}
+		})()
+		time.Sleep(2 * time.Second)
+	}
+
+	after := func(t *testing.T) {
+		if mn != nil {
+			mn.Shutdown()
+		} else {
+			t.Fatalf("Unable to shutdown the monitor!")
+		}
+	}
+	return before, after
+}
+
+func setupPublisher(t *testing.T) (scope.TestF, scope.TestF) {
+	var pu *publisher.Publisher
+
+	before := func(t *testing.T) {
+		conf := publisher.DefaultConfig()
+		conf.Client = &fasthttp.Client{}
+		conf.SendTo = []string{PubUrl}
+
+		go (func() {
+			pu = publisher.NewPublisher(conf)
+		})()
+		time.Sleep(2 * time.Second)
+	}
+
+	after := func(t *testing.T) {
+	}
+	return before, after
+}
+
+func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.TestF) {
 	var srv *server.Server
 	var err error
 	path := fmt.Sprintf("/var/tmp/e2e-qed%d/", id)
 
 	before := func(t *testing.T) {
 		os.RemoveAll(path)
-		os.MkdirAll(path, os.FileMode(0755))
+		_ = os.MkdirAll(path, os.FileMode(0755))
 
 		hostname, _ := os.Hostname()
 		conf := server.DefaultConfig()
@@ -79,7 +166,7 @@ func setup(id int, joinAddr string, t *testing.T) (scope.TestF, scope.TestF) {
 
 	after := func(t *testing.T) {
 		if srv != nil {
-			srv.Stop()
+			_ = srv.Stop()
 		} else {
 			t.Fatalf("Unable to shutdown the server!")
 		}
