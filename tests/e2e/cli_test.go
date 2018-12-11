@@ -28,7 +28,7 @@ import (
 )
 
 func TestCli(t *testing.T) {
-	before, after := setup(0, "", t)
+	before, after := setupServer(0, "", t)
 	scenario, let := scope.Scope(t, before, after)
 
 	scenario("Add one event through cli and verify it", func() {
