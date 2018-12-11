@@ -108,7 +108,7 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 		if err != nil {
 			log.Fatalf("Unable to perform request: %v", err)
 		}
-		defer res.Body.Close()
+		res.Body.Close()
 
 		if res.StatusCode != c.req.expectedStatusCode {
 			log.Fatalf("Server error: %v", res)
