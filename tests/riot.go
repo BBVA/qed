@@ -27,6 +27,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"sync"
@@ -468,6 +469,7 @@ var (
 	wantMembership   bool
 	offload          bool
 	charts           bool
+	profiling        bool
 	incrementalDelta int
 	offset           int
 	numRequests      int
@@ -493,6 +495,7 @@ func init() {
 		usageWriteConcurrency = "Set write concurrency value"
 		usageOffload          = "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)"
 		usageCharts           = "Create charts while executing the benchmarks. Output: graph-$testname.png"
+		usageProfiling        = "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 "
 		usageOffset           = "The starting version from which we start the load"
 		usageWantAdd          = "Execute add benchmark"
 		usageWantIncremental  = "Execute Incremental benchmark"
@@ -507,6 +510,7 @@ func init() {
 	flag.BoolVar(&wantIncremental, "incremental", defaultWantIncremental, usageWantIncremental)
 	flag.BoolVar(&offload, "offload", false, usageOffload)
 	flag.BoolVar(&charts, "charts", false, usageCharts)
+	flag.BoolVar(&profiling, "profiling", false, usageProfiling)
 	flag.IntVar(&incrementalDelta, "delta", defaultIncrementalDelta, usageDelta)
 	flag.IntVar(&incrementalDelta, "d", defaultIncrementalDelta, usageDelta+" (shorthand)")
 	flag.IntVar(&numRequests, "n", defaultNumRequests, usageNumRequests)
@@ -558,6 +562,13 @@ func main() {
 	}
 
 	flag.Parse()
+
+	if profiling {
+		go func() {
+			fmt.Print("Go profiling enabled\n")
+			log.Print(http.ListenAndServe(":6061", nil))
+		}()
+	}
 
 	if offload {
 		n = n / 2
