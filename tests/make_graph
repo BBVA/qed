@@ -14,14 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-lines=$(tput lines)
-columns=$(tput cols)
-
 if [ $# -ne 1 ]; then
     echo "Usage: $0 results_dir"
     exit 1
 fi
-
 
 dir="$1"
 metric="$2"
@@ -48,6 +44,9 @@ if [ ! -f /tmp/data -o ! -z "$(find "$dir" -name '*pb.gz' -newer /tmp/data)" ]; 
 else
     echo 'Using cached /tmp/data.'
 fi
+
+lines=$(tput lines)
+columns=$(tput cols)
 
 while dialog --separate-output                                                                \
              --buildlist 'Choose functions'                                                   \
