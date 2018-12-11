@@ -33,10 +33,3 @@ If you install Dialog and Gnuplot you can generate usage graphs for each functio
 ```
 ./make_graph results
 ```
-
-
-
-
-
-
-
