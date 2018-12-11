@@ -26,7 +26,12 @@ fi
 dir="$1"
 metric="$2"
 
-if [ ! -z "$(find "$dir" -name '*pb.gz' -newer /tmp/data)" ]; then
+if [ ! -d "$dir" ]; then
+    echo "ERROR: results_dir: ‘$dir’ is not readable!"
+    echo "Usage: $0 results_dir"
+fi
+
+if [ ! -f /tmp/data -o ! -z "$(find "$dir" -name '*pb.gz' -newer /tmp/data)" ]; then
     echo -n 'Refreshing /tmp/data...'
     for prof in $(find $dir -type f -name "*.pb.gz" | sort)
     do
