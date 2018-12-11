@@ -5,6 +5,8 @@
 Besides the standalone example given in the [README](../README.md), QED is also designed 
 to be a production-ready cluster. Here you can find some detailed examples.
 
+<p align="center"><img width="100%" src="./full_architecture.png" alt="Architecture overview"/></p>
+
 ## QED cluster
 
 In order to guarantee reliability and high availabity, QED servers include
