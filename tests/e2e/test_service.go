@@ -199,6 +199,7 @@ type Service struct {
 	snaps  *snapStore
 	alerts *alertStore
 	stats  *statStore
+	quitCh chan bool
 }
 
 func NewService() *Service {
@@ -212,6 +213,7 @@ func NewService() *Service {
 		snaps:  &snaps,
 		alerts: &alerts,
 		stats:  &stats,
+		quitCh: make(chan bool),
 	}
 }
 
@@ -225,6 +227,8 @@ func (s *Service) Start() {
 				fmt.Println("Request per second: ", c)
 				fmt.Println("Counters ", s.stats.count)
 				atomic.StoreUint64(&s.stats.count[RPS], 0)
+			case <-s.quitCh:
+				return
 			}
 		}
 	}()
@@ -234,4 +238,9 @@ func (s *Service) Start() {
 	http.HandleFunc("/snapshot", s.getSnapshotHandler())
 	http.HandleFunc("/alert", s.alertHandler())
 	log.Fatal(http.ListenAndServe("127.0.0.1:8888", nil))
+}
+
+func (s *Service) Shutdown() {
+	s.quitCh <- true
+	close(s.quitCh)
 }
