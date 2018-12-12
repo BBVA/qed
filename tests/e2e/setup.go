@@ -39,6 +39,16 @@ const (
 	APIKey = "my-key"
 )
 
+// merge function is a helper function that execute all the variadic parameters
+// inside a score.TestF function
+func merge(list ...scope.TestF) scope.TestF {
+	return func(t *testing.T) {
+		for _, elem := range list {
+			elem()
+		}
+	}
+}
+
 func init() {
 	apiKey = APIKey
 	cacheSize = 50000
