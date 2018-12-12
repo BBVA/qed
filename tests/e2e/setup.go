@@ -23,7 +23,9 @@ import (
 	"time"
 
 	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/gossip/auditor"
+	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/monitor"
 	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/server"
@@ -34,20 +36,10 @@ var apiKey, storageType, keyFile string
 var cacheSize uint64
 
 const (
-	QEDUrl = "http://127.0.0.1:9000"
-	PubUrl = "http://127.0.0.1:9000"
+	QEDUrl = "http://127.0.0.1:8080"
+	PubUrl = "http://127.0.0.1:8888"
 	APIKey = "my-key"
 )
-
-// merge function is a helper function that execute all the variadic parameters
-// inside a score.TestF function
-func merge(list ...scope.TestF) scope.TestF {
-	return func(t *testing.T) {
-		for _, elem := range list {
-			elem()
-		}
-	}
-}
 
 func init() {
 	apiKey = APIKey
@@ -58,23 +50,56 @@ func init() {
 	keyFile = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
 }
 
-func setupAuditor(t *testing.T) (scope.TestF, scope.TestF) {
+// merge function is a helper function that execute all the variadic parameters
+// inside a score.TestF function
+func merge(list ...scope.TestF) scope.TestF {
+	return func(t *testing.T) {
+		for _, elem := range list {
+			elem(t)
+		}
+	}
+}
+
+func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) {
+	agentConf := gossip.DefaultConfig()
+	agentConf.NodeName = fmt.Sprintf("%s%d", name, id)
+
+	switch role {
+	case member.Auditor:
+		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:910%d", id)
+	case member.Monitor:
+		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:920%d", id)
+	case member.Publisher:
+		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:930%d", id)
+	}
+
+	agentConf.StartJoin = []string{QEDUrl}
+	agentConf.EnableCompression = true
+	agentConf.AlertsUrls = []string{PubUrl}
+	agentConf.Role = role
+
+	_, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
+	if err != nil {
+		t.Fatalf("Failed to start the QED %s: %v", name, err)
+	}
+}
+
+func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var au *auditor.Auditor
 	var err error
 
 	before := func(t *testing.T) {
-		conf := auditor.DefaultConfig()
-		conf.QEDUrls = []string{QEDUrl}
-		conf.PubUrls = []string{PubUrl}
-		conf.APIKey = APIKey
+		auditorConf := auditor.DefaultConfig()
+		auditorConf.QEDUrls = []string{QEDUrl}
+		auditorConf.PubUrls = []string{PubUrl}
+		auditorConf.APIKey = APIKey
 
-		go (func() {
-			au, err = auditor.NewAuditor(conf)
-			if err != nil {
-				t.Fatalf("Unable to create a new auditor: %v", err)
-			}
-		})()
-		time.Sleep(2 * time.Second)
+		au, err = auditor.NewAuditor(auditorConf)
+		if err != nil {
+			t.Fatalf("Unable to create a new auditor: %v", err)
+		}
+
+		newAgent(id, "auditor", member.Auditor, au, t)
 	}
 
 	after := func(t *testing.T) {
@@ -87,22 +112,21 @@ func setupAuditor(t *testing.T) (scope.TestF, scope.TestF) {
 	return before, after
 }
 
-func setupMonitor(t *testing.T) (scope.TestF, scope.TestF) {
+func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var mn *monitor.Monitor
 	var err error
 
 	before := func(t *testing.T) {
-		conf := monitor.DefaultConfig()
-		conf.QEDEndpoints = []string{QEDUrl}
-		conf.APIKey = APIKey
+		monitorConf := monitor.DefaultConfig()
+		monitorConf.QEDEndpoints = []string{QEDUrl}
+		monitorConf.APIKey = APIKey
 
-		go (func() {
-			mn, err = monitor.NewMonitor(conf)
-			if err != nil {
-				t.Fatalf("Unable to create a new monitor: %v", err)
-			}
-		})()
-		time.Sleep(2 * time.Second)
+		mn, err = monitor.NewMonitor(monitorConf)
+		if err != nil {
+			t.Fatalf("Unable to create a new monitor: %v", err)
+		}
+
+		newAgent(id, "monitor", member.Monitor, mn, t)
 	}
 
 	after := func(t *testing.T) {
@@ -115,7 +139,7 @@ func setupMonitor(t *testing.T) (scope.TestF, scope.TestF) {
 	return before, after
 }
 
-func setupPublisher(t *testing.T) (scope.TestF, scope.TestF) {
+func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var pu *publisher.Publisher
 	var err error
 
@@ -123,13 +147,12 @@ func setupPublisher(t *testing.T) (scope.TestF, scope.TestF) {
 		conf := publisher.DefaultConfig()
 		conf.PubUrls = []string{PubUrl}
 
-		go (func() {
-			pu, err = publisher.NewPublisher(conf)
-			if err != nil {
-				t.Fatalf("Unable to create a new publisher: %v", err)
-			}
-		})()
-		time.Sleep(2 * time.Second)
+		pu, err = publisher.NewPublisher(conf)
+		if err != nil {
+			t.Fatalf("Unable to create a new publisher: %v", err)
+		}
+
+		newAgent(id, "publisher", member.Publisher, pu, t)
 	}
 
 	after := func(t *testing.T) {
@@ -138,6 +161,21 @@ func setupPublisher(t *testing.T) (scope.TestF, scope.TestF) {
 		} else {
 			t.Fatalf("Unable to shutdown the publisher!")
 		}
+	}
+	return before, after
+}
+
+func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
+	var s *Service
+	before := func(t *testing.T) {
+		go (func() {
+			s = NewService()
+			s.Start()
+		})()
+	}
+
+	after := func(t *testing.T) {
+		s.Shutdown()
 	}
 	return before, after
 }
