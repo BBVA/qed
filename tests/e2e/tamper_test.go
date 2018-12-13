@@ -16,9 +16,6 @@
 package e2e
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"testing"
 	"time"
 
@@ -29,35 +26,16 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/snapshot?v=%d", StoreUrl, version))
-	if err != nil {
-		return nil, fmt.Errorf("Error getting snapshot from the store: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Error getting snapshot from the store. Status: %d", resp.StatusCode)
-	}
-
-	buf, _ := ioutil.ReadAll(resp.Body)
-	s := &protocol.SignedSnapshot{}
-	err = s.Decode(buf)
-	if err != nil {
-		return nil, fmt.Errorf("Error decoding signed snapshot %d codec", version)
-	}
-	return s, nil
-}
-
 func TestTamper(t *testing.T) {
 	bStore, aStore := setupStore(t)
 	bServer, aServer := setupServer(0, "", t)
-	// bAuditor, aAuditor := setupAuditor(0, t)
-	// bMonitor, aMonitor := setupMonitor(0, t)
+	bAuditor, aAuditor := setupAuditor(0, t)
+	bMonitor, aMonitor := setupMonitor(0, t)
 	bPublisher, aPublisher := setupPublisher(0, t)
 
 	scenario, let := scope.Scope(t,
-		merge(bStore, bServer /*bAuditor, bMonitor*/, bPublisher),
-		merge( /*aAuditor, aMonitor,*/ aPublisher, aServer, aStore),
+		merge(bStore, bServer, bAuditor, bMonitor, bPublisher),
+		merge(aAuditor, aMonitor, aPublisher, aServer, aStore),
 	)
 
 	client := getClient(0)
@@ -110,11 +88,9 @@ func TestTamper(t *testing.T) {
 		})
 
 		let("Get signed snapshot from snapshot public storage", func(t *testing.T) {
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 			ss, err := getSnapshot(0)
-			if err != nil {
-				fmt.Println("Error: ", err)
-			}
+			assert.NoError(t, err)
 			assert.Equal(t, snapshot, ss.Snapshot)
 		})
 	})

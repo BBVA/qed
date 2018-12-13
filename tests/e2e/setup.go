@@ -39,7 +39,7 @@ const (
 	QEDUrl    = "http://127.0.0.1:8080"
 	StoreUrl  = "http://127.0.0.1:8888"
 	APIKey    = "my-key"
-	QEDGossip = "127.0.0.1:9100"
+	QEDGossip = "127.0.0.1:9010"
 )
 
 func init() {
@@ -202,7 +202,7 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 		conf.HttpAddr = fmt.Sprintf("127.0.0.1:808%d", id)
 		conf.RaftAddr = fmt.Sprintf("127.0.0.1:900%d", id)
 		conf.MgmtAddr = fmt.Sprintf("127.0.0.1:809%d", id)
-		conf.GossipAddr = fmt.Sprintf("127.0.0.1:910%d", id)
+		conf.GossipAddr = fmt.Sprintf("127.0.0.1:901%d", id)
 		conf.DBPath = path + "data"
 		conf.RaftPath = path + "raft"
 		conf.PrivateKeyPath = keyFile

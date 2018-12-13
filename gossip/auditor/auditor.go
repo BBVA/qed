@@ -96,7 +96,7 @@ type MembershipTask struct {
 }
 
 func (t *MembershipTask) Do() {
-	proof, err := t.qed.Membership(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
+	proof, err := t.qed.MembershipDigest(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
 		// retry
 		log.Errorf("Error executing membership query: %v", err)
@@ -135,54 +135,53 @@ func (t *MembershipTask) sendAlert(msg string) {
 			log.Infof("Error getting response from alertStore saving a batch: %v", err)
 		}
 	}()
-
 }
 
-func (m Auditor) Process(b *protocol.BatchSnapshots) {
+func (a Auditor) Process(b *protocol.BatchSnapshots) {
 
 	task := &MembershipTask{
-		qed:    m.qed,
-		pubUrl: m.conf.PubUrls[0],
-		taskCh: m.taskCh,
+		qed:    a.qed,
+		pubUrl: a.conf.PubUrls[0],
+		taskCh: a.taskCh,
 		s:      b.Snapshots[0],
 	}
 
-	m.taskCh <- task
+	a.taskCh <- task
 }
 
-func (m *Auditor) runTaskDispatcher() {
-	m.executionTicker = time.NewTicker(m.conf.TaskExecutionInterval)
+func (a *Auditor) runTaskDispatcher() {
+	a.executionTicker = time.NewTicker(a.conf.TaskExecutionInterval)
 	for {
 		select {
-		case <-m.executionTicker.C:
+		case <-a.executionTicker.C:
 			log.Debug("Dispatching tasks...")
-			m.dispatchTasks()
-		case <-m.quitCh:
+			a.dispatchTasks()
+		case <-a.quitCh:
 			return
 		}
 	}
 }
 
-func (m *Auditor) Shutdown() {
-	m.executionTicker.Stop()
-	m.quitCh <- true
-	close(m.quitCh)
-	close(m.taskCh)
+func (a *Auditor) Shutdown() {
+	a.executionTicker.Stop()
+	a.quitCh <- true
+	close(a.quitCh)
+	close(a.taskCh)
 }
 
-func (m *Auditor) dispatchTasks() {
+func (a *Auditor) dispatchTasks() {
 	count := 0
 	var task Task
 	defer log.Debugf("%d tasks dispatched", count)
 	for {
 		select {
-		case task = <-m.taskCh:
+		case task = <-a.taskCh:
 			go task.Do()
 			count++
 		default:
 			return
 		}
-		if count >= m.conf.MaxInFlightTasks {
+		if count >= a.conf.MaxInFlightTasks {
 			return
 		}
 	}
