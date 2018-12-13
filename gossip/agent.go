@@ -100,7 +100,6 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 		RetransmitMult: 2,
 	}
 
-	fmt.Println(">>>>>>>>>< AGENT ", agent.memberlist.Members())
 	if p != nil {
 		go agent.start()
 	}
