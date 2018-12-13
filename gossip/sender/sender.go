@@ -113,7 +113,7 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 func (s Sender) sender(batch *protocol.BatchSnapshots) {
 	var wg sync.WaitGroup
 	msg, _ := batch.Encode()
-	// fmt.Println("BATCH: ", batch.Snapshots)
+	fmt.Println("BATCH: ", batch.Snapshots)
 	peers := s.Agent.Topology.Each(s.Config.EachN, nil)
 	for _, peer := range peers.L {
 		fmt.Println(">>>>>> PEERS ", peers)

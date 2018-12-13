@@ -37,9 +37,9 @@ var cacheSize uint64
 
 const (
 	QEDUrl    = "http://127.0.0.1:8080"
-	PubUrl    = "http://127.0.0.1:8888"
+	StoreUrl  = "http://127.0.0.1:8888"
 	APIKey    = "my-key"
-	QEDGossip = "127.0.0.1:8600"
+	QEDGossip = "127.0.0.1:9100"
 )
 
 func init() {
@@ -76,7 +76,7 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 
 	agentConf.StartJoin = []string{QEDGossip}
 	agentConf.EnableCompression = true
-	agentConf.AlertsUrls = []string{PubUrl}
+	agentConf.AlertsUrls = []string{StoreUrl}
 	agentConf.Role = role
 
 	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
@@ -94,7 +94,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	before := func(t *testing.T) {
 		auditorConf := auditor.DefaultConfig()
 		auditorConf.QEDUrls = []string{QEDUrl}
-		auditorConf.PubUrls = []string{PubUrl}
+		auditorConf.PubUrls = []string{StoreUrl}
 		auditorConf.APIKey = APIKey
 
 		au, err = auditor.NewAuditor(auditorConf)
@@ -152,7 +152,7 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		conf := publisher.DefaultConfig()
-		conf.PubUrls = []string{PubUrl}
+		conf.PubUrls = []string{StoreUrl}
 
 		pu, err = publisher.NewPublisher(conf)
 		if err != nil {
@@ -160,6 +160,7 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		}
 
 		agent = newAgent(id, "publisher", member.Publisher, pu, t)
+		time.Sleep(20 * time.Second)
 	}
 
 	after := func(t *testing.T) {
@@ -198,10 +199,10 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 		hostname, _ := os.Hostname()
 		conf := server.DefaultConfig()
 		conf.NodeID = fmt.Sprintf("%s-%d", hostname, id)
-		conf.HttpAddr = fmt.Sprintf("127.0.0.1:850%d", id)
-		conf.RaftAddr = fmt.Sprintf("127.0.0.1:830%d", id)
-		conf.MgmtAddr = fmt.Sprintf("127.0.0.1:840%d", id)
-		conf.GossipAddr = fmt.Sprintf("127.0.0.1:860%d", id)
+		conf.HttpAddr = fmt.Sprintf("127.0.0.1:808%d", id)
+		conf.RaftAddr = fmt.Sprintf("127.0.0.1:900%d", id)
+		conf.MgmtAddr = fmt.Sprintf("127.0.0.1:809%d", id)
+		conf.GossipAddr = fmt.Sprintf("127.0.0.1:910%d", id)
 		conf.DBPath = path + "data"
 		conf.RaftPath = path + "raft"
 		conf.PrivateKeyPath = keyFile
@@ -221,7 +222,7 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 				t.Log(err)
 			}
 		})()
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 	after := func(t *testing.T) {
@@ -235,7 +236,7 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 }
 
 func endPoint(id int) string {
-	return fmt.Sprintf("http://127.0.0.1:850%d", id)
+	return fmt.Sprintf("http://127.0.0.1:808%d", id)
 }
 
 func getClient(id int) *client.HttpClient {
