@@ -201,7 +201,7 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 		HistoryDigest: snapshot.HistoryDigest,
 		HyperDigest:   snapshot.HyperDigest,
 		Version:       snapshot.Version,
-		EventDigest:   event,
+		EventDigest:   snapshot.EventDigest,
 	}
 
 	return &fsmAddResponse{snapshot: snapshot}

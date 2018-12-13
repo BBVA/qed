@@ -81,8 +81,9 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 
 	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
 	if err != nil {
-		t.Fatalf("Failed to start the QED %s: %v", name, err)
+		t.Fatalf("Failed to start AGENT %s: %v", name, err)
 	}
+	_, _ = agent.Join([]string{QEDGossip})
 	return agent
 }
 
@@ -108,7 +109,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if au != nil {
 			au.Shutdown()
-			fmt.Println(">>>>>>>>>>>>>", agent.Shutdown())
+			agent.Shutdown()
 		} else {
 			t.Fatalf("Unable to shutdown the auditor!")
 		}
@@ -160,7 +161,6 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		}
 
 		agent = newAgent(id, "publisher", member.Publisher, pu, t)
-		time.Sleep(20 * time.Second)
 	}
 
 	after := func(t *testing.T) {
@@ -209,7 +209,7 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 		conf.EnableProfiling = true
 		conf.EnableTampering = true
 
-		fmt.Printf("%+v", conf)
+		fmt.Printf("Server config: %+v\n", conf)
 
 		srv, err = server.NewServer(conf)
 		if err != nil {
