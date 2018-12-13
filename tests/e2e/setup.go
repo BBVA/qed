@@ -60,7 +60,7 @@ func merge(list ...scope.TestF) scope.TestF {
 	}
 }
 
-func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) {
+func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) *gossip.Agent {
 	agentConf := gossip.DefaultConfig()
 	agentConf.NodeName = fmt.Sprintf("%s%d", name, id)
 
@@ -78,14 +78,16 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 	agentConf.AlertsUrls = []string{PubUrl}
 	agentConf.Role = role
 
-	_, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
+	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
 	if err != nil {
 		t.Fatalf("Failed to start the QED %s: %v", name, err)
 	}
+	return agent
 }
 
 func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var au *auditor.Auditor
+	var agent *gossip.Agent
 	var err error
 
 	before := func(t *testing.T) {
@@ -99,12 +101,13 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 			t.Fatalf("Unable to create a new auditor: %v", err)
 		}
 
-		newAgent(id, "auditor", member.Auditor, au, t)
+		agent = newAgent(id, "auditor", member.Auditor, au, t)
 	}
 
 	after := func(t *testing.T) {
 		if au != nil {
 			au.Shutdown()
+			fmt.Println(">>>>>>>>>>>>>", agent.Shutdown())
 		} else {
 			t.Fatalf("Unable to shutdown the auditor!")
 		}
@@ -114,6 +117,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var mn *monitor.Monitor
+	var agent *gossip.Agent
 	var err error
 
 	before := func(t *testing.T) {
@@ -126,12 +130,13 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 			t.Fatalf("Unable to create a new monitor: %v", err)
 		}
 
-		newAgent(id, "monitor", member.Monitor, mn, t)
+		agent = newAgent(id, "monitor", member.Monitor, mn, t)
 	}
 
 	after := func(t *testing.T) {
 		if mn != nil {
 			mn.Shutdown()
+			agent.Shutdown()
 		} else {
 			t.Fatalf("Unable to shutdown the monitor!")
 		}
@@ -141,6 +146,7 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var pu *publisher.Publisher
+	var agent *gossip.Agent
 	var err error
 
 	before := func(t *testing.T) {
@@ -152,12 +158,13 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 			t.Fatalf("Unable to create a new publisher: %v", err)
 		}
 
-		newAgent(id, "publisher", member.Publisher, pu, t)
+		agent = newAgent(id, "publisher", member.Publisher, pu, t)
 	}
 
 	after := func(t *testing.T) {
 		if pu != nil {
 			pu.Shutdown()
+			agent.Shutdown()
 		} else {
 			t.Fatalf("Unable to shutdown the publisher!")
 		}
@@ -168,10 +175,8 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
 	var s *Service
 	before := func(t *testing.T) {
-		go (func() {
-			s = NewService()
-			s.Start()
-		})()
+		s = NewService()
+		s.Start()
 	}
 
 	after := func(t *testing.T) {
