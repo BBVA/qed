@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bbva/qed/hashing"
+	// "github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/testutils/scope"
@@ -64,50 +64,53 @@ func TestTamper(t *testing.T) {
 
 	event := rand.RandomString(10)
 
-	scenario("Add one event and get its membership proof", func() {
+	// scenario("Add one event and get its membership proof", func() {
+	// 	var snapshot *protocol.Snapshot
+	// 	var err error
+
+	// 	let("Add event", func(t *testing.T) {
+	// 		snapshot, err = client.Add(event)
+	// 		assert.NoError(t, err)
+
+	// 		assert.Equal(t, snapshot.EventDigest, hashing.NewSha256Hasher().Do([]byte(event)),
+	// 			"The snapshot's event doesn't match: expected %s, actual %s", event, snapshot.EventDigest)
+	// 		assert.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
+	// 		assert.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
+	// 		assert.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empt")
+	// 	})
+
+	// 	let("Get membership proof for first inserted event", func(t *testing.T) {
+	// 		result, err := client.Membership([]byte(event), snapshot.Version)
+	// 		assert.NoError(t, err)
+
+	// 		assert.True(t, result.Exists, "The queried key should be a member")
+	// 		assert.Equal(t, result.QueryVersion, snapshot.Version,
+	// 			"The query version doest't match the queried one: expected %d, actual %d", snapshot.Version, result.QueryVersion)
+	// 		assert.Equal(t, result.ActualVersion, snapshot.Version,
+	// 			"The actual version should match the queried one: expected %d, actual %d", snapshot.Version, result.ActualVersion)
+	// 		assert.Equal(t, result.CurrentVersion, snapshot.Version,
+	// 			"The current version should match the queried one: expected %d, actual %d", snapshot.Version, result.CurrentVersion)
+	// 		assert.Equal(t, []byte(event), result.Key,
+	// 			"The returned event doesn't math the original one: expected %s, actual %s", event, result.Key)
+	// 		assert.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
+	// 		assert.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
+	// 		assert.False(t, result.ActualVersion > 0 && len(result.History) == 0,
+	// 			"The history proof cannot be empty when version is greater than 0")
+
+	// 	})
+	// })
+
+	scenario("Add one event and check that it has been published", func() {
 		var snapshot *protocol.Snapshot
 		var err error
 
 		let("Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
 			assert.NoError(t, err)
-
-			assert.Equal(t, snapshot.EventDigest, hashing.NewSha256Hasher().Do([]byte(event)),
-				"The snapshot's event doesn't match: expected %s, actual %s", event, snapshot.EventDigest)
-			assert.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
-			assert.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
-			assert.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empt")
 		})
 
-		let("Get membership proof for first inserted event", func(t *testing.T) {
-			result, err := client.Membership([]byte(event), snapshot.Version)
-			assert.NoError(t, err)
-
-			assert.True(t, result.Exists, "The queried key should be a member")
-			assert.Equal(t, result.QueryVersion, snapshot.Version,
-				"The query version doest't match the queried one: expected %d, actual %d", snapshot.Version, result.QueryVersion)
-			assert.Equal(t, result.ActualVersion, snapshot.Version,
-				"The actual version should match the queried one: expected %d, actual %d", snapshot.Version, result.ActualVersion)
-			assert.Equal(t, result.CurrentVersion, snapshot.Version,
-				"The current version should match the queried one: expected %d, actual %d", snapshot.Version, result.CurrentVersion)
-			assert.Equal(t, []byte(event), result.Key,
-				"The returned event doesn't math the original one: expected %s, actual %s", event, result.Key)
-			assert.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
-			assert.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
-			assert.False(t, result.ActualVersion > 0 && len(result.History) == 0,
-				"The history proof cannot be empty when version is greater than 0")
-
-		})
-	})
-
-	scenario("S", func() {
-		var snapshot *protocol.Snapshot
-		var err error
-
-		let("Add event", func(t *testing.T) {
-			snapshot, err = client.Add(event)
-			assert.NoError(t, err)
-			time.Sleep(100 * time.Second)
+		let("Get signed snapshot from snapshot public storage", func(t *testing.T) {
+			time.Sleep(2 * time.Second)
 			ss, err := getSnapshot(0)
 			if err != nil {
 				fmt.Println("Error: ", err)
