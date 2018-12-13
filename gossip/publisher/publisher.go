@@ -121,18 +121,16 @@ func (p *Publisher) dispatchTasks() {
 }
 
 func (p *Publisher) executeTask(task *PublishTask) {
-	log.Debug("Executing task: %+v", task)
-	fmt.Printf("Executing task: %+v\n", task)
-	fmt.Println(">>>>>>>>> PUBLISHER EXECUTE TASK")
+	log.Debug("Executing task: %+v\n", task)
 	buf, err := task.Batch.Encode()
 	if err != nil {
-		log.Debug("\nPublisher: Error marshalling: %s", err.Error())
+		log.Debug("Publisher: Error marshalling: %s\n", err.Error())
 		return
 	}
 	resp, err := http.Post(fmt.Sprintf("%s/batch", p.conf.PubUrls[0]),
 		"application/json", bytes.NewBuffer(buf))
 	if err != nil {
-		log.Infof("Error saving batch in snapStore: %v", err)
+		log.Infof("Error saving batch in snapStore: %v\n", err)
 	}
 	defer resp.Body.Close()
 	_, err = io.Copy(ioutil.Discard, resp.Body)
