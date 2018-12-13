@@ -19,6 +19,7 @@ package publisher
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -67,7 +68,7 @@ func (p *Publisher) Process(b *protocol.BatchSnapshots) {
 		log.Infof("Error saving batch in snapStore: %v", err)
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
 		log.Infof("Error getting response from snapStore saving a batch: %v", err)
 	}
