@@ -76,6 +76,9 @@ func (t *MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, 
 		return nil, fmt.Errorf("Error getting snapshot from the store: %v", err)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Error getting snapshot from the store. Status: %d", resp.StatusCode)
+	}
 	buf, err := ioutil.ReadAll(resp.Body)
 	var s protocol.SignedSnapshot
 	err = s.Decode(buf)
