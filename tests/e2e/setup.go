@@ -36,9 +36,10 @@ var apiKey, storageType, keyFile string
 var cacheSize uint64
 
 const (
-	QEDUrl = "http://127.0.0.1:8080"
-	PubUrl = "http://127.0.0.1:8888"
-	APIKey = "my-key"
+	QEDUrl    = "http://127.0.0.1:8080"
+	PubUrl    = "http://127.0.0.1:8888"
+	APIKey    = "my-key"
+	QEDGossip = "127.0.0.1:8600"
 )
 
 func init() {
@@ -73,7 +74,7 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:930%d", id)
 	}
 
-	agentConf.StartJoin = []string{QEDUrl}
+	agentConf.StartJoin = []string{QEDGossip}
 	agentConf.EnableCompression = true
 	agentConf.AlertsUrls = []string{PubUrl}
 	agentConf.Role = role
@@ -220,7 +221,7 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 				t.Log(err)
 			}
 		})()
-		time.Sleep(2 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	after := func(t *testing.T) {
