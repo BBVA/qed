@@ -58,50 +58,71 @@ func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
 		quit:   make(chan bool),
 	}
 }
+
 func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool) {
+	batches := []*protocol.BatchSnapshots{}
 	batch := &protocol.BatchSnapshots{
 		TTL:       s.Config.TTL,
 		From:      s.Agent.Self,
 		Snapshots: make([]*protocol.SignedSnapshot, 0),
 	}
 
+	ticker := time.NewTicker(500 * time.Millisecond)
+
+	resetBatches := func() {
+		batches = append(batches, batch)
+		batch = &protocol.BatchSnapshots{
+			TTL:       s.Config.TTL,
+			From:      s.Agent.Self,
+			Snapshots: make([]*protocol.SignedSnapshot, 0),
+		}
+	}
+
 	for {
 		select {
 		case snap := <-ch:
-			// batchSize 100 must be configurable
+			// TODO: batchSize 100 must be configurable
 			if len(batch.Snapshots) == 100 {
-				go s.sender(batch)
-				batch = &protocol.BatchSnapshots{
-					TTL:       s.Config.TTL,
-					From:      s.Agent.Self,
-					Snapshots: make([]*protocol.SignedSnapshot, 0),
-				}
+				resetBatches()
 			}
 			ss, err := s.doSign(snap)
 			if err != nil {
 				log.Errorf("Failed signing message: %v", err)
 			}
 			batch.Snapshots = append(batch.Snapshots, ss)
+			fmt.Printf(">>>>>>>>>>>>>SENDER %d: ADD SNAPSHOT TO BATCH \n", id)
+
+		case <-ticker.C:
+			if len(batch.Snapshots) > 0 {
+				resetBatches()
+			}
+			for _, b := range batches {
+				go s.sender(b)
+				fmt.Printf(">>>>>>>>>>>>>SENDER: SEND BATCH LEN(%d)\n", len(b.Snapshots))
+			}
+			batches = []*protocol.BatchSnapshots{}
+
 		case <-quit:
 			return
 			// default:
 			// fmt.Println("Doing nothing", id)
 		}
 	}
-
 }
+
 func (s Sender) sender(batch *protocol.BatchSnapshots) {
 	var wg sync.WaitGroup
 	msg, _ := batch.Encode()
-
+	// fmt.Println("BATCH: ", batch.Snapshots)
 	peers := s.Agent.Topology.Each(s.Config.EachN, nil)
-
 	for _, peer := range peers.L {
+		fmt.Println(">>>>>> PEERS ", peers)
 		dst := peer.Node()
 		log.Infof("Sending batch %+v to node %+v\n", batch, dst.Name)
 		wg.Add(1)
 		go func() {
 			err := s.Agent.Memberlist().SendReliable(dst, msg)
+			fmt.Println(">>>>>>>>> MESSAGE SENT")
 			if err != nil {
 				log.Errorf("Failed send message: %v", err)
 			}
@@ -114,7 +135,7 @@ func (s Sender) sender(batch *protocol.BatchSnapshots) {
 func (s Sender) Start(ch chan *protocol.Snapshot) {
 	ticker := time.NewTicker(1000 * time.Millisecond)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 1; i++ {
 		go s.batcherSender(i, ch, s.quit)
 	}
 
@@ -130,40 +151,6 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 
 func (s Sender) Stop() {
 	s.quit <- true
-}
-
-func (s *Sender) getBatch(ch chan *protocol.Snapshot) *protocol.BatchSnapshots {
-
-	if len(ch) == 0 {
-		return nil
-	}
-
-	var snapshot *protocol.Snapshot
-	var batch protocol.BatchSnapshots
-
-	var batchSize int = 100
-	var counter int = 0
-
-	batch.Snapshots = make([]*protocol.SignedSnapshot, 0)
-	batch.TTL = s.Config.TTL
-	batch.From = s.Agent.Self
-
-	for {
-		select {
-		case snapshot = <-ch:
-			counter++
-		default:
-			return &batch
-		}
-
-		batch.Snapshots = append(batch.Snapshots, &protocol.SignedSnapshot{snapshot, []byte{0x0}})
-
-		if counter == batchSize {
-			return &batch
-		}
-
-	}
-
 }
 
 func (s *Sender) doSign(snapshot *protocol.Snapshot) (*protocol.SignedSnapshot, error) {

@@ -206,7 +206,7 @@ func (s *Server) Start() error {
 	}
 
 	go func() {
-		log.Debug("	* Starting QED agent.")
+		log.Debug("	* Starting QED gossip agent.")
 		s.sender.Start(s.agentsQueue)
 	}()
 

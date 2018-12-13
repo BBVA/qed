@@ -122,6 +122,7 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 		atomic.AddUint64(&s.stats.count[RPS], 1)
 		atomic.AddUint64(&s.stats.count[SNAP], 1)
 		if r.Method == "POST" {
+			fmt.Println(">>>>>>> REQUEST RECEIVED")
 			// Decode batch to get signed snapshots and batch version.
 			var b protocol.BatchSnapshots
 			buf, err := ioutil.ReadAll(r.Body)

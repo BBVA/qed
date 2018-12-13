@@ -123,7 +123,7 @@ func (p *Publisher) dispatchTasks() {
 func (p *Publisher) executeTask(task *PublishTask) {
 	log.Debug("Executing task: %+v", task)
 	fmt.Printf("Executing task: %+v\n", task)
-
+	fmt.Println(">>>>>>>>> PUBLISHER EXECUTE TASK")
 	buf, err := task.Batch.Encode()
 	if err != nil {
 		log.Debug("\nPublisher: Error marshalling: %s", err.Error())
