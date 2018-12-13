@@ -14,6 +14,7 @@
 package e2e
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -154,7 +155,7 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 			}
 			b, ok := s.snaps.Get(uint64(version))
 			if !ok {
-				http.Error(w, fmt.Sprintf("Version not found: %v", version), http.StatusMethodNotAllowed)
+				http.Error(w, fmt.Sprintf("Version not found: %v", version), http.StatusUnprocessableEntity)
 				return
 			}
 			buf, err := b.Encode()
@@ -167,6 +168,7 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 	}
 }
+
 func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddUint64(&s.stats.count[RPS], 1)
@@ -209,6 +211,7 @@ func NewService() *Service {
 	snaps.d = make(map[uint64]*protocol.SignedSnapshot, 0)
 	stats.batch = make(map[string][]int, 0)
 	alerts.d = make([]string, 0)
+
 	return &Service{
 		snaps:  &snaps,
 		alerts: &alerts,
@@ -218,6 +221,13 @@ func NewService() *Service {
 }
 
 func (s *Service) Start() {
+	router := http.NewServeMux()
+	router.HandleFunc("/stat", s.statHandler())
+	router.HandleFunc("/batch", s.postBatchHandler())
+	router.HandleFunc("/snapshot", s.getSnapshotHandler())
+	router.HandleFunc("/alert", s.alertHandler())
+
+	httpServer := &http.Server{Addr: "127.0.0.1:8888", Handler: router}
 	go func() {
 		ticker := time.NewTicker(1 * time.Second)
 		for {
@@ -228,16 +238,18 @@ func (s *Service) Start() {
 				fmt.Println("Counters ", s.stats.count)
 				atomic.StoreUint64(&s.stats.count[RPS], 0)
 			case <-s.quitCh:
+				fmt.Println("\nShutting down the server...")
+				httpServer.Shutdown(context.Background())
 				return
 			}
 		}
 	}()
 
-	http.HandleFunc("/stat", s.statHandler())
-	http.HandleFunc("/batch", s.postBatchHandler())
-	http.HandleFunc("/snapshot", s.getSnapshotHandler())
-	http.HandleFunc("/alert", s.alertHandler())
-	log.Fatal(http.ListenAndServe("127.0.0.1:8888", nil))
+	go (func() {
+		if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	})()
 }
 
 func (s *Service) Shutdown() {
