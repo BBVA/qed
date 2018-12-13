@@ -23,6 +23,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof" // this will enable the default profiling capabilities
 	"os"
@@ -145,6 +147,7 @@ func join(joinAddr, raftAddr, nodeID string) error {
 		return err
 	}
 	defer resp.Body.Close()
+	io.Copy(ioutil.Discard, resp.Body)
 
 	return nil
 }

@@ -186,8 +186,6 @@ func getVersion(eventTemplate string, c *Config) uint64 {
 	json.Unmarshal(body, &signedSnapshot)
 	version := signedSnapshot.Snapshot.Version
 
-	io.Copy(ioutil.Discard, res.Body)
-
 	return version
 }
 
