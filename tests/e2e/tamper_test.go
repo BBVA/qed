@@ -30,7 +30,7 @@ import (
 )
 
 func getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/snapshot?v=%d", PubUrl, version))
+	resp, err := http.Get(fmt.Sprintf("%s/snapshot?v=%d", StoreUrl, version))
 	if err != nil {
 		return nil, fmt.Errorf("Error getting snapshot from the store: %v", err)
 	}
