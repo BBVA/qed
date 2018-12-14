@@ -228,6 +228,7 @@ func (s *Service) Start() {
 	router.HandleFunc("/alert", s.alertHandler())
 
 	httpServer := &http.Server{Addr: "127.0.0.1:8888", Handler: router}
+	fmt.Println("Starting test service...")
 	go func() {
 		ticker := time.NewTicker(1 * time.Second)
 		for {
@@ -238,8 +239,13 @@ func (s *Service) Start() {
 				log.Debugf("Counters ", s.stats.count)
 				atomic.StoreUint64(&s.stats.count[RPS], 0)
 			case <-s.quitCh:
+<<<<<<< HEAD
 				log.Debugf("\nShutting down the server...")
 				httpServer.Shutdown(context.Background())
+=======
+				fmt.Println("Shutting down test service...")
+				_ = httpServer.Shutdown(context.Background())
+>>>>>>> Fix race condition in e2e agent tests
 				return
 			}
 		}

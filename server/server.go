@@ -156,6 +156,7 @@ func join(joinAddr, raftAddr, nodeID string) error {
 func (s *Server) Start() error {
 
 	log.Debugf("Starting QED server...")
+	fmt.Printf("Starting QED server %s\n", s.conf.NodeID)
 
 	err := s.raftBalloon.Open(s.bootstrap)
 	if err != nil {
@@ -219,7 +220,7 @@ func (s *Server) Start() error {
 
 // Stop will close all the channels from the mux servers.
 func (s *Server) Stop() error {
-
+	fmt.Printf("\nShutting down QED server %s", s.conf.NodeID)
 	if s.tamperingServer != nil {
 		log.Debugf("Tampering enabled: stopping server...")
 		if err := s.tamperingServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil

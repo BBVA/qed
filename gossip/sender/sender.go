@@ -96,7 +96,7 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 				resetBatches()
 			}
 			for _, b := range batches {
-				go s.sender(b)
+				s.sender(*b)
 			}
 			batches = []*protocol.BatchSnapshots{}
 
@@ -108,7 +108,7 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 	}
 }
 
-func (s Sender) sender(batch *protocol.BatchSnapshots) {
+func (s Sender) sender(batch protocol.BatchSnapshots) {
 	var wg sync.WaitGroup
 	msg, _ := batch.Encode()
 
