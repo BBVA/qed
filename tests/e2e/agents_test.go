@@ -72,7 +72,7 @@ func TestAgents(t *testing.T) {
 	bPublisher, aPublisher := setupPublisher(0, t)
 
 	scenario, let := scope.Scope(t,
-		merge(bStore, bServer, bPublisher, bAuditor, bMonitor),
+		merge(bServer, bStore, bPublisher, bAuditor, bMonitor),
 		merge(aServer, aPublisher, aAuditor, aMonitor, aStore),
 	)
 
