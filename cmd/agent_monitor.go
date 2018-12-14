@@ -40,7 +40,7 @@ func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 			agentConfig.Role = member.Monitor
 			monitorConfig := monitor.DefaultConfig()
 			monitorConfig.APIKey = apiKey
-			monitorConfig.QEDEndpoints = qedUrls
+			monitorConfig.QedUrls = qedUrls
 			monitorConfig.PubUrls = pubUrls
 
 			monitor, err := monitor.NewMonitor(monitorConfig)

@@ -29,7 +29,7 @@ import (
 
 func TestCli(t *testing.T) {
 	before, after := setupServer(0, "", t)
-	scenario, let := scope.Scope(t, before, after)
+	scenario, let := scope.Scope(t, before, merge(after))
 
 	scenario("Add one event through cli and verify it", func() {
 
@@ -37,9 +37,9 @@ func TestCli(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				"--apikey=my-key",
+				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				"--endpoint=http://localhost:8500",
+				fmt.Sprintf("--endpoint=%s", QEDUrl),
 				"add",
 				"--key='test event'",
 				"--value=2",
@@ -55,9 +55,9 @@ func TestCli(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				"--apikey=my-key",
+				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				"--endpoint=http://localhost:8500",
+				fmt.Sprintf("--endpoint=%s", QEDUrl),
 				"membership",
 				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
@@ -79,9 +79,9 @@ func TestCli(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				"--apikey=my-key",
+				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				"--endpoint=http://localhost:8500",
+				fmt.Sprintf("--endpoint=%s", QEDUrl),
 				"membership",
 				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
