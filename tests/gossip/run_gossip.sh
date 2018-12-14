@@ -35,7 +35,7 @@ done
 
 for i in `seq 1 $2`;
 do
-	xterm  -hold -e "$QED agent --alertsUrls $alertsEndpoint monitor -k key -l info --bind 127.0.0.1:920$i --join $masterEndpoint --endpoints $qedEndpoint --node monitor$i" &
+	xterm  -hold -e "$QED agent --alertsUrls $alertsEndpoint monitor -k key -l info --bind 127.0.0.1:920$i --join $masterEndpoint --endpoints $qedEndpoint --pubUrls $publisherEndpoint --node monitor$i" &
 	pids+=($!)
 done 
 
