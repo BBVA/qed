@@ -58,6 +58,7 @@ func merge(list ...scope.TestF) scope.TestF {
 		for _, elem := range list {
 			elem(t)
 		}
+		time.Sleep(2 * time.Second)
 	}
 }
 

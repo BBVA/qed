@@ -17,7 +17,9 @@
 package tampering
 
 import (
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/bbva/qed/api/apihttp"
@@ -28,6 +30,7 @@ import (
 
 type tamperEvent struct {
 	Key       []byte
+	Digest    string
 	KeyDigest []byte
 	Value     []byte
 }
@@ -63,18 +66,27 @@ func tamperFunc(store storage.DeletableStore, hasher hashing.Hasher) http.Handle
 			return
 		}
 
-		tp.KeyDigest = hasher.Do(tp.Key)
+		digest, _ := hex.DecodeString(tp.Digest)
+		tp.KeyDigest = digest
 
 		switch r.Method {
 		case "PATCH":
-			get, _ := store.Get(storage.IndexPrefix, tp.KeyDigest)
+			get, err := store.Get(storage.IndexPrefix, tp.KeyDigest)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("%s: %X", err.Error(), tp.Key), http.StatusUnprocessableEntity)
+				return
+			}
 			log.Debugf("Get: %v", get)
 			mutations := make([]*storage.Mutation, 0)
 			mutations = append(mutations, storage.NewMutation(storage.IndexPrefix, tp.KeyDigest, tp.Value))
 			log.Debugf("Tamper: %v", store.Mutate(mutations))
 
 		case "DELETE":
-			get, _ := store.Get(storage.IndexPrefix, tp.KeyDigest)
+			get, err := store.Get(storage.IndexPrefix, tp.KeyDigest)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("%s: %X", err.Error(), tp.Key), http.StatusUnprocessableEntity)
+				return
+			}
 			log.Debugf("Get: %v", get)
 			log.Debugf("Delete: %v", store.Delete(storage.IndexPrefix, tp.KeyDigest))
 
