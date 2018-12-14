@@ -149,8 +149,10 @@ func (m *Monitor) executeTask(task *QueryTask) {
 	log.Debug("Executing task: %+v", task)
 	resp, err := m.client.Incremental(task.Start, task.End)
 	if err != nil {
-		// retry
-		log.Errorf("Error executing incremental query: %v", err)
+		// TODO: retry
+		m.sendAlert(fmt.Sprintf("Unable to verify incremental proof from %d to %d", task.Start, task.End))
+		log.Infof("Unable to verify incremental proof from %d to %d", task.Start, task.End)
+		return
 	}
 	ok := m.client.VerifyIncremental(resp, task.StartSnapshot, task.EndSnapshot, hashing.NewSha256Hasher())
 	if !ok {

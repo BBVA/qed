@@ -18,13 +18,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 )
 
@@ -234,11 +234,11 @@ func (s *Service) Start() {
 			select {
 			case <-ticker.C:
 				c := atomic.LoadUint64(&s.stats.count[RPS])
-				fmt.Println("Request per second: ", c)
-				fmt.Println("Counters ", s.stats.count)
+				log.Debugf("Request per second: ", c)
+				log.Debugf("Counters ", s.stats.count)
 				atomic.StoreUint64(&s.stats.count[RPS], 0)
 			case <-s.quitCh:
-				fmt.Println("\nShutting down the server...")
+				log.Debugf("\nShutting down the server...")
 				httpServer.Shutdown(context.Background())
 				return
 			}
