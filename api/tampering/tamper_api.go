@@ -26,13 +26,12 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
+	"github.com/bbva/qed/util"
 )
 
 type tamperEvent struct {
-	Key       []byte
-	Digest    string
-	KeyDigest []byte
-	Value     []byte
+	Digest string
+	Value  string
 }
 
 // NewTamperingApi will return a mux server with the endpoint required to
@@ -67,28 +66,32 @@ func tamperFunc(store storage.DeletableStore, hasher hashing.Hasher) http.Handle
 		}
 
 		digest, _ := hex.DecodeString(tp.Digest)
-		tp.KeyDigest = digest
+		value, _ := hex.DecodeString(tp.Value)
 
 		switch r.Method {
 		case "PATCH":
-			get, err := store.Get(storage.IndexPrefix, tp.KeyDigest)
+			index, err := store.Get(storage.IndexPrefix, digest)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("%s: %X", err.Error(), tp.Key), http.StatusUnprocessableEntity)
+				http.Error(w, fmt.Sprintf("%s: %X", err.Error(), index), http.StatusUnprocessableEntity)
 				return
 			}
-			log.Debugf("Get: %v", get)
-			mutations := make([]*storage.Mutation, 0)
-			mutations = append(mutations, storage.NewMutation(storage.IndexPrefix, tp.KeyDigest, tp.Value))
+
+			bIndex := make([]byte, 10) // Size of the index plus 2 bytes for the height
+			copy(bIndex, index.Value)
+			copy(bIndex[len(index.Value):], util.Uint16AsBytes(uint16(0)))
+
+			mutations := []*storage.Mutation{{storage.HistoryCachePrefix, bIndex, value}}
+
 			log.Debugf("Tamper: %v", store.Mutate(mutations))
 
 		case "DELETE":
-			get, err := store.Get(storage.IndexPrefix, tp.KeyDigest)
+			_, err = store.Get(storage.IndexPrefix, digest)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("%s: %X", err.Error(), tp.Key), http.StatusUnprocessableEntity)
+				http.Error(w, fmt.Sprintf("%s: %X", err.Error(), digest), http.StatusUnprocessableEntity)
 				return
 			}
-			log.Debugf("Get: %v", get)
-			log.Debugf("Delete: %v", store.Delete(storage.IndexPrefix, tp.KeyDigest))
+
+			log.Debugf("Delete: %v", store.Delete(storage.IndexPrefix, digest))
 
 		}
 
