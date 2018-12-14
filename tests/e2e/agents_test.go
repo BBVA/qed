@@ -17,8 +17,10 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/bbva/qed/hashing"
 	"io/ioutil"
 	"net/http"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -84,6 +86,7 @@ func TestAgents(t *testing.T) {
 		let("Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
 			assert.NoError(t, err)
+			time.Sleep(2 * time.Second)
 		})
 
 		let("Get signed snapshot from snapshot public storage", func(t *testing.T) {
@@ -109,4 +112,89 @@ func TestAgents(t *testing.T) {
 
 	})
 
+	scenario("Add 1st event. Tamper it. Check auditor alerts correctly", func() {
+		var err error
+
+		let("Add 1st event", func(t *testing.T) {
+			_, err = client.Add(event)
+			assert.NoError(t, err)
+		})
+
+		let("Tamper 1st event", func(t *testing.T) {
+			cmd := exec.Command("curl",
+				"-sS",
+				"-XDELETE",
+				"-H", "Api-Key: my-key",
+				"-H", "Content-type: application/json",
+				"http://localhost:8081/tamper",
+				"-d", fmt.Sprintf(`{"Digest": "%X"}`, hashing.NewSha256Hasher().Do(hashing.Digest(event))),
+			)
+
+			_, err := cmd.CombinedOutput()
+			assert.NoError(t, err, "Subprocess must not exit with status 1")
+
+		})
+
+		let("Check Auditor alerts", func(t *testing.T) {
+			time.Sleep(2 * time.Second)
+			alerts, err := getAlert()
+			assert.NoError(t, err)
+			assert.True(t, strings.Contains(string(alerts), "Unable to verify snapshot"), "Must exist auditor alerts")
+		})
+
+		let("Check Monitor do not create any alert", func(t *testing.T) {
+			time.Sleep(1 * time.Second)
+			alerts, err := getAlert()
+			assert.NoError(t, err)
+			assert.False(t, strings.Contains(string(alerts), "Unable to verify incremental"), "Must not exist monitor alert")
+		})
+
+	})
+
+	// scenario("Add 1st event. Tamper it. Add 2nd event. Check monitor alerts correctly", func() {
+	// 	var err error
+
+	// 	let("Add 1st event", func(t *testing.T) {
+	// 		_, err = client.Add(event)
+	// 		assert.NoError(t, err)
+	// 	})
+
+	// 	let("Tamper 1st event", func(t *testing.T) {
+	// 		cmd := exec.Command("curl",
+	// 			"-sS",
+	// 			"-XDELETE",
+	// 			"-H", "Api-Key: my-key",
+	// 			"-H", "Content-type: application/json",
+	// 			"http://localhost:8081/tamper",
+	// 			"-d", fmt.Sprintf(`{"Digest": "%X"}`, hashing.NewSha256Hasher().Do(hashing.Digest(event))),
+	// 		)
+
+	// 		o, err := cmd.CombinedOutput()
+	// 		fmt.Printf(">>>>>>>>>>>> %s %s\n", event, o)
+	// 		assert.NoError(t, err, "Subprocess must not exit with status 1")
+
+	// 	})
+
+	// 	event2 := rand.RandomString(10)
+	// 	let("Add 2nd event", func(t *testing.T) {
+	// 		_, err = client.Add(event2)
+	// 		assert.NoError(t, err)
+	// 		time.Sleep(2 * time.Second)
+	// 	})
+
+	// 	let("Check Auditor do not create any alert", func(t *testing.T) {
+	// 		time.Sleep(1 * time.Second)
+	// 		alerts, err := getAlert()
+	// 		assert.NoError(t, err)
+	// 		assert.False(t, strings.Contains(string(alerts), "Unable to verify snapshot"), "Must not exist auditor alerts")
+	// 	})
+
+	// 	let("Check Monitor alert", func(t *testing.T) {
+	// 		time.Sleep(1 * time.Second)
+	// 		alerts, err := getAlert()
+	// 		assert.NoError(t, err)
+	// 		assert.True(t, strings.Contains(string(alerts), "Unable to verify incremental"), "Must exist monitor alert")
+	// 	})
+
+	// })
 }
