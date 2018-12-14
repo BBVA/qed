@@ -66,7 +66,8 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 
 	cmd.Flags().StringSliceVarP(&qedUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
 	cmd.Flags().StringSliceVarP(&pubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
-	cmd.MarkFlagRequired("endpoints")
+	cmd.MarkFlagRequired("qedUrls")
+	cmd.MarkFlagRequired("pubUrls")
 
 	return cmd
 }
