@@ -147,7 +147,6 @@ func (m *Monitor) sendAlert(msg string) {
 
 func (m *Monitor) executeTask(task *QueryTask) {
 	log.Debug("Executing task: %+v", task)
-	fmt.Printf("Executing task: %+v\n", task)
 	resp, err := m.client.Incremental(task.Start, task.End)
 	if err != nil {
 		// retry
@@ -160,5 +159,5 @@ func (m *Monitor) executeTask(task *QueryTask) {
 		log.Infof("Unable to verify incremental proof from %d to %d",
 			task.StartSnapshot.Version, task.EndSnapshot.Version)
 	}
-	fmt.Printf("Consistency between versions %d and %d: %v\n", task.Start, task.End, ok)
+	log.Debugf("Consistency between versions %d and %d: %v\n", task.Start, task.End, ok)
 }
