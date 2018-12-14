@@ -36,10 +36,11 @@ var apiKey, storageType, keyFile string
 var cacheSize uint64
 
 const (
-	QEDUrl    = "http://127.0.0.1:8080"
-	StoreUrl  = "http://127.0.0.1:8888"
-	APIKey    = "my-key"
-	QEDGossip = "127.0.0.1:9010"
+	QEDUrl       = "http://127.0.0.1:8080"
+	QEDGossip    = "127.0.0.1:9010"
+	QEDTamperURL = "http://localhost:8081/tamper"
+	StoreUrl     = "http://127.0.0.1:8888"
+	APIKey       = "my-key"
 )
 
 func init() {
@@ -110,7 +111,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if au != nil {
 			au.Shutdown()
-			agent.Shutdown()
+			_ = agent.Shutdown()
 		} else {
 			t.Fatalf("Unable to shutdown the auditor!")
 		}
@@ -140,7 +141,7 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if mn != nil {
 			mn.Shutdown()
-			agent.Shutdown()
+			_ = agent.Shutdown()
 		} else {
 			t.Fatalf("Unable to shutdown the monitor!")
 		}
@@ -168,7 +169,7 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if pu != nil {
 			pu.Shutdown()
-			agent.Shutdown()
+			_ = agent.Shutdown()
 		} else {
 			t.Fatalf("Unable to shutdown the publisher!")
 		}

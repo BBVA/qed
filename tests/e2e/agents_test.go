@@ -71,8 +71,8 @@ func TestAgents(t *testing.T) {
 	bPublisher, aPublisher := setupPublisher(0, t)
 
 	scenario, let := scope.Scope(t,
-		merge(bStore, bServer, bAuditor, bMonitor, bPublisher),
-		merge(aAuditor, aMonitor, aPublisher, aServer, aStore),
+		merge(bStore, bServer, bPublisher, bAuditor, bMonitor),
+		merge(aServer, aPublisher, aAuditor, aMonitor, aStore),
 	)
 
 	client := getClient(0)
@@ -124,15 +124,14 @@ func TestAgents(t *testing.T) {
 			cmd := exec.Command("curl",
 				"-sS",
 				"-XDELETE",
-				"-H", "Api-Key: my-key",
+				"-H", fmt.Sprintf("Api-Key:%s", APIKey),
 				"-H", "Content-type: application/json",
-				"http://localhost:8081/tamper",
+				QEDTamperURL,
 				"-d", fmt.Sprintf(`{"Digest": "%X"}`, hashing.NewSha256Hasher().Do(hashing.Digest(event))),
 			)
 
 			_, err := cmd.CombinedOutput()
 			assert.NoError(t, err, "Subprocess must not exit with status 1")
-
 		})
 
 		let("Check Auditor alerts", func(t *testing.T) {
@@ -148,7 +147,6 @@ func TestAgents(t *testing.T) {
 			assert.NoError(t, err)
 			assert.False(t, strings.Contains(string(alerts), "Unable to verify incremental"), "Must not exist monitor alert")
 		})
-
 	})
 
 	// scenario("Add 1st event. Tamper it. Add 2nd event. Check monitor alerts correctly", func() {
@@ -163,9 +161,9 @@ func TestAgents(t *testing.T) {
 	// 		cmd := exec.Command("curl",
 	// 			"-sS",
 	// 			"-XDELETE",
-	// 			"-H", "Api-Key: my-key",
+	// 			"-H", fmt.Sprintf("Api-Key:%s", APIKey),
 	// 			"-H", "Content-type: application/json",
-	// 			"http://localhost:8081/tamper",
+	// 			QEDTamperURL,
 	// 			"-d", fmt.Sprintf(`{"Digest": "%X"}`, hashing.NewSha256Hasher().Do(hashing.Digest(event))),
 	// 		)
 
