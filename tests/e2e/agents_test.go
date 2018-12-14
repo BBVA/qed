@@ -65,18 +65,18 @@ func TestAgents(t *testing.T) {
 	bStore, aStore := setupStore(t)
 	bServer, aServer := setupServer(0, "", t)
 	bAuditor, aAuditor := setupAuditor(0, t)
-	// bMonitor, aMonitor := setupMonitor(0, t)
+	bMonitor, aMonitor := setupMonitor(0, t)
 	bPublisher, aPublisher := setupPublisher(0, t)
 
 	scenario, let := scope.Scope(t,
-		merge(bStore, bServer, bAuditor /* bMonitor*/, bPublisher),
-		merge(aAuditor /*,aMonitor*/, aPublisher, aServer, aStore),
+		merge(bStore, bServer, bAuditor, bMonitor, bPublisher),
+		merge(aAuditor, aMonitor, aPublisher, aServer, aStore),
 	)
 
 	client := getClient(0)
 	event := rand.RandomString(10)
 
-	scenario("Add one event and check that it has been published", func() {
+	scenario("Add one event and check that it has been published without alerts", func() {
 		var snapshot *protocol.Snapshot
 		var ss *protocol.SignedSnapshot
 		var err error
@@ -96,10 +96,17 @@ func TestAgents(t *testing.T) {
 		let("Check Auditor do not create any alert", func(t *testing.T) {
 			time.Sleep(1 * time.Second)
 			alerts, err := getAlert()
-			fmt.Println(string(alerts))
 			assert.NoError(t, err)
-			assert.False(t, strings.Contains(string(alerts), "Unable to verify"), "Must not exist alerts")
+			assert.False(t, strings.Contains(string(alerts), "Unable to verify snapshot"), "Must not exist alerts")
 		})
+
+		let("Check Monitor do not create any alert", func(t *testing.T) {
+			time.Sleep(1 * time.Second)
+			alerts, err := getAlert()
+			assert.NoError(t, err)
+			assert.False(t, strings.Contains(string(alerts), "Unable to verify incremental"), "Must not exist alerts")
+		})
+
 	})
 
 }

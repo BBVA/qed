@@ -114,7 +114,7 @@ func (t *MembershipTask) Do() {
 		Version:       t.s.Snapshot.Version,
 		EventDigest:   t.s.Snapshot.EventDigest,
 	}
-	ok := t.qed.Verify(proof, checkSnap, hashing.NewSha256Hasher)
+	ok := t.qed.DigestVerify(proof, checkSnap, hashing.NewSha256Hasher)
 	if !ok {
 		t.sendAlert(fmt.Sprintf("Unable to verify snapshot %v", t.s.Snapshot))
 		log.Infof("Unable to verify snapshot %v", t.s.Snapshot)

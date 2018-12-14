@@ -17,7 +17,10 @@
 package monitor
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/bbva/qed/client"
@@ -27,7 +30,8 @@ import (
 )
 
 type Config struct {
-	QEDEndpoints          []string
+	QedUrls               []string
+	PubUrls               []string
 	APIKey                string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
@@ -51,7 +55,7 @@ type Monitor struct {
 
 func NewMonitor(conf *Config) (*Monitor, error) {
 
-	client := client.NewHttpClient(conf.QEDEndpoints[0], conf.APIKey)
+	client := client.NewHttpClient(conf.QedUrls[0], conf.APIKey)
 
 	monitor := &Monitor{
 		client: client,
@@ -125,6 +129,22 @@ func (m *Monitor) dispatchTasks() {
 	}
 }
 
+func (m *Monitor) sendAlert(msg string) {
+
+	go func() {
+		resp, err := http.Post(fmt.Sprintf("%s/alert", m.conf.PubUrls), "application/json",
+			bytes.NewBufferString(msg))
+		if err != nil {
+			log.Infof("Error saving batch in alertStore: %v", err)
+		}
+		defer resp.Body.Close()
+		_, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Infof("Error getting response from alertStore saving a batch: %v", err)
+		}
+	}()
+}
+
 func (m *Monitor) executeTask(task *QueryTask) {
 	log.Debug("Executing task: %+v", task)
 	fmt.Printf("Executing task: %+v\n", task)
@@ -134,5 +154,11 @@ func (m *Monitor) executeTask(task *QueryTask) {
 		log.Errorf("Error executing incremental query: %v", err)
 	}
 	ok := m.client.VerifyIncremental(resp, task.StartSnapshot, task.EndSnapshot, hashing.NewSha256Hasher())
+	if !ok {
+		m.sendAlert(fmt.Sprintf("Unable to verify incremental proof from %d to %d",
+			task.StartSnapshot.Version, task.EndSnapshot.Version))
+		log.Infof("Unable to verify incremental proof from %d to %d",
+			task.StartSnapshot.Version, task.EndSnapshot.Version)
+	}
 	fmt.Printf("Consistency between versions %d and %d: %v\n", task.Start, task.End, ok)
 }
