@@ -28,6 +28,7 @@ import (
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/monitor"
 	"github.com/bbva/qed/gossip/publisher"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
 )
@@ -50,6 +51,8 @@ func init() {
 
 	usr, _ := user.Current()
 	keyFile = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
+
+	log.SetLogger("", log.SILENT)
 }
 
 // merge function is a helper function that execute all the variadic parameters
@@ -58,8 +61,8 @@ func merge(list ...scope.TestF) scope.TestF {
 	return func(t *testing.T) {
 		for _, elem := range list {
 			elem(t)
+			time.Sleep(2 * time.Second)
 		}
-		time.Sleep(2 * time.Second)
 	}
 }
 
