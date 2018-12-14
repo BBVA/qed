@@ -24,7 +24,7 @@ import (
 
 func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 
-	var qedEndpoints []string
+	var qedUrls, pubUrls []string
 
 	cmd := &cobra.Command{
 		Use:   "monitor",
@@ -40,7 +40,8 @@ func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 			agentConfig.Role = member.Monitor
 			monitorConfig := monitor.DefaultConfig()
 			monitorConfig.APIKey = apiKey
-			monitorConfig.QEDEndpoints = qedEndpoints
+			monitorConfig.QEDEndpoints = qedUrls
+			monitorConfig.PubUrls = pubUrls
 
 			monitor, err := monitor.NewMonitor(monitorConfig)
 			if err != nil {
@@ -63,8 +64,10 @@ func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&qedEndpoints, "endpoints", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
-	cmd.MarkFlagRequired("endpoints")
+	cmd.Flags().StringSliceVarP(&qedUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
+	cmd.Flags().StringSliceVarP(&pubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
+	cmd.MarkFlagRequired("qedUrls")
+	cmd.MarkFlagRequired("pubUrls")
 
 	return cmd
 }

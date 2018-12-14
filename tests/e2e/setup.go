@@ -124,7 +124,8 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		monitorConf := monitor.DefaultConfig()
-		monitorConf.QEDEndpoints = []string{QEDUrl}
+		monitorConf.QedUrls = []string{QEDUrl}
+		monitorConf.PubUrls = []string{StoreUrl}
 		monitorConf.APIKey = APIKey
 
 		mn, err = monitor.NewMonitor(monitorConf)
