@@ -99,7 +99,9 @@ func (t *MembershipTask) Do() {
 	proof, err := t.qed.MembershipDigest(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
 		// retry
-		log.Errorf("Error executing membership query: %v", err)
+		t.sendAlert(fmt.Sprintf("Unable to verify snapshot %v", t.s.Snapshot))
+		log.Infof("Error executing membership query: %v", err)
+		return
 	}
 
 	snap, err := t.getSnapshot(proof.CurrentVersion)
