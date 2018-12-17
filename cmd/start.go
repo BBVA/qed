@@ -61,7 +61,7 @@ func newStartCommand() *cobra.Command {
 
 	hostname, _ := os.Hostname()
 	cmd.Flags().StringVar(&conf.NodeID, "node-id", hostname, "Unique name for node. If not set, fallback to hostname")
-	cmd.Flags().StringVar(&conf.HttpAddr, "http-addr", ":8080", "Endpoint for REST requests on (host:port)")
+	cmd.Flags().StringVar(&conf.TLSAddr, "https-addr", ":443", "Endpoint for REST requests on (host:port)")
 	cmd.Flags().StringVar(&conf.RaftAddr, "raft-addr", ":9000", "Raft bind address (host:port)")
 	cmd.Flags().StringVar(&conf.MgmtAddr, "mgmt-addr", ":8090", "Management endpoint bind address (host:port)")
 	cmd.Flags().StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
