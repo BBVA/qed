@@ -123,7 +123,11 @@ func NewServer(conf *Config) (*Server, error) {
 
 	// Create http endpoints
 	httpMux := apihttp.NewApiHttp(server.raftBalloon)
-	server.httpServer = newTLSServer(conf, httpMux)
+	if conf.EnableTLS {
+		server.httpServer = newTLSServer(conf.HTTPAddr, httpMux)
+	} else {
+		server.httpServer = newHTTPServer(conf.HTTPAddr, httpMux)
+	}
 
 	// Create management endpoints
 	mgmtMux := mgmthttp.NewMgmtHttp(server.raftBalloon)
@@ -184,16 +188,26 @@ func (s *Server) Start() error {
 		}()
 	}
 
-	go func() {
-		log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.TLSAddr)
-		err := s.httpServer.ListenAndServeTLS(
-			s.conf.SSLCertificate,
-			s.conf.SSLCertificateKey,
-		)
-		if err != http.ErrServerClosed {
-			log.Errorf("Can't start QED API HTTP Server: %s", err)
-		}
-	}()
+	if s.conf.EnableTLS {
+		go func() {
+			log.Debug("	* Starting QED API HTTPS server in addr: ", s.conf.HTTPAddr)
+			err := s.httpServer.ListenAndServeTLS(
+				s.conf.SSLCertificate,
+				s.conf.SSLCertificateKey,
+			)
+			if err != http.ErrServerClosed {
+				log.Errorf("Can't start QED API HTTP Server: %s", err)
+			}
+		}()
+	} else {
+		go func() {
+			log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.HTTPAddr)
+			if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
+				log.Errorf("Can't start QED API HTTP Server: %s", err)
+			}
+		}()
+
+	}
 
 	go func() {
 		log.Debug("	* Starting QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
@@ -202,7 +216,7 @@ func (s *Server) Start() error {
 		}
 	}()
 
-	log.Debugf(" ready on %s and %s\n", s.conf.TLSAddr, s.conf.MgmtAddr)
+	log.Debugf(" ready on %s and %s\n", s.conf.HTTPAddr, s.conf.MgmtAddr)
 
 	if !s.bootstrap {
 		for _, addr := range s.conf.RaftJoinAddr {
@@ -279,7 +293,7 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-func newTLSServer(conf *Config, mux *http.ServeMux) *http.Server {
+func newTLSServer(addr string, mux *http.ServeMux) *http.Server {
 
 	cfg := &tls.Config{
 		MinVersion: tls.VersionTLS12,
@@ -298,7 +312,7 @@ func newTLSServer(conf *Config, mux *http.ServeMux) *http.Server {
 	}
 
 	return &http.Server{
-		Addr:         conf.TLSAddr,
+		Addr:         addr,
 		Handler:      apihttp.STSHandler(apihttp.LogHandler(mux)),
 		TLSConfig:    cfg,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),

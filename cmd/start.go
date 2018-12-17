@@ -30,6 +30,7 @@ import (
 func newStartCommand() *cobra.Command {
 	const defaultKeyPath = "~/.ssh/id_ed25519"
 
+	var disableTLS bool
 	conf := server.DefaultConfig()
 
 	cmd := &cobra.Command{
@@ -39,6 +40,7 @@ func newStartCommand() *cobra.Command {
 		// Args:  cobra.NoArgs(),
 
 		Run: func(cmd *cobra.Command, args []string) {
+			conf.EnableTLS = !disableTLS
 
 			if conf.PrivateKeyPath == defaultKeyPath {
 				usr, _ := user.Current()
@@ -61,7 +63,7 @@ func newStartCommand() *cobra.Command {
 
 	hostname, _ := os.Hostname()
 	cmd.Flags().StringVar(&conf.NodeID, "node-id", hostname, "Unique name for node. If not set, fallback to hostname")
-	cmd.Flags().StringVar(&conf.TLSAddr, "https-addr", ":443", "Endpoint for REST requests on (host:port)")
+	cmd.Flags().StringVar(&conf.HTTPAddr, "http-addr", ":8080", "Endpoint for REST requests on (host:port)")
 	cmd.Flags().StringVar(&conf.RaftAddr, "raft-addr", ":9000", "Raft bind address (host:port)")
 	cmd.Flags().StringVar(&conf.MgmtAddr, "mgmt-addr", ":8090", "Management endpoint bind address (host:port)")
 	cmd.Flags().StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
@@ -71,6 +73,7 @@ func newStartCommand() *cobra.Command {
 	cmd.Flags().StringVar(&conf.RaftPath, "raftpath", "/var/tmp/qed/raft", "Set raft storage path")
 	cmd.Flags().StringVarP(&conf.PrivateKeyPath, "keypath", "y", defaultKeyPath, "Path to the ed25519 key file")
 	cmd.Flags().BoolVarP(&conf.EnableProfiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
+	cmd.Flags().BoolVar(&disableTLS, "insecure", "", false, "Disable TLS service")
 
 	// INFO: testing purposes
 	cmd.Flags().BoolVar(&conf.EnableTampering, "tampering", false, "Allow tampering api for proof demostrations")
