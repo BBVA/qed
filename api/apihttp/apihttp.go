@@ -344,3 +344,13 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 		}
 	}
 }
+
+// STSHandler adds TLS Header to the handlers
+func STSHandler(handle http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, request *http.Request) {
+		w.Header().Add(
+			"Strict-Transport-Security",
+			"max-age=63072000; includeSubDomains",
+		)
+	}
+}
