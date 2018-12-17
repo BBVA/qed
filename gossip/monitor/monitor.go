@@ -118,7 +118,7 @@ func (m *Monitor) dispatchTasks() {
 	for {
 		select {
 		case task = <-m.taskCh:
-			go m.executeTask(task)
+			go m.executeTask(*task)
 			count++
 		default:
 			return
@@ -130,22 +130,19 @@ func (m *Monitor) dispatchTasks() {
 }
 
 func (m *Monitor) sendAlert(msg string) {
-
-	go func() {
-		resp, err := http.Post(fmt.Sprintf("%s/alert", m.conf.PubUrls), "application/json",
-			bytes.NewBufferString(msg))
-		if err != nil {
-			log.Infof("Error saving batch in alertStore: %v", err)
-		}
-		defer resp.Body.Close()
-		_, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Infof("Error getting response from alertStore saving a batch: %v", err)
-		}
-	}()
+	resp, err := http.Post(fmt.Sprintf("%s/alert", m.conf.PubUrls[0]), "application/json",
+		bytes.NewBufferString(msg))
+	if err != nil {
+		log.Infof("Error saving batch in alertStore: %v", err)
+	}
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Infof("Error getting response from alertStore saving a batch: %v", err)
+	}
 }
 
-func (m *Monitor) executeTask(task *QueryTask) {
+func (m *Monitor) executeTask(task QueryTask) {
 	log.Debug("Executing task: %+v", task)
 	resp, err := m.client.Incremental(task.Start, task.End)
 	if err != nil {
