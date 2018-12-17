@@ -30,7 +30,7 @@ type Config struct {
 	NodeID string
 
 	// TLS server bind address/port.
-	TLSAddr string
+	HTTPAddr string
 
 	// Raft communication bind address/port.
 	RaftAddr string
@@ -64,6 +64,9 @@ type Config struct {
 	// Enables tampering endpoint.
 	EnableTampering bool
 
+	// Enable TLS service
+	EnableTLS bool
+
 	// TLS server cerificate
 	SSLCertificate string
 
@@ -80,7 +83,7 @@ func DefaultConfig() *Config {
 
 	return &Config{
 		NodeID:            hostname,
-		TLSAddr:           "127.0.0.1:443",
+		HTTPAddr:          "127.0.0.1:8080",
 		RaftAddr:          "127.0.0.1:9000",
 		MgmtAddr:          "127.0.0.1:8090",
 		RaftJoinAddr:      []string{},
@@ -90,6 +93,7 @@ func DefaultConfig() *Config {
 		RaftPath:          currentDir + "/raft",
 		EnableProfiling:   false,
 		EnableTampering:   false,
+		EnableTLS:         true,
 		SSLCertificate:    fmt.Sprintf("%s/.ssh/server.crt", homeDir),
 		SSLCertificateKey: fmt.Sprintf("%s/.ssh/server.key", homeDir),
 	}
