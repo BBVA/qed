@@ -239,13 +239,8 @@ func (s *Service) Start() {
 				log.Debugf("Counters ", s.stats.count)
 				atomic.StoreUint64(&s.stats.count[RPS], 0)
 			case <-s.quitCh:
-<<<<<<< HEAD
 				log.Debugf("\nShutting down the server...")
-				httpServer.Shutdown(context.Background())
-=======
-				fmt.Println("Shutting down test service...")
 				_ = httpServer.Shutdown(context.Background())
->>>>>>> Fix race condition in e2e agent tests
 				return
 			}
 		}
