@@ -21,6 +21,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,7 +41,6 @@ import (
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
-	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/util"
 )
@@ -122,16 +122,19 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// Create http endpoints
-	server.httpServer = newHTTPServer(conf.HttpAddr, server.raftBalloon)
+	httpMux := apihttp.NewApiHttp(server.raftBalloon)
+	server.httpServer = newTLSServer(conf, httpMux)
 
 	// Create management endpoints
-	server.mgmtServer = newMgmtServer(conf.MgmtAddr, server.raftBalloon)
+	mgmtMux := mgmthttp.NewMgmtHttp(server.raftBalloon)
+	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux)
 
 	if conf.EnableTampering {
-		server.tamperingServer = newTamperingServer("localhost:8081", store, hashing.NewSha256Hasher())
+		tamperMux := tampering.NewTamperingApi(store, hashing.NewSha256Hasher())
+		server.tamperingServer = newHTTPServer("localhost:8081", tamperMux)
 	}
 	if conf.EnableProfiling {
-		server.profilingServer = newProfilingServer("localhost:6060")
+		server.profilingServer = newHTTPServer("localhost:6060", nil)
 	}
 
 	return server, nil
@@ -182,8 +185,12 @@ func (s *Server) Start() error {
 	}
 
 	go func() {
-		log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.HttpAddr)
-		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
+		log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.TLSAddr)
+		err := s.httpServer.ListenAndServeTLS(
+			s.conf.SSLCertificate,
+			s.conf.SSLCertificateKey,
+		)
+		if err != http.ErrServerClosed {
 			log.Errorf("Can't start QED API HTTP Server: %s", err)
 		}
 	}()
@@ -195,7 +202,7 @@ func (s *Server) Start() error {
 		}
 	}()
 
-	log.Debugf(" ready on %s and %s\n", s.conf.HttpAddr, s.conf.MgmtAddr)
+	log.Debugf(" ready on %s and %s\n", s.conf.TLSAddr, s.conf.MgmtAddr)
 
 	if !s.bootstrap {
 		for _, addr := range s.conf.RaftJoinAddr {
@@ -272,33 +279,36 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-func newHTTPServer(endpoint string, raftBalloon raftwal.RaftBalloonApi) *http.Server {
-	router := apihttp.NewApiHttp(raftBalloon)
-	return &http.Server{
-		Addr:    endpoint,
-		Handler: apihttp.LogHandler(router),
+func newTLSServer(conf *Config, mux *http.ServeMux) *http.Server {
+
+	cfg := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		CurvePreferences: []tls.CurveID{
+			tls.CurveP521,
+			tls.CurveP384,
+			tls.CurveP256,
+		},
+		PreferServerCipherSuites: true,
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		},
 	}
+
+	return &http.Server{
+		Addr:         conf.TLSAddr,
+		Handler:      apihttp.STSHandler(apihttp.LogHandler(mux)),
+		TLSConfig:    cfg,
+		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
+	}
+
 }
 
-func newMgmtServer(endpoint string, raftBalloon raftwal.RaftBalloonApi) *http.Server {
-	router := mgmthttp.NewMgmtHttp(raftBalloon)
+func newHTTPServer(addr string, mux *http.ServeMux) *http.Server {
 	return &http.Server{
-		Addr:    endpoint,
-		Handler: apihttp.LogHandler(router),
-	}
-}
-
-func newProfilingServer(endpoint string) *http.Server {
-	return &http.Server{
-		Addr:    endpoint,
-		Handler: nil,
-	}
-}
-
-func newTamperingServer(endpoint string, store storage.DeletableStore, hasher hashing.Hasher) *http.Server {
-	router := tampering.NewTamperingApi(store, hasher)
-	return &http.Server{
-		Addr:    endpoint,
-		Handler: apihttp.LogHandler(router),
+		Addr:    addr,
+		Handler: apihttp.LogHandler(mux),
 	}
 }

@@ -17,8 +17,10 @@
 package server
 
 import (
+	"fmt"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -27,8 +29,8 @@ type Config struct {
 	// gossip clusters. If not set, fallback to hostname.
 	NodeID string
 
-	// HTTP server bind address/port.
-	HttpAddr string
+	// TLS server bind address/port.
+	TLSAddr string
 
 	// Raft communication bind address/port.
 	RaftAddr string
@@ -61,23 +63,35 @@ type Config struct {
 
 	// Enables tampering endpoint.
 	EnableTampering bool
+
+	// TLS server cerificate
+	SSLCertificate string
+
+	// TLS server cerificate key
+	SSLCertificateKey string
 }
 
 func DefaultConfig() *Config {
 	hostname, _ := os.Hostname()
 	currentDir := getCurrentDir()
+
+	usr, _ := user.Current()
+	homeDir := usr.HomeDir
+
 	return &Config{
-		NodeID:          hostname,
-		HttpAddr:        "127.0.0.1:8080",
-		RaftAddr:        "127.0.0.1:9000",
-		MgmtAddr:        "127.0.0.1:8090",
-		RaftJoinAddr:    []string{},
-		GossipAddr:      "127.0.0.1:9100",
-		GossipJoinAddr:  []string{},
-		DBPath:          currentDir + "/data",
-		RaftPath:        currentDir + "/raft",
-		EnableProfiling: false,
-		EnableTampering: false,
+		NodeID:            hostname,
+		TLSAddr:           "127.0.0.1:443",
+		RaftAddr:          "127.0.0.1:9000",
+		MgmtAddr:          "127.0.0.1:8090",
+		RaftJoinAddr:      []string{},
+		GossipAddr:        "127.0.0.1:9100",
+		GossipJoinAddr:    []string{},
+		DBPath:            currentDir + "/data",
+		RaftPath:          currentDir + "/raft",
+		EnableProfiling:   false,
+		EnableTampering:   false,
+		SSLCertificate:    fmt.Sprintf("%s/.ssh/server.crt", homeDir),
+		SSLCertificateKey: fmt.Sprintf("%s/.ssh/server.key", homeDir),
 	}
 }
 
