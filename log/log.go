@@ -66,11 +66,11 @@ var (
 
 	// Fatal is the public log function to write to stdOut and stop execution
 	// Same as Error.
-	Fatal func(...interface{}) = Error
+	Fatal = Error
 
 	// Panic is the public log function to write to stdOut and stop execution
 	// Same as Error.
-	Panic func(...interface{}) = Error
+	Panic = Error
 )
 
 // Errorf is the public log function with params to write to stdOut and stop
@@ -83,11 +83,11 @@ var (
 
 	// Fatalf is the public log function with params to write to stdOut and
 	// stop execution. Same as Errorf
-	Fatalf func(string, ...interface{}) = Errorf
+	Fatalf = Errorf
 
 	// Panicf is the public log function with params to write to stdOut and
 	// stop execution. Same as Errorf
-	Panicf func(string, ...interface{}) = Errorf
+	Panicf = Errorf
 )
 
 // Info is the public log function to write information relative to the usage

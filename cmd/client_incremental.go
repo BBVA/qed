@@ -19,6 +19,7 @@ package cmd
 import (
 	"encoding/hex"
 
+	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-func newIncrementalCommand(ctx *clientContext) *cobra.Command {
+func newIncrementalCommand(client *client.HTTPClient) *cobra.Command {
 
 	var start, end uint64
 	var verify bool
@@ -52,7 +53,7 @@ func newIncrementalCommand(ctx *clientContext) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Infof("Querying incremental between versions [ %d ] and [ %d ]\n", start, end)
 
-			proof, err := ctx.client.Incremental(start, end)
+			proof, err := client.Incremental(start, end)
 			if err != nil {
 				return err
 			}
@@ -67,7 +68,7 @@ func newIncrementalCommand(ctx *clientContext) *cobra.Command {
 
 				log.Infof("Verifying with snapshots: \n\tStartDigest: %s\n\tEndDigest: %s\n",
 					startDigest, endDigest)
-				if ctx.client.VerifyIncremental(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
+				if client.VerifyIncremental(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
 					log.Info("Verify: OK")
 				} else {
 					log.Info("Verify: KO")
@@ -83,7 +84,6 @@ func newIncrementalCommand(ctx *clientContext) *cobra.Command {
 	cmd.Flags().BoolVar(&verify, "verify", false, "Do verify received proof")
 	cmd.Flags().StringVar(&startDigest, "startDigest", "", "Start digest of the history tree")
 	cmd.Flags().StringVar(&endDigest, "endDigest", "", "End digest of the history tree")
-
 	cmd.MarkFlagRequired("start")
 	cmd.MarkFlagRequired("end")
 
