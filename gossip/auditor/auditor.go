@@ -46,7 +46,7 @@ func DefaultConfig() *Config {
 }
 
 type Auditor struct {
-	qed  *client.HttpClient
+	qed  *client.HTTPClient
 	conf Config
 
 	taskCh          chan Task
@@ -56,7 +56,11 @@ type Auditor struct {
 
 func NewAuditor(conf Config) (*Auditor, error) {
 	auditor := Auditor{
-		qed:    client.NewHttpClient(conf.QEDUrls[0], conf.APIKey),
+		qed: client.NewHTTPClient(&client.Config{
+			Endpoint:  conf.QEDUrls[0],
+			APIKey:    conf.APIKey,
+			EnableTLS: false,
+		}),
 		conf:   conf,
 		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
@@ -125,7 +129,7 @@ func (t MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, e
 }
 
 type MembershipTask struct {
-	qed    *client.HttpClient
+	qed    *client.HTTPClient
 	pubUrl string
 	taskCh chan Task
 	s      protocol.SignedSnapshot

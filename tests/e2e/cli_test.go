@@ -44,9 +44,12 @@ func TestCli(t *testing.T) {
 				"--key='test event'",
 				"--value=2",
 				"--log=info",
+				"--insecure",
 			)
 
-			_, err := cmd.CombinedOutput()
+			o, err := cmd.CombinedOutput()
+
+			fmt.Printf(">>>>> %s", o)
 
 			assert.NoError(t, err, "Subprocess must not exit with status 1")
 		})
@@ -65,6 +68,7 @@ func TestCli(t *testing.T) {
 				"--eventDigest=8694718de4363adf07ec3b4aff4c76589f60fe89a7715bee7c8b250e06493922",
 				"--log=info",
 				"--verify",
+				"--insecure",
 			)
 
 			stdoutStderr, err := cmd.CombinedOutput()
@@ -89,6 +93,7 @@ func TestCli(t *testing.T) {
 				"--key='test event'",
 				"--log=info",
 				"--verify",
+				"--insecure",
 			)
 
 			stdoutStderr, err := cmd.CombinedOutput()
