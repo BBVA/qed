@@ -127,7 +127,7 @@ func (t MembershipTask) Do() {
 	log.Infof("MembershipTask.Do(): Snapshot %v has been verified by QED", t.s.Snapshot)
 }
 
-func (t *MembershipTask) sendAlert(msg string) {
+func (t MembershipTask) sendAlert(msg string) {
 	resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json", bytes.NewBufferString(msg))
 	if err != nil {
 		log.Infof("Error saving batch in alertStore: %v", err)
