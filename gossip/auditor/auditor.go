@@ -47,14 +47,14 @@ func DefaultConfig() *Config {
 
 type Auditor struct {
 	qed  *client.HttpClient
-	conf *Config
+	conf Config
 
 	taskCh          chan Task
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
 
-func NewAuditor(conf *Config) (*Auditor, error) {
+func NewAuditor(conf Config) (*Auditor, error) {
 	auditor := Auditor{
 		qed:    client.NewHttpClient(conf.QEDUrls[0], conf.APIKey),
 		conf:   conf,
@@ -103,7 +103,7 @@ type Task interface {
 	Do()
 }
 
-func (t *MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
+func (t MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
 	resp, err := http.Get(fmt.Sprintf("%s/snapshot?v=%d", t.pubUrl, version))
 	if err != nil {
 		return nil, fmt.Errorf("Error getting snapshot from the store: %v", err)
@@ -128,7 +128,7 @@ type MembershipTask struct {
 	qed    *client.HttpClient
 	pubUrl string
 	taskCh chan Task
-	s      *protocol.SignedSnapshot
+	s      protocol.SignedSnapshot
 }
 
 func (t MembershipTask) Do() {
@@ -172,12 +172,12 @@ func (t MembershipTask) sendAlert(msg string) {
 	}
 }
 
-func (a Auditor) Process(b *protocol.BatchSnapshots) {
+func (a Auditor) Process(b protocol.BatchSnapshots) {
 	task := &MembershipTask{
 		qed:    a.qed,
 		pubUrl: a.conf.PubUrls[0],
 		taskCh: a.taskCh,
-		s:      b.Snapshots[0],
+		s:      *b.Snapshots[0],
 	}
 
 	a.taskCh <- task

@@ -26,13 +26,13 @@ import (
 )
 
 type Processor interface {
-	Process(*protocol.BatchSnapshots)
+	Process(protocol.BatchSnapshots)
 }
 
 type FakeProcessor struct {
 }
 
-func (d FakeProcessor) Process(b *protocol.BatchSnapshots) {
+func (d FakeProcessor) Process(b protocol.BatchSnapshots) {
 }
 
 type DummyProcessor struct {
@@ -45,7 +45,7 @@ func (d DummyProcessor) Process(b *protocol.BatchSnapshots) {
 			log.Debugf("Error contacting service with error %v", err)
 		}
 		// to reuse connections we need to do this
-		io.Copy(ioutil.Discard, res.Body)
+		_, _ = io.Copy(ioutil.Discard, res.Body)
 		res.Body.Close()
 
 		// time.Sleep(1 * time.Second)

@@ -113,7 +113,7 @@ func (a *Agent) start() {
 		select {
 		case batch := <-a.In:
 			for _, p := range a.processors {
-				go p.Process(batch)
+				go p.Process(*batch)
 			}
 			a.Out <- batch
 		case <-outTicker.C:
@@ -252,11 +252,11 @@ func (a *Agent) Shutdown() error {
 	return nil
 }
 
-func (a *Agent) Memberlist() *memberlist.Memberlist {
+func (a Agent) Memberlist() *memberlist.Memberlist {
 	return a.memberlist
 }
 
-func (a *Agent) Broadcasts() *memberlist.TransmitLimitedQueue {
+func (a Agent) Broadcasts() *memberlist.TransmitLimitedQueue {
 	return a.broadcasts
 }
 

@@ -40,7 +40,7 @@ func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
 			agentConfig.Role = member.Publisher
 			publisherConfig := publisher.NewConfig(endpoints)
 
-			publisher, err := publisher.NewPublisher(publisherConfig)
+			publisher, err := publisher.NewPublisher(*publisherConfig)
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
