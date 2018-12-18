@@ -80,6 +80,9 @@ func (t *MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, 
 		return nil, fmt.Errorf("Error getting snapshot from the store. Status: %d", resp.StatusCode)
 	}
 	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Infof("Error reading request body: %v", err)
+	}
 	var s protocol.SignedSnapshot
 	err = s.Decode(buf)
 	if err != nil {
@@ -125,18 +128,15 @@ func (t *MembershipTask) Do() {
 }
 
 func (t *MembershipTask) sendAlert(msg string) {
-
-	go func() {
-		resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json", bytes.NewBufferString(msg))
-		if err != nil {
-			log.Infof("Error saving batch in alertStore: %v", err)
-		}
-		defer resp.Body.Close()
-		_, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Infof("Error getting response from alertStore saving a batch: %v", err)
-		}
-	}()
+	resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json", bytes.NewBufferString(msg))
+	if err != nil {
+		log.Infof("Error saving batch in alertStore: %v", err)
+	}
+	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Infof("Error reading request body: %v", err)
+	}
 }
 
 func (a Auditor) Process(b *protocol.BatchSnapshots) {
