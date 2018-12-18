@@ -43,7 +43,7 @@ func newAgentAuditorCommand(ctx *agentContext) *cobra.Command {
 			auditorConfig.QEDUrls = qedUrls
 			auditorConfig.PubUrls = pubUrls
 
-			auditor, err := auditor.NewAuditor(auditorConfig)
+			auditor, err := auditor.NewAuditor(*auditorConfig)
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}

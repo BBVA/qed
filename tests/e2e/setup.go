@@ -104,7 +104,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		auditorConf.PubUrls = []string{StoreUrl}
 		auditorConf.APIKey = APIKey
 
-		au, err = auditor.NewAuditor(auditorConf)
+		au, err = auditor.NewAuditor(*auditorConf)
 		if err != nil {
 			t.Fatalf("Unable to create a new auditor: %v", err)
 		}
@@ -134,7 +134,7 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		monitorConf.PubUrls = []string{StoreUrl}
 		monitorConf.APIKey = APIKey
 
-		mn, err = monitor.NewMonitor(monitorConf)
+		mn, err = monitor.NewMonitor(*monitorConf)
 		if err != nil {
 			t.Fatalf("Unable to create a new monitor: %v", err)
 		}
@@ -162,7 +162,7 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		conf := publisher.DefaultConfig()
 		conf.PubUrls = []string{StoreUrl}
 
-		pu, err = publisher.NewPublisher(conf)
+		pu, err = publisher.NewPublisher(*conf)
 		if err != nil {
 			t.Fatalf("Unable to create a new publisher: %v", err)
 		}
