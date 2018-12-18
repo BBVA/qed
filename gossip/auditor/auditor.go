@@ -98,7 +98,7 @@ type MembershipTask struct {
 	s      *protocol.SignedSnapshot
 }
 
-func (t *MembershipTask) Do() {
+func (t MembershipTask) Do() {
 	proof, err := t.qed.MembershipDigest(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
 		// retry

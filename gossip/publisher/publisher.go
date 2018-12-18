@@ -109,7 +109,7 @@ func (p *Publisher) dispatchTasks() {
 	for {
 		select {
 		case task = <-p.taskCh:
-			go p.executeTask(&task)
+			go p.executeTask(task)
 			count++
 		default:
 			return
@@ -120,7 +120,7 @@ func (p *Publisher) dispatchTasks() {
 	}
 }
 
-func (p *Publisher) executeTask(task *PublishTask) {
+func (p *Publisher) executeTask(task PublishTask) {
 	log.Debug("Executing task: %+v\n", task)
 	buf, err := task.Batch.Encode()
 	if err != nil {
