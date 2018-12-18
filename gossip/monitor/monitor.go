@@ -19,6 +19,7 @@ package monitor
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -54,19 +55,18 @@ type Monitor struct {
 }
 
 func NewMonitor(conf *Config) (*Monitor, error) {
-
 	client := client.NewHttpClient(conf.QedUrls[0], conf.APIKey)
-
-	monitor := &Monitor{
+	monitor := Monitor{
 		client: client,
 		conf:   conf,
 		taskCh: make(chan QueryTask, 100),
 		quitCh: make(chan bool),
 	}
 
+	monitor.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go monitor.runTaskDispatcher()
 
-	return monitor, nil
+	return &monitor, nil
 }
 
 type QueryTask struct {
@@ -75,7 +75,6 @@ type QueryTask struct {
 }
 
 func (m Monitor) Process(b *protocol.BatchSnapshots) {
-
 	first := b.Snapshots[0].Snapshot
 	last := b.Snapshots[len(b.Snapshots)-1].Snapshot
 
@@ -91,14 +90,14 @@ func (m Monitor) Process(b *protocol.BatchSnapshots) {
 	m.taskCh <- task
 }
 
-func (m *Monitor) runTaskDispatcher() {
-	m.executionTicker = time.NewTicker(m.conf.TaskExecutionInterval)
+func (m Monitor) runTaskDispatcher() {
 	for {
 		select {
 		case <-m.executionTicker.C:
 			log.Debug("Dispatching tasks...")
-			m.dispatchTasks()
+			go m.dispatchTasks()
 		case <-m.quitCh:
+			m.executionTicker.Stop()
 			return
 		}
 	}
@@ -111,7 +110,7 @@ func (m *Monitor) Shutdown() {
 	close(m.taskCh)
 }
 
-func (m *Monitor) dispatchTasks() {
+func (m Monitor) dispatchTasks() {
 	count := 0
 	var task QueryTask
 	defer log.Debugf("%d tasks dispatched", count)
@@ -129,20 +128,20 @@ func (m *Monitor) dispatchTasks() {
 	}
 }
 
-func (m *Monitor) sendAlert(msg string) {
+func (m Monitor) sendAlert(msg string) {
 	resp, err := http.Post(fmt.Sprintf("%s/alert", m.conf.PubUrls[0]), "application/json",
 		bytes.NewBufferString(msg))
 	if err != nil {
 		log.Infof("Error saving batch in alertStore: %v", err)
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
 		log.Infof("Error getting response from alertStore saving a batch: %v", err)
 	}
 }
 
-func (m *Monitor) executeTask(task QueryTask) {
+func (m Monitor) executeTask(task QueryTask) {
 	log.Debug("Executing task: %+v", task)
 	resp, err := m.client.Incremental(task.Start, task.End)
 	if err != nil {
