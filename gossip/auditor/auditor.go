@@ -19,6 +19,7 @@ package auditor
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -54,16 +55,48 @@ type Auditor struct {
 }
 
 func NewAuditor(conf *Config) (*Auditor, error) {
-	auditor := &Auditor{
+	auditor := Auditor{
 		qed:    client.NewHttpClient(conf.QEDUrls[0], conf.APIKey),
 		conf:   conf,
 		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
 	}
 
+	auditor.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go auditor.runTaskDispatcher()
 
-	return auditor, nil
+	return &auditor, nil
+}
+
+func (a Auditor) runTaskDispatcher() {
+	for {
+		select {
+		case <-a.executionTicker.C:
+			log.Debug("Dispatching tasks...")
+			go a.dispatchTasks()
+		case <-a.quitCh:
+			a.executionTicker.Stop()
+			return
+		}
+	}
+}
+
+func (a Auditor) dispatchTasks() {
+	count := 0
+	var task Task
+	defer log.Debugf("%d tasks dispatched", count)
+	for {
+		select {
+		case task = <-a.taskCh:
+			go task.Do()
+			count++
+		default:
+			return
+		}
+		if count >= a.conf.MaxInFlightTasks {
+			return
+		}
+	}
 }
 
 type Task interface {
@@ -133,14 +166,13 @@ func (t MembershipTask) sendAlert(msg string) {
 		log.Infof("Error saving batch in alertStore: %v", err)
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
 		log.Infof("Error reading request body: %v", err)
 	}
 }
 
 func (a Auditor) Process(b *protocol.BatchSnapshots) {
-
 	task := &MembershipTask{
 		qed:    a.qed,
 		pubUrl: a.conf.PubUrls[0],
@@ -151,40 +183,9 @@ func (a Auditor) Process(b *protocol.BatchSnapshots) {
 	a.taskCh <- task
 }
 
-func (a *Auditor) runTaskDispatcher() {
-	a.executionTicker = time.NewTicker(a.conf.TaskExecutionInterval)
-	for {
-		select {
-		case <-a.executionTicker.C:
-			log.Debug("Dispatching tasks...")
-			a.dispatchTasks()
-		case <-a.quitCh:
-			return
-		}
-	}
-}
-
 func (a *Auditor) Shutdown() {
 	a.executionTicker.Stop()
 	a.quitCh <- true
 	close(a.quitCh)
 	close(a.taskCh)
-}
-
-func (a *Auditor) dispatchTasks() {
-	count := 0
-	var task Task
-	defer log.Debugf("%d tasks dispatched", count)
-	for {
-		select {
-		case task = <-a.taskCh:
-			go task.Do()
-			count++
-		default:
-			return
-		}
-		if count >= a.conf.MaxInFlightTasks {
-			return
-		}
-	}
 }

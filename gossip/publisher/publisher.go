@@ -59,16 +59,17 @@ type Publisher struct {
 
 func NewPublisher(conf *Config) (*Publisher, error) {
 
-	publisher := &Publisher{
+	publisher := Publisher{
 		client: &fasthttp.Client{},
 		conf:   conf,
 		taskCh: make(chan PublishTask, 100),
 		quitCh: make(chan bool),
 	}
 
+	publisher.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go publisher.runTaskDispatcher()
 
-	return publisher, nil
+	return &publisher, nil
 }
 
 type PublishTask struct {
@@ -82,14 +83,14 @@ func (p *Publisher) Process(b *protocol.BatchSnapshots) {
 	p.taskCh <- *task
 }
 
-func (p *Publisher) runTaskDispatcher() {
-	p.executionTicker = time.NewTicker(p.conf.TaskExecutionInterval)
+func (p Publisher) runTaskDispatcher() {
 	for {
 		select {
 		case <-p.executionTicker.C:
 			log.Debug("Dispatching tasks...")
-			p.dispatchTasks()
+			go p.dispatchTasks()
 		case <-p.quitCh:
+			p.executionTicker.Stop()
 			return
 		}
 	}
@@ -102,7 +103,7 @@ func (p *Publisher) Shutdown() {
 	close(p.taskCh)
 }
 
-func (p *Publisher) dispatchTasks() {
+func (p Publisher) dispatchTasks() {
 	count := 0
 	var task PublishTask
 	defer log.Debugf("%d tasks dispatched", count)
@@ -120,7 +121,7 @@ func (p *Publisher) dispatchTasks() {
 	}
 }
 
-func (p *Publisher) executeTask(task PublishTask) {
+func (p Publisher) executeTask(task PublishTask) {
 	log.Debug("Executing task: %+v\n", task)
 	buf, err := task.Batch.Encode()
 	if err != nil {
@@ -137,5 +138,4 @@ func (p *Publisher) executeTask(task PublishTask) {
 	if err != nil {
 		log.Infof("Error getting response from snapStore saving a batch: %v", err)
 	}
-
 }
