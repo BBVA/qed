@@ -252,11 +252,11 @@ func (a *Agent) Shutdown() error {
 	return nil
 }
 
-func (a Agent) Memberlist() *memberlist.Memberlist {
+func (a *Agent) Memberlist() *memberlist.Memberlist {
 	return a.memberlist
 }
 
-func (a Agent) Broadcasts() *memberlist.TransmitLimitedQueue {
+func (a *Agent) Broadcasts() *memberlist.TransmitLimitedQueue {
 	return a.broadcasts
 }
 
