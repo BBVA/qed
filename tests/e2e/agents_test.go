@@ -33,7 +33,7 @@ import (
 )
 
 func getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/snapshot?v=%d", StoreUrl, version))
+	resp, err := http.Get(fmt.Sprintf("%s/snapshot?v=%d", StoreURL, version))
 	if err != nil {
 		return nil, fmt.Errorf("Error getting snapshot from the store: %v", err)
 	}
@@ -52,7 +52,7 @@ func getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
 }
 
 func getAlert() ([]byte, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/alert", StoreUrl))
+	resp, err := http.Get(fmt.Sprintf("%s/alert", StoreURL))
 	if err != nil {
 		return []byte{}, fmt.Errorf("Error getting alert from alertStore: %v", err)
 	}

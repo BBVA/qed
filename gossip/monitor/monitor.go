@@ -46,7 +46,7 @@ func DefaultConfig() *Config {
 }
 
 type Monitor struct {
-	client *client.HttpClient
+	client *client.HTTPClient
 	conf   Config
 
 	taskCh          chan QueryTask
@@ -55,9 +55,13 @@ type Monitor struct {
 }
 
 func NewMonitor(conf Config) (*Monitor, error) {
-	client := client.NewHttpClient(conf.QedUrls[0], conf.APIKey)
+
 	monitor := Monitor{
-		client: client,
+		client: client.NewHTTPClient(&client.Config{
+			Endpoint:  conf.QedUrls[0],
+			APIKey:    conf.APIKey,
+			EnableTLS: false,
+		}),
 		conf:   conf,
 		taskCh: make(chan QueryTask, 100),
 		quitCh: make(chan bool),
