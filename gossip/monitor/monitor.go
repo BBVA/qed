@@ -137,6 +137,7 @@ func (m Monitor) sendAlert(msg string) {
 		bytes.NewBufferString(msg))
 	if err != nil {
 		log.Infof("Error saving batch in alertStore: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 	_, err = io.Copy(ioutil.Discard, resp.Body)

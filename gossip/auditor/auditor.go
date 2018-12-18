@@ -161,9 +161,11 @@ func (t MembershipTask) Do() {
 }
 
 func (t MembershipTask) sendAlert(msg string) {
-	resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json", bytes.NewBufferString(msg))
+	resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json",
+		bytes.NewBufferString(msg))
 	if err != nil {
 		log.Infof("Error saving batch in alertStore: %v", err)
+		return
 	}
 	defer resp.Body.Close()
 	_, err = io.Copy(ioutil.Discard, resp.Body)
