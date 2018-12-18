@@ -14,23 +14,23 @@
    limitations under the License.
 */
 
-package cmd
+package client
 
-import (
-	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/gossip"
-)
+type Config struct {
+	// Server host:port to consult
+	Endpoint string
 
-type cmdContext struct {
-	apiKey, logLevel string
+	// ApiKey to query the server endpoint
+	APIKey string
+
+	// Enable TLS service
+	EnableTLS bool
 }
 
-type clientContext struct {
-	endpoint   string
-	disableTLS bool
-	client     *client.HTTPClient
-}
-
-type agentContext struct {
-	config *gossip.Config
+func DefaultConfig() *Config {
+	return &Config{
+		Endpoint:  "localhost:8080",
+		APIKey:    "my-key",
+		EnableTLS: true,
+	}
 }

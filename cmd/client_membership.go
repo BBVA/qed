@@ -19,6 +19,7 @@ package cmd
 import (
 	"encoding/hex"
 
+	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-func newMembershipCommand(ctx *clientContext) *cobra.Command {
+func newMembershipCommand(client *client.HTTPClient) *cobra.Command {
 
 	hasherF := hashing.NewSha256Hasher
 	var version uint64
@@ -67,7 +68,7 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 				digest, _ = hex.DecodeString(eventDigest)
 			}
 
-			membershipResult, err = ctx.client.MembershipDigest(digest, version)
+			membershipResult, err = client.MembershipDigest(digest, version)
 			if err != nil {
 				return err
 			}
@@ -98,7 +99,7 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 				log.Infof("Verifying with Snapshot: \n\tEventDigest:%x\n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
 					digest, hyperDigest, historyDigest, version)
 
-				if ctx.client.DigestVerify(membershipResult, snapshot, hasherF) {
+				if client.DigestVerify(membershipResult, snapshot, hasherF) {
 					log.Info("Verify: OK")
 				} else {
 					log.Info("Verify: KO")

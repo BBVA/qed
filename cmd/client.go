@@ -22,34 +22,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var clientEndpoint string
+func newClientCommand(ctx *cmdContext) *cobra.Command {
+	var endpoint string
+	var disableTLS bool
 
-func newClientCommand() *cobra.Command {
-
-	ctx := newClientContext()
+	client := client.NewHTTPClient(&client.Config{
+		Endpoint:  endpoint,
+		APIKey:    ctx.apiKey,
+		EnableTLS: !disableTLS,
+	})
 
 	cmd := &cobra.Command{
 		Use:   "client",
 		Short: "Client mode for qed",
 		Long:  `Client process for emitting events to a qed server`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			log.SetLogger("QedClient", logLevel)
-			ctx.client = client.NewHttpClient(clientEndpoint, apiKey)
+			log.SetLogger("QedClient", ctx.logLevel)
 		},
 		TraverseChildren: true,
 	}
 
-	cmd.PersistentFlags().StringVarP(
-		&clientEndpoint,
-		"endpoint",
-		"e",
-		"http://localhost:8080",
-		"Endpoint for REST requests on (host:port)",
-	)
+	cmd.PersistentFlags().StringVarP(&endpoint, "endpoint", "e", "localhost:8080", "Endpoint for REST requests on (host:port)")
+	cmd.PersistentFlags().BoolVar(&disableTLS, "insecure", false, "Disable TLS transport")
 
-	cmd.AddCommand(newAddCommand(ctx))
-	cmd.AddCommand(newMembershipCommand(ctx))
-	cmd.AddCommand(newIncrementalCommand(ctx))
+	cmd.AddCommand(newAddCommand(client))
+	cmd.AddCommand(newMembershipCommand(client))
+	cmd.AddCommand(newIncrementalCommand(client))
 
 	return cmd
 }

@@ -20,6 +20,7 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -32,26 +33,30 @@ import (
 	"github.com/bbva/qed/protocol"
 )
 
-// HttpClient ist the stuct that has the required information for the cli.
-type HttpClient struct {
-	endpoint string
-	apiKey   string
+// HTTPClient ist the stuct that has the required information for the cli.
+type HTTPClient struct {
+	conf *Config
 
 	http.Client
 }
 
-// NewHttpClient will return a new instance of HttpClient.
-func NewHttpClient(endpoint, apiKey string) *HttpClient {
-
-	return &HttpClient{
-		endpoint,
-		apiKey,
-		*http.DefaultClient,
+// NewHTTPClient will return a new instance of HTTPClient.
+func NewHTTPClient(conf *Config) *HTTPClient {
+	var c http.Client
+	if conf.EnableTLS {
+		c = http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+	} else {
+		c = http.Client{}
 	}
+	return &HTTPClient{conf, c}
 
 }
 
-func (c HttpClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
+func (c HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
 
 	var retries uint
 
@@ -71,15 +76,15 @@ func (c HttpClient) exponentialBackoff(req *http.Request) (*http.Response, error
 
 }
 
-func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
+func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 
-	req, err := http.NewRequest(method, c.endpoint+path, bytes.NewBuffer(data))
+	req, err := http.NewRequest(method, c.conf.Endpoint+path, bytes.NewBuffer(data))
 	if err != nil {
 		panic(err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Api-Key", c.apiKey)
+	req.Header.Set("Api-Key", c.conf.APIKey)
 
 	resp, err := c.exponentialBackoff(req)
 	if err != nil {
@@ -102,7 +107,7 @@ func (c HttpClient) doReq(method, path string, data []byte) ([]byte, error) {
 }
 
 // Add will do a request to the server with a post data to store a new event.
-func (c HttpClient) Add(event string) (*protocol.Snapshot, error) {
+func (c HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
 	data, _ := json.Marshal(&protocol.Event{[]byte(event)})
 
@@ -119,7 +124,7 @@ func (c HttpClient) Add(event string) (*protocol.Snapshot, error) {
 }
 
 // Membership will ask for a Proof to the server.
-func (c HttpClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
+func (c HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipQuery{
 		key,
@@ -139,7 +144,7 @@ func (c HttpClient) Membership(key []byte, version uint64) (*protocol.Membership
 }
 
 // Membership will ask for a Proof to the server.
-func (c HttpClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
+func (c HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipDigest{
 		keyDigest,
@@ -159,7 +164,7 @@ func (c HttpClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (
 }
 
 // Incremental will ask for an IncrementalProof to the server.
-func (c HttpClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
+func (c HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
 
 	query, _ := json.Marshal(&protocol.IncrementalRequest{
 		start,
@@ -185,7 +190,11 @@ func uint2bytes(i uint64) []byte {
 
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
-func (c HttpClient) Verify(result *protocol.MembershipResult, snap *protocol.Snapshot, hasherF func() hashing.Hasher) bool {
+func (c HTTPClient) Verify(
+	result *protocol.MembershipResult,
+	snap *protocol.Snapshot,
+	hasherF func() hashing.Hasher,
+) bool {
 
 	proof := protocol.ToBalloonProof(result, hasherF)
 
@@ -200,7 +209,11 @@ func (c HttpClient) Verify(result *protocol.MembershipResult, snap *protocol.Sna
 
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
-func (c HttpClient) DigestVerify(result *protocol.MembershipResult, snap *protocol.Snapshot, hasherF func() hashing.Hasher) bool {
+func (c HTTPClient) DigestVerify(
+	result *protocol.MembershipResult,
+	snap *protocol.Snapshot,
+	hasherF func() hashing.Hasher,
+) bool {
 
 	proof := protocol.ToBalloonProof(result, hasherF)
 
@@ -212,7 +225,12 @@ func (c HttpClient) DigestVerify(result *protocol.MembershipResult, snap *protoc
 	})
 
 }
-func (c HttpClient) VerifyIncremental(result *protocol.IncrementalResponse, startSnapshot, endSnapshot *protocol.Snapshot, hasher hashing.Hasher) bool {
+
+func (c HTTPClient) VerifyIncremental(
+	result *protocol.IncrementalResponse,
+	startSnapshot, endSnapshot *protocol.Snapshot,
+	hasher hashing.Hasher,
+) bool {
 
 	proof := protocol.ToIncrementalProof(result, hasher)
 

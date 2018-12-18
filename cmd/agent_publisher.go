@@ -22,22 +22,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
+func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config) *cobra.Command {
 
 	var endpoints []string
 
 	cmd := &cobra.Command{
 		Use:   "publisher",
 		Short: "Start a QED publisher",
-		Long: `Start a QED publisher that reacts to snapshot batches 
-		propagated by QED servers and periodically publishes them to
-		a certain log storage.`,
+		Long:  `Start a QED publisher that reacts to snapshot batches propagated by QED servers and periodically publishes them to a certain log storage.`,
 		Run: func(cmd *cobra.Command, args []string) {
 
-			log.SetLogger("QedPublisher", logLevel)
+			log.SetLogger("QedPublisher", ctx.logLevel)
 
-			agentConfig := ctx.config
-			agentConfig.Role = member.Publisher
+			config.Role = member.Publisher
 			publisherConfig := publisher.NewConfig(endpoints)
 
 			publisher, err := publisher.NewPublisher(*publisherConfig)
@@ -45,12 +42,12 @@ func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
 
-			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{publisher})
+			agent, err := gossip.NewAgent(config, []gossip.Processor{publisher})
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
 
-			contacted, err := agent.Join(agentConfig.StartJoin)
+			contacted, err := agent.Join(config.StartJoin)
 			if err != nil {
 				log.Fatalf("Failed to join the cluster: %v", err)
 			}
@@ -61,7 +58,9 @@ func newAgentPublisherCommand(ctx *agentContext) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&endpoints, "endpoints", "", []string{}, "Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
+	cmd.Flags().StringSliceVarP(&endpoints, "endpoints", "", []string{},
+		"Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
+
 	cmd.MarkFlagRequired("endpoints")
 
 	return cmd

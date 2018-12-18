@@ -22,9 +22,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
+func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config) *cobra.Command {
 
-	var qedUrls, pubUrls []string
+	monitorConfig := monitor.DefaultConfig()
 
 	cmd := &cobra.Command{
 		Use:   "monitor",
@@ -33,39 +33,35 @@ func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 		propagated by QED servers and periodically executes incremental 
 		queries to verify the consistency between snaphots`,
 		Run: func(cmd *cobra.Command, args []string) {
+			log.SetLogger("QedMonitor", ctx.logLevel)
 
-			log.SetLogger("QedMonitor", logLevel)
-
-			agentConfig := ctx.config
-			agentConfig.Role = member.Monitor
-			monitorConfig := monitor.DefaultConfig()
-			monitorConfig.APIKey = apiKey
-			monitorConfig.QedUrls = qedUrls
-			monitorConfig.PubUrls = pubUrls
+			config.Role = member.Monitor
+			monitorConfig.APIKey = ctx.apiKey
 
 			monitor, err := monitor.NewMonitor(*monitorConfig)
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
 
-			agent, err := gossip.NewAgent(agentConfig, []gossip.Processor{monitor})
+			agent, err := gossip.NewAgent(config, []gossip.Processor{monitor})
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
+			defer agent.Shutdown()
 
-			contacted, err := agent.Join(agentConfig.StartJoin)
+			contacted, err := agent.Join(config.StartJoin)
 			if err != nil {
 				log.Fatalf("Failed to join the cluster: %v", err)
 			}
+
 			log.Debugf("Number of nodes contacted: %d", contacted)
 
-			defer agent.Shutdown()
 			util.AwaitTermSignal(agent.Leave)
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&qedUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
-	cmd.Flags().StringSliceVarP(&pubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
+	cmd.Flags().StringSliceVarP(&monitorConfig.QedUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
+	cmd.Flags().StringSliceVarP(&monitorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an monitor can publish alerts")
 	cmd.MarkFlagRequired("qedUrls")
 	cmd.MarkFlagRequired("pubUrls")
 

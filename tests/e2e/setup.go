@@ -34,22 +34,19 @@ import (
 	"github.com/bbva/qed/testutils/scope"
 )
 
-var apiKey, storageType, keyFile string
-var cacheSize uint64
-
 const (
 	QEDUrl       = "http://127.0.0.1:8080"
 	QEDGossip    = "127.0.0.1:9010"
 	QEDTamperURL = "http://localhost:8081/tamper"
-	StoreUrl     = "http://127.0.0.1:8888"
+	StoreURL     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
+	cacheSize    = 50000
+	storageType  = "badger"
 )
 
-func init() {
-	apiKey = APIKey
-	cacheSize = 50000
-	storageType = "badger"
+var keyFile string
 
+func init() {
 	usr, _ := user.Current()
 	keyFile = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
 
@@ -82,7 +79,7 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 
 	agentConf.StartJoin = []string{QEDGossip}
 	agentConf.EnableCompression = true
-	agentConf.AlertsUrls = []string{StoreUrl}
+	agentConf.AlertsUrls = []string{StoreURL}
 	agentConf.Role = role
 
 	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
@@ -101,7 +98,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	before := func(t *testing.T) {
 		auditorConf := auditor.DefaultConfig()
 		auditorConf.QEDUrls = []string{QEDUrl}
-		auditorConf.PubUrls = []string{StoreUrl}
+		auditorConf.PubUrls = []string{StoreURL}
 		auditorConf.APIKey = APIKey
 
 		au, err = auditor.NewAuditor(*auditorConf)
@@ -131,7 +128,7 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	before := func(t *testing.T) {
 		monitorConf := monitor.DefaultConfig()
 		monitorConf.QedUrls = []string{QEDUrl}
-		monitorConf.PubUrls = []string{StoreUrl}
+		monitorConf.PubUrls = []string{StoreURL}
 		monitorConf.APIKey = APIKey
 
 		mn, err = monitor.NewMonitor(*monitorConf)
@@ -160,7 +157,7 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		conf := publisher.DefaultConfig()
-		conf.PubUrls = []string{StoreUrl}
+		conf.PubUrls = []string{StoreURL}
 
 		pu, err = publisher.NewPublisher(*conf)
 		if err != nil {
@@ -201,12 +198,15 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 
 	before := func(t *testing.T) {
 		os.RemoveAll(path)
-		_ = os.MkdirAll(path, os.FileMode(0755))
+		err = os.MkdirAll(path, os.FileMode(0755))
+		if err != nil {
+			t.Fatalf("Unable to create a path: %v", err)
+		}
 
 		hostname, _ := os.Hostname()
 		conf := server.DefaultConfig()
 		conf.NodeID = fmt.Sprintf("%s-%d", hostname, id)
-		conf.HttpAddr = fmt.Sprintf("127.0.0.1:808%d", id)
+		conf.HTTPAddr = fmt.Sprintf("127.0.0.1:808%d", id)
 		conf.RaftAddr = fmt.Sprintf("127.0.0.1:900%d", id)
 		conf.MgmtAddr = fmt.Sprintf("127.0.0.1:809%d", id)
 		conf.GossipAddr = fmt.Sprintf("127.0.0.1:901%d", id)
@@ -215,6 +215,7 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 		conf.PrivateKeyPath = keyFile
 		conf.EnableProfiling = true
 		conf.EnableTampering = true
+		conf.EnableTLS = false
 
 		fmt.Printf("Server config: %+v\n", conf)
 
@@ -234,7 +235,10 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 
 	after := func(t *testing.T) {
 		if srv != nil {
-			_ = srv.Stop()
+			err := srv.Stop()
+			if err != nil {
+				t.Fatalf("Unable to shutdown the server! %v", err)
+			}
 		} else {
 			t.Fatalf("Unable to shutdown the server!")
 		}
@@ -246,6 +250,10 @@ func endPoint(id int) string {
 	return fmt.Sprintf("http://127.0.0.1:808%d", id)
 }
 
-func getClient(id int) *client.HttpClient {
-	return client.NewHttpClient(endPoint(id), apiKey)
+func getClient(id int) *client.HTTPClient {
+	return client.NewHTTPClient(&client.Config{
+		Endpoint:  endPoint(id),
+		APIKey:    APIKey,
+		EnableTLS: false,
+	})
 }

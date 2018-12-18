@@ -104,7 +104,6 @@ func (s *statStore) Print() {
 	if err == nil {
 		fmt.Println(string(b))
 	}
-	return
 }
 
 func (s *Service) statHandler() func(http.ResponseWriter, *http.Request) {
@@ -159,6 +158,10 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 				return
 			}
 			buf, err := b.Encode()
+			if err != nil {
+				fmt.Printf("ERROR: %v", err)
+			}
+
 			_, err = w.Write(buf)
 			if err != nil {
 				fmt.Printf("ERROR: %v", err)
@@ -208,8 +211,8 @@ func NewService() *Service {
 	var snaps snapStore
 	var alerts alertStore
 	var stats statStore
-	snaps.d = make(map[uint64]*protocol.SignedSnapshot, 0)
-	stats.batch = make(map[string][]int, 0)
+	snaps.d = make(map[uint64]*protocol.SignedSnapshot)
+	stats.batch = make(map[string][]int)
 	alerts.d = make([]string, 0)
 
 	return &Service{

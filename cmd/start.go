@@ -27,9 +27,8 @@ import (
 	"github.com/bbva/qed/server"
 )
 
-func newStartCommand() *cobra.Command {
+func newStartCommand(ctx *cmdContext) *cobra.Command {
 	const defaultKeyPath = "~/.ssh/id_ed25519"
-
 	var disableTLS bool
 	conf := server.DefaultConfig()
 
@@ -38,7 +37,9 @@ func newStartCommand() *cobra.Command {
 		Short: "Start the server for the verifiable log QED",
 		Long:  ``,
 		// Args:  cobra.NoArgs(),
-
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			log.SetLogger("QedServer", ctx.logLevel)
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			conf.EnableTLS = !disableTLS
 
@@ -48,7 +49,6 @@ func newStartCommand() *cobra.Command {
 			}
 
 			srv, err := server.NewServer(conf)
-
 			if err != nil {
 				log.Fatalf("Can't start QED server: %v", err)
 			}
@@ -73,11 +73,11 @@ func newStartCommand() *cobra.Command {
 	cmd.Flags().StringVar(&conf.RaftPath, "raftpath", "/var/tmp/qed/raft", "Set raft storage path")
 	cmd.Flags().StringVarP(&conf.PrivateKeyPath, "keypath", "y", defaultKeyPath, "Path to the ed25519 key file")
 	cmd.Flags().BoolVarP(&conf.EnableProfiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
-	cmd.Flags().BoolVar(&disableTLS, "insecure", "", false, "Disable TLS service")
+	cmd.Flags().BoolVar(&disableTLS, "insecure", false, "Disable TLS service")
 
 	// INFO: testing purposes
 	cmd.Flags().BoolVar(&conf.EnableTampering, "tampering", false, "Allow tampering api for proof demostrations")
-	cmd.Flags().MarkHidden("tampering")
+	cmd.Flags().MarkHidden("tampering") // nolint: errcheck
 
 	return cmd
 }
