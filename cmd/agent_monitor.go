@@ -43,7 +43,7 @@ func newAgentMonitorCommand(ctx *agentContext) *cobra.Command {
 			monitorConfig.QedUrls = qedUrls
 			monitorConfig.PubUrls = pubUrls
 
-			monitor, err := monitor.NewMonitor(monitorConfig)
+			monitor, err := monitor.NewMonitor(*monitorConfig)
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}

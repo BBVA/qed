@@ -50,14 +50,14 @@ func NewConfig(PubUrls []string) *Config {
 
 type Publisher struct {
 	client *fasthttp.Client
-	conf   *Config
+	conf   Config
 
 	taskCh          chan PublishTask
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
 
-func NewPublisher(conf *Config) (*Publisher, error) {
+func NewPublisher(conf Config) (*Publisher, error) {
 
 	publisher := Publisher{
 		client: &fasthttp.Client{},
@@ -73,10 +73,10 @@ func NewPublisher(conf *Config) (*Publisher, error) {
 }
 
 type PublishTask struct {
-	Batch *protocol.BatchSnapshots
+	Batch protocol.BatchSnapshots
 }
 
-func (p *Publisher) Process(b *protocol.BatchSnapshots) {
+func (p *Publisher) Process(b protocol.BatchSnapshots) {
 	task := &PublishTask{
 		Batch: b,
 	}

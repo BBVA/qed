@@ -47,14 +47,14 @@ func DefaultConfig() *Config {
 
 type Monitor struct {
 	client *client.HttpClient
-	conf   *Config
+	conf   Config
 
 	taskCh          chan QueryTask
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
 
-func NewMonitor(conf *Config) (*Monitor, error) {
+func NewMonitor(conf Config) (*Monitor, error) {
 	client := client.NewHttpClient(conf.QedUrls[0], conf.APIKey)
 	monitor := Monitor{
 		client: client,
@@ -71,10 +71,10 @@ func NewMonitor(conf *Config) (*Monitor, error) {
 
 type QueryTask struct {
 	Start, End                 uint64
-	StartSnapshot, EndSnapshot *protocol.Snapshot
+	StartSnapshot, EndSnapshot protocol.Snapshot
 }
 
-func (m Monitor) Process(b *protocol.BatchSnapshots) {
+func (m Monitor) Process(b protocol.BatchSnapshots) {
 	first := b.Snapshots[0].Snapshot
 	last := b.Snapshots[len(b.Snapshots)-1].Snapshot
 
@@ -83,8 +83,8 @@ func (m Monitor) Process(b *protocol.BatchSnapshots) {
 	task := QueryTask{
 		Start:         first.Version,
 		End:           last.Version,
-		StartSnapshot: first,
-		EndSnapshot:   last,
+		StartSnapshot: *first,
+		EndSnapshot:   *last,
 	}
 
 	m.taskCh <- task
@@ -113,10 +113,14 @@ func (m *Monitor) Shutdown() {
 func (m Monitor) dispatchTasks() {
 	count := 0
 	var task QueryTask
+	var ok bool
 	defer log.Debugf("%d tasks dispatched", count)
 	for {
 		select {
-		case task = <-m.taskCh:
+		case task, ok = <-m.taskCh:
+			if !ok {
+				return
+			}
 			go m.executeTask(task)
 			count++
 		default:
@@ -150,7 +154,7 @@ func (m Monitor) executeTask(task QueryTask) {
 		log.Infof("Unable to verify incremental proof from %d to %d", task.Start, task.End)
 		return
 	}
-	ok := m.client.VerifyIncremental(resp, task.StartSnapshot, task.EndSnapshot, hashing.NewSha256Hasher())
+	ok := m.client.VerifyIncremental(resp, &task.StartSnapshot, &task.EndSnapshot, hashing.NewSha256Hasher())
 	if !ok {
 		m.sendAlert(fmt.Sprintf("Unable to verify incremental proof from %d to %d",
 			task.StartSnapshot.Version, task.EndSnapshot.Version))
