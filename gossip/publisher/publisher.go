@@ -132,6 +132,7 @@ func (p Publisher) executeTask(task PublishTask) {
 		"application/json", bytes.NewBuffer(buf))
 	if err != nil {
 		log.Infof("Error saving batch in snapStore: %v\n", err)
+		return
 	}
 	defer resp.Body.Close()
 	_, err = io.Copy(ioutil.Discard, resp.Body)
