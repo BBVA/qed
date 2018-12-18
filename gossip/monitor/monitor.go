@@ -48,7 +48,7 @@ type Monitor struct {
 	client *client.HttpClient
 	conf   *Config
 
-	taskCh          chan *QueryTask
+	taskCh          chan QueryTask
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
@@ -60,7 +60,7 @@ func NewMonitor(conf *Config) (*Monitor, error) {
 	monitor := &Monitor{
 		client: client,
 		conf:   conf,
-		taskCh: make(chan *QueryTask, 100),
+		taskCh: make(chan QueryTask, 100),
 		quitCh: make(chan bool),
 	}
 
@@ -81,7 +81,7 @@ func (m Monitor) Process(b *protocol.BatchSnapshots) {
 
 	log.Debugf("Processing batch from versions %d to %d", first.Version, last.Version)
 
-	task := &QueryTask{
+	task := QueryTask{
 		Start:         first.Version,
 		End:           last.Version,
 		StartSnapshot: first,
@@ -113,12 +113,12 @@ func (m *Monitor) Shutdown() {
 
 func (m *Monitor) dispatchTasks() {
 	count := 0
-	var task *QueryTask
+	var task QueryTask
 	defer log.Debugf("%d tasks dispatched", count)
 	for {
 		select {
 		case task = <-m.taskCh:
-			go m.executeTask(*task)
+			go m.executeTask(task)
 			count++
 		default:
 			return
