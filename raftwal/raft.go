@@ -57,6 +57,7 @@ type RaftBalloonApi interface {
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
 	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
 	Join(nodeID, addr string) error
+	LeaderAddr() string
 }
 
 // RaftBalloon is a replicated verifiable key-value store, where changes are made via Raft consensus.

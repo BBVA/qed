@@ -49,7 +49,7 @@ func TestCli(t *testing.T) {
 
 			_, err := cmd.CombinedOutput()
 
-			assert.NoError(t, err, "Subprocess must not exit with status 1")
+			assert.NoError(t, err, "%v", *cmd) //"Subprocess must not exit with status 1")
 		})
 
 		let("verify event with eventDigest", func(t *testing.T) {

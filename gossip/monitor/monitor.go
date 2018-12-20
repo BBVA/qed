@@ -70,7 +70,7 @@ func NewMonitor(conf Config) (*Monitor, error) {
 
 	monitor := Monitor{
 		client: client.NewHTTPClient(client.Config{
-			Endpoint: conf.QEDUrls[0],
+			Cluster: conf.QEDUrls,
 			APIKey:   conf.APIKey,
 			Insecure: false,
 		}),
