@@ -53,39 +53,43 @@ func (b fakeRaftBalloon) Join(nodeID, addr string) error {
 
 func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
 	return &balloon.MembershipProof{
-		true,
-		visitor.NewFakeVerifiable(true),
-		visitor.NewFakeVerifiable(true),
-		1,
-		1,
-		2,
-		keyDigest,
-		hashing.NewFakeXorHasher(),
+		Exists:         true,
+		HyperProof:     visitor.NewFakeVerifiable(true),
+		HistoryProof:   visitor.NewFakeVerifiable(true),
+		CurrentVersion: 1,
+		QueryVersion:   1,
+		ActualVersion:  2,
+		KeyDigest:      keyDigest,
+		Hasher:         hashing.NewFakeXorHasher(),
 	}, nil
 }
 
 func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	hasher := hashing.NewFakeXorHasher()
 	return &balloon.MembershipProof{
-		true,
-		visitor.NewFakeVerifiable(true),
-		visitor.NewFakeVerifiable(true),
-		1,
-		1,
-		2,
-		hasher.Do(event),
-		hasher,
+		Exists:         true,
+		HyperProof:     visitor.NewFakeVerifiable(true),
+		HistoryProof:   visitor.NewFakeVerifiable(true),
+		CurrentVersion: 1,
+		QueryVersion:   1,
+		ActualVersion:  2,
+		KeyDigest:      hasher.Do(event),
+		Hasher:         hasher,
 	}, nil
 }
 
 func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	ip := balloon.IncrementalProof{
-		2,
-		8,
-		visitor.AuditPath{"0|0": hashing.Digest{0x00}},
-		hashing.NewFakeXorHasher(),
+		Start:     2,
+		End:       8,
+		AuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x00}},
+		Hasher:    hashing.NewFakeXorHasher(),
 	}
 	return &ip, nil
+}
+
+func (b fakeRaftBalloon) LeaderAddr() string {
+	return b.raftBindAddr
 }
 
 func TestHealthCheckHandler(t *testing.T) {

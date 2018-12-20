@@ -35,14 +35,14 @@ func newClientCommand(ctx *cmdContext) *cobra.Command {
 	}
 
 	f := cmd.PersistentFlags()
-	f.StringVarP(&clientCtx.config.Endpoint, "endpoint", "e", "127.0.0.1:8800", "Endpoint for REST requests on (host:port)")
+	f.StringSliceVarP(&clientCtx.config.Endpoints, "endpoints", "e", []string{"127.0.0.1:8800"}, "Endpoint for REST requests on (host:port)")
 	f.BoolVar(&clientCtx.config.Insecure, "insecure", false, "Allow self signed certificates")
 	f.IntVar(&clientCtx.config.TimeoutSeconds, "timeout-seconds", 10, "Seconds to cut the connection")
 	f.IntVar(&clientCtx.config.DialTimeoutSeconds, "dial-timeout-seconds", 5, "Seconds to cut the dialing")
 	f.IntVar(&clientCtx.config.HandshakeTimeoutSeconds, "handshake-timeout-seconds", 5, "Seconds to cut the handshaking")
 
 	// Lookups
-	v.BindPFlag("client.endpoint", f.Lookup("endpoint"))
+	v.BindPFlag("client.endpoints", f.Lookup("endpoints"))
 	v.BindPFlag("client.insecure", f.Lookup("insecure"))
 	v.BindPFlag("client.timeout.connection", f.Lookup("timeout-seconds"))
 	v.BindPFlag("client.timeout.dial", f.Lookup("dial-timeout-seconds"))
@@ -52,7 +52,7 @@ func newClientCommand(ctx *cmdContext) *cobra.Command {
 		log.SetLogger("QEDClient", ctx.logLevel)
 
 		clientCtx.config.APIKey = ctx.apiKey
-		clientCtx.config.Endpoint = v.GetString("client.endpoint")
+		clientCtx.config.Endpoints = v.GetStringSlice("client.endpoints")
 		clientCtx.config.Insecure = v.GetBool("client.insecure")
 		clientCtx.config.TimeoutSeconds = v.GetInt("client.timeout.connection")
 		clientCtx.config.DialTimeoutSeconds = v.GetInt("client.timeout.dial")

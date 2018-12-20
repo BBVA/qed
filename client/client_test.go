@@ -43,8 +43,8 @@ func setup() func() {
 	mux = http.NewServeMux()
 	server = httptest.NewServer(mux)
 	client = NewHTTPClient(Config{
-		Endpoint:  server.URL,
-		APIKey:    "my-awesome-api-key",
+		Cluster:  QEDCluster{Endpoints: []string{server.URL}, Leader: server.URL},
+		APIKey:   "my-awesome-api-key",
 		Insecure: false,
 	})
 	return func() {

@@ -17,8 +17,8 @@
 package client
 
 type Config struct {
-	// Server host:port to consult.
-	Endpoint string
+	// Cluster [host:port,host:port,...] to consult.
+	Cluster QEDCluster
 
 	// ApiKey to query the server endpoint.
 	APIKey string
@@ -36,9 +36,14 @@ type Config struct {
 	HandshakeTimeoutSeconds int
 }
 
+type QEDCluster struct {
+	Endpoints []string
+	Leader    string
+}
+
 func DefaultConfig() *Config {
 	return &Config{
-		Endpoint:                "localhost:8800",
+		Cluster:  QEDCluster{[]string{"127.0.0.1:8800"}, ""},
 		APIKey:                  "my-key",
 		Insecure:                true,
 		TimeoutSeconds:          10,

@@ -322,6 +322,7 @@ func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
+	api.HandleFunc("/leader", AuthHandlerMiddleware(LeaderHandle(balloon)))
 
 	return api
 }
@@ -358,5 +359,24 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 		if writer.status >= 400 {
 			log.Infof("Bad Request: %d %+v", latency, request)
 		}
+	}
+}
+
+func LeaderHandle(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		out, err := json.Marshal(balloon.LeaderAddr())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(out)
+		return
 	}
 }
