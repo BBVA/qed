@@ -37,7 +37,6 @@ import (
 // HTTPClient ist the stuct that has the required information for the cli.
 type HTTPClient struct {
 	conf *Config
-
 	*http.Client
 }
 
@@ -51,7 +50,7 @@ func NewHTTPClient(conf Config) *HTTPClient {
 		tlsConf = &tls.Config{}
 	}
 
-	return &HTTPClient{
+	client := &HTTPClient{
 		&conf,
 		&http.Client{
 			Timeout: time.Second * 10,
@@ -65,15 +64,23 @@ func NewHTTPClient(conf Config) *HTTPClient {
 		},
 	}
 
+	if len(conf.Cluster.Endpoints) == 1 {
+		conf.Cluster.Leader = conf.Cluster.Endpoints[0]
+	} else {
+		client.checkClusterLeader()
+	}
+
+	return client
 }
 
-func (c HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
+func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
 
 	var retries uint
 
 	for {
 		resp, err := c.Do(req)
 		if err != nil {
+			// c.checkClusterLeader()
 			if retries == 5 {
 				return nil, err
 			}
@@ -87,8 +94,28 @@ func (c HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error
 
 }
 
+func (c *HTTPClient) checkClusterLeader() {
+	var data []byte
+
+	url := c.conf.Cluster.Endpoints[0]
+	path := "/leader"
+	req, err := http.NewRequest("GET", url+path, bytes.NewBuffer(data))
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Api-Key", c.conf.APIKey)
+	resp, err := c.Do(req)
+	if err != nil {
+		panic(err)
+	}
+
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	c.conf.Cluster.Leader = string(bodyBytes)
+}
+
 func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
-	url, err := url.Parse(c.conf.Endpoint + path)
+	url, err := url.Parse(c.conf.Cluster.Leader + path)
 	if err != nil {
 		panic(err)
 	}
@@ -118,7 +145,6 @@ func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 	}
 
 	return bodyBytes, nil
-
 }
 
 // Ping will do a request to the server
@@ -132,9 +158,9 @@ func (c HTTPClient) Ping() error {
 }
 
 // Add will do a request to the server with a post data to store a new event.
-func (c HTTPClient) Add(event string) (*protocol.Snapshot, error) {
+func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
-	data, _ := json.Marshal(&protocol.Event{[]byte(event)})
+	data, _ := json.Marshal(&protocol.Event{Event: []byte(event)})
 
 	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
@@ -142,18 +168,18 @@ func (c HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 	}
 
 	var snapshot protocol.Snapshot
-	json.Unmarshal(body, &snapshot)
+	_ = json.Unmarshal(body, &snapshot)
 
 	return &snapshot, nil
 
 }
 
 // Membership will ask for a Proof to the server.
-func (c HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
+func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipQuery{
-		key,
-		version,
+		Key:     key,
+		Version: version,
 	})
 
 	body, err := c.doReq("POST", "/proofs/membership", query)
@@ -169,7 +195,7 @@ func (c HTTPClient) Membership(key []byte, version uint64) (*protocol.Membership
 }
 
 // Membership will ask for a Proof to the server.
-func (c HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
+func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipDigest{
 		KeyDigest: keyDigest,
@@ -189,7 +215,7 @@ func (c HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (
 }
 
 // Incremental will ask for an IncrementalProof to the server.
-func (c HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
+func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
 
 	query, _ := json.Marshal(&protocol.IncrementalRequest{
 		Start: start,
@@ -218,10 +244,10 @@ func (c HTTPClient) Verify(
 	proof := protocol.ToBalloonProof(result, hasherF)
 
 	return proof.Verify(snap.EventDigest, &balloon.Snapshot{
-		snap.EventDigest,
-		snap.HistoryDigest,
-		snap.HyperDigest,
-		snap.Version,
+		EventDigest:   snap.EventDigest,
+		HistoryDigest: snap.HistoryDigest,
+		HyperDigest:   snap.HyperDigest,
+		Version:       snap.Version,
 	})
 
 }
@@ -237,10 +263,10 @@ func (c HTTPClient) DigestVerify(
 	proof := protocol.ToBalloonProof(result, hasherF)
 
 	return proof.DigestVerify(snap.EventDigest, &balloon.Snapshot{
-		snap.EventDigest,
-		snap.HistoryDigest,
-		snap.HyperDigest,
-		snap.Version,
+		EventDigest:   snap.EventDigest,
+		HistoryDigest: snap.HistoryDigest,
+		HyperDigest:   snap.HyperDigest,
+		Version:       snap.Version,
 	})
 
 }
@@ -254,16 +280,16 @@ func (c HTTPClient) VerifyIncremental(
 	proof := protocol.ToIncrementalProof(result, hasher)
 
 	start := &balloon.Snapshot{
-		startSnapshot.EventDigest,
-		startSnapshot.HistoryDigest,
-		startSnapshot.HyperDigest,
-		startSnapshot.Version,
+		EventDigest:   startSnapshot.EventDigest,
+		HistoryDigest: startSnapshot.HistoryDigest,
+		HyperDigest:   startSnapshot.HyperDigest,
+		Version:       startSnapshot.Version,
 	}
 	end := &balloon.Snapshot{
-		endSnapshot.EventDigest,
-		endSnapshot.HistoryDigest,
-		endSnapshot.HyperDigest,
-		endSnapshot.Version,
+		HistoryDigest: endSnapshot.EventDigest,
+		EventDigest:   endSnapshot.HistoryDigest,
+		HyperDigest:   endSnapshot.HyperDigest,
+		Version:       endSnapshot.Version,
 	}
 
 	return proof.Verify(start, end)
