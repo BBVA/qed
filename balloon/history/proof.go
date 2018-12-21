@@ -122,7 +122,6 @@ func (p IncrementalProof) Verify(startDigest, endDigest hashing.Digest) (correct
 	// visit the pruned trees
 	startRecomputed := startPruned.PostOrder(computeHash).(hashing.Digest)
 	endRecomputed := endPruned.PostOrder(computeHash).(hashing.Digest)
-
 	return bytes.Equal(startRecomputed, startDigest) && bytes.Equal(endRecomputed, endDigest)
 
 }

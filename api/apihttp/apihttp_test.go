@@ -88,8 +88,11 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 	return &ip, nil
 }
 
-func (b fakeRaftBalloon) LeaderAddr() string {
-	return b.raftBindAddr
+func (b fakeRaftBalloon) Info() map[string]interface{} {
+	m := make(map[string]interface{})
+	m["Type"] = "fakeRaftBalloon"
+	m["LeaderAddr"] = b.raftBindAddr
+	return m
 }
 
 func TestHealthCheckHandler(t *testing.T) {
