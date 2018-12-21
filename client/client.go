@@ -286,12 +286,11 @@ func (c HTTPClient) VerifyIncremental(
 		Version:       startSnapshot.Version,
 	}
 	end := &balloon.Snapshot{
-		HistoryDigest: endSnapshot.EventDigest,
-		EventDigest:   endSnapshot.HistoryDigest,
+		EventDigest:   endSnapshot.EventDigest,
+		HistoryDigest: endSnapshot.HistoryDigest,
 		HyperDigest:   endSnapshot.HyperDigest,
 		Version:       endSnapshot.Version,
 	}
 
 	return proof.Verify(start, end)
-
 }
