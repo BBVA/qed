@@ -57,7 +57,7 @@ type RaftBalloonApi interface {
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
 	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
 	Join(nodeID, addr string) error
-	LeaderAddr() string
+	Info() map[string]interface{}
 }
 
 // RaftBalloon is a replicated verifiable key-value store, where changes are made via Raft consensus.
@@ -317,6 +317,14 @@ func (b *RaftBalloon) LeaderAddr() string {
 // ID returns the Raft ID of the store.
 func (b *RaftBalloon) ID() string {
 	return b.id
+}
+
+// TODO Improve info structure.
+// Info returns the Raft leader address.
+func (b *RaftBalloon) Info() map[string]interface{} {
+	m := make(map[string]interface{})
+	m["LeaderAddr"] = b.LeaderAddr()
+	return m
 }
 
 // LeaderID returns the node ID of the Raft leader. Returns a
