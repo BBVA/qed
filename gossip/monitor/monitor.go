@@ -57,10 +57,10 @@ type Monitor struct {
 func NewMonitor(conf Config) (*Monitor, error) {
 
 	monitor := Monitor{
-		client: client.NewHTTPClient(&client.Config{
+		client: client.NewHTTPClient(client.Config{
 			Endpoint:  conf.QedUrls[0],
 			APIKey:    conf.APIKey,
-			EnableTLS: false,
+			Insecure: false,
 		}),
 		conf:   conf,
 		taskCh: make(chan QueryTask, 100),

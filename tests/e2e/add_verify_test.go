@@ -28,7 +28,7 @@ import (
 )
 
 func TestAddVerify(t *testing.T) {
-	before, after := setupServer(0, "", t)
+	before, after := setupServer(0, "", false, t)
 	scenario, let := scope.Scope(t, before, after)
 
 	client := getClient(0)

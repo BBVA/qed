@@ -26,9 +26,9 @@ type cmdContext struct {
 }
 
 type clientContext struct {
-	endpoint   string
-	disableTLS bool
-	client     *client.HTTPClient
+	endpoint string
+	insecure bool
+	client   *client.HTTPClient
 }
 
 type agentContext struct {

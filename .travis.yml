@@ -36,6 +36,8 @@ notifications:
 
 before_script:
   - ssh-keygen -t ed25519 -f $HOME/.ssh/id_ed25519 -P ''
+  - openssl genrsa -out $HOME/.ssh/server.key 2048
+  - openssl req -new -x509 -sha256 -key $HOME/.ssh/server.key -out $HOME/.ssh/server.crt -days 3650
   - go mod download
 
 script:
