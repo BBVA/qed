@@ -56,10 +56,10 @@ type Auditor struct {
 
 func NewAuditor(conf Config) (*Auditor, error) {
 	auditor := Auditor{
-		qed: client.NewHTTPClient(&client.Config{
+		qed: client.NewHTTPClient(client.Config{
 			Endpoint:  conf.QEDUrls[0],
 			APIKey:    conf.APIKey,
-			EnableTLS: false,
+			Insecure: false,
 		}),
 		conf:   conf,
 		taskCh: make(chan Task, 100),

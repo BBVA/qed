@@ -105,6 +105,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
 		snapshot := &protocol.Snapshot{
 			response.HistoryDigest,
 			response.HyperDigest,
@@ -120,6 +121,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusCreated)
 		w.Write(out)
+
 		return
 
 	}
@@ -342,15 +344,5 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 		if writer.status >= 400 {
 			log.Infof("Bad Request: %d %+v", latency, request)
 		}
-	}
-}
-
-// STSHandler adds TLS Header to the handlers
-func STSHandler(handle http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, request *http.Request) {
-		w.Header().Add(
-			"Strict-Transport-Security",
-			"max-age=63072000; includeSubDomains",
-		)
 	}
 }

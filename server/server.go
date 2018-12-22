@@ -313,7 +313,7 @@ func newTLSServer(addr string, mux *http.ServeMux) *http.Server {
 
 	return &http.Server{
 		Addr:         addr,
-		Handler:      apihttp.STSHandler(apihttp.LogHandler(mux)),
+		Handler:      apihttp.LogHandler(mux),
 		TLSConfig:    cfg,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}

@@ -19,11 +19,10 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
 )
 
-func newAddCommand(client *client.HTTPClient) *cobra.Command {
+func newAddCommand(ctx *clientContext) *cobra.Command {
 
 	var key, value string
 
@@ -34,7 +33,7 @@ func newAddCommand(client *client.HTTPClient) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Infof("Adding key [ %s ] with value [ %s ]\n", key, value)
 
-			snapshot, err := client.Add(key)
+			snapshot, err := ctx.client.Add(key)
 			if err != nil {
 				return err
 			}
