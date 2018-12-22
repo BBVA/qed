@@ -66,7 +66,7 @@ func getAlert() ([]byte, error) {
 
 func TestAgents(t *testing.T) {
 	bStore, aStore := setupStore(t)
-	bServer, aServer := setupServer(0, "", t)
+	bServer, aServer := setupServer(0, "", false, t)
 	bAuditor, aAuditor := setupAuditor(0, t)
 	bMonitor, aMonitor := setupMonitor(0, t)
 	bPublisher, aPublisher := setupPublisher(0, t)

@@ -19,7 +19,6 @@ package cmd
 import (
 	"encoding/hex"
 
-	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 
@@ -28,7 +27,7 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-func newIncrementalCommand(client *client.HTTPClient) *cobra.Command {
+func newIncrementalCommand(ctx *clientContext) *cobra.Command {
 
 	var start, end uint64
 	var verify bool
@@ -53,7 +52,7 @@ func newIncrementalCommand(client *client.HTTPClient) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Infof("Querying incremental between versions [ %d ] and [ %d ]\n", start, end)
 
-			proof, err := client.Incremental(start, end)
+			proof, err := ctx.client.Incremental(start, end)
 			if err != nil {
 				return err
 			}
@@ -68,7 +67,7 @@ func newIncrementalCommand(client *client.HTTPClient) *cobra.Command {
 
 				log.Infof("Verifying with snapshots: \n\tStartDigest: %s\n\tEndDigest: %s\n",
 					startDigest, endDigest)
-				if client.VerifyIncremental(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
+				if ctx.client.VerifyIncremental(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
 					log.Info("Verify: OK")
 				} else {
 					log.Info("Verify: KO")

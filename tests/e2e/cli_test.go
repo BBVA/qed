@@ -28,7 +28,7 @@ import (
 )
 
 func TestCli(t *testing.T) {
-	before, after := setupServer(0, "", t)
+	before, after := setupServer(0, "", true, t)
 	scenario, let := scope.Scope(t, before, merge(after))
 
 	scenario("Add one event through cli and verify it", func() {
@@ -39,7 +39,7 @@ func TestCli(t *testing.T) {
 				"./../../main.go",
 				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoint=%s", QEDUrl),
+				fmt.Sprintf("--endpoint=%s", QEDTLS),
 				"add",
 				"--key='test event'",
 				"--value=2",
@@ -47,9 +47,7 @@ func TestCli(t *testing.T) {
 				"--insecure",
 			)
 
-			o, err := cmd.CombinedOutput()
-
-			fmt.Printf(">>>>> %s", o)
+			_, err := cmd.CombinedOutput()
 
 			assert.NoError(t, err, "Subprocess must not exit with status 1")
 		})
@@ -60,7 +58,7 @@ func TestCli(t *testing.T) {
 				"./../../main.go",
 				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoint=%s", QEDUrl),
+				fmt.Sprintf("--endpoint=%s", QEDTLS),
 				"membership",
 				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
@@ -75,17 +73,15 @@ func TestCli(t *testing.T) {
 
 			assert.NoError(t, err, "Subprocess must not exit with status 1")
 			assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
-
 		})
 
 		let("verify event with eventDigest", func(t *testing.T) {
-
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
 				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoint=%s", QEDUrl),
+				fmt.Sprintf("--endpoint=%s", QEDTLS),
 				"membership",
 				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
@@ -100,7 +96,6 @@ func TestCli(t *testing.T) {
 
 			assert.NoError(t, err, "Subprocess must not exit with status 1")
 			assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
-
 		})
 
 	})

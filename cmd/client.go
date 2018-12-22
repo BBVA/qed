@@ -23,14 +23,7 @@ import (
 )
 
 func newClientCommand(ctx *cmdContext) *cobra.Command {
-	var endpoint string
-	var disableTLS bool
-
-	client := client.NewHTTPClient(&client.Config{
-		Endpoint:  endpoint,
-		APIKey:    ctx.apiKey,
-		EnableTLS: !disableTLS,
-	})
+	clientCtx := &clientContext{}
 
 	cmd := &cobra.Command{
 		Use:   "client",
@@ -38,16 +31,22 @@ func newClientCommand(ctx *cmdContext) *cobra.Command {
 		Long:  `Client process for emitting events to a qed server`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			log.SetLogger("QedClient", ctx.logLevel)
+
+			clientCtx.client = client.NewHTTPClient(client.Config{
+				Endpoint: clientCtx.endpoint,
+				APIKey:   ctx.apiKey,
+				Insecure: clientCtx.insecure,
+			})
 		},
 		TraverseChildren: true,
 	}
 
-	cmd.PersistentFlags().StringVarP(&endpoint, "endpoint", "e", "localhost:8080", "Endpoint for REST requests on (host:port)")
-	cmd.PersistentFlags().BoolVar(&disableTLS, "insecure", false, "Disable TLS transport")
+	cmd.PersistentFlags().StringVarP(&clientCtx.endpoint, "endpoint", "e", "localhost:8080", "Endpoint for REST requests on (host:port)")
+	cmd.PersistentFlags().BoolVar(&clientCtx.insecure, "insecure", false, "Disable TLS transport")
 
-	cmd.AddCommand(newAddCommand(client))
-	cmd.AddCommand(newMembershipCommand(client))
-	cmd.AddCommand(newIncrementalCommand(client))
+	cmd.AddCommand(newAddCommand(clientCtx))
+	cmd.AddCommand(newMembershipCommand(clientCtx))
+	cmd.AddCommand(newIncrementalCommand(clientCtx))
 
 	return cmd
 }
