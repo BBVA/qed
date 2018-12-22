@@ -36,8 +36,9 @@ notifications:
 
 before_script:
   - ssh-keygen -t ed25519 -f $HOME/.ssh/id_ed25519 -P ''
-  - openssl genrsa -out $HOME/.ssh/server.key 2048
-  - openssl req -new -x509 -sha256 -key $HOME/.ssh/server.key -out $HOME/.ssh/server.crt -days 3650
+  - openssl req -newkey rsa:2048 -nodes -days 3650 -x509 -keyout $HOME/.ssh/ca.key -out $HOME/.ssh/ca.crt -subj "/CN=*"
+  - openssl req -newkey rsa:2048 -nodes -keyout $HOME/.ssh/server.key -out $HOME/.ssh/server.csr -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*"
+  - openssl x509 -req -days 365 -sha256 -in $HOME/.ssh/server.csr -CA $HOME/.ssh/ca.crt -CAkey $HOME/.ssh/ca.key -CAcreateserial -out $HOME/.ssh/server.crt -extfile <(echo subjectAltName = IP:127.0.0.1)
   - go mod download
 
 script:
