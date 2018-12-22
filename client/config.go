@@ -17,20 +17,20 @@
 package client
 
 type Config struct {
-	// Server host:port to consult
+	// Server host:port to consult.
 	Endpoint string
 
-	// ApiKey to query the server endpoint
+	// ApiKey to query the server endpoint.
 	APIKey string
 
-	// Enable TLS service
-	EnableTLS bool
+	// Enable self-signed certificates, allowing MiTM vector attacks.
+	Insecure bool
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		Endpoint:  "localhost:8080",
-		APIKey:    "my-key",
-		EnableTLS: true,
+		Endpoint: "localhost:8080",
+		APIKey:   "my-key",
+		Insecure: true,
 	}
 }

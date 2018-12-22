@@ -29,29 +29,20 @@ import (
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/monitor"
 	"github.com/bbva/qed/gossip/publisher"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
 )
 
 const (
 	QEDUrl       = "http://127.0.0.1:8080"
+	QEDTLS       = "https://localhost:8080"
 	QEDGossip    = "127.0.0.1:9010"
-	QEDTamperURL = "http://localhost:8081/tamper"
+	QEDTamperURL = "http://127.0.0.1:8081/tamper"
 	StoreURL     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
 	cacheSize    = 50000
 	storageType  = "badger"
 )
-
-var keyFile string
-
-func init() {
-	usr, _ := user.Current()
-	keyFile = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
-
-	log.SetLogger("", log.SILENT)
-}
 
 // merge function is a helper function that execute all the variadic parameters
 // inside a score.TestF function
@@ -191,10 +182,12 @@ func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
 	return before, after
 }
 
-func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.TestF) {
+func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, scope.TestF) {
 	var srv *server.Server
 	var err error
 	path := fmt.Sprintf("/var/tmp/e2e-qed%d/", id)
+
+	usr, _ := user.Current()
 
 	before := func(t *testing.T) {
 		os.RemoveAll(path)
@@ -212,10 +205,10 @@ func setupServer(id int, joinAddr string, t *testing.T) (scope.TestF, scope.Test
 		conf.GossipAddr = fmt.Sprintf("127.0.0.1:901%d", id)
 		conf.DBPath = path + "data"
 		conf.RaftPath = path + "raft"
-		conf.PrivateKeyPath = keyFile
+		conf.PrivateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
 		conf.EnableProfiling = true
 		conf.EnableTampering = true
-		conf.EnableTLS = false
+		conf.EnableTLS = tls
 
 		fmt.Printf("Server config: %+v\n", conf)
 
@@ -251,9 +244,9 @@ func endPoint(id int) string {
 }
 
 func getClient(id int) *client.HTTPClient {
-	return client.NewHTTPClient(&client.Config{
-		Endpoint:  endPoint(id),
-		APIKey:    APIKey,
-		EnableTLS: false,
+	return client.NewHTTPClient(client.Config{
+		Endpoint: endPoint(id),
+		APIKey:   APIKey,
+		Insecure: false,
 	})
 }

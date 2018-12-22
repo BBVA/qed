@@ -42,10 +42,10 @@ func init() {
 func setup() func() {
 	mux = http.NewServeMux()
 	server = httptest.NewServer(mux)
-	client = NewHTTPClient(&Config{
+	client = NewHTTPClient(Config{
 		Endpoint:  server.URL,
 		APIKey:    "my-awesome-api-key",
-		EnableTLS: false,
+		Insecure: false,
 	})
 	return func() {
 		server.Close()

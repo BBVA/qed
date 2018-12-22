@@ -25,7 +25,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/bbva/qed/balloon"
@@ -37,22 +39,32 @@ import (
 type HTTPClient struct {
 	conf *Config
 
-	http.Client
+	*http.Client
 }
 
 // NewHTTPClient will return a new instance of HTTPClient.
-func NewHTTPClient(conf *Config) *HTTPClient {
-	var c http.Client
-	if conf.EnableTLS {
-		c = http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		}
+func NewHTTPClient(conf Config) *HTTPClient {
+	var tlsConf *tls.Config
+
+	if conf.Insecure {
+		tlsConf = &tls.Config{InsecureSkipVerify: true}
 	} else {
-		c = http.Client{}
+		tlsConf = &tls.Config{}
 	}
-	return &HTTPClient{conf, c}
+
+	return &HTTPClient{
+		&conf,
+		&http.Client{
+			Timeout: time.Second * 10,
+			Transport: &http.Transport{
+				Dial: (&net.Dialer{
+					Timeout: 5 * time.Second,
+				}).Dial,
+				TLSClientConfig:     tlsConf,
+				TLSHandshakeTimeout: 5 * time.Second,
+			},
+		},
+	}
 
 }
 
@@ -77,8 +89,12 @@ func (c HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error
 }
 
 func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
+	url, err := url.Parse(c.conf.Endpoint + path)
+	if err != nil {
+		panic(err)
+	}
 
-	req, err := http.NewRequest(method, c.conf.Endpoint+path, bytes.NewBuffer(data))
+	req, err := http.NewRequest(method, fmt.Sprintf("%s", url), bytes.NewBuffer(data))
 	if err != nil {
 		panic(err)
 	}
