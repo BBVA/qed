@@ -67,7 +67,7 @@ func NewHTTPClient(conf Config) *HTTPClient {
 	if len(conf.Cluster.Endpoints) == 1 {
 		conf.Cluster.Leader = conf.Cluster.Endpoints[0]
 	} else {
-		client.checkClusterLeader()
+		client.updateClusterLeader()
 	}
 
 	return client
@@ -80,7 +80,6 @@ func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, erro
 	for {
 		resp, err := c.Do(req)
 		if err != nil {
-			// c.checkClusterLeader()
 			if retries == 5 {
 				return nil, err
 			}
@@ -91,27 +90,40 @@ func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, erro
 		}
 		return resp, err
 	}
-
 }
 
-func (c *HTTPClient) checkClusterLeader() {
-	var data []byte
+func (c HTTPClient) GetClusterInfo() (map[string]interface{}, error) {
+	info := make(map[string]interface{})
 
-	url := c.conf.Cluster.Endpoints[0]
-	path := "/leader"
-	req, err := http.NewRequest("GET", url+path, bytes.NewBuffer(data))
+	req, err := http.NewRequest("GET", c.conf.Cluster.Leader+"/info", bytes.NewBuffer([]byte{}))
 	if err != nil {
-		panic(err)
+		return info, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Api-Key", c.conf.APIKey)
 	resp, err := c.Do(req)
 	if err != nil {
-		panic(err)
+		return info, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return info, err
+	}
+	err = json.Unmarshal(body, &info)
+	if err != nil {
+		return info, err
 	}
 
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
-	c.conf.Cluster.Leader = string(bodyBytes)
+	return info, err
+}
+
+func (c *HTTPClient) updateClusterLeader() {
+	info, _ := c.GetClusterInfo()
+	if val, ok := info["LeaderAddr"]; ok {
+		c.conf.Cluster.Leader = val.(string)
+	}
 }
 
 func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {

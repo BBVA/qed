@@ -315,7 +315,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/health-check -> HealthCheckHandler
 //	/events -> Add
 //	/proofs/membership -> Membership
-func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
+func NewApiHttp(httpEndpoint string, balloon raftwal.RaftBalloonApi) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
@@ -323,7 +323,7 @@ func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
-	api.HandleFunc("/info", AuthHandlerMiddleware(InfoHandle(balloon)))
+	api.HandleFunc("/info", AuthHandlerMiddleware(InfoHandle(httpEndpoint, balloon)))
 
 	return api
 }
@@ -363,21 +363,20 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 	}
 }
 
-func InfoHandle(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func InfoHandle(httpEndpoint string, balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			w.Header().Set("Allow", "GET")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-
-		out, err := json.Marshal(balloon.Info())
+		out, err := json.Marshal(httpEndpoint)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(out)
-		return
 	}
 }

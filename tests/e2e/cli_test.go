@@ -49,7 +49,7 @@ func TestCli(t *testing.T) {
 
 			_, err := cmd.CombinedOutput()
 
-			assert.NoError(t, err, "%v", *cmd) //"Subprocess must not exit with status 1")
+			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
 		})
 
 		let("verify event with eventDigest", func(t *testing.T) {
@@ -97,6 +97,83 @@ func TestCli(t *testing.T) {
 			assert.NoError(t, err, "Subprocess must not exit with status 1")
 			assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 		})
+
+	})
+}
+
+func TestCluster(t *testing.T) {
+	before0, after0 := setupServer(0, "", t)
+	before1, after1 := setupServer(1, "", t)
+	before2, after2 := setupServer(2, "", t)
+	serversHttpAddr := "http://127.0.0.1:8080,http://127.0.0.1:8081,http://127.0.0.1:8082"
+
+	// before3, after3 := setupServer(0, "", t)
+
+	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after0, after1, after2))
+
+	scenario("Add one event through cli and verify it", func() {
+		let("Add event", func(t *testing.T) {
+			cmd := exec.Command("go",
+				"run",
+				"./../../main.go",
+				fmt.Sprintf("--apikey=%s", APIKey),
+				"client",
+				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				"add",
+				"--key='test event'",
+				"--value=2",
+				"--log=info",
+			)
+
+			_, err := cmd.CombinedOutput()
+
+			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+		})
+	})
+
+	let("verify event with eventDigest", func(t *testing.T) {
+		cmd := exec.Command("go",
+			"run",
+			"./../../main.go",
+			fmt.Sprintf("--apikey=%s", APIKey),
+			"client",
+			fmt.Sprintf("--endpoints=%s", QEDUrl),
+			"membership",
+			"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
+			"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
+			"--version=0",
+			"--eventDigest=8694718de4363adf07ec3b4aff4c76589f60fe89a7715bee7c8b250e06493922",
+			"--log=info",
+			"--verify",
+		)
+
+		stdoutStderr, err := cmd.CombinedOutput()
+
+		assert.NoError(t, err, "Subprocess must not exit with status 1")
+		assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+	})
+
+	let("verify event with eventDigest", func(t *testing.T) {
+
+		cmd := exec.Command("go",
+			"run",
+			"./../../main.go",
+			fmt.Sprintf("--apikey=%s", APIKey),
+			"client",
+			fmt.Sprintf("--endpoints=%s", QEDUrl),
+			"membership",
+			"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
+			"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
+			"--version=0",
+			"--key='test event'",
+			"--log=info",
+			"--verify",
+		)
+
+		stdoutStderr, err := cmd.CombinedOutput()
+
+		assert.NoError(t, err, "Subprocess must not exit with status 1")
+		assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 
 	})
 }

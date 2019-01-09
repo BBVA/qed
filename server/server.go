@@ -30,6 +30,8 @@ import (
 	_ "net/http/pprof" // this will enable the default profiling capabilities
 	"os"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/api/mgmthttp"
@@ -45,7 +47,6 @@ import (
 	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/util"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Server encapsulates the data and login to start/stop a QED server
@@ -233,29 +234,29 @@ func (s *Server) Start() error {
 
 	if s.conf.EnableTLS {
 		go func() {
-			log.Debug("	* Starting API HTTPS server in addr: ", s.conf.HTTPAddr)
+			log.Debug("	* Starting QED API HTTPS server in addr: ", s.conf.HTTPAddr)
 			err := s.httpServer.ListenAndServeTLS(
 				s.conf.SSLCertificate,
 				s.conf.SSLCertificateKey,
 			)
 			if err != http.ErrServerClosed {
-				log.Errorf("Can't start API HTTPS server: %s", err)
+				log.Errorf("Can't start QED API HTTP Server: %s", err)
 			}
 		}()
 	} else {
 		go func() {
-			log.Debug("	* Starting API HTTP server in addr: ", s.conf.HTTPAddr)
+			log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.HTTPAddr)
 			if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-				log.Errorf("Can't start API HTTP server: %s", err)
+				log.Errorf("Can't start QED API HTTP Server: %s", err)
 			}
 		}()
 
 	}
 
 	go func() {
-		log.Debug("	* Starting management HTTP server in addr: ", s.conf.MgmtAddr)
+		log.Debug("	* Starting QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
 		if err := s.mgmtServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start management HTTP server: %s", err)
+			log.Errorf("Can't start QED MGMT HTTP Server: %s", err)
 		}
 	}()
 
@@ -263,7 +264,7 @@ func (s *Server) Start() error {
 
 	if !s.bootstrap {
 		for _, addr := range s.conf.RaftJoinAddr {
-			log.Debug("	* Joining existing QED cluster in addr: ", addr)
+			log.Debug("	* Joining existent cluster QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
 			if err := join(addr, s.conf.RaftAddr, s.conf.NodeID); err != nil {
 				log.Fatalf("failed to join node at %s: %s", addr, err.Error())
 			}
@@ -312,7 +313,7 @@ func (s *Server) Stop() error {
 		log.Debugf("Done.\n")
 	}
 
-	log.Debugf("Stopping management server...")
+	log.Debugf("Stopping MGMT server...")
 	if err := s.mgmtServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
 		log.Error(err)
 		return err

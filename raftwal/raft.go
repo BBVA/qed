@@ -323,7 +323,7 @@ func (b *RaftBalloon) ID() string {
 // Info returns the Raft leader address.
 func (b *RaftBalloon) Info() map[string]interface{} {
 	m := make(map[string]interface{})
-	m["LeaderAddr"] = b.LeaderAddr()
+	m["LeaderAddr"] = b.addr //  LeaderAddr()
 	return m
 }
 

@@ -209,6 +209,10 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 		conf.MetricsAddr = fmt.Sprintf("127.0.0.1:860%d", id)
 		conf.RaftAddr = fmt.Sprintf("127.0.0.1:850%d", id)
 		conf.GossipAddr = fmt.Sprintf("127.0.0.1:840%d", id)
+		if id > 0 {
+			conf.RaftJoinAddr = []string{"127.0.0.1:8600"}
+			conf.GossipJoinAddr = []string{"127.0.0.1:8400"}
+		}
 		conf.DBPath = path + "data"
 		conf.RaftPath = path + "raft"
 		conf.PrivateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)

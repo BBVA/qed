@@ -58,10 +58,10 @@ func TestAddSuccess(t *testing.T) {
 
 	event := "Hello world!"
 	snap := &protocol.Snapshot{
-		[]byte("hyper"),
-		[]byte("history"),
-		0,
-		[]byte(event),
+		HistoryDigest: []byte("history"),
+		HyperDigest:   []byte("hyper"),
+		Version:       0,
+		EventDigest:   []byte(event),
 	}
 
 	result, _ := json.Marshal(snap)
@@ -107,7 +107,6 @@ func TestMembership(t *testing.T) {
 	result, err := client.Membership([]byte(event), version)
 	assert.NoError(t, err)
 	assert.Equal(t, fakeResult, result, "The results should match")
-
 }
 
 func TestDigestMembership(t *testing.T) {
@@ -143,7 +142,6 @@ func TestMembershipWithServerFailure(t *testing.T) {
 
 	_, err := client.Membership([]byte(event), 0)
 	assert.Error(t, err)
-
 }
 
 func TestIncremental(t *testing.T) {
@@ -153,9 +151,9 @@ func TestIncremental(t *testing.T) {
 	start := uint64(2)
 	end := uint64(8)
 	fakeResult := &protocol.IncrementalResponse{
-		start,
-		end,
-		visitor.AuditPath{"0|0": []uint8{0x0}},
+		Start:     start,
+		End:       end,
+		AuditPath: visitor.AuditPath{"0|0": []uint8{0x0}},
 	}
 
 	resultJSON, _ := json.Marshal(fakeResult)
@@ -184,8 +182,8 @@ func okHandler(result []byte) func(http.ResponseWriter, *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		out := new(bytes.Buffer)
-		json.Compact(out, result)
-		w.Write(out.Bytes())
+		_ = json.Compact(out, result)
+		_, _ = w.Write(out.Bytes())
 	}
 }
 
