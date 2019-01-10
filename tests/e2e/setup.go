@@ -34,11 +34,11 @@ import (
 )
 
 const (
-	QEDUrl       = "http://127.0.0.1:8800"
-	QEDTLS       = "https://localhost:8800"
-	QEDGossip    = "127.0.0.1:8400"
-	QEDTamperURL = "http://127.0.0.1:8081/tamper"
-	StoreURL     = "http://127.0.0.1:8888"
+	QEDUrl       = "http://127.0.0.1:8080"
+	QEDTLS       = "https://localhost:8080"
+	QEDGossip    = "127.0.0.1:9010"
+	QEDTamperURL = "http://127.0.0.1:18080/tamper"
+	StoreUrl     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
 	cacheSize    = 50000
 	storageType  = "badger"
@@ -259,7 +259,10 @@ func endPoint(id int) string {
 
 func getClient(id int) *client.HTTPClient {
 	return client.NewHTTPClient(client.Config{
-		Endpoint: endPoint(id),
+		Cluster:  client.QEDCluster{
+			Endpoints: []string{endPoint(id)},
+			Leader: endPoint(id),
+		},
 		APIKey:   APIKey,
 		Insecure: false,
 	})
