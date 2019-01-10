@@ -43,7 +43,7 @@ type QEDCluster struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		Cluster:  QEDCluster{[]string{"127.0.0.1:8800"}, ""},
+		Cluster:                 QEDCluster{[]string{"127.0.0.1:8800"}, ""},
 		APIKey:                  "my-key",
 		Insecure:                true,
 		TimeoutSeconds:          10,
