@@ -67,15 +67,11 @@ type Auditor struct {
 func NewAuditor(conf Config) (*Auditor, error) {
 	metrics.Qed_auditor_instances_count.Inc()
 	auditor := Auditor{
-<<<<<<< HEAD
 		qed: client.NewHTTPClient(client.Config{
-			Endpoint: conf.QEDUrls[0],
-			APIKey:   conf.APIKey,
+			Cluster:  client.QEDCluster{Endpoints: conf.QEDUrls, Leader: conf.QEDUrls[0]},
+			APIKey:    conf.APIKey,
 			Insecure: false,
 		}),
-=======
-		qed:    client.NewHttpClient(conf.QEDUrls, conf.APIKey),
->>>>>>> WIP
 		conf:   conf,
 		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
