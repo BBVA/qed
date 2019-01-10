@@ -169,7 +169,7 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	if conf.EnableProfiling {
-		server.profilingServer = newHTTPServer("localhost:6060", nil)
+		server.profilingServer = newHTTPServer(fmt.Sprintf("localhost:606%d"), nil)
 	}
 
 	r := prometheus.NewRegistry()
