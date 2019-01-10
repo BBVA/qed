@@ -40,7 +40,7 @@ func TestCli(t *testing.T) {
 				"./../../main.go",
 				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoint=%s", QEDTLS),
+				fmt.Sprintf("--endpoints=%s", QEDTLS),
 				"add",
 				"--key='test event'",
 				"--value=2",
@@ -59,7 +59,7 @@ func TestCli(t *testing.T) {
 				"./../../main.go",
 				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoint=%s", QEDTLS),
+				fmt.Sprintf("--endpoints=%s", QEDTLS),
 				"membership",
 				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
@@ -83,7 +83,7 @@ func TestCli(t *testing.T) {
 				"./../../main.go",
 				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoint=%s", QEDTLS),
+				fmt.Sprintf("--endpoints=%s", QEDTLS),
 				"membership",
 				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
@@ -104,9 +104,9 @@ func TestCli(t *testing.T) {
 }
 
 func TestCluster(t *testing.T) {
-	before0, after0 := setupServer(0, "", t)
-	before1, after1 := setupServer(1, "", t)
-	before2, after2 := setupServer(2, "", t)
+	before0, after0 := setupServer(0, "", false, t)
+	before1, after1 := setupServer(1, "", false, t)
+	before2, after2 := setupServer(2, "", false, t)
 	serversHttpAddr := "http://127.0.0.1:8080,http://127.0.0.1:8081,http://127.0.0.1:8082"
 
 	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after1, after2))
