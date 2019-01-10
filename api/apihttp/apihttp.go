@@ -370,7 +370,10 @@ func InfoHandle(httpEndpoint string, balloon raftwal.RaftBalloonApi) http.Handle
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		out, err := json.Marshal(httpEndpoint)
+
+		info := balloon.Info()
+		info["httpEndpoint"] = "http://" + httpEndpoint
+		out, err := json.Marshal(info)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

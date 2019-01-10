@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -92,6 +93,17 @@ func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, erro
 	}
 }
 
+func (c *HTTPClient) updateClusterLeader() {
+	info, _ := c.GetClusterInfo()
+	if info["isLeader"].(bool) {
+		c.conf.Cluster.Leader = info["httpEndpoint"].(string)
+	} else {
+		time.Sleep(100 * time.Millisecond)
+		c.conf.Cluster.Leader = c.conf.Cluster.Endpoints[rand.Int()%len(c.conf.Cluster.Endpoints)]
+		c.updateClusterLeader()
+	}
+}
+
 func (c HTTPClient) GetClusterInfo() (map[string]interface{}, error) {
 	info := make(map[string]interface{})
 
@@ -117,13 +129,6 @@ func (c HTTPClient) GetClusterInfo() (map[string]interface{}, error) {
 	}
 
 	return info, err
-}
-
-func (c *HTTPClient) updateClusterLeader() {
-	info, _ := c.GetClusterInfo()
-	if val, ok := info["LeaderAddr"]; ok {
-		c.conf.Cluster.Leader = val.(string)
-	}
 }
 
 func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
