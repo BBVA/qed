@@ -321,8 +321,15 @@ func newTLSServer(addr string, mux *http.ServeMux) *http.Server {
 }
 
 func newHTTPServer(addr string, mux *http.ServeMux) *http.Server {
+	var handler http.Handler
+	if mux != nil {
+		handler = apihttp.LogHandler(mux)
+	} else {
+		handler = nil
+	}
+
 	return &http.Server{
 		Addr:    addr,
-		Handler: apihttp.LogHandler(mux),
+		Handler: handler,
 	}
 }
