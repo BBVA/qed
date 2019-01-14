@@ -17,36 +17,59 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+	v "github.com/spf13/viper"
+
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
-	"github.com/spf13/cobra"
 )
 
 func newClientCommand(ctx *cmdContext) *cobra.Command {
 	clientCtx := &clientContext{}
+	clientCtx.config = client.DefaultConfig()
 
 	cmd := &cobra.Command{
 		Use:   "client",
 		Short: "Client mode for qed",
 		Long:  `Client process for emitting events to a qed server`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			log.SetLogger("QedClient", ctx.logLevel)
-
-			clientCtx.client = client.NewHTTPClient(client.Config{
-				Endpoint: clientCtx.endpoint,
-				APIKey:   ctx.apiKey,
-				Insecure: clientCtx.insecure,
-			})
-		},
-		TraverseChildren: true,
 	}
 
-	cmd.PersistentFlags().StringVarP(&clientCtx.endpoint, "endpoint", "e", "localhost:8080", "Endpoint for REST requests on (host:port)")
-	cmd.PersistentFlags().BoolVar(&clientCtx.insecure, "insecure", false, "Disable TLS transport")
+	f := cmd.PersistentFlags()
+	f.StringVarP(&clientCtx.config.Endpoint, "endpoint", "e", "127.0.0.1:8080", "Endpoint for REST requests on (host:port)")
+	f.BoolVar(&clientCtx.config.Insecure, "insecure", false, "Allow self signed certificates")
+	f.IntVar(&clientCtx.config.TimeoutSeconds, "timeout-seconds", 10, "Seconds to cut the connection")
+	f.IntVar(&clientCtx.config.DialTimeoutSeconds, "dial-timeout-seconds", 5, "Seconds to cut the dialing")
+	f.IntVar(&clientCtx.config.HandshakeTimeoutSeconds, "handshake-timeout-seconds", 5, "Seconds to cut the handshaking")
 
-	cmd.AddCommand(newAddCommand(clientCtx))
-	cmd.AddCommand(newMembershipCommand(clientCtx))
-	cmd.AddCommand(newIncrementalCommand(clientCtx))
+	// Lookups
+	v.BindPFlag("client.endpoint", f.Lookup("endpoint"))
+	v.BindPFlag("client.insecure", f.Lookup("insecure"))
+	v.BindPFlag("client.timeout.connection", f.Lookup("timeout-seconds"))
+	v.BindPFlag("client.timeout.dial", f.Lookup("dial-timeout-seconds"))
+	v.BindPFlag("client.timeout.handshake", f.Lookup("handshake-timeout-seconds"))
+
+	clientPreRun := func(cmd *cobra.Command, args []string) {
+		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>", "client.customprerun")
+		log.SetLogger("QEDClient", ctx.logLevel)
+
+		clientCtx.config.APIKey = ctx.apiKey
+		clientCtx.config.Endpoint = v.GetString("client.endpoint")
+		clientCtx.config.Insecure = v.GetBool("client.insecure")
+		clientCtx.config.TimeoutSeconds = v.GetInt("client.timeout.connection")
+		clientCtx.config.DialTimeoutSeconds = v.GetInt("client.timeout.dial")
+		clientCtx.config.HandshakeTimeoutSeconds = v.GetInt("client.timeout.handshake")
+
+		clientCtx.client = client.NewHTTPClient(*clientCtx.config)
+
+	}
+
+	cmd.AddCommand(
+		newAddCommand(clientCtx, clientPreRun),
+		newMembershipCommand(clientCtx, clientPreRun),
+		newIncrementalCommand(clientCtx, clientPreRun),
+	)
 
 	return cmd
 }

@@ -36,3 +36,4 @@ coverage.txt
 *.tfstate*
 *terraform.tfvars*
 .golangci.yml
+config.yml
