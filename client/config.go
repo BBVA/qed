@@ -25,12 +25,24 @@ type Config struct {
 
 	// Enable self-signed certificates, allowing MiTM vector attacks.
 	Insecure bool
+
+	// Seconds to wait for an established connection.
+	TimeoutSeconds int
+
+	// Seconds to wait for the connection to be established.
+	DialTimeoutSeconds int
+
+	// Seconds to wait for a handshake negotiation.
+	HandshakeTimeoutSeconds int
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		Endpoint: "localhost:8080",
-		APIKey:   "my-key",
-		Insecure: true,
+		Endpoint:                "localhost:8080",
+		APIKey:                  "my-key",
+		Insecure:                true,
+		TimeoutSeconds:          10,
+		DialTimeoutSeconds:      5,
+		HandshakeTimeoutSeconds: 5,
 	}
 }

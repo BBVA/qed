@@ -14,26 +14,40 @@
 package cmd
 
 import (
+	"github.com/spf13/cobra"
+	v "github.com/spf13/viper"
+
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/monitor"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
-	"github.com/spf13/cobra"
 )
 
-func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config) *cobra.Command {
+func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun func(*cobra.Command, []string)) *cobra.Command {
 
 	monitorConfig := monitor.DefaultConfig()
 
 	cmd := &cobra.Command{
 		Use:   "monitor",
 		Short: "Start a QED monitor",
-		Long: `Start a QED monitor that reacts to snapshot batches 
-		propagated by QED servers and periodically executes incremental 
-		queries to verify the consistency between snaphots`,
+		Long:  `Start a QED monitor that reacts to snapshot batches propagated by QED servers and periodically executes incremental queries to verify the consistency between snaphots`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+
+			log.SetLogger("QEDMonitor", ctx.logLevel)
+
+			// WARN: PersitentPreRun can't be nested and we're using it in cmd/root so inbetween preRuns
+			// must be curried.
+			agentPreRun(cmd, args)
+
+			// Bindings
+			monitorConfig.QedUrls = v.GetStringSlice("agent.server_urls")
+			monitorConfig.PubUrls = v.GetStringSlice("agent.publish_urls")
+			markSliceStringRequired(monitorConfig.QedUrls, "qedUrls")
+			markSliceStringRequired(monitorConfig.PubUrls, "pubUrls")
+
+		},
 		Run: func(cmd *cobra.Command, args []string) {
-			log.SetLogger("QedMonitor", ctx.logLevel)
 
 			config.Role = member.Monitor
 			monitorConfig.APIKey = ctx.apiKey
@@ -60,10 +74,13 @@ func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config) *cobra.Comma
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&monitorConfig.QedUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
-	cmd.Flags().StringSliceVarP(&monitorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an monitor can publish alerts")
-	cmd.MarkFlagRequired("qedUrls")
-	cmd.MarkFlagRequired("pubUrls")
+	f := cmd.Flags()
+	f.StringSliceVarP(&monitorConfig.QedUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
+	f.StringSliceVarP(&monitorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an monitor can publish alerts")
+
+	// Lookups
+	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
+	v.BindPFlag("agent.publish_urls", f.Lookup("pubUrls"))
 
 	return cmd
 }
