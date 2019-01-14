@@ -14,15 +14,17 @@
 package cmd
 
 import (
+	"github.com/spf13/cobra"
+	v "github.com/spf13/viper"
+
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
-	"github.com/spf13/cobra"
 )
 
-func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config) *cobra.Command {
+func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config, agentPreRun func(*cobra.Command, []string)) *cobra.Command {
 
 	var endpoints []string
 
@@ -30,9 +32,20 @@ func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config) *cobra.Com
 		Use:   "publisher",
 		Short: "Start a QED publisher",
 		Long:  `Start a QED publisher that reacts to snapshot batches propagated by QED servers and periodically publishes them to a certain log storage.`,
-		Run: func(cmd *cobra.Command, args []string) {
+		PreRun: func(cmd *cobra.Command, args []string) {
 
-			log.SetLogger("QedPublisher", ctx.logLevel)
+			log.SetLogger("QEDPublisher", ctx.logLevel)
+
+			// WARN: PersitentPreRun can't be nested and we're using it in
+			// cmd/root so inbetween preRuns must be curried.
+			agentPreRun(cmd, args)
+
+			// Bindings
+			endpoints = v.GetStringSlice("agent.publish_urls")
+			markSliceStringRequired(endpoints, "pubUrls")
+
+		},
+		Run: func(cmd *cobra.Command, args []string) {
 
 			config.Role = member.Publisher
 			publisherConfig := publisher.NewConfig(endpoints)
@@ -58,10 +71,12 @@ func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config) *cobra.Com
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&endpoints, "endpoints", "", []string{},
+	f := cmd.Flags()
+	f.StringSliceVarP(&endpoints, "pubUrls", "", []string{},
 		"Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
 
-	cmd.MarkFlagRequired("endpoints")
+	// Lookups
+	v.BindPFlag("agent.publish_urls", f.Lookup("pubUrls"))
 
 	return cmd
 }

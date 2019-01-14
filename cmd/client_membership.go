@@ -26,7 +26,7 @@ import (
 	"github.com/bbva/qed/protocol"
 )
 
-func newMembershipCommand(ctx *clientContext) *cobra.Command {
+func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []string)) *cobra.Command {
 
 	hasherF := hashing.NewSha256Hasher
 	var version uint64
@@ -39,6 +39,10 @@ func newMembershipCommand(ctx *clientContext) *cobra.Command {
 		Long: `Query for membership of an event to the authenticated data structure.
 			It also verifies the proofs provided by the server if flag enabled.`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// WARN: PersitentPreRun can't be nested and we're using it in
+			// cmd/root so inbetween preRuns must be curried.
+			clientPreRun(cmd, args)
+
 			if key == "" && eventDigest == "" {
 				log.Errorf("Error: trying to get membership without either key or eventDigest")
 			}
