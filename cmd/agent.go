@@ -17,8 +17,10 @@
 package cmd
 
 import (
-	"github.com/bbva/qed/gossip"
 	"github.com/spf13/cobra"
+	v "github.com/spf13/viper"
+
+	"github.com/bbva/qed/gossip"
 )
 
 func newAgentCommand(cmdCtx *cmdContext) *cobra.Command {
@@ -28,27 +30,41 @@ func newAgentCommand(cmdCtx *cmdContext) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Short: "Start a gossip agent for the verifiable log QED",
-		Long:  ``,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			config.EnableCompression = true
-		},
-		TraverseChildren: true,
 	}
 
-	cmd.PersistentFlags().StringVar(&config.NodeName, "node", "", "Unique name for node. If not set, fallback to hostname")
-	cmd.PersistentFlags().StringVar(&config.BindAddr, "bind", "", "Bind address for TCP/UDP gossip on (host:port)")
-	cmd.PersistentFlags().StringVar(&config.AdvertiseAddr, "advertise", "", "Address to advertise to cluster")
-	cmd.PersistentFlags().StringSliceVar(&config.StartJoin, "join", []string{}, "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
-	cmd.Flags().StringSliceVar(&config.AlertsUrls, "alertsUrls", []string{}, "Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts")
+	f := cmd.PersistentFlags()
+	f.StringVar(&config.NodeName, "node", "", "Unique name for node. If not set, fallback to hostname")
+	f.StringVar(&config.BindAddr, "bind", "", "Bind address for TCP/UDP gossip on (host:port)")
+	f.StringVar(&config.AdvertiseAddr, "advertise", "", "Address to advertise to cluster")
+	f.StringSliceVar(&config.StartJoin, "join", []string{}, "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
+	f.StringSliceVar(&config.AlertsUrls, "alertsUrls", []string{}, "Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts")
 
-	cmd.MarkPersistentFlagRequired("node")
-	cmd.MarkPersistentFlagRequired("bind")
-	cmd.MarkPersistentFlagRequired("join")
-	cmd.MarkFlagRequired("alertUrls")
+	agentPreRun := func(cmd *cobra.Command, args []string) {
+		config.EnableCompression = true
+		config.NodeName = v.GetString("agent.node")
+		config.BindAddr = v.GetString("agent.bind")
+		config.AdvertiseAddr = v.GetString("agent.advertise")
+		config.StartJoin = v.GetStringSlice("agent.join")
+		config.AlertsUrls = v.GetStringSlice("agent.alert_urls")
 
-	cmd.AddCommand(newAgentMonitorCommand(cmdCtx, config))
-	cmd.AddCommand(newAgentAuditorCommand(cmdCtx, config))
-	cmd.AddCommand(newAgentPublisherCommand(cmdCtx, config))
+		markStringRequired(config.NodeName, "node")
+		markStringRequired(config.BindAddr, "bind")
+		markSliceStringRequired(config.StartJoin, "join")
+		markSliceStringRequired(config.AlertsUrls, "alertsUrls")
+	}
+
+	cmd.AddCommand(
+		newAgentMonitorCommand(cmdCtx, config, agentPreRun),
+		newAgentAuditorCommand(cmdCtx, config, agentPreRun),
+		newAgentPublisherCommand(cmdCtx, config, agentPreRun),
+	)
+
+	// Lookups
+	v.BindPFlag("agent.node", f.Lookup("node"))
+	v.BindPFlag("agent.bind", f.Lookup("bind"))
+	v.BindPFlag("agent.advertise", f.Lookup("advertise"))
+	v.BindPFlag("agent.join", f.Lookup("join"))
+	v.BindPFlag("agent.alert_urls", f.Lookup("alertsUrls"))
 
 	return cmd
 

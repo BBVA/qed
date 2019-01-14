@@ -27,7 +27,7 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-func newIncrementalCommand(ctx *clientContext) *cobra.Command {
+func newIncrementalCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []string)) *cobra.Command {
 
 	var start, end uint64
 	var verify bool
@@ -39,6 +39,10 @@ func newIncrementalCommand(ctx *clientContext) *cobra.Command {
 		Long: `Query for an incremental proof to the authenticated data structure.
 			It also verifies the proofs provided by the server if flag enabled.`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// WARN: PersitentPreRun can't be nested and we're using it in
+			// cmd/root so inbetween preRuns must be curried.
+			clientPreRun(cmd, args)
+
 			if verify {
 				if startDigest == "" {
 					log.Errorf("Error: trying to verify proof without start digest")

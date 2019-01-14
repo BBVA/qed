@@ -1,0 +1,75 @@
+---
+#  Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+# 
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+
+###############################################################################
+# Example configuration file for teaching porpouses
+###############################################################################
+
+
+log: error # Choose between log levels: silent, error, info and debug.
+api_key: "my-key" # The application namespace used in all the nodes. 
+
+###############################################################################
+# Server Configuration (where it collect and processes events).
+###############################################################################
+server:
+  node_id: "hostname"  # Unique name for node. If not set, fallback to hostname.
+  profiling: false  # Allow a pprof url (localhost:6060) for profiling purposes.
+  key: "~/.ssh/id_ed25519"  # Path to the ed25519 key file.
+  tls:
+    certificate: "~/.ssh/server.crt" # Server certificate file
+    certificate_key: "~/.ssh/server.key" # Server certificate key file
+  addr:
+    http: ":8080"  # Endpoint for REST requests on (host:port).
+    mgmt: ":8090"  # Management endpoint bind address (host:port).
+    raft: ":9000"  # Raft bind address (host:port).
+    join:  # Raft: list of nodes ([host]:port), through which a cluster can be joined.
+     - "127.0.0.1:9000"
+    gossip: "9100"  # Gossip: management endpoint bind address (host:port).
+    gossip_join:  # Gossip: list of nodes ([host]:port), through which a cluster can be joined.
+      - "127.0.0.0.1:9100"
+  path:
+    db: "/var/tmp/qed/data"  # Set default storage path.
+    wal: "/var/tmp/qed/raft"  # Set raft storage path.
+
+
+###############################################################################
+# Cient Configuration (cli commands `add` `incremental` and `verify`)
+###############################################################################
+client:
+  endpoint: "127.0.0.1:8080"  # Endpoint for REST requests on (host:port)
+  insecure: false  # Allow self signed certificates
+  timeout:
+    connection: 10  # time in seconds to cut the ongoing connection
+    dial: 5  # time in seconds to cut the dialing of the connection
+    handshake: 5  # time in seconds to cut the handshakeing of the connection
+
+
+###############################################################################
+# Agent Configuration
+###############################################################################
+agent:
+  node: "nodeName"  # Unique name for node. If not set, fallback to hostname
+  bind: ":9200"  # Bind address for TCP/UDP gossip on (host:port)
+  advertise: ""  # Address to advertise to cluster
+  join:  # Comma-delimited list of nodes ([host]:port), through which a cluster can be joined
+    - "127.0.0.1:9100"
+  alert_urls:  # List of Alert servers ([host]:port), through which an agent can post alerts
+    - "127.0.0.1:8888"
+  server_urls:  # List of QED servers ([host]:port), through which an auditor can make queries
+    - "127.0.0.1:8080"
+  snapshots_store_urls:  # List of end-publishers ([host]:port), through which an agent can send signedSnapshots or alerts
+    - "127.0.0.1:8888"

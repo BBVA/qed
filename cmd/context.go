@@ -19,18 +19,31 @@ package cmd
 import (
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/log"
 )
 
 type cmdContext struct {
-	apiKey, logLevel string
+	apiKey, logLevel, configFile, path string
+	disableConfig                      bool
 }
 
 type clientContext struct {
-	endpoint string
-	insecure bool
-	client   *client.HTTPClient
+	config *client.Config
+	client *client.HTTPClient
 }
 
 type agentContext struct {
 	config *gossip.Config
+}
+
+func markStringRequired(value, name string) {
+	if value == "" {
+		log.Fatalf("Argument `%s` is required", name)
+	}
+}
+
+func markSliceStringRequired(value []string, name string) {
+	if len(value) == 0 {
+		log.Fatalf("Argument `%s` is required", name)
+	}
 }

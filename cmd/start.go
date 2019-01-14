@@ -19,35 +19,53 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/user"
 
 	"github.com/spf13/cobra"
+	v "github.com/spf13/viper"
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 )
 
 func newStartCommand(ctx *cmdContext) *cobra.Command {
-	const defaultKeyPath = "~/.ssh/id_ed25519"
-	var disableTLS bool
 	conf := server.DefaultConfig()
 
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Start the server for the verifiable log QED",
-		Long:  ``,
-		// Args:  cobra.NoArgs(),
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			log.SetLogger("QedServer", ctx.logLevel)
-		},
 		Run: func(cmd *cobra.Command, args []string) {
-			conf.EnableTLS = !disableTLS
+			fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>", "start.run", ctx.path)
+			var err error
 
-			if conf.PrivateKeyPath == defaultKeyPath {
-				usr, _ := user.Current()
-				conf.PrivateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
+			log.SetLogger("QEDServer", ctx.logLevel)
+
+			// Bindings
+			conf.APIKey = ctx.apiKey
+			conf.NodeID = v.GetString("server.node-id")
+			conf.EnableProfiling = v.GetBool("server.profiling")
+			conf.PrivateKeyPath = v.GetString("server.key")
+			conf.SSLCertificate = v.GetString("server.tls.certificate")
+			conf.SSLCertificateKey = v.GetString("server.tls.certificate_key")
+			conf.HTTPAddr = v.GetString("server.addr.http")
+			conf.RaftAddr = v.GetString("server.addr.raft")
+			conf.MgmtAddr = v.GetString("server.addr.mgmt")
+			conf.RaftJoinAddr = v.GetStringSlice("server.addr.join")
+			conf.GossipAddr = v.GetString("server.addr.gossip")
+			conf.GossipJoinAddr = v.GetStringSlice("server.addr.gossip_join")
+			conf.DBPath = fmt.Sprintf("%s/%s", ctx.path, "db")
+			conf.RaftPath = fmt.Sprintf("%s/%s", ctx.path, "wal")
+
+			if conf.SSLCertificate != "" && conf.SSLCertificateKey != "" {
+				if _, err := os.Stat(conf.SSLCertificate); os.IsNotExist(err) {
+					log.Fatalf("Can't find certificate .crt file: %v", err)
+				} else if _, err := os.Stat(conf.SSLCertificateKey); os.IsNotExist(err) {
+					log.Fatalf("Can't find certificate .key file: %v", err)
+				} else {
+					conf.EnableTLS = true
+				}
 			}
 
+			// cmd.DisableSuggestions = true
 			srv, err := server.NewServer(conf)
 			if err != nil {
 				log.Fatalf("Can't start QED server: %v", err)
@@ -61,23 +79,41 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 		},
 	}
 
+	f := cmd.Flags()
 	hostname, _ := os.Hostname()
-	cmd.Flags().StringVar(&conf.NodeID, "node-id", hostname, "Unique name for node. If not set, fallback to hostname")
-	cmd.Flags().StringVar(&conf.HTTPAddr, "http-addr", ":8080", "Endpoint for REST requests on (host:port)")
-	cmd.Flags().StringVar(&conf.RaftAddr, "raft-addr", ":9000", "Raft bind address (host:port)")
-	cmd.Flags().StringVar(&conf.MgmtAddr, "mgmt-addr", ":8090", "Management endpoint bind address (host:port)")
-	cmd.Flags().StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
-	cmd.Flags().StringVar(&conf.GossipAddr, "gossip-addr", ":9100", "Gossip: management endpoint bind address (host:port)")
-	cmd.Flags().StringSliceVar(&conf.GossipJoinAddr, "gossip-join-addr", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
-	cmd.Flags().StringVarP(&conf.DBPath, "dbpath", "p", "/var/tmp/qed/data", "Set default storage path")
-	cmd.Flags().StringVar(&conf.RaftPath, "raftpath", "/var/tmp/qed/raft", "Set raft storage path")
-	cmd.Flags().StringVarP(&conf.PrivateKeyPath, "keypath", "y", defaultKeyPath, "Path to the ed25519 key file")
-	cmd.Flags().BoolVarP(&conf.EnableProfiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
-	cmd.Flags().BoolVar(&disableTLS, "insecure", false, "Disable TLS service")
+	f.StringVar(&conf.NodeID, "node-id", hostname, "Unique name for node. If not set, fallback to hostname")
+	f.BoolVarP(&conf.EnableProfiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
+	f.StringVar(&conf.PrivateKeyPath, "keypath", fmt.Sprintf("%s/%s", ctx.path, "id_ed25519"), "Server Singning private key file path")
+	f.StringVar(&conf.SSLCertificate, "certificate", fmt.Sprintf("%s/%s", ctx.path, "server.crt"), "Server crt file")
+	f.StringVar(&conf.SSLCertificateKey, "certificate-key", fmt.Sprintf("%s/%s", ctx.path, "server.key"), "Server key file")
+
+	f.StringVar(&conf.HTTPAddr, "http-addr", ":8080", "Endpoint for REST requests on (host:port)")
+	f.StringVar(&conf.RaftAddr, "raft-addr", "9000", "Raft bind address (host:port)")
+	f.StringVar(&conf.MgmtAddr, "mgmt-addr", "8090", "Management endpoint bind address (host:port)")
+	f.StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
+	f.StringVar(&conf.GossipAddr, "gossip-addr", ":9100", "Gossip: management endpoint bind address (host:port)")
+	f.StringSliceVar(&conf.GossipJoinAddr, "gossip-join-addr", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 
 	// INFO: testing purposes
-	cmd.Flags().BoolVar(&conf.EnableTampering, "tampering", false, "Allow tampering api for proof demostrations")
-	cmd.Flags().MarkHidden("tampering") // nolint: errcheck
+	f.BoolVar(&conf.EnableTampering, "tampering", false, "Allow tampering api for proof demostrations")
+	f.MarkHidden("tampering")
+
+	// Lookups
+	v.BindPFlag("server.node-id", f.Lookup("node-id"))
+	v.BindPFlag("server.profiling", f.Lookup("profiling"))
+	v.BindPFlag("server.key", f.Lookup("keypath"))
+	v.BindPFlag("server.tls.certificate", f.Lookup("certificate"))
+	v.BindPFlag("server.tls.certificate_key", f.Lookup("certificate-key"))
+
+	v.BindPFlag("server.addr.http", f.Lookup("http-addr"))
+	v.BindPFlag("server.addr.raft", f.Lookup("raft-addr"))
+	v.BindPFlag("server.addr.mgmt", f.Lookup("mgmt-addr"))
+	v.BindPFlag("server.addr.join", f.Lookup("join-addr"))
+	v.BindPFlag("server.addr.gossip", f.Lookup("gossip-addr"))
+	v.BindPFlag("server.addr.gossip_join", f.Lookup("gossip-join-addr"))
+
+	v.BindPFlag("server.path.db", f.Lookup("dbpath"))
+	v.BindPFlag("server.path.wal", f.Lookup("raftpath"))
 
 	return cmd
 }

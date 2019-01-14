@@ -22,7 +22,7 @@ import (
 	"github.com/bbva/qed/log"
 )
 
-func newAddCommand(ctx *clientContext) *cobra.Command {
+func newAddCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []string)) *cobra.Command {
 
 	var key, value string
 
@@ -30,6 +30,11 @@ func newAddCommand(ctx *clientContext) *cobra.Command {
 		Use:   "add",
 		Short: "Add an event",
 		Long:  `Add an event to the authenticated data structure`,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			// WARN: PersitentPreRun can't be nested and we're using it in
+			// cmd/root so inbetween preRuns must be curried.
+			clientPreRun(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Infof("Adding key [ %s ] with value [ %s ]\n", key, value)
 
