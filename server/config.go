@@ -17,14 +17,15 @@
 package server
 
 import (
-	"fmt"
 	"net"
 	"os"
-	"os/user"
 	"path/filepath"
 )
 
 type Config struct {
+	// Unique identifier to allow connections
+	APIKey string
+
 	// Unique name for this node. It identifies itself both in raft and
 	// gossip clusters. If not set, fallback to hostname.
 	NodeID string
@@ -78,9 +79,6 @@ func DefaultConfig() *Config {
 	hostname, _ := os.Hostname()
 	currentDir := getCurrentDir()
 
-	usr, _ := user.Current()
-	homeDir := usr.HomeDir
-
 	return &Config{
 		NodeID:            hostname,
 		HTTPAddr:          "127.0.0.1:8080",
@@ -89,13 +87,13 @@ func DefaultConfig() *Config {
 		RaftJoinAddr:      []string{},
 		GossipAddr:        "127.0.0.1:9100",
 		GossipJoinAddr:    []string{},
-		DBPath:            currentDir + "/data",
-		RaftPath:          currentDir + "/raft",
+		DBPath:            currentDir + "/db",
+		RaftPath:          currentDir + "/wal",
 		EnableProfiling:   false,
 		EnableTampering:   false,
-		EnableTLS:         true,
-		SSLCertificate:    fmt.Sprintf("%s/.ssh/server.crt", homeDir),
-		SSLCertificateKey: fmt.Sprintf("%s/.ssh/server.key", homeDir),
+		EnableTLS:         false,
+		SSLCertificate:    "",
+		SSLCertificateKey: "",
 	}
 }
 
