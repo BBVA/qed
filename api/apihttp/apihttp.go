@@ -26,6 +26,21 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/rcrowley/go-metrics"
+)
+
+var (
+	// Prometheus:
+	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "qed_healthcheck_ops_total",
+		Help: "The total number of processed events",
+	})
+
+	// Crowley:
+	cOpsProcessed = metrics.NewCounter()
 )
 
 // HealthCheckResponse contains the response from HealthCheckHandler.
@@ -43,6 +58,12 @@ type HealthCheckResponse struct {
 // If everything is allright, the HTTP status is 200 and the body contains:
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	// Prometheus
+	opsProcessed.Inc()
+
+	// Crowley
+	cOpsProcessed.Inc(1)
+
 	result := HealthCheckResponse{
 		Version: 0,
 		Status:  "ok",
@@ -301,6 +322,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/events -> Add
 //	/proofs/membership -> Membership
 func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
+	metrics.Register("healthcheck_ops_total", cOpsProcessed)
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
