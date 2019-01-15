@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	v "github.com/spf13/viper"
 
@@ -43,9 +44,9 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 			conf.APIKey = ctx.apiKey
 			conf.NodeID = v.GetString("server.node-id")
 			conf.EnableProfiling = v.GetBool("server.profiling")
-			conf.PrivateKeyPath = v.GetString("server.key")
-			conf.SSLCertificate = v.GetString("server.tls.certificate")
-			conf.SSLCertificateKey = v.GetString("server.tls.certificate_key")
+			conf.PrivateKeyPath, _ = homedir.Expand(v.GetString("server.key"))
+			conf.SSLCertificate, _ = homedir.Expand(v.GetString("server.tls.certificate"))
+			conf.SSLCertificateKey, _ = homedir.Expand(v.GetString("server.tls.certificate_key"))
 			conf.HTTPAddr = v.GetString("server.addr.http")
 			conf.RaftAddr = v.GetString("server.addr.raft")
 			conf.MgmtAddr = v.GetString("server.addr.mgmt")
@@ -57,10 +58,11 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 
 			if conf.SSLCertificate != "" && conf.SSLCertificateKey != "" {
 				if _, err := os.Stat(conf.SSLCertificate); os.IsNotExist(err) {
-					log.Fatalf("Can't find certificate .crt file: %v", err)
+					log.Infof("Can't find certificate .crt file: %v", err)
 				} else if _, err := os.Stat(conf.SSLCertificateKey); os.IsNotExist(err) {
-					log.Fatalf("Can't find certificate .key file: %v", err)
+					log.Infof("Can't find certificate .key file: %v", err)
 				} else {
+					log.Info("EnabledTLS")
 					conf.EnableTLS = true
 				}
 			}
