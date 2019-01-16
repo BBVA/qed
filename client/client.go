@@ -94,20 +94,22 @@ func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, erro
 }
 
 func (c *HTTPClient) updateClusterLeader() {
-	info, _ := c.GetClusterInfo()
-	if info["isLeader"].(bool) {
-		c.conf.Cluster.Leader = info["httpEndpoint"].(string)
-	} else {
-		time.Sleep(100 * time.Millisecond)
-		c.conf.Cluster.Leader = c.conf.Cluster.Endpoints[rand.Int()%len(c.conf.Cluster.Endpoints)]
-		c.updateClusterLeader()
+	info, _ := c.getClusterInfo()
+	if isLeader, ok := info["isLeader"]; ok {
+		if isLeader.(bool) {
+			c.conf.Cluster.Leader = info["httpEndpoint"].(string)
+		} else {
+			time.Sleep(100 * time.Millisecond)
+			c.conf.Cluster.Leader = c.conf.Cluster.Endpoints[rand.Int()%len(c.conf.Cluster.Endpoints)]
+			c.updateClusterLeader()
+		}
 	}
 }
 
-func (c HTTPClient) GetClusterInfo() (map[string]interface{}, error) {
+func (c HTTPClient) getClusterInfo() (map[string]interface{}, error) {
 	info := make(map[string]interface{})
 
-	req, err := http.NewRequest("GET", c.conf.Cluster.Leader+"/info", bytes.NewBuffer([]byte{}))
+	req, err := http.NewRequest("GET", c.conf.Cluster.Leader+"/info/shards", bytes.NewBuffer([]byte{}))
 	if err != nil {
 		return info, err
 	}

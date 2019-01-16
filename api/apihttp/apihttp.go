@@ -323,7 +323,7 @@ func NewApiHttp(httpEndpoint string, balloon raftwal.RaftBalloonApi) *http.Serve
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
-	api.HandleFunc("/info", AuthHandlerMiddleware(InfoHandle(httpEndpoint, balloon)))
+	api.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(httpEndpoint, balloon)))
 
 	return api
 }
@@ -363,7 +363,7 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 	}
 }
 
-func InfoHandle(httpEndpoint string, balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func InfoShardsHandler(httpEndpoint string, balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			w.Header().Set("Allow", "GET")
@@ -371,8 +371,16 @@ func InfoHandle(httpEndpoint string, balloon raftwal.RaftBalloonApi) http.Handle
 			return
 		}
 
+		var scheme string
+		if r.TLS != nil {
+			scheme = "https://"
+		} else {
+			scheme = "http://"
+		}
+
 		info := balloon.Info()
-		info["httpEndpoint"] = "http://" + httpEndpoint
+		info["httpEndpoint"] = scheme + httpEndpoint
+
 		out, err := json.Marshal(info)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
