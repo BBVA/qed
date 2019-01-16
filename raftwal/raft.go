@@ -422,5 +422,11 @@ func (b *RaftBalloon) Join(nodeID, addr string) error {
 func (b *RaftBalloon) Info() map[string]interface{} {
 	m := make(map[string]interface{})
 	m["isLeader"] = b.IsLeader()
+	var nodes []string
+	raftNodes, _ := b.Nodes()
+	for _, node := range raftNodes {
+		nodes = append(nodes, string(node.Address))
+	}
+	m["nodes"] = nodes
 	return m
 }
