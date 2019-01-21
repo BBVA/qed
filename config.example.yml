@@ -21,6 +21,7 @@
 
 log: error # Choose between log levels: silent, error, info and debug.
 api_key: "my-key" # The application namespace used in all the nodes. 
+path: "/var/tmp/qed/" # Set root path used for dbpath, raftpath, private key and certificates.
 
 ###############################################################################
 # Server Configuration (where it collect and processes events).
@@ -28,22 +29,22 @@ api_key: "my-key" # The application namespace used in all the nodes.
 server:
   node_id: "hostname"  # Unique name for node. If not set, fallback to hostname.
   profiling: false  # Allow a pprof url (localhost:6060) for profiling purposes.
-  key: "~/.ssh/id_ed25519"  # Path to the ed25519 key file.
+  key: "/var/tmp/qed/id_ed25519"  # Path to the ed25519 key file.
   tls:
-    certificate: "~/.ssh/server.crt" # Server certificate file
-    certificate_key: "~/.ssh/server.key" # Server certificate key file
+    certificate: "/var/tmp/qed/server.crt" # Server certificate file
+    certificate_key: "/var/tmp/qed/server.key" # Server certificate key file
   addr:
     http: ":8080"  # Endpoint for REST requests on (host:port).
     mgmt: ":8090"  # Management endpoint bind address (host:port).
     raft: ":9000"  # Raft bind address (host:port).
-    join:  # Raft: list of nodes ([host]:port), through which a cluster can be joined.
+    raft_join:  # Raft: list of nodes ([host]:port), through which a cluster can be joined.
      - "127.0.0.1:9000"
-    gossip: "9100"  # Gossip: management endpoint bind address (host:port).
+    gossip: ":9100"  # Gossip: management endpoint bind address (host:port).
     gossip_join:  # Gossip: list of nodes ([host]:port), through which a cluster can be joined.
       - "127.0.0.0.1:9100"
-  path:
-    db: "/var/tmp/qed/data"  # Set default storage path.
-    wal: "/var/tmp/qed/raft"  # Set raft storage path.
+    path:
+      db: "/var/tmp/qed/db"  # Set default storage path.
+      wal: "/var/tmp/qed/wal"  # Set raft storage path.
 
 
 ###############################################################################
