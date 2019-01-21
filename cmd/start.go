@@ -108,9 +108,9 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	v.BindPFlag("server.tls.certificate_key", f.Lookup("certificate-key"))
 
 	v.BindPFlag("server.addr.http", f.Lookup("http-addr"))
-	v.BindPFlag("server.addr.raft", f.Lookup("raft-addr"))
 	v.BindPFlag("server.addr.mgmt", f.Lookup("mgmt-addr"))
-	v.BindPFlag("server.addr.join", f.Lookup("join-addr"))
+	v.BindPFlag("server.addr.raft", f.Lookup("raft-addr"))
+	v.BindPFlag("server.addr.raft_join", f.Lookup("join-addr"))
 	v.BindPFlag("server.addr.gossip", f.Lookup("gossip-addr"))
 	v.BindPFlag("server.addr.gossip_join", f.Lookup("gossip-join-addr"))
 

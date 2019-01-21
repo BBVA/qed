@@ -80,6 +80,7 @@ func DefaultConfig() *Config {
 	currentDir := getCurrentDir()
 
 	return &Config{
+		APIKey:            "",
 		NodeID:            hostname,
 		HTTPAddr:          "127.0.0.1:8080",
 		RaftAddr:          "127.0.0.1:9000",
