@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"fmt"
+	// "math/rand"
 	"os/exec"
 	"strings"
 	"testing"
@@ -107,7 +108,8 @@ func TestCluster(t *testing.T) {
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 	before2, after2 := setupServer(2, "", false, t)
-	serversHttpAddr := "http://127.0.0.1:8080,http://127.0.0.1:8081,http://127.0.0.1:8082"
+
+	serversHttpAddr := "http://127.0.0.1:8080"
 
 	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after1, after2))
 
@@ -178,8 +180,10 @@ func TestCluster(t *testing.T) {
 
 		let("Kill server 0", func(t *testing.T) {
 			after0(t)
-			serversHttpAddr = "http://127.0.0.1:8081,http://127.0.0.1:8082"
-			time.Sleep(2 * time.Second)
+			serversHttpAddr = "http://127.0.0.1:8081"
+
+			// Need time to propagate changes via RAFT.
+			time.Sleep(10 * time.Second)
 		})
 
 		let("Add second event", func(t *testing.T) {
