@@ -31,9 +31,9 @@ func TestIncrementalConsistency(t *testing.T) {
 	before, after := setupServer(0, "", false, t)
 	scenario, let := scope.Scope(t, before, after)
 
-	client := getClient(0)
-
 	scenario("Add multiple events and verify consistency between two of them", func() {
+
+		client := getClient(0)
 
 		events := make([]string, 10)
 		snapshots := make([]*protocol.Snapshot, 10)

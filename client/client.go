@@ -125,12 +125,41 @@ func (c HTTPClient) getClusterInfo() (map[string]interface{}, error) {
 	if err != nil {
 		return info, err
 	}
+
 	err = json.Unmarshal(body, &info)
 	if err != nil {
 		return info, err
 	}
 
 	return info, err
+}
+
+func (c *HTTPClient) updateConf(info map[string]interface{}) {
+
+	clusterMeta := info["meta"].(map[string]interface{})
+	leaderID := info["leaderID"].(string)
+	scheme := info["URIScheme"].(string)
+
+	var leaderAddr string
+	var endpoints []string
+
+	leaderMeta := clusterMeta[leaderID].(map[string]interface{})
+	for k, addr := range leaderMeta {
+		if k == "HTTPAddr" {
+			leaderAddr = scheme + addr.(string)
+		}
+	}
+	c.conf.Cluster.Leader = leaderAddr
+
+	for _, nodeMeta := range clusterMeta {
+		for k, address := range nodeMeta.(map[string]interface{}) {
+			if k == "HTTPAddr" {
+				url := scheme + address.(string)
+				endpoints = append(endpoints, url)
+			}
+		}
+	}
+	c.conf.Cluster.Endpoints = endpoints
 }
 
 func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {

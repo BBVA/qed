@@ -76,13 +76,14 @@ func TestAgents(t *testing.T) {
 		merge(aServer, aPublisher, aAuditor, aMonitor, aStore),
 	)
 
-	client := getClient(0)
 	event := rand.RandomString(10)
 
 	scenario("Add one event and check that it has been published without alerts", func() {
 		var snapshot *protocol.Snapshot
 		var ss *protocol.SignedSnapshot
 		var err error
+
+		client := getClient(0)
 
 		let("Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
@@ -112,6 +113,8 @@ func TestAgents(t *testing.T) {
 
 	scenario("Add 1st event. Tamper it. Check auditor alerts correctly", func() {
 		var err error
+
+		client := getClient(0)
 
 		let("Add 1st event", func(t *testing.T) {
 			_, err = client.Add(event)
@@ -152,6 +155,8 @@ func TestAgents(t *testing.T) {
 		hasher := hashing.NewSha256Hasher()
 		tampered := rand.RandomString(10)
 		event2 := rand.RandomString(10)
+
+		client := getClient(0)
 
 		let("Add 1st event", func(t *testing.T) {
 			_, err := client.Add(event)

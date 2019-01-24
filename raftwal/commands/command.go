@@ -28,11 +28,17 @@ type CommandType uint8
 
 const (
 	AddEventCommandType       CommandType = 0 // Commands which modify the database.
-	MetadataDeleteCommandType CommandType = 1
+	MetadataSetCommandType    CommandType = 1
+	MetadataDeleteCommandType CommandType = 2
 )
 
 type AddEventCommand struct {
 	Event []byte
+}
+
+type MetadataSetCommand struct {
+	Id   string
+	Data map[string]string
 }
 
 type MetadataDeleteCommand struct {

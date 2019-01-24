@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/bbva/qed/balloon/visitor"
@@ -42,6 +43,9 @@ func init() {
 func setup() func() {
 	mux = http.NewServeMux()
 	server = httptest.NewServer(mux)
+
+	mux.HandleFunc("/info/shards", infoHandler(server.URL))
+
 	client = NewHTTPClient(Config{
 		Cluster:  QEDCluster{Endpoints: []string{server.URL}, Leader: server.URL},
 		APIKey:   "my-awesome-api-key",
@@ -191,5 +195,25 @@ func serverErrorHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func infoHandler(serverURL string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		var md = make(map[string]interface{})
+		md["nodeID"] = "node01"
+		md["leaderID"] = "node01"
+		md["URIScheme"] = "http://"
+		md["meta"] = map[string]map[string]string{
+			"node01": map[string]string{
+				"HTTPAddr": strings.Trim(serverURL, "http://"),
+			},
+		}
+
+		out, _ := json.Marshal(md)
+		_, _ = w.Write(out)
 	}
 }
