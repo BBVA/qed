@@ -134,7 +134,10 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	if len(conf.GossipJoinAddr) > 0 {
-		server.agent.Join(conf.GossipJoinAddr)
+		_, err = server.agent.Join(conf.GossipJoinAddr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// TODO: add queue size to config
@@ -182,11 +185,16 @@ func NewServer(conf *Config) (*Server, error) {
 	return server, nil
 }
 
-func join(joinAddr, raftAddr, nodeID string) error {
-	b, err := json.Marshal(map[string]string{"addr": raftAddr, "id": nodeID})
+func join(joinAddr, raftAddr, nodeID string, metadata map[string]string) error {
+	body := make(map[string]interface{})
+	body["addr"] = raftAddr
+	body["id"] = nodeID
+	body["metadata"] = metadata
+	b, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
+
 	resp, err := http.Post(fmt.Sprintf("http://%s/join", joinAddr), "application-type/json", bytes.NewReader(b))
 	if err != nil {
 		return err
@@ -202,7 +210,10 @@ func (s *Server) Start() error {
 	metrics.Qed_instances_count.Inc()
 	log.Infof("Starting QED server %s\n", s.conf.NodeID)
 
-	err := s.raftBalloon.Open(s.bootstrap)
+	metadata := map[string]string{}
+	metadata["HTTPAddr"] = s.conf.HTTPAddr
+
+	err := s.raftBalloon.Open(s.bootstrap, metadata)
 	if err != nil {
 		return err
 	}
@@ -265,7 +276,7 @@ func (s *Server) Start() error {
 	if !s.bootstrap {
 		for _, addr := range s.conf.RaftJoinAddr {
 			log.Debug("	* Joining existent cluster QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
-			if err := join(addr, s.conf.RaftAddr, s.conf.NodeID); err != nil {
+			if err := join(addr, s.conf.RaftAddr, s.conf.NodeID, metadata); err != nil {
 				log.Fatalf("failed to join node at %s: %s", addr, err.Error())
 			}
 		}

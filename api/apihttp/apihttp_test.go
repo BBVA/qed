@@ -47,7 +47,7 @@ func (b fakeRaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	return &balloon.Snapshot{hashing.Digest{0x02}, hashing.Digest{0x00}, hashing.Digest{0x01}, 0}, nil
 }
 
-func (b fakeRaftBalloon) Join(nodeID, addr string) error {
+func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) error {
 	return nil
 }
 
@@ -389,7 +389,7 @@ func BenchmarkApiAdd(b *testing.B) {
 	r, clean := newNodeBench(b, 1)
 	defer clean()
 
-	err := r.Open(true)
+	err := r.Open(true, map[string]string{"foo": "bar"})
 	assert.NoError(b, err)
 
 	handler := Add(r)

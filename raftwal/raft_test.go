@@ -72,7 +72,7 @@ func Test_Raft_IsLeader(t *testing.T) {
 	r, clean := newNode(t, 1)
 	defer clean()
 
-	err := r.Open(true)
+	err := r.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	defer func() {
@@ -87,12 +87,12 @@ func Test_Raft_IsLeader(t *testing.T) {
 
 }
 
-func Test_Raft_OpenStoreCloseSingleNode(t *testing.T) {
+func Test_Raft_OpenStore_CloseSingleNode(t *testing.T) {
 
 	r, clean := newNode(t, 2)
 	defer clean()
 
-	err := r.Open(true)
+	err := r.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	_, err = r.WaitForLeader(10 * time.Second)
@@ -101,12 +101,12 @@ func Test_Raft_OpenStoreCloseSingleNode(t *testing.T) {
 	err = r.Close(true)
 	require.NoError(t, err)
 
-	err = r.Open(true)
+	err = r.Open(true, map[string]string{"foo": "bar"})
 	require.Equal(t, err, ErrBalloonInvalidState, err, "incorrect error returned on re-open attempt")
 
 }
 
-func Test_Raft_MultiNodeJoin(t *testing.T) {
+func Test_Raft_MultiNode_Join(t *testing.T) {
 
 	log.SetLogger("Test_Raft_MultiNodeJoin", log.SILENT)
 
@@ -117,7 +117,7 @@ func Test_Raft_MultiNodeJoin(t *testing.T) {
 		clean0()
 	}()
 
-	err := r0.Open(true)
+	err := r0.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	_, err = r0.WaitForLeader(10 * time.Second)
@@ -130,15 +130,15 @@ func Test_Raft_MultiNodeJoin(t *testing.T) {
 		clean1()
 	}()
 
-	err = r1.Open(false)
+	err = r1.Open(false, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
-	err = r0.Join("1", string(r1.raft.transport.LocalAddr()))
+	err = r0.Join("1", string(r1.raft.transport.LocalAddr()), map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 }
 
-func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
+func Test_Raft_MultiNode_JoinRemove(t *testing.T) {
 
 	r0, clean0 := newNode(t, 5)
 	defer func() {
@@ -147,7 +147,7 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 		clean0()
 	}()
 
-	err := r0.Open(true)
+	err := r0.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	_, err = r0.WaitForLeader(10 * time.Second)
@@ -160,10 +160,10 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 		clean1()
 	}()
 
-	err = r1.Open(false)
+	err = r1.Open(false, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
-	err = r0.Join("6", string(r1.raft.transport.LocalAddr()))
+	err = r0.Join("6", string(r1.raft.transport.LocalAddr()), map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	_, err = r0.WaitForLeader(10 * time.Second)
@@ -200,10 +200,10 @@ func Test_Raft_MultiNodeJoinRemove(t *testing.T) {
 
 }
 
-func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
+func Test_Raft_SingleNode_SnapshotOnDisk(t *testing.T) {
 	r0, clean0 := newNode(t, 7)
 
-	err := r0.Open(true)
+	err := r0.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	_, err = r0.WaitForLeader(10 * time.Second)
@@ -245,7 +245,7 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 		clean8()
 	}()
 
-	err = r8.Open(true)
+	err = r8.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	_, err = r8.WaitForLeader(10 * time.Second)
@@ -258,10 +258,10 @@ func Test_Raft_SingleNodeSnapshotOnDisk(t *testing.T) {
 
 }
 
-func Test_Raft_SingleNodeSnapshotConsistency(t *testing.T) {
+func Test_Raft_SingleNode_SnapshotConsistency(t *testing.T) {
 	r0, clean0 := newNode(t, 8)
 
-	err := r0.Open(true)
+	err := r0.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	_, err = r0.WaitForLeader(10 * time.Second)
@@ -318,7 +318,7 @@ func Test_Raft_SingleNodeSnapshotConsistency(t *testing.T) {
 		clean9()
 	}()
 
-	err = r9.Open(true)
+	err = r9.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(t, err)
 
 	_, err = r9.WaitForLeader(10 * time.Second)
@@ -329,6 +329,103 @@ func Test_Raft_SingleNodeSnapshotConsistency(t *testing.T) {
 
 	require.Equal(t, expectedBalloonVersion, r9.fsm.balloon.Version(), "Error in state recovery from snapshot")
 
+}
+
+func Test_Raft_MultiNode_WithMetadata(t *testing.T) {
+
+	log.SetLogger("Test_Raft_MultiNodeMetadata", log.SILENT)
+
+	r0, clean0 := newNode(t, 0)
+	defer func() {
+		err := r0.Close(true)
+		require.NoError(t, err)
+		clean0()
+	}()
+
+	err := r0.Open(true, map[string]string{"nodeID": "0"})
+	require.NoError(t, err)
+
+	_, err = r0.WaitForLeader(10 * time.Second)
+	require.NoError(t, err)
+
+	r1, clean1 := newNode(t, 1)
+	defer func() {
+		err := r1.Close(true)
+		require.NoError(t, err)
+		clean1()
+	}()
+
+	empty_meta := map[string]string{}
+	err = r1.Open(false, empty_meta)
+	require.NoError(t, err)
+
+	err = r0.Join("1", string(r1.raft.transport.LocalAddr()), map[string]string{"nodeID": "1"})
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+
+	require.Equal(t, r0.Info()["meta"], r1.Info()["meta"], "Both nodes must have the same metadata.")
+}
+
+func Test_Raft_MultiNode_Remove_WithMetadata(t *testing.T) {
+
+	log.SetLogger("Test_Raft_MultiNodeMetadataRemove", log.SILENT)
+
+	// Node 0
+	r0, clean0 := newNode(t, 0)
+	defer func() {
+		err := r0.Close(true)
+		require.NoError(t, err)
+		clean0()
+	}()
+
+	err := r0.Open(true, map[string]string{"nodeID": "0"})
+	require.NoError(t, err)
+
+	_, err = r0.WaitForLeader(10 * time.Second)
+	require.NoError(t, err)
+
+	// Node 1
+	r1, clean1 := newNode(t, 1)
+
+	empty_meta := map[string]string{}
+	err = r1.Open(false, empty_meta)
+	require.NoError(t, err)
+
+	// Node 2
+	r2, clean2 := newNode(t, 2)
+	defer func() {
+		err := r2.Close(true)
+		require.NoError(t, err)
+		clean2()
+	}()
+
+	err = r2.Open(false, empty_meta)
+	require.NoError(t, err)
+
+	// Join
+	err = r0.Join("1", string(r1.raft.transport.LocalAddr()), map[string]string{"nodeID": "1"})
+	require.NoError(t, err)
+	err = r0.Join("2", string(r2.raft.transport.LocalAddr()), map[string]string{"nodeID": "2"})
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+
+	// Test
+	require.Equal(t, len(r0.Info()["meta"].(map[string]map[string]string)), 3, "Node 0 metadata should have info of 3 nodes.")
+
+	// Kill & remove Node 1
+	err = r1.Close(true)
+	require.NoError(t, err)
+	clean1()
+
+	err = r0.Remove(r1.ID())
+	require.NoError(t, err)
+	time.Sleep(1 * time.Second)
+
+	// Test
+	require.Equal(t, r0.Info()["meta"], r2.Info()["meta"], "All nodes must have the same metadata.")
+	require.Equal(t, len(r0.Info()["meta"].(map[string]map[string]string)), 2, "Node 0 metadata should have info of 2 nodes.")
 }
 
 type mockSnapshotSink struct {
@@ -380,7 +477,7 @@ func BenchmarkRaftAdd(b *testing.B) {
 	r, clean := newNodeBench(b, 1)
 	defer clean()
 
-	err := r.Open(true)
+	err := r.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(b, err)
 
 	b.ResetTimer()

@@ -56,7 +56,7 @@ type RaftBalloonApi interface {
 	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
 	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
-	Join(nodeID, addr string) error
+	Join(nodeID, addr string, metadata map[string]string) error
 	Info() map[string]interface{}
 }
 
@@ -133,7 +133,7 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, agentsQue
 
 // Open opens the Balloon. If no joinAddr is provided, then there are no existing peers,
 // then this node becomes the first node, and therefore, leader of the cluster.
-func (b *RaftBalloon) Open(bootstrap bool) error {
+func (b *RaftBalloon) Open(bootstrap bool, metadata map[string]string) error {
 	b.Lock()
 	defer b.Unlock()
 
@@ -173,8 +173,10 @@ func (b *RaftBalloon) Open(bootstrap bool) error {
 		return fmt.Errorf("new raft: %s", err)
 	}
 
+	// If master node...
 	if bootstrap {
 		log.Info("bootstrap needed")
+
 		b.raft.nodes = &raft.Configuration{
 			Servers: []raft.Server{
 				{
@@ -184,6 +186,12 @@ func (b *RaftBalloon) Open(bootstrap bool) error {
 			},
 		}
 		b.raft.api.BootstrapCluster(*b.raft.nodes)
+
+		// Metadata
+		if err := b.SetMetadata(b.id, metadata); err != nil {
+			return err
+		}
+
 	} else {
 		log.Info("no bootstrap needed")
 	}
@@ -377,7 +385,7 @@ func (b *RaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalP
 // Join joins a node, identified by id and located at addr, to this store.
 // The node must be ready to respond to Raft communications at that address.
 // This must be called from the Leader or it will fail.
-func (b *RaftBalloon) Join(nodeID, addr string) error {
+func (b *RaftBalloon) Join(nodeID, addr string, metadata map[string]string) error {
 
 	log.Infof("received join request for remote node %s at %s", nodeID, addr)
 
@@ -413,20 +421,37 @@ func (b *RaftBalloon) Join(nodeID, addr string) error {
 		return e.Error()
 	}
 
+	// Metadata
+	if err := b.SetMetadata(nodeID, metadata); err != nil {
+		return err
+	}
+
 	log.Infof("node %s at %s joined successfully", nodeID, addr)
 	return nil
 }
 
+// SetMetadata adds the metadata md to any existing metadata for
+// this node.
+func (b *RaftBalloon) SetMetadata(nodeInvolved string, md map[string]string) error {
+	cmd := b.fsm.setMetadata(nodeInvolved, md)
+	_, err := b.WaitForLeader(5 * time.Second)
+	if err != nil {
+		return err
+	}
+
+	resp, err := b.raftApply(commands.MetadataSetCommandType, cmd)
+	if err != nil {
+		return err
+	}
+
+	return resp.(*fsmGenericResponse).error
+}
+
 // TODO Improve info structure.
-// Info returns the Raft leader address.
 func (b *RaftBalloon) Info() map[string]interface{} {
 	m := make(map[string]interface{})
-	m["isLeader"] = b.IsLeader()
-	var nodes []string
-	raftNodes, _ := b.Nodes()
-	for _, node := range raftNodes {
-		nodes = append(nodes, string(node.Address))
-	}
-	m["nodes"] = nodes
+	m["nodeID"] = b.ID()
+	m["leaderID"], _ = b.LeaderID()
+	m["meta"] = b.fsm.meta
 	return m
 }

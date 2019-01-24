@@ -18,6 +18,8 @@ package raftwal
 
 import (
 	"bytes"
+	// "encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
@@ -50,6 +52,9 @@ type BalloonFSM struct {
 	state   *fsmState
 
 	agentsQueue chan *protocol.Snapshot
+
+	metaMu sync.RWMutex
+	meta   map[string]map[string]string
 
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
@@ -87,6 +92,7 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher, ag
 		balloon:     b,
 		state:       state,
 		agentsQueue: agentsQueue,
+		meta:        make(map[string]map[string]string),
 	}, nil
 }
 
@@ -139,6 +145,36 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 			return fsm.applyAdd(cmd.Event, newState)
 		}
 		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
+
+	case commands.MetadataSetCommandType:
+		var cmd commands.MetadataSetCommand
+		if err := commands.Decode(buf[1:], &cmd); err != nil {
+			return &fsmGenericResponse{error: err}
+		}
+
+		fsm.metaMu.Lock()
+		defer fsm.metaMu.Unlock()
+		if _, ok := fsm.meta[cmd.Id]; !ok {
+			fsm.meta[cmd.Id] = make(map[string]string)
+		}
+		for k, v := range cmd.Data {
+			fsm.meta[cmd.Id][k] = v
+		}
+
+		return &fsmGenericResponse{}
+
+	case commands.MetadataDeleteCommandType:
+		var cmd commands.MetadataDeleteCommand
+		if err := commands.Decode(buf[1:], &cmd); err != nil {
+			return &fsmGenericResponse{error: err}
+		}
+
+		fsm.metaMu.Lock()
+		defer fsm.metaMu.Unlock()
+		delete(fsm.meta, cmd.Id)
+
+		return &fsmGenericResponse{}
+
 	default:
 		return &fsmGenericResponse{error: fmt.Errorf("unknown command: %v", cmdType)}
 
@@ -151,12 +187,21 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 	fsm.restoreMu.Lock()
 	defer fsm.restoreMu.Unlock()
+
 	version, err := fsm.store.GetLastVersion()
 	if err != nil {
 		return nil, err
 	}
 	log.Debugf("Generating snapshot until version: %d (balloon version %d)", version, fsm.balloon.Version())
-	return &fsmSnapshot{lastVersion: version, store: fsm.store}, nil
+
+	// Copy the node metadata.
+	meta, err := json.Marshal(fsm.meta)
+	if err != nil {
+		log.Debugf("failed to encode meta for snapshot: %s", err.Error())
+		return nil, err
+	}
+
+	return &fsmSnapshot{lastVersion: version, store: fsm.store, meta: meta}, nil
 }
 
 // Restore restores the node to a previous state.
@@ -170,6 +215,26 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	if err = fsm.store.Load(rc); err != nil {
 		return err
 	}
+
+	// TODO: Restore metadata??
+
+	// log.Debug("Restoring Metadata...")
+	// var sz uint64
+
+	// // Get size of meta, read those bytes, and set to meta.
+	// if err := binary.Read(rc, binary.LittleEndian, &sz); err != nil {
+	// 	return err
+	// }
+	// meta := make([]byte, sz)
+	// if _, err := io.ReadFull(rc, meta); err != nil {
+	// 	return err
+	// }
+	// err = func() error {
+	// 	fsm.metaMu.Lock()
+	// 	defer fsm.metaMu.Unlock()
+	// 	return json.Unmarshal(meta, &fsm.meta)
+	// }()
+
 	return fsm.balloon.RefreshVersion()
 }
 
@@ -222,4 +287,45 @@ func encodeMsgPack(in interface{}) (*bytes.Buffer, error) {
 	enc := codec.NewEncoder(buf, &hd)
 	err := enc.Encode(in)
 	return buf, err
+}
+
+// Metadata returns the value for a given key, for a given node ID.
+func (fsm *BalloonFSM) Metadata(id, key string) string {
+	fsm.metaMu.RLock()
+	defer fsm.metaMu.RUnlock()
+
+	if _, ok := fsm.meta[id]; !ok {
+		return ""
+	}
+	v, ok := fsm.meta[id][key]
+	if ok {
+		return v
+	}
+	return ""
+}
+
+// setMetadata adds the metadata md to any existing metadata for
+// the given node ID.
+func (fsm *BalloonFSM) setMetadata(id string, md map[string]string) *commands.MetadataSetCommand {
+	// Check local data first.
+	if func() bool {
+		fsm.metaMu.RLock()
+		defer fsm.metaMu.RUnlock()
+		if _, ok := fsm.meta[id]; ok {
+			for k, v := range md {
+				if fsm.meta[id][k] != v {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}() {
+		// Local data is same as data being pushed in,
+		// nothing to do.
+		return nil
+	}
+	cmd := &commands.MetadataSetCommand{Id: id, Data: md}
+
+	return cmd
 }
