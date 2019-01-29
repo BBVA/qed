@@ -34,6 +34,11 @@ import (
 )
 
 var (
+	funcDuration = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "example_function_duration_seconds",
+		Help: "Duration of the last call of an example function.",
+	})
+
 	requestDuration = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "example_request_duration_seconds",
 		Help:    "Histogram for the runtime of a simple example function.",
@@ -67,6 +72,9 @@ type HealthCheckResponse struct {
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	timer := prometheus.NewTimer(requestDuration)
 	defer timer.ObserveDuration()
+
+	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(funcDuration.Set))
+	defer timer2.ObserveDuration()
 
 	// Do something here that takes time.
 	time.Sleep(time.Duration(rand.NormFloat64()*10000+50000) * time.Microsecond)
