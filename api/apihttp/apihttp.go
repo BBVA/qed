@@ -20,6 +20,7 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -33,6 +34,12 @@ import (
 )
 
 var (
+	requestDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "example_request_duration_seconds",
+		Help:    "Histogram for the runtime of a simple example function.",
+		Buckets: prometheus.LinearBuckets(0.01, 0.01, 10),
+	})
+
 	// Prometheus:
 	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "qed_healthcheck_ops_total",
@@ -58,6 +65,12 @@ type HealthCheckResponse struct {
 // If everything is allright, the HTTP status is 200 and the body contains:
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	timer := prometheus.NewTimer(requestDuration)
+	defer timer.ObserveDuration()
+
+	// Do something here that takes time.
+	time.Sleep(time.Duration(rand.NormFloat64()*10000+50000) * time.Microsecond)
+
 	// Prometheus
 	opsProcessed.Inc()
 
