@@ -25,32 +25,15 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
+	qedMetrics "github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rcrowley/go-metrics"
 )
 
 var (
-	funcDuration = promauto.NewGauge(prometheus.GaugeOpts{
-		Name: "example_function_duration_seconds",
-		Help: "Duration of the last call of an example function.",
-	})
-
-	requestDuration = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "example_request_duration_seconds",
-		Help:    "Histogram for the runtime of a simple example function.",
-		Buckets: prometheus.LinearBuckets(0.01, 0.01, 10),
-	})
-
-	// Prometheus:
-	opsProcessed = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "qed_healthcheck_ops_total",
-		Help: "The total number of processed events",
-	})
-
 	// Crowley:
 	cOpsProcessed = metrics.NewCounter()
 )
@@ -70,17 +53,17 @@ type HealthCheckResponse struct {
 // If everything is allright, the HTTP status is 200 and the body contains:
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	timer := prometheus.NewTimer(requestDuration)
+	timer := prometheus.NewTimer(qedMetrics.RequestDuration)
 	defer timer.ObserveDuration()
 
-	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(funcDuration.Set))
+	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(qedMetrics.FuncDuration.Set))
 	defer timer2.ObserveDuration()
 
 	// Do something here that takes time.
 	time.Sleep(time.Duration(rand.NormFloat64()*10000+50000) * time.Microsecond)
 
 	// Prometheus
-	opsProcessed.Inc()
+	qedMetrics.OpsProcessed.Inc()
 
 	// Crowley
 	cOpsProcessed.Inc(1)
@@ -102,9 +85,9 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	// In the future we could report back on the status of our DB, or our cache
 	// (e.g. Redis) by performing a simple PING, and include them in the response.
 	out := new(bytes.Buffer)
-	json.Compact(out, resultJson)
+	_ = json.Compact(out, resultJson)
 
-	w.Write(out.Bytes())
+	_, _ = w.Write(out.Bytes())
 }
 
 // Add posts an event into the system:

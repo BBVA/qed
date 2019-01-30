@@ -19,6 +19,8 @@ package metrics
 import (
 	"expvar"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
@@ -28,6 +30,11 @@ var (
 	History *expvar.Map
 	// BalloonStats has a Map of all the stats relative to Balloon
 	Balloon *expvar.Map
+
+	// Prometheus
+	FuncDuration    prometheus.Gauge
+	RequestDuration prometheus.Histogram
+	OpsProcessed    prometheus.Counter
 )
 
 // Implement expVar.Var interface
@@ -41,4 +48,21 @@ func init() {
 	Hyper = expvar.NewMap("hyper_stats")
 	History = expvar.NewMap("history_stats")
 	Balloon = expvar.NewMap("balloon_stats")
+
+	FuncDuration = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "example_function_duration_seconds",
+		Help: "Duration of the last call of an example function.",
+	})
+
+	RequestDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "example_request_duration_seconds",
+		Help:    "Histogram for the runtime of a simple example function.",
+		Buckets: prometheus.LinearBuckets(0.01, 0.01, 10),
+	})
+
+	OpsProcessed = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "qed_healthcheck_ops_total",
+		Help: "The total number of processed events",
+	})
+
 }
