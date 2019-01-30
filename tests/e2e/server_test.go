@@ -27,6 +27,7 @@ import (
 
 const (
 	QEDProfilingURL = "http://localhost:6060/debug/pprof"
+	QEDMetricsURL   = "http://localhost:9990/metrics"
 )
 
 // FIXME: This function should also include testing for the other servers, not
@@ -68,4 +69,22 @@ func TestStart(t *testing.T) {
 			assert.Error(t, err, "Subprocess must exit with non-zero status")
 		})
 	})
+
+	scenario("Test availability of metrics server", func() {
+		let("Query metrics endpoint", func(t *testing.T) {
+			cmd := exec.Command("curl",
+				"--fail",
+				"-sS",
+				"-XGET",
+				"-H", fmt.Sprintf("Api-Key:%s", APIKey),
+				"-H", "Content-type: application/json",
+				QEDMetricsURL,
+			)
+
+			_, err := cmd.CombinedOutput()
+			assert.NoError(t, err, "Subprocess must not exit with non-zero status")
+		})
+
+	})
+
 }
