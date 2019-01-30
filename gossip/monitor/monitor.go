@@ -70,9 +70,9 @@ func NewMonitor(conf Config) (*Monitor, error) {
 
 	monitor := Monitor{
 		client: client.NewHTTPClient(client.Config{
-			Cluster:  client.QEDCluster{Endpoints: conf.QEDUrls, Leader: conf.QEDUrls[0]},
-			APIKey:   conf.APIKey,
-			Insecure: false,
+			Endpoints: conf.QedUrls,
+			APIKey:    conf.APIKey,
+			Insecure:  false,
 		}),
 		conf:   conf,
 		taskCh: make(chan QueryTask, 100),

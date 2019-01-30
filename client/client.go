@@ -32,6 +32,7 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 )
 
@@ -65,11 +66,14 @@ func NewHTTPClient(conf Config) *HTTPClient {
 		},
 	}
 
-	if len(conf.Cluster.Endpoints) == 1 {
-		conf.Cluster.Leader = conf.Cluster.Endpoints[0]
-	} else {
-		client.updateClusterLeader()
+	conf.ClusterLeader = conf.Endpoints[0]
+
+	info, err := client.getClusterInfo()
+	if err != nil {
+		log.Errorf("Failed to get raft cluster info: %v", err)
+		return nil
 	}
+	client.updateConf(info)
 
 	return client
 }
@@ -93,23 +97,10 @@ func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, erro
 	}
 }
 
-func (c *HTTPClient) updateClusterLeader() {
-	info, _ := c.getClusterInfo()
-	if isLeader, ok := info["isLeader"]; ok {
-		if isLeader.(bool) {
-			c.conf.Cluster.Leader = info["httpEndpoint"].(string)
-		} else {
-			time.Sleep(100 * time.Millisecond)
-			c.conf.Cluster.Leader = c.conf.Cluster.Endpoints[rand.Int()%len(c.conf.Cluster.Endpoints)]
-			c.updateClusterLeader()
-		}
-	}
-}
-
 func (c HTTPClient) getClusterInfo() (map[string]interface{}, error) {
 	info := make(map[string]interface{})
 
-	req, err := http.NewRequest("GET", c.conf.Cluster.Leader+"/info/shards", bytes.NewBuffer([]byte{}))
+	req, err := http.NewRequest("GET", c.conf.ClusterLeader+"/info/shards", bytes.NewBuffer([]byte{}))
 	if err != nil {
 		return info, err
 	}
@@ -149,7 +140,7 @@ func (c *HTTPClient) updateConf(info map[string]interface{}) {
 			leaderAddr = scheme + addr.(string)
 		}
 	}
-	c.conf.Cluster.Leader = leaderAddr
+	c.conf.ClusterLeader = leaderAddr
 
 	for _, nodeMeta := range clusterMeta {
 		for k, address := range nodeMeta.(map[string]interface{}) {
@@ -159,11 +150,11 @@ func (c *HTTPClient) updateConf(info map[string]interface{}) {
 			}
 		}
 	}
-	c.conf.Cluster.Endpoints = endpoints
+	c.conf.Endpoints = endpoints
 }
 
 func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
-	url, err := url.Parse(c.conf.Cluster.Leader + path)
+	url, err := url.Parse(c.conf.ClusterLeader + path)
 	if err != nil {
 		panic(err)
 	}
