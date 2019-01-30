@@ -206,6 +206,8 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 		conf.DBPath = path + "data"
 		conf.RaftPath = path + "raft"
 		conf.PrivateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
+		conf.SSLCertificate = fmt.Sprintf("%s/.ssh/server.crt", usr.HomeDir)
+		conf.SSLCertificateKey = fmt.Sprintf("%s/.ssh/server.key", usr.HomeDir)
 		conf.EnableProfiling = true
 		conf.EnableTampering = true
 		conf.EnableTLS = tls
