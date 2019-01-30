@@ -17,8 +17,12 @@
 package client
 
 type Config struct {
-	// Cluster [host:port,host:port,...] to consult.
-	Cluster QEDCluster
+	// Endpoint [host:port] to operate.
+	// Must be the QED cluster leader.
+	ClusterLeader string
+
+	// Endpoints [host:port,host:port,...] to ask for QED cluster-topology.
+	Endpoints []string
 
 	// ApiKey to query the server endpoint.
 	APIKey string
@@ -36,14 +40,9 @@ type Config struct {
 	HandshakeTimeoutSeconds int
 }
 
-type QEDCluster struct {
-	Endpoints []string
-	Leader    string
-}
-
 func DefaultConfig() *Config {
 	return &Config{
-		Cluster:                 QEDCluster{[]string{"127.0.0.1:8800"}, ""},
+		Endpoints:               []string{"127.0.0.1:8800"},
 		APIKey:                  "my-key",
 		Insecure:                true,
 		TimeoutSeconds:          10,

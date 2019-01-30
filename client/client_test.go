@@ -47,9 +47,9 @@ func setup() func() {
 	mux.HandleFunc("/info/shards", infoHandler(server.URL))
 
 	client = NewHTTPClient(Config{
-		Cluster:  QEDCluster{Endpoints: []string{server.URL}, Leader: server.URL},
-		APIKey:   "my-awesome-api-key",
-		Insecure: false,
+		Endpoints: []string{server.URL},
+		APIKey:    "my-awesome-api-key",
+		Insecure:  false,
 	})
 	return func() {
 		server.Close()
