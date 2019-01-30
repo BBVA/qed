@@ -68,8 +68,8 @@ func NewAuditor(conf Config) (*Auditor, error) {
 	metrics.Qed_auditor_instances_count.Inc()
 	auditor := Auditor{
 		qed: client.NewHTTPClient(client.Config{
-			Cluster:  client.QEDCluster{Endpoints: conf.QEDUrls, Leader: conf.QEDUrls[0]},
-			APIKey:    conf.APIKey,
+			Endpoints: conf.QEDUrls,
+			APIKey:   conf.APIKey,
 			Insecure: false,
 		}),
 		conf:   conf,

@@ -259,11 +259,8 @@ func endPoint(id int) string {
 
 func getClient(id int) *client.HTTPClient {
 	return client.NewHTTPClient(client.Config{
-		Cluster:  client.QEDCluster{
-			Endpoints: []string{endPoint(id)},
-			Leader: endPoint(id),
-		},
-		APIKey:   APIKey,
-		Insecure: false,
+		Endpoints: []string{endPoint(id)},
+		APIKey:    APIKey,
+		Insecure:  false,
 	})
 }
