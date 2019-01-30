@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/api/mgmthttp"
 	"github.com/bbva/qed/api/tampering"
 	"github.com/bbva/qed/gossip"
@@ -46,7 +47,6 @@ import (
 	"github.com/bbva/qed/util"
 	metricsprom "github.com/deathowl/go-metrics-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -55,15 +55,17 @@ type Server struct {
 	conf      *Config
 	bootstrap bool // Set bootstrap to true when bringing up the first node as a master
 
-	httpServer      *http.Server
-	mgmtServer      *http.Server
-	raftBalloon     *raftwal.RaftBalloon
-	tamperingServer *http.Server
-	profilingServer *http.Server
-	signer          sign.Signer
-	sender          *sender.Sender
-	agent           *gossip.Agent
-	agentsQueue     chan *protocol.Snapshot
+	httpServer            *http.Server
+	mgmtServer            *http.Server
+	raftBalloon           *raftwal.RaftBalloon
+	tamperingServer       *http.Server
+	profilingServer       *http.Server
+	metricsServer         *http.Server
+	signer                sign.Signer
+	sender                *sender.Sender
+	agent                 *gossip.Agent
+	agentsQueue           chan *protocol.Snapshot
+	metricsUpdaterControl chan bool
 }
 
 func serverInfo(conf *Config) http.HandlerFunc {
@@ -170,7 +172,9 @@ func NewServer(conf *Config) (*Server, error) {
 		server.profilingServer = newHTTPServer("localhost:6060", nil)
 	}
 	if conf.EnableMetrics {
-		http.Handle("/metrics", promhttp.Handler())
+		server.metricsUpdaterControl = make(chan bool)
+		metricsMux := metricshttp.NewMetricsHttp()
+		server.metricsServer = newHTTPServer("localhost:9990", metricsMux)
 	}
 
 	return server, nil
@@ -186,7 +190,7 @@ func join(joinAddr, raftAddr, nodeID string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	io.Copy(ioutil.Discard, resp.Body)
+	_, _ = io.Copy(ioutil.Discard, resp.Body)
 
 	return nil
 }
@@ -203,18 +207,29 @@ func (s *Server) Start() error {
 	}
 
 	if s.conf.EnableMetrics {
-		pClient := metricsprom.NewPrometheusProvider(
-			metrics.DefaultRegistry,
-			"qed",
-			"crowley",
-			prometheus.DefaultRegisterer,
-			1*time.Second,
-		)
-		go pClient.UpdatePrometheusMetrics()
+		go func() {
+			pClient := metricsprom.NewPrometheusProvider(
+				metrics.DefaultRegistry,
+				"qed",
+				"crowley",
+				prometheus.DefaultRegisterer,
+				1*time.Second,
+			)
+
+			ticker := time.NewTicker(pClient.FlushInterval)
+			for {
+				select {
+				case <-ticker.C:
+					_ = pClient.UpdatePrometheusMetricsOnce()
+				case <-s.metricsUpdaterControl:
+					return
+				}
+			}
+		}()
 
 		go func() {
 			log.Debugf("	* Starting metrics HTTP server in addr: localhost:9990")
-			if err := http.ListenAndServe("localhost:9990", nil); err != http.ErrServerClosed {
+			if err := s.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
 				log.Errorf("Can't start metrics HTTP server: %s", err)
 			}
 		}()
@@ -292,6 +307,19 @@ func (s *Server) Start() error {
 // Stop will close all the channels from the mux servers.
 func (s *Server) Stop() error {
 	fmt.Printf("\nShutting down QED server %s", s.conf.NodeID)
+
+	if s.conf.EnableMetrics {
+		log.Debugf("Metrics enabled: stopping server...")
+		if err := s.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+			log.Error(err)
+			return err
+		}
+		log.Debugf("Done.\n")
+
+		s.metricsUpdaterControl <- true
+		close(s.metricsUpdaterControl)
+	}
+
 	if s.tamperingServer != nil {
 		log.Debugf("Tampering enabled: stopping server...")
 		if err := s.tamperingServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
