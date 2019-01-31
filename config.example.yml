@@ -41,7 +41,7 @@ server:
      - "127.0.0.1:9000"
     gossip: ":9100"  # Gossip: management endpoint bind address (host:port).
     gossip_join:  # Gossip: list of nodes ([host]:port), through which a cluster can be joined.
-      - "127.0.0.0.1:9100"
+      - "127.0.0.1:9100"
     path:
       db: "/var/tmp/qed/db"  # Set default storage path.
       wal: "/var/tmp/qed/wal"  # Set raft storage path.
