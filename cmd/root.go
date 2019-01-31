@@ -18,8 +18,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/bbva/qed/log"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -35,7 +33,6 @@ func NewRootCommand() *cobra.Command {
 		Short:            "QED is a client for the verifiable log server",
 		TraverseChildren: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>", "root.persistentprerun", ctx.path)
 
 			if ctx.configFile != "" {
 				v.SetConfigFile(ctx.configFile)

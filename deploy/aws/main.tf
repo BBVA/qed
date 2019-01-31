@@ -121,7 +121,7 @@ module "agent-publisher" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
 
-  command="agent"
+  command="agent publisher"
   config = <<-CONFIG
   ---
   api_key: "terraform_qed"
@@ -152,7 +152,7 @@ module "agent-monitor" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
 
-  command="agent"
+  command="agent monitor"
   config = <<-CONFIG
   ---
   api_key: "terraform_qed"
@@ -182,7 +182,7 @@ module "agent-auditor" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
 
-  command="agent"
+  command="agent auditor"
   config = <<-CONFIG
   ---
   api_key: "terraform_qed"
