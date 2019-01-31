@@ -17,10 +17,6 @@
 package client
 
 type Config struct {
-	// Endpoint [host:port] to operate.
-	// Must be the QED cluster leader.
-	ClusterLeader string
-
 	// Endpoints [host:port,host:port,...] to ask for QED cluster-topology.
 	Endpoints []string
 
@@ -38,6 +34,15 @@ type Config struct {
 
 	// Seconds to wait for a handshake negotiation.
 	HandshakeTimeoutSeconds int
+}
+
+type Topology struct {
+	// Topology endpoints [host:port,host:port,...a]
+	Endpoints []string
+
+	// Endpoint [host:port] to operate.
+	// Must be the QED cluster leader.
+	Leader string
 }
 
 func DefaultConfig() *Config {

@@ -206,3 +206,62 @@ func TestCluster(t *testing.T) {
 
 	})
 }
+
+func TestClusterBadEndpoint(t *testing.T) {
+	before0, after0 := setupServer(0, "", false, t)
+	before1, after1 := setupServer(1, "", false, t)
+
+	serversHttpAddr := "badendpoint,http://127.0.0.1:8080"
+
+	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1))
+
+	scenario("Add one event through cli and verify it", func() {
+		let("Add event", func(t *testing.T) {
+			cmd := exec.Command("go",
+				"run",
+				"./../../main.go",
+				fmt.Sprintf("--apikey=%s", APIKey),
+				"client",
+				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				"add",
+				"--key='test event'",
+				"--value=2",
+				"--log=info",
+			)
+
+			_, err := cmd.CombinedOutput()
+
+			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+		})
+
+	})
+}
+
+func TestSingleBadEndpoint(t *testing.T) {
+	before0, after0 := setupServer(0, "", false, t)
+
+	serversHttpAddr := "badendpoint"
+
+	scenario, let := scope.Scope(t, merge(before0), merge(after0))
+
+	scenario("Add one event through cli and verify it", func() {
+		let("Add event", func(t *testing.T) {
+			cmd := exec.Command("go",
+				"run",
+				"./../../main.go",
+				fmt.Sprintf("--apikey=%s", APIKey),
+				"client",
+				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				"add",
+				"--key='test event'",
+				"--value=2",
+				"--log=info",
+			)
+
+			_, err := cmd.CombinedOutput()
+
+			assert.Errorf(t, err, "Subprocess must exit with status 1: %v", *cmd)
+		})
+
+	})
+}
