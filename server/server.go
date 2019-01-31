@@ -39,6 +39,7 @@ import (
 	"github.com/bbva/qed/gossip/sender"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
@@ -169,8 +170,10 @@ func NewServer(conf *Config) (*Server, error) {
 		server.profilingServer = newHTTPServer("localhost:6060", nil)
 	}
 	if conf.EnableMetrics {
-		server.prometheusRegistry = prometheus.NewRegistry()
-		metricsMux := metricshttp.NewMetricsHTTP(server.prometheusRegistry)
+		r := prometheus.NewRegistry()
+		metrics.Register(r)
+		server.prometheusRegistry = r
+		metricsMux := metricshttp.NewMetricsHTTP(r)
 		server.metricsServer = newHTTPServer("localhost:9990", metricsMux)
 	}
 
