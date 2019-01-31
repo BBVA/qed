@@ -29,7 +29,7 @@ data "aws_ami" "amazon_linux" {
 resource "null_resource" "prebuild" {
   provisioner "local-exec" {
     command = "bash build.sh"
-    working_dir = "${path.module}/data"
+    working_dir = "${path.module}"
   }
 }
 

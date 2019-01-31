@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+resource "null_resource" "prebuild" {
+  provisioner "local-exec" {
+    command = "bash config_build.sh"
+    working_dir = "/config_file"
+  }
+}
+
 module "leader" {
   source = "./modules/qed"
 
