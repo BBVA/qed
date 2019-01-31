@@ -44,6 +44,7 @@ import (
 	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/util"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Server encapsulates the data and login to start/stop a QED server
@@ -51,16 +52,17 @@ type Server struct {
 	conf      *Config
 	bootstrap bool // Set bootstrap to true when bringing up the first node as a master
 
-	httpServer      *http.Server
-	mgmtServer      *http.Server
-	raftBalloon     *raftwal.RaftBalloon
-	tamperingServer *http.Server
-	profilingServer *http.Server
-	metricsServer   *http.Server
-	signer          sign.Signer
-	sender          *sender.Sender
-	agent           *gossip.Agent
-	agentsQueue     chan *protocol.Snapshot
+	httpServer         *http.Server
+	mgmtServer         *http.Server
+	raftBalloon        *raftwal.RaftBalloon
+	tamperingServer    *http.Server
+	profilingServer    *http.Server
+	metricsServer      *http.Server
+	prometheusRegistry *prometheus.Registry
+	signer             sign.Signer
+	sender             *sender.Sender
+	agent              *gossip.Agent
+	agentsQueue        chan *protocol.Snapshot
 }
 
 func serverInfo(conf *Config) http.HandlerFunc {
@@ -167,7 +169,8 @@ func NewServer(conf *Config) (*Server, error) {
 		server.profilingServer = newHTTPServer("localhost:6060", nil)
 	}
 	if conf.EnableMetrics {
-		metricsMux := metricshttp.NewMetricsHttp()
+		server.prometheusRegistry = prometheus.NewRegistry()
+		metricsMux := metricshttp.NewMetricsHTTP(server.prometheusRegistry)
 		server.metricsServer = newHTTPServer("localhost:9990", metricsMux)
 	}
 
