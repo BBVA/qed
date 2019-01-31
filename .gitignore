@@ -32,8 +32,12 @@ coverage.txt
 
 # Terraform
 *.terraform*
-*terraform.tfstate*
+*terraform.tf*
 *.tfstate*
-*terraform.tfvars*
+
+# Config files
 .golangci.yml
 config.yml
+deploy/aws/config_files/*
+!deploy/aws/config_files/README.md
+deploy/aws/modules/inmemory_storage/data
