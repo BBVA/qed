@@ -14,8 +14,7 @@
 
 resource "null_resource" "prebuild" {
   provisioner "local-exec" {
-    command = "bash config_build.sh"
-    working_dir = "/config_file"
+    command = "bash ./config_build.sh"
   }
 }
 
@@ -33,7 +32,6 @@ module "leader" {
   ---
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
-
   server:
     node_id: "leader"
     addr:
@@ -59,7 +57,6 @@ module "follower-1" {
   ---
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
-
   server:
     node_id: "follower-1"
     addr:
@@ -89,7 +86,6 @@ module "follower-2" {
   ---
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
-
   server:
     node_id: "follower-2"
     addr:
@@ -130,7 +126,6 @@ module "agent-publisher" {
   ---
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
-
   agent:
     node: "publisher"
     bind: ":9300"
@@ -162,7 +157,6 @@ module "agent-monitor" {
   ---
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
-
   agent:
     node: "monitor"
     bind: ":9200"
@@ -193,7 +187,6 @@ module "agent-auditor" {
   ---
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
-
   agent:
     node: "auditor"
     bind: ":9100"
