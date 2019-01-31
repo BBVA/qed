@@ -40,6 +40,7 @@ import (
 type HTTPClient struct {
 	conf *Config
 	*http.Client
+	topology Topology
 }
 
 // NewHTTPClient will return a new instance of HTTPClient.
@@ -64,18 +65,119 @@ func NewHTTPClient(conf Config) *HTTPClient {
 				TLSHandshakeTimeout: 5 * time.Second,
 			},
 		},
+		Topology{},
 	}
 
-	conf.ClusterLeader = conf.Endpoints[0]
+	// Initial topology assignment
+	client.topology.Leader = conf.Endpoints[0]
+	client.topology.Endpoints = conf.Endpoints
 
 	info, err := client.getClusterInfo()
 	if err != nil {
 		log.Errorf("Failed to get raft cluster info: %v", err)
 		return nil
 	}
-	client.updateConf(info)
+	client.updateTopology(info)
 
 	return client
+}
+
+func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
+
+	var retries uint
+
+	for {
+		url, err := url.Parse(c.topology.Leader + path)
+		if err != nil {
+			return nil, err //panic(err)
+		}
+
+		req, err := http.NewRequest(method, fmt.Sprintf("%s", url), bytes.NewBuffer(data))
+		if err != nil {
+			return nil, err //panic(err)
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Api-Key", c.conf.APIKey)
+
+		resp, err := c.Do(req)
+		if err != nil {
+			if retries == 5 {
+				return nil, err
+			}
+			c.topology.Leader = c.topology.Endpoints[rand.Intn(len(c.topology.Endpoints))]
+			retries = retries + 1
+			delay := time.Duration(10 << retries * time.Millisecond)
+			time.Sleep(delay)
+			continue
+		}
+		return resp, err
+	}
+}
+
+func (c HTTPClient) getClusterInfo() (map[string]interface{}, error) {
+	info := make(map[string]interface{})
+
+	body, err := c.doReq("GET", "/info/shards", []byte{})
+	if err != nil {
+		return info, err
+	}
+
+	err = json.Unmarshal(body, &info)
+	if err != nil {
+		return info, err
+	}
+
+	return info, nil
+}
+
+func (c *HTTPClient) updateTopology(info map[string]interface{}) {
+
+	clusterMeta := info["meta"].(map[string]interface{})
+	leaderID := info["leaderID"].(string)
+	scheme := info["URIScheme"].(string)
+
+	var leaderAddr string
+	var endpoints []string
+
+	leaderMeta := clusterMeta[leaderID].(map[string]interface{})
+	for k, addr := range leaderMeta {
+		if k == "HTTPAddr" {
+			leaderAddr = scheme + addr.(string)
+		}
+	}
+	c.topology.Leader = leaderAddr
+
+	for _, nodeMeta := range clusterMeta {
+		for k, address := range nodeMeta.(map[string]interface{}) {
+			if k == "HTTPAddr" {
+				url := scheme + address.(string)
+				endpoints = append(endpoints, url)
+			}
+		}
+	}
+	c.topology.Endpoints = endpoints
+}
+
+func (c *HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
+
+	resp, err := c.exponentialBackoff(method, path, data)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+
+	if resp.StatusCode >= 500 {
+		return nil, fmt.Errorf("Server error: %v", string(bodyBytes))
+	}
+
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		return nil, fmt.Errorf("Invalid request %v", string(bodyBytes))
+	}
+
+	return bodyBytes, nil
 }
 
 func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
@@ -95,105 +197,6 @@ func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, erro
 		}
 		return resp, err
 	}
-}
-
-func (c HTTPClient) getClusterInfo() (map[string]interface{}, error) {
-	info := make(map[string]interface{})
-
-	req, err := http.NewRequest("GET", c.conf.ClusterLeader+"/info/shards", bytes.NewBuffer([]byte{}))
-	if err != nil {
-		return info, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Api-Key", c.conf.APIKey)
-	resp, err := c.Do(req)
-	if err != nil {
-		return info, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return info, err
-	}
-
-	err = json.Unmarshal(body, &info)
-	if err != nil {
-		return info, err
-	}
-
-	return info, err
-}
-
-func (c *HTTPClient) updateConf(info map[string]interface{}) {
-
-	clusterMeta := info["meta"].(map[string]interface{})
-	leaderID := info["leaderID"].(string)
-	scheme := info["URIScheme"].(string)
-
-	var leaderAddr string
-	var endpoints []string
-
-	leaderMeta := clusterMeta[leaderID].(map[string]interface{})
-	for k, addr := range leaderMeta {
-		if k == "HTTPAddr" {
-			leaderAddr = scheme + addr.(string)
-		}
-	}
-	c.conf.ClusterLeader = leaderAddr
-
-	for _, nodeMeta := range clusterMeta {
-		for k, address := range nodeMeta.(map[string]interface{}) {
-			if k == "HTTPAddr" {
-				url := scheme + address.(string)
-				endpoints = append(endpoints, url)
-			}
-		}
-	}
-	c.conf.Endpoints = endpoints
-}
-
-func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
-	url, err := url.Parse(c.conf.ClusterLeader + path)
-	if err != nil {
-		panic(err)
-	}
-
-	req, err := http.NewRequest(method, fmt.Sprintf("%s", url), bytes.NewBuffer(data))
-	if err != nil {
-		panic(err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Api-Key", c.conf.APIKey)
-
-	resp, err := c.exponentialBackoff(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode >= 500 {
-		return nil, fmt.Errorf("Server error: %v", string(bodyBytes))
-	}
-
-	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		return nil, fmt.Errorf("Invalid request %v", string(bodyBytes))
-	}
-
-	return bodyBytes, nil
-}
-
-// Ping will do a request to the server
-func (c HTTPClient) Ping() error {
-	_, err := c.doReq("GET", "/health-check", nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Add will do a request to the server with a post data to store a new event.
