@@ -9,6 +9,15 @@ import (
 
 func NewMetricsHTTP(r *prometheus.Registry) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.HandlerFor(r, promhttp.HandlerOpts{}))
+	mux.Handle(
+		"/metrics",
+		promhttp.InstrumentMetricHandler(
+			r,
+			promhttp.HandlerFor(
+				r,
+				promhttp.HandlerOpts{},
+			),
+		),
+	)
 	return mux
 }
