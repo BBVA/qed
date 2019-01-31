@@ -29,7 +29,6 @@ import (
 	"net/http"
 	_ "net/http/pprof" // this will enable the default profiling capabilities
 	"os"
-	"time"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/metricshttp"
@@ -45,9 +44,6 @@ import (
 	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/util"
-	metricsprom "github.com/deathowl/go-metrics-prometheus"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rcrowley/go-metrics"
 )
 
 // Server encapsulates the data and login to start/stop a QED server
@@ -55,17 +51,16 @@ type Server struct {
 	conf      *Config
 	bootstrap bool // Set bootstrap to true when bringing up the first node as a master
 
-	httpServer            *http.Server
-	mgmtServer            *http.Server
-	raftBalloon           *raftwal.RaftBalloon
-	tamperingServer       *http.Server
-	profilingServer       *http.Server
-	metricsServer         *http.Server
-	signer                sign.Signer
-	sender                *sender.Sender
-	agent                 *gossip.Agent
-	agentsQueue           chan *protocol.Snapshot
-	metricsUpdaterControl chan bool
+	httpServer      *http.Server
+	mgmtServer      *http.Server
+	raftBalloon     *raftwal.RaftBalloon
+	tamperingServer *http.Server
+	profilingServer *http.Server
+	metricsServer   *http.Server
+	signer          sign.Signer
+	sender          *sender.Sender
+	agent           *gossip.Agent
+	agentsQueue     chan *protocol.Snapshot
 }
 
 func serverInfo(conf *Config) http.HandlerFunc {
@@ -172,7 +167,6 @@ func NewServer(conf *Config) (*Server, error) {
 		server.profilingServer = newHTTPServer("localhost:6060", nil)
 	}
 	if conf.EnableMetrics {
-		server.metricsUpdaterControl = make(chan bool)
 		metricsMux := metricshttp.NewMetricsHttp()
 		server.metricsServer = newHTTPServer("localhost:9990", metricsMux)
 	}
@@ -207,26 +201,6 @@ func (s *Server) Start() error {
 	}
 
 	if s.conf.EnableMetrics {
-		go func() {
-			pClient := metricsprom.NewPrometheusProvider(
-				metrics.DefaultRegistry,
-				"qed",
-				"crowley",
-				prometheus.DefaultRegisterer,
-				1*time.Second,
-			)
-
-			ticker := time.NewTicker(pClient.FlushInterval)
-			for {
-				select {
-				case <-ticker.C:
-					_ = pClient.UpdatePrometheusMetricsOnce()
-				case <-s.metricsUpdaterControl:
-					return
-				}
-			}
-		}()
-
 		go func() {
 			log.Debugf("	* Starting metrics HTTP server in addr: localhost:9990")
 			if err := s.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
@@ -315,9 +289,6 @@ func (s *Server) Stop() error {
 			return err
 		}
 		log.Debugf("Done.\n")
-
-		s.metricsUpdaterControl <- true
-		close(s.metricsUpdaterControl)
 	}
 
 	if s.tamperingServer != nil {
