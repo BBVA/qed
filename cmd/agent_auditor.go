@@ -42,7 +42,7 @@ func newAgentAuditorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun 
 
 			// Bindings
 			auditorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
-			auditorConfig.PubUrls = v.GetStringSlice("agent.publish_urls")
+			auditorConfig.PubUrls = v.GetStringSlice("agent.alert_urls")
 			markSliceStringRequired(auditorConfig.QEDUrls, "qedUrls")
 			markSliceStringRequired(auditorConfig.PubUrls, "pubUrls")
 
@@ -79,7 +79,7 @@ func newAgentAuditorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun 
 
 	// Lookups
 	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
-	v.BindPFlag("agent.publish_urls", f.Lookup("pubUrls"))
+	v.BindPFlag("agent.alert_urls", f.Lookup("pubUrls"))
 
 	return cmd
 }

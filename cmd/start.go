@@ -35,7 +35,6 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 		Use:   "start",
 		Short: "Start the server for the verifiable log QED",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>", "start.run", ctx.path)
 			var err error
 
 			log.SetLogger("QEDServer", ctx.logLevel)

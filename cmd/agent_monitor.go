@@ -42,7 +42,7 @@ func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun 
 
 			// Bindings
 			monitorConfig.QedUrls = v.GetStringSlice("agent.server_urls")
-			monitorConfig.PubUrls = v.GetStringSlice("agent.publish_urls")
+			monitorConfig.PubUrls = v.GetStringSlice("agent.alert_urls")
 			markSliceStringRequired(monitorConfig.QedUrls, "qedUrls")
 			markSliceStringRequired(monitorConfig.PubUrls, "pubUrls")
 
@@ -80,7 +80,7 @@ func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun 
 
 	// Lookups
 	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
-	v.BindPFlag("agent.publish_urls", f.Lookup("pubUrls"))
+	v.BindPFlag("agent.alert_urls", f.Lookup("pubUrls"))
 
 	return cmd
 }

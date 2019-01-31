@@ -12,50 +12,59 @@ tdir=$(mktemp -d /tmp/qed_build.XXX)
 sign_path=${pub}/id_ed25519
 cert_path=${pub}/server.crt
 key_path=${pub}/server.key
+node_path=${pub}/node_exporter
 
 (
-    cd ${tdir}
+cd ${tdir}
 
-    if [ ! -f ${sign_path} ]; then
-        #build shared signing key
-        ssh-keygen -t ed25519 -f id_ed25519 -P ''
+if [ ! -f ${node_path} ]; then (
+    mkdir -p ./node_exporter
+    version=0.17.0
+    link=https://github.com/prometheus/node_exporter/releases/download/v${version}/node_exporter-${version}.linux-amd64.tar.gz
+    wget -qO- ${link} | tar xvz -C ./
+    cp node_exporter-${version}.linux-amd64/node_exporter ${node_path}
+) fi
 
-        cp id_ed25519 ${sign_path}
-    fi
+if [ ! -f ${sign_path} ]; then
+    #build shared signing key
+    ssh-keygen -t ed25519 -f id_ed25519 -P ''
 
+    cp id_ed25519 ${sign_path}
+fi
 
-    if [ ! -f ${cert_path} ] && [ ! -f ${key_path} ]; then
+if [ ! -f ${cert_path} ] && [ ! -f ${key_path} ]; then
 
-        #build shared server cert
-        openssl req \
-            -newkey rsa:2048 \
-            -nodes \
-            -days 3650 \
-            -x509 \
-            -keyout ca.key \
-            -out ca.crt \
-            -subj "/CN=*"
-        openssl req \
-            -newkey rsa:2048 \
-            -nodes \
-            -keyout server.key \
-            -out server.csr \
-            -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*"
-        openssl x509 \
-            -req \
-            -days 365 \
-            -sha256 \
-            -in server.csr \
-            -CA ca.crt \
-            -CAkey ca.key \
-            -CAcreateserial \
-            -out server.crt \
-            -extfile <(echo subjectAltName = IP:127.0.0.1)
+    #build shared server cert
+    openssl req \
+        -newkey rsa:2048 \
+        -nodes \
+        -days 3650 \
+        -x509 \
+        -keyout ca.key \
+        -out ca.crt \
+        -subj "/CN=*"
+    openssl req \
+        -newkey rsa:2048 \
+        -nodes \
+        -keyout server.key \
+        -out server.csr \
+        -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*"
+    openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -in server.csr \
+        -CA ca.crt \
+        -CAkey ca.key \
+        -CAcreateserial \
+        -out server.crt \
+        -extfile <(echo subjectAltName = IP:127.0.0.1)
 
-        cp server.crt ${cert_path}
-        cp server.key ${key_path}
+    cp server.crt ${cert_path}
+    cp server.key ${key_path}
 
-    fi
+fi
+
 )
 
 #build server binary
