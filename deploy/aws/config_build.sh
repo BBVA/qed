@@ -1,0 +1,62 @@
+#!/bin/bash
+
+function _readlink() { (
+  # INFO: readlink does not exists on OSX ¯\_(ツ)_/¯
+  cd $(dirname $1)
+  echo $PWD/$(basename $1)
+) }
+
+pub=$(_readlink ./config_files)
+tdir=$(mktemp -d /tmp/qed_build.XXX)
+
+sign_path=${pub}/id_ed25519
+cert_path=${pub}/server.crt
+key_path=${pub}/server.key
+
+(
+    cd ${tdir}
+
+    if [ ! -f ${sign_path} ]; then
+        #build shared signing key
+        ssh-keygen -t ed25519 -f id_ed25519 -P ''
+
+        cp id_ed25519 ${sign_path}
+    fi
+
+
+    if [ ! -f ${cert_path} ] && [ ! -f ${key_path} ]; then
+
+        #build shared server cert
+        openssl req \
+            -newkey rsa:2048 \
+            -nodes \
+            -days 3650 \
+            -x509 \
+            -keyout ca.key \
+            -out ca.crt \
+            -subj "/CN=*"
+        openssl req \
+            -newkey rsa:2048 \
+            -nodes \
+            -keyout server.key \
+            -out server.csr \
+            -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*"
+        openssl x509 \
+            -req \
+            -days 365 \
+            -sha256 \
+            -in server.csr \
+            -CA ca.crt \
+            -CAkey ca.key \
+            -CAcreateserial \
+            -out server.crt \
+            -extfile <(echo subjectAltName = IP:127.0.0.1)
+
+        cp server.crt ${cert_path}
+        cp server.key ${key_path}
+
+    fi
+)
+
+#build server binary
+go build -o ${pub}/qed ../../
