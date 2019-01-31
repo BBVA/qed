@@ -17,8 +17,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	v "github.com/spf13/viper"
 
@@ -51,7 +49,6 @@ func newClientCommand(ctx *cmdContext) *cobra.Command {
 	v.BindPFlag("client.timeout.handshake", f.Lookup("handshake-timeout-seconds"))
 
 	clientPreRun := func(cmd *cobra.Command, args []string) {
-		fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>", "client.customprerun")
 		log.SetLogger("QEDClient", ctx.logLevel)
 
 		clientCtx.config.APIKey = ctx.apiKey

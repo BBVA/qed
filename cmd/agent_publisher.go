@@ -41,7 +41,7 @@ func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config, agentPreRu
 			agentPreRun(cmd, args)
 
 			// Bindings
-			endpoints = v.GetStringSlice("agent.publish_urls")
+			endpoints = v.GetStringSlice("agent.snapshots_store_urls")
 			markSliceStringRequired(endpoints, "pubUrls")
 
 		},
@@ -76,7 +76,7 @@ func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config, agentPreRu
 		"Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
 
 	// Lookups
-	v.BindPFlag("agent.publish_urls", f.Lookup("pubUrls"))
+	v.BindPFlag("agent.snapshots_store_urls", f.Lookup("pubUrls"))
 
 	return cmd
 }
