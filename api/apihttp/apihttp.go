@@ -25,17 +25,11 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
-	qedMetrics "github.com/bbva/qed/metrics"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rcrowley/go-metrics"
-)
-
-var (
-	// Crowley:
-	cOpsProcessed = metrics.NewCounter()
 )
 
 // HealthCheckResponse contains the response from HealthCheckHandler.
@@ -53,20 +47,14 @@ type HealthCheckResponse struct {
 // If everything is allright, the HTTP status is 200 and the body contains:
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	timer := prometheus.NewTimer(qedMetrics.RequestDuration)
+	timer := prometheus.NewTimer(metrics.RequestDuration)
 	defer timer.ObserveDuration()
 
-	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(qedMetrics.FuncDuration.Set))
+	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(metrics.FuncDuration.Set))
 	defer timer2.ObserveDuration()
 
 	// Do something here that takes time.
 	time.Sleep(time.Duration(rand.NormFloat64()*10000+50000) * time.Microsecond)
-
-	// Prometheus
-	qedMetrics.OpsProcessed.Inc()
-
-	// Crowley
-	cOpsProcessed.Inc(1)
 
 	result := HealthCheckResponse{
 		Version: 0,
@@ -326,8 +314,6 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/events -> Add
 //	/proofs/membership -> Membership
 func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
-	metrics.Register("healthcheck_ops_total", cOpsProcessed)
-
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
 	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
