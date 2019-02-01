@@ -18,11 +18,11 @@ node_path=${pub}/node_exporter
 cd ${tdir}
 
 if [ ! -f ${node_path} ]; then (
-    mkdir -p ./node_exporter
     version=0.17.0
-    link=https://github.com/prometheus/node_exporter/releases/download/v${version}/node_exporter-${version}.linux-amd64.tar.gz
+    folder=node_exporter-${version}.linux-amd64
+    link=https://github.com/prometheus/node_exporter/releases/download/v${version}/${folder}.tar.gz
     wget -qO- ${link} | tar xvz -C ./
-    cp node_exporter-${version}.linux-amd64/node_exporter ${node_path}
+    cp ${folder}/node_exporter ${node_path}
 ) fi
 
 if [ ! -f ${sign_path} ]; then
