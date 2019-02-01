@@ -184,6 +184,13 @@ var (
 		},
 	)
 
+	RequestSummary = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "example_function_durations_seconds",
+			Help: "example function latency distributions.",
+		},
+	)
+
 	RequestDuration = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "example_request_duration_seconds",
@@ -220,6 +227,7 @@ var (
 		Publisher_batches_process_seconds,
 
 		FuncDuration,
+		RequestSummary,
 		RequestDuration,
 	}
 )
