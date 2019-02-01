@@ -47,6 +47,9 @@ type HealthCheckResponse struct {
 // If everything is allright, the HTTP status is 200 and the body contains:
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+
+	metrics.API_healthcheck_requests_total.Inc()
+
 	timer := prometheus.NewTimer(metrics.RequestDuration)
 	defer timer.ObserveDuration()
 
