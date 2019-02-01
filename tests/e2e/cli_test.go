@@ -29,7 +29,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func TestCli(t *testing.T) {
+func Test_Client_To_Single_Server(t *testing.T) {
 	before, after := setupServer(0, "", true, t)
 	scenario, let := scope.Scope(t, before, merge(after))
 
@@ -104,7 +104,7 @@ func TestCli(t *testing.T) {
 	})
 }
 
-func TestCluster(t *testing.T) {
+func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 	before2, after2 := setupServer(2, "", false, t)
@@ -207,7 +207,7 @@ func TestCluster(t *testing.T) {
 	})
 }
 
-func TestClusterBadEndpoint(t *testing.T) {
+func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 
@@ -215,7 +215,59 @@ func TestClusterBadEndpoint(t *testing.T) {
 
 	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1))
 
-	scenario("Add one event through cli and verify it", func() {
+	scenario("Success by extracting topology from right endpoint", func() {
+		let("Add event", func(t *testing.T) {
+			cmd := exec.Command("go",
+				"run",
+				"./../../main.go",
+				fmt.Sprintf("--apikey=%s", APIKey),
+				"client",
+				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				"add",
+				"--key='test event'",
+				"--value=2",
+				"--log=info",
+			)
+
+			_, err := cmd.CombinedOutput()
+
+			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+		})
+	})
+
+	serversHttpAddr = "badendpoint"
+	scenario("Fails if no right endpoint provided", func() {
+		let("Add event", func(t *testing.T) {
+			cmd := exec.Command("go",
+				"run",
+				"./../../main.go",
+				fmt.Sprintf("--apikey=%s", APIKey),
+				"client",
+				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				"add",
+				"--key='test event'",
+				"--value=2",
+				"--log=info",
+			)
+
+			_, err := cmd.CombinedOutput()
+
+			assert.Errorf(t, err, "Subprocess must exit with status 1: %v", *cmd)
+		})
+
+	})
+
+}
+
+func Test_Client_To_Cluster_Continuous_Load_Node_Fails(t *testing.T) {
+	before0, after0 := setupServer(0, "", false, t)
+	before1, after1 := setupServer(1, "", false, t)
+
+	serversHttpAddr := "http://127.0.0.1:8080,http://127.0.0.1:8081"
+
+	scenario, let := scope.Scope(t, merge(before0, before1), merge(after1))
+
+	scenario("Success by extracting topology from right endpoint", func() {
 		let("Add event", func(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
@@ -234,33 +286,12 @@ func TestClusterBadEndpoint(t *testing.T) {
 			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
 		})
 
-	})
-}
+		let("Kill server 0", func(t *testing.T) {
+			after0(t)
+			serversHttpAddr = "http://127.0.0.1:8081"
 
-func TestSingleBadEndpoint(t *testing.T) {
-	before0, after0 := setupServer(0, "", false, t)
-
-	serversHttpAddr := "badendpoint"
-
-	scenario, let := scope.Scope(t, merge(before0), merge(after0))
-
-	scenario("Add one event through cli and verify it", func() {
-		let("Add event", func(t *testing.T) {
-			cmd := exec.Command("go",
-				"run",
-				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
-				"client",
-				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
-				"add",
-				"--key='test event'",
-				"--value=2",
-				"--log=info",
-			)
-
-			_, err := cmd.CombinedOutput()
-
-			assert.Errorf(t, err, "Subprocess must exit with status 1: %v", *cmd)
+			// Need time to propagate changes via RAFT.
+			time.Sleep(10 * time.Second)
 		})
 
 	})
