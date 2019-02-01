@@ -65,18 +65,18 @@ func NewHTTPClient(conf Config) *HTTPClient {
 				TLSHandshakeTimeout: 5 * time.Second,
 			},
 		},
-		Topology{},
+		Topology{
+			Leader: conf.Endpoints[0],
+			Endpoints: conf.Endpoints,
+		},
 	}
-
-	// Initial topology assignment
-	client.topology.Leader = conf.Endpoints[0]
-	client.topology.Endpoints = conf.Endpoints
 
 	info, err := client.getClusterInfo()
 	if err != nil {
-		log.Errorf("Failed to get raft cluster info: %v", err)
+		log.Errorf("Failed to get raft cluster info. Error: %v", err)
 		return nil
 	}
+
 	client.updateTopology(info)
 
 	return client
@@ -87,25 +87,11 @@ func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, erro
 	var retries uint
 
 	for {
-		url, err := url.Parse(c.topology.Leader + path)
-		if err != nil {
-			return nil, err //panic(err)
-		}
-
-		req, err := http.NewRequest(method, fmt.Sprintf("%s", url), bytes.NewBuffer(data))
-		if err != nil {
-			return nil, err //panic(err)
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Api-Key", c.conf.APIKey)
-
 		resp, err := c.Do(req)
 		if err != nil {
 			if retries == 5 {
 				return nil, err
 			}
-			c.topology.Leader = c.topology.Endpoints[rand.Intn(len(c.topology.Endpoints))]
 			retries = retries + 1
 			delay := time.Duration(10 << retries * time.Millisecond)
 			time.Sleep(delay)
@@ -116,19 +102,32 @@ func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, erro
 }
 
 func (c HTTPClient) getClusterInfo() (map[string]interface{}, error) {
+	var retries uint
 	info := make(map[string]interface{})
 
-	body, err := c.doReq("GET", "/info/shards", []byte{})
-	if err != nil {
+	for {
+		body, err := c.doReq("GET", "/info/shards", []byte{})
+
+		if err != nil {
+			log.Debugf("Failed to get raft cluster info through server %s. Error: %v",
+				c.topology.Leader, err)
+			if retries == 5 {
+				return nil, err
+			}
+			c.topology.Leader = c.topology.Endpoints[rand.Intn(len(c.topology.Endpoints))]
+			retries = retries + 1
+			delay := time.Duration(10 << retries * time.Millisecond)
+			time.Sleep(delay)
+			continue
+		}
+
+		err = json.Unmarshal(body, &info)
+		if err != nil {
+			return nil, err
+		}
+
 		return info, err
 	}
-
-	err = json.Unmarshal(body, &info)
-	if err != nil {
-		return info, err
-	}
-
-	return info, nil
 }
 
 func (c *HTTPClient) updateTopology(info map[string]interface{}) {
@@ -161,9 +160,23 @@ func (c *HTTPClient) updateTopology(info map[string]interface{}) {
 
 func (c *HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 
-	resp, err := c.exponentialBackoff(method, path, data)
+	url, err := url.Parse(c.topology.Leader + path)
+	if err != nil {
+		return nil, err //panic(err)
+	}
+
+	req, err := http.NewRequest(method, fmt.Sprintf("%s", url), bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err //panic(err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Api-Key", c.conf.APIKey)
+
+	resp, err := c.exponentialBackoff(req)
 	if err != nil {
 		return nil, err
+		// NetworkTransport error. Check topology info
 	}
 	defer resp.Body.Close()
 
@@ -171,6 +184,7 @@ func (c *HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 
 	if resp.StatusCode >= 500 {
 		return nil, fmt.Errorf("Server error: %v", string(bodyBytes))
+		// Non Leader error. Check topology info.
 	}
 
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
@@ -180,23 +194,14 @@ func (c *HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 	return bodyBytes, nil
 }
 
-func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
-
-	var retries uint
-
-	for {
-		resp, err := c.Do(req)
-		if err != nil {
-			if retries == 5 {
-				return nil, err
-			}
-			retries = retries + 1
-			delay := time.Duration(10 << retries * time.Millisecond)
-			time.Sleep(delay)
-			continue
-		}
-		return resp, err
+// Ping will do a request to the server
+func (c HTTPClient) Ping() error {
+	_, err := c.doReq("GET", "/health-check", nil)
+	if err != nil {
+		return err
 	}
+
+	return nil
 }
 
 // Add will do a request to the server with a post data to store a new event.
