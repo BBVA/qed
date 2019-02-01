@@ -70,29 +70,29 @@ var (
 		},
 	)
 
-	Balloon_add_total = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Balloon_add_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "Balloon_add_total",
 			Help: "Duration of the last call of an example function.",
 		},
 	)
 
-	Balloon_membership_total = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Balloon_membership_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "Balloon_membership_total",
 			Help: "Duration of the last call of an example function.",
 		},
 	)
 
-	Balloon_digest_membership_total = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Balloon_digest_membership_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "Balloon_digest_membership_total",
 			Help: "Duration of the last call of an example function.",
 		},
 	)
 
-	Balloon_incremental_total = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Balloon_incremental_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "Balloon_incremental_total",
 			Help: "Duration of the last call of an example function.",
 		},
@@ -127,29 +127,29 @@ var (
 		},
 	)
 
-	Sender_batches_sent_total = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Sender_batches_sent_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "Sender_batches_sent_total",
 			Help: "Duration of the last call of an example function.",
 		},
 	)
 
-	Auditor_batches_received_total = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Auditor_batches_received_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "Auditor_batches_received_total",
 			Help: "Duration of the last call of an example function.",
 		},
 	)
 
-	Monitor_batches_received_total = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Monitor_batches_received_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "Monitor_batches_received_total",
 			Help: "Duration of the last call of an example function.",
 		},
 	)
 
-	Publisher_batches_received_total = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Publisher_batches_received_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
 			Name: "Publisher_batches_received_total",
 			Help: "Duration of the last call of an example function.",
 		},
