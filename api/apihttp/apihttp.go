@@ -56,6 +56,9 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(metrics.FuncDuration.Set))
 	defer timer2.ObserveDuration()
 
+	timer3 := prometheus.NewTimer(metrics.RequestSummary)
+	defer timer3.ObserveDuration()
+
 	// Do something here that takes time.
 	time.Sleep(time.Duration(rand.NormFloat64()*10000+50000) * time.Microsecond)
 
