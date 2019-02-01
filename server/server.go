@@ -175,15 +175,6 @@ func NewServer(conf *Config) (*Server, error) {
 		server.prometheusRegistry = r
 		metricsMux := metricshttp.NewMetricsHTTP(r)
 
-		r.MustRegister(
-			prometheus.NewProcessCollector(
-				prometheus.ProcessCollectorOpts{},
-			),
-		)
-		r.MustRegister(
-			prometheus.NewGoCollector(),
-		)
-
 		server.metricsServer = newHTTPServer("localhost:9990", metricsMux)
 	}
 
