@@ -44,7 +44,7 @@ type HealthCheckResponse struct {
 //
 // The following statuses are expected:
 //
-// If everything is allright, the HTTP status is 200 and the body contains:
+// If everything is alright, the HTTP status is 200 and the body contains:
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
