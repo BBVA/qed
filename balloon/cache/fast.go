@@ -18,8 +18,6 @@ package cache
 
 import (
 	"github.com/VictoriaMetrics/fastcache"
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 )
 
@@ -32,16 +30,16 @@ func NewFastCache(maxBytes int64) *FastCache {
 	return &FastCache{cached: cache}
 }
 
-func (c FastCache) Get(pos navigator.Position) (hashing.Digest, bool) {
-	value := c.cached.Get(nil, pos.Bytes())
+func (c FastCache) Get(key []byte) ([]byte, bool) {
+	value := c.cached.Get(nil, key)
 	if value == nil {
 		return nil, false
 	}
 	return value, true
 }
 
-func (c *FastCache) Put(pos navigator.Position, value hashing.Digest) {
-	c.cached.Set(pos.Bytes(), value)
+func (c *FastCache) Put(key []byte, value []byte) {
+	c.cached.Set(key, value)
 }
 
 func (c *FastCache) Fill(r storage.KVPairReader) (err error) {

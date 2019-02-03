@@ -19,32 +19,30 @@ package cache
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 )
 
 const keySize = 34
 
 type SimpleCache struct {
-	cached map[[keySize]byte]hashing.Digest
+	cached map[[keySize]byte][]byte
 }
 
 func NewSimpleCache(initialSize uint64) *SimpleCache {
-	return &SimpleCache{make(map[[keySize]byte]hashing.Digest, initialSize)}
+	return &SimpleCache{make(map[[keySize]byte][]byte, initialSize)}
 }
 
-func (c SimpleCache) Get(pos navigator.Position) (hashing.Digest, bool) {
-	var key [keySize]byte
-	copy(key[:], pos.Bytes())
-	digest, ok := c.cached[key]
-	return digest, ok
+func (c SimpleCache) Get(key []byte) ([]byte, bool) {
+	var k [keySize]byte
+	copy(k[:], key)
+	value, ok := c.cached[k]
+	return value, ok
 }
 
-func (c *SimpleCache) Put(pos navigator.Position, value hashing.Digest) {
-	var key [keySize]byte
-	copy(key[:], pos.Bytes())
-	c.cached[key] = value
+func (c *SimpleCache) Put(key []byte, value []byte) {
+	var k [keySize]byte
+	copy(k[:], key)
+	c.cached[k] = value
 }
 
 func (c *SimpleCache) Fill(r storage.KVPairReader) (err error) {

@@ -14,28 +14,28 @@
    limitations under the License.
 */
 
-package cache
+package visit
 
 import (
-	"github.com/bbva/qed/storage"
+	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/history/navigation"
+	"github.com/bbva/qed/hashing"
 )
 
-type PassThroughCache struct {
-	prefix byte
-	store  storage.Store
+type CachingVisitor struct {
+	cache cache.ModifiableCache
+	PostOrderVisitor
 }
 
-func NewPassThroughCache(prefix byte, store storage.Store) *PassThroughCache {
-	return &PassThroughCache{
-		prefix: prefix,
-		store:  store,
+func NewCachingVisitor(decorated PostOrderVisitor, cache cache.ModifiableCache) *CachingVisitor {
+	return &CachingVisitor{
+		PostOrderVisitor: decorated,
+		cache:            cache,
 	}
 }
 
-func (c PassThroughCache) Get(key []byte) ([]byte, bool) {
-	pair, err := c.store.Get(c.prefix, key)
-	if err != nil {
-		return nil, false
-	}
-	return pair.Value, true
+func (v *CachingVisitor) VisitCacheable(pos *navigation.Position, result hashing.Digest) hashing.Digest {
+	hash := v.PostOrderVisitor.VisitCacheable(pos, result)
+	v.cache.Put(pos.Bytes(), hash)
+	return hash
 }
