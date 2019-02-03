@@ -14,14 +14,12 @@
    limitations under the License.
 */
 
-package history
+package pruning
 
-import (
-	"github.com/bbva/qed/balloon/navigator"
-)
+import "github.com/bbva/qed/balloon/history/navigation"
 
 type CacheResolver interface {
-	ShouldGetFromCache(pos navigator.Position) bool
+	ShouldGetFromCache(pos *navigation.Position) bool
 }
 
 type SingleTargetedCacheResolver struct {
@@ -32,8 +30,8 @@ func NewSingleTargetedCacheResolver(version uint64) *SingleTargetedCacheResolver
 	return &SingleTargetedCacheResolver{version}
 }
 
-func (r SingleTargetedCacheResolver) ShouldGetFromCache(pos navigator.Position) bool {
-	return r.version > pos.IndexAsUint64()+1<<pos.Height()-1
+func (r SingleTargetedCacheResolver) ShouldGetFromCache(pos *navigation.Position) bool {
+	return r.version > pos.Index+1<<pos.Height-1
 }
 
 type DoubleTargetedCacheResolver struct {
@@ -44,15 +42,15 @@ func NewDoubleTargetedCacheResolver(start, end uint64) *DoubleTargetedCacheResol
 	return &DoubleTargetedCacheResolver{start, end}
 }
 
-func (r DoubleTargetedCacheResolver) ShouldGetFromCache(pos navigator.Position) bool {
-	if pos.Height() == 0 && pos.IndexAsUint64() == r.start { // THIS SHOULD BE TRUE for inc proofs but not for membership
+func (r DoubleTargetedCacheResolver) ShouldGetFromCache(pos *navigation.Position) bool {
+	if pos.Height == 0 && pos.Index == r.start { // THIS SHOULD BE TRUE for inc proofs but not for membership
 		return false
 	}
-	lastDescendantIndex := pos.IndexAsUint64() + 1<<pos.Height() - 1
+	lastDescendantIndex := pos.Index + 1<<pos.Height - 1
 	if r.start > lastDescendantIndex && r.end > lastDescendantIndex {
 		return true
 	}
-	return pos.IndexAsUint64() > r.start && lastDescendantIndex <= r.end
+	return pos.Index > r.start && lastDescendantIndex <= r.end
 }
 
 type IncrementalCacheResolver struct {
@@ -63,13 +61,13 @@ func NewIncrementalCacheResolver(start, end uint64) *IncrementalCacheResolver {
 	return &IncrementalCacheResolver{start, end}
 }
 
-func (r IncrementalCacheResolver) ShouldGetFromCache(pos navigator.Position) bool {
-	if pos.Height() == 0 && pos.IndexAsUint64() == r.start {
+func (r IncrementalCacheResolver) ShouldGetFromCache(pos *navigation.Position) bool {
+	if pos.Height == 0 && pos.Index == r.start {
 		return true
 	}
-	lastDescendantIndex := pos.IndexAsUint64() + 1<<pos.Height() - 1
+	lastDescendantIndex := pos.Index + 1<<pos.Height - 1
 	if r.start > lastDescendantIndex && r.end > lastDescendantIndex {
 		return true
 	}
-	return pos.IndexAsUint64() > r.start && lastDescendantIndex <= r.end
+	return pos.Index > r.start && lastDescendantIndex <= r.end
 }

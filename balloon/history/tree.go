@@ -22,7 +22,8 @@ import (
 	"github.com/bbva/qed/metrics"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/visitor"
+	"github.com/bbva/qed/balloon/history/pruning"
+	"github.com/bbva/qed/balloon/history/visit"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -61,29 +62,28 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	stats := metrics.History
 
 	// visitors
-	computeHash := visitor.NewComputeHashVisitor(t.hasher)
-	caching := visitor.NewCachingVisitor(computeHash, t.writeCache)
-	collect := visitor.NewCollectMutationsVisitor(caching, storage.HistoryCachePrefix)
+	computeHash := visit.NewComputeHashVisitor(t.hasher)
+	caching := visit.NewCachingVisitor(computeHash, t.writeCache)
+	collect := visit.NewCollectMutationsVisitor(caching, storage.HistoryCachePrefix)
 
 	// build pruning context
-	context := PruningContext{
-		navigator:     NewHistoryTreeNavigator(version),
-		cacheResolver: NewSingleTargetedCacheResolver(version),
-		cache:         t.writeCache,
-	}
+	context := pruning.NewPruningContext(
+		pruning.NewSingleTargetedCacheResolver(version),
+		t.writeCache,
+	)
 
 	// traverse from root and generate a visitable pruned tree
-	pruned, err := NewInsertPruner(version, eventDigest, context).Prune()
+	pruned, err := pruning.NewInsertPruner(version, eventDigest, context).Prune()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// print := visitor.NewPrintVisitor(t.getDepth(version))
-	// pruned.PreOrder(print)
-	// log.Debugf("Pruned tree: %s", print.Result())
+	print := visit.NewPrintVisitor(t.getDepth(version))
+	pruned.PreOrder(print)
+	log.Debugf("Pruned tree: %s", print.Result())
 
 	// visit the pruned tree
-	rh := pruned.PostOrder(collect).(hashing.Digest)
+	rh := pruned.PostOrder(collect)
 
 	// Increment add hits
 	stats.Add("add_hits", 1)
@@ -97,30 +97,29 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	stats := metrics.History
 	stats.Add("ProveMembership_hits", 1)
 	// visitors
-	computeHash := visitor.NewComputeHashVisitor(t.hasherF())
-	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
+	computeHash := visit.NewComputeHashVisitor(t.hasherF())
+	calcAuditPath := visit.NewAuditPathVisitor(computeHash)
 
 	// build pruning context
-	var resolver CacheResolver
+	var resolver pruning.CacheResolver
 	switch index == version {
 	case true:
-		resolver = NewSingleTargetedCacheResolver(version)
+		resolver = pruning.NewSingleTargetedCacheResolver(version)
 	case false:
-		resolver = NewDoubleTargetedCacheResolver(index, version)
+		resolver = pruning.NewDoubleTargetedCacheResolver(index, version)
 	}
-	context := PruningContext{
-		navigator:     NewHistoryTreeNavigator(version),
-		cacheResolver: resolver,
-		cache:         t.readCache,
-	}
+	context := pruning.NewPruningContext(
+		resolver,
+		t.readCache,
+	)
 
 	// traverse from root and generate a visitable pruned tree
-	pruned, err := NewSearchPruner(context).Prune()
+	pruned, err := pruning.NewSearchPruner(version, context).Prune()
 	if err != nil {
 		return nil, err
 	}
 
-	// print := visitor.NewPrintVisitor(t.getDepth(version))
+	// print := NewPrintVisitor(t.getDepth(version))
 	// pruned.PreOrder(print)
 	// log.Debugf("Pruned tree: %s", print.Result())
 
@@ -139,18 +138,17 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 	stats.Add("ProveConsistency_hits", 1)
 
 	// visitors
-	computeHash := visitor.NewComputeHashVisitor(t.hasherF())
-	calcAuditPath := visitor.NewAuditPathVisitor(computeHash)
+	computeHash := visit.NewComputeHashVisitor(t.hasherF())
+	calcAuditPath := visit.NewAuditPathVisitor(computeHash)
 
 	// build pruning context
-	context := PruningContext{
-		navigator:     NewHistoryTreeNavigator(end),
-		cacheResolver: NewIncrementalCacheResolver(start, end),
-		cache:         t.readCache,
-	}
+	context := pruning.NewPruningContext(
+		pruning.NewIncrementalCacheResolver(start, end),
+		t.readCache,
+	)
 
 	// traverse from root and generate a visitable pruned tree
-	pruned, err := NewSearchPruner(context).Prune()
+	pruned, err := pruning.NewSearchPruner(end, context).Prune()
 	if err != nil {
 		return nil, err
 	}

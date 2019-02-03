@@ -19,8 +19,6 @@ package cache
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/storage"
@@ -30,13 +28,13 @@ import (
 func TestPassThroughCache(t *testing.T) {
 
 	testCases := []struct {
-		pos    navigator.Position
-		value  hashing.Digest
+		key    []byte
+		value  []byte
 		cached bool
 	}{
-		{&navigator.FakePosition{[]byte{0x0}, 0}, hashing.Digest{0x1}, true},
-		{&navigator.FakePosition{[]byte{0x1}, 0}, hashing.Digest{0x2}, true},
-		{&navigator.FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x3}, false},
+		{[]byte{0x0, 0x0}, []byte{0x1}, true},
+		{[]byte{0x1, 0x0}, []byte{0x2}, true},
+		{[]byte{0x2, 0x0}, []byte{0x3}, false},
 	}
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
@@ -47,12 +45,12 @@ func TestPassThroughCache(t *testing.T) {
 	for i, c := range testCases {
 		if c.cached {
 			err := store.Mutate([]*storage.Mutation{
-				{prefix, c.pos.Bytes(), c.value},
+				{prefix, c.key, c.value},
 			})
 			require.NoError(t, err)
 		}
 
-		cachedValue, ok := cache.Get(c.pos)
+		cachedValue, ok := cache.Get(c.key)
 
 		if c.cached {
 			require.Truef(t, ok, "The key should exists in cache in test case %d", i)

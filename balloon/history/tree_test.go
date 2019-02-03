@@ -19,7 +19,7 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/visitor"
+	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/bplus"
@@ -113,115 +113,115 @@ func TestProveMembership(t *testing.T) {
 	testCases := []struct {
 		index, version    uint64
 		eventDigest       hashing.Digest
-		expectedAuditPath visitor.AuditPath
+		expectedAuditPath navigation.AuditPath
 	}{
 		{
 			index:             0,
 			version:           0,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{},
+			expectedAuditPath: navigation.AuditPath{},
 		},
 		{
 			index:             1,
 			version:           1,
 			eventDigest:       hashing.Digest{0x1},
-			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 0).FixedBytes(): hashing.Digest{0x0}},
 		},
 		{
 			index:             2,
 			version:           2,
 			eventDigest:       hashing.Digest{0x2},
-			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 1).FixedBytes(): hashing.Digest{0x1}},
 		},
 		{
 			index:             3,
 			version:           3,
 			eventDigest:       hashing.Digest{0x3},
-			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 1).FixedBytes(): hashing.Digest{0x1}, pos(2, 0).FixedBytes(): hashing.Digest{0x2}},
 		},
 		{
 			index:             4,
 			version:           4,
 			eventDigest:       hashing.Digest{0x4},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}},
 		},
 		{
 			index:             5,
 			version:           5,
 			eventDigest:       hashing.Digest{0x5},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}, pos(4, 0).FixedBytes(): hashing.Digest{0x4}},
 		},
 		{
 			index:             6,
 			version:           6,
 			eventDigest:       hashing.Digest{0x6},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}, pos(4, 1).FixedBytes(): hashing.Digest{0x1}},
 		},
 		{
 			index:             7,
 			version:           7,
 			eventDigest:       hashing.Digest{0x7},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}, pos(4, 1).FixedBytes(): hashing.Digest{0x1}, pos(6, 0).FixedBytes(): hashing.Digest{0x6}},
 		},
 		{
 			index:             8,
 			version:           8,
 			eventDigest:       hashing.Digest{0x8},
-			expectedAuditPath: visitor.AuditPath{"0|3": hashing.Digest{0x0}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 3).FixedBytes(): hashing.Digest{0x0}},
 		},
 		{
 			index:             9,
 			version:           9,
 			eventDigest:       hashing.Digest{0x9},
-			expectedAuditPath: visitor.AuditPath{"0|3": hashing.Digest{0x0}, "8|0": hashing.Digest{0x8}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 3).FixedBytes(): hashing.Digest{0x0}, pos(8, 0).FixedBytes(): hashing.Digest{0x8}},
 		},
 		{
 			index:             0,
 			version:           1,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}},
+			expectedAuditPath: navigation.AuditPath{pos(1, 0).FixedBytes(): hashing.Digest{0x1}},
 		},
 		{
 			index:             0,
 			version:           1,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}},
+			expectedAuditPath: navigation.AuditPath{pos(1, 0).FixedBytes(): hashing.Digest{0x1}},
 		},
 		{
 			index:             0,
 			version:           2,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
+			expectedAuditPath: navigation.AuditPath{pos(1, 0).FixedBytes(): hashing.Digest{0x1}, pos(2, 0).FixedBytes(): hashing.Digest{0x2}},
 		},
 		{
 			index:             0,
 			version:           3,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}},
+			expectedAuditPath: navigation.AuditPath{pos(1, 0).FixedBytes(): hashing.Digest{0x1}, pos(2, 1).FixedBytes(): hashing.Digest{0x1}},
 		},
 		{
 			index:             0,
 			version:           4,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|0": hashing.Digest{0x4}},
+			expectedAuditPath: navigation.AuditPath{pos(1, 0).FixedBytes(): hashing.Digest{0x1}, pos(2, 1).FixedBytes(): hashing.Digest{0x1}, pos(4, 0).FixedBytes(): hashing.Digest{0x4}},
 		},
 		{
 			index:             0,
 			version:           5,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|1": hashing.Digest{0x1}},
+			expectedAuditPath: navigation.AuditPath{pos(1, 0).FixedBytes(): hashing.Digest{0x1}, pos(2, 1).FixedBytes(): hashing.Digest{0x1}, pos(4, 1).FixedBytes(): hashing.Digest{0x1}},
 		},
 		{
 			index:             0,
 			version:           6,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}},
+			expectedAuditPath: navigation.AuditPath{pos(1, 0).FixedBytes(): hashing.Digest{0x1}, pos(2, 1).FixedBytes(): hashing.Digest{0x1}, pos(4, 1).FixedBytes(): hashing.Digest{0x1}, pos(6, 0).FixedBytes(): hashing.Digest{0x6}},
 		},
 		{
 			index:             0,
 			version:           7,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"1|0": hashing.Digest{0x1}, "2|1": hashing.Digest{0x1}, "4|2": hashing.Digest{0x0}},
+			expectedAuditPath: navigation.AuditPath{pos(1, 0).FixedBytes(): hashing.Digest{0x1}, pos(2, 1).FixedBytes(): hashing.Digest{0x1}, pos(4, 2).FixedBytes(): hashing.Digest{0x0}},
 		},
 	}
 
@@ -247,47 +247,47 @@ func TestProveConsistency(t *testing.T) {
 
 	testCases := []struct {
 		eventDigest       hashing.Digest
-		expectedAuditPath visitor.AuditPath
+		expectedAuditPath navigation.AuditPath
 	}{
 		{
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 0).FixedBytes(): hashing.Digest{0x0}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x1},
-			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 0).FixedBytes(): hashing.Digest{0x0}, pos(1, 0).FixedBytes(): hashing.Digest{0x1}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x2},
-			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 0).FixedBytes(): hashing.Digest{0x0}, pos(1, 0).FixedBytes(): hashing.Digest{0x1}, pos(2, 0).FixedBytes(): hashing.Digest{0x2}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x3},
-			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 1).FixedBytes(): hashing.Digest{0x1}, pos(2, 0).FixedBytes(): hashing.Digest{0x2}, pos(3, 0).FixedBytes(): hashing.Digest{0x3}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x4},
-			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}, "4|0": hashing.Digest{0x4}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 1).FixedBytes(): hashing.Digest{0x1}, pos(2, 0).FixedBytes(): hashing.Digest{0x2}, pos(3, 0).FixedBytes(): hashing.Digest{0x3}, pos(4, 0).FixedBytes(): hashing.Digest{0x4}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x5},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}, "5|0": hashing.Digest{0x5}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}, pos(4, 0).FixedBytes(): hashing.Digest{0x4}, pos(5, 0).FixedBytes(): hashing.Digest{0x5}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x6},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}, "5|0": hashing.Digest{0x5}, "6|0": hashing.Digest{0x6}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}, pos(4, 0).FixedBytes(): hashing.Digest{0x4}, pos(5, 0).FixedBytes(): hashing.Digest{0x5}, pos(6, 0).FixedBytes(): hashing.Digest{0x6}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x7},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}, "7|0": hashing.Digest{0x7}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}, pos(4, 1).FixedBytes(): hashing.Digest{0x1}, pos(6, 0).FixedBytes(): hashing.Digest{0x6}, pos(7, 0).FixedBytes(): hashing.Digest{0x7}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x8},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|1": hashing.Digest{0x1}, "6|0": hashing.Digest{0x6}, "7|0": hashing.Digest{0x7}, "8|0": hashing.Digest{0x8}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}, pos(4, 1).FixedBytes(): hashing.Digest{0x1}, pos(6, 0).FixedBytes(): hashing.Digest{0x6}, pos(7, 0).FixedBytes(): hashing.Digest{0x7}, pos(8, 0).FixedBytes(): hashing.Digest{0x8}},
 		},
 		{
 			eventDigest:       hashing.Digest{0x9},
-			expectedAuditPath: visitor.AuditPath{"0|3": hashing.Digest{0x0}, "8|0": hashing.Digest{0x8}, "9|0": hashing.Digest{0x9}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 3).FixedBytes(): hashing.Digest{0x0}, pos(8, 0).FixedBytes(): hashing.Digest{0x8}, pos(9, 0).FixedBytes(): hashing.Digest{0x9}},
 		},
 	}
 
@@ -318,32 +318,32 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	testCases := []struct {
 		index             uint64
 		eventDigest       hashing.Digest
-		expectedAuditPath visitor.AuditPath
+		expectedAuditPath navigation.AuditPath
 	}{
 		{
 			index:             0,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 0).FixedBytes(): hashing.Digest{0x0}},
 		},
 		{
 			index:             1,
 			eventDigest:       hashing.Digest{0x1},
-			expectedAuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x0}, "1|0": hashing.Digest{0x1}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 0).FixedBytes(): hashing.Digest{0x0}, pos(1, 0).FixedBytes(): hashing.Digest{0x1}},
 		},
 		{
 			index:             2,
 			eventDigest:       hashing.Digest{0x2},
-			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 1).FixedBytes(): hashing.Digest{0x1}, pos(2, 0).FixedBytes(): hashing.Digest{0x2}},
 		},
 		{
 			index:             3,
 			eventDigest:       hashing.Digest{0x3},
-			expectedAuditPath: visitor.AuditPath{"0|1": hashing.Digest{0x1}, "2|0": hashing.Digest{0x2}, "3|0": hashing.Digest{0x3}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 1).FixedBytes(): hashing.Digest{0x1}, pos(2, 0).FixedBytes(): hashing.Digest{0x2}, pos(3, 0).FixedBytes(): hashing.Digest{0x3}},
 		},
 		{
 			index:             4,
 			eventDigest:       hashing.Digest{0x4},
-			expectedAuditPath: visitor.AuditPath{"0|2": hashing.Digest{0x0}, "4|0": hashing.Digest{0x4}},
+			expectedAuditPath: navigation.AuditPath{pos(0, 2).FixedBytes(): hashing.Digest{0x0}, pos(4, 0).FixedBytes(): hashing.Digest{0x4}},
 		},
 	}
 

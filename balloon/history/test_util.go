@@ -14,28 +14,10 @@
    limitations under the License.
 */
 
-package cache
+package history
 
-import (
-	"github.com/bbva/qed/storage"
-)
+import "github.com/bbva/qed/balloon/history/navigation"
 
-type PassThroughCache struct {
-	prefix byte
-	store  storage.Store
-}
-
-func NewPassThroughCache(prefix byte, store storage.Store) *PassThroughCache {
-	return &PassThroughCache{
-		prefix: prefix,
-		store:  store,
-	}
-}
-
-func (c PassThroughCache) Get(key []byte) ([]byte, bool) {
-	pair, err := c.store.Get(c.prefix, key)
-	if err != nil {
-		return nil, false
-	}
-	return pair.Value, true
+func pos(index uint64, height uint16) *navigation.Position {
+	return navigation.NewPosition(index, height)
 }
