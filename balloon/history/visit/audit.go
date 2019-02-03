@@ -14,28 +14,31 @@
    limitations under the License.
 */
 
-package visitor
+package visit
 
 import (
-	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/navigator"
+	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/hashing"
 )
 
-type CachingVisitor struct {
-	cache cache.ModifiableCache
-
-	*ComputeHashVisitor
+type AuditPathVisitor struct {
+	auditPath navigation.AuditPath
+	PostOrderVisitor
 }
 
-func NewCachingVisitor(decorated *ComputeHashVisitor, cache cache.ModifiableCache) *CachingVisitor {
-	return &CachingVisitor{
-		ComputeHashVisitor: decorated,
-		cache:              cache,
+func NewAuditPathVisitor(decorated PostOrderVisitor) *AuditPathVisitor {
+	return &AuditPathVisitor{
+		PostOrderVisitor: decorated,
+		auditPath:        make(navigation.AuditPath),
 	}
 }
 
-func (v *CachingVisitor) VisitCacheable(pos navigator.Position, result interface{}) interface{} {
-	v.cache.Put(pos.Bytes(), result.(hashing.Digest))
-	return result
+func (v AuditPathVisitor) Result() navigation.AuditPath {
+	return v.auditPath
+}
+
+func (v *AuditPathVisitor) VisitCollectable(pos *navigation.Position, result hashing.Digest) hashing.Digest {
+	hash := v.PostOrderVisitor.VisitCollectable(pos, result)
+	v.auditPath[pos.FixedBytes()] = hash
+	return hash
 }

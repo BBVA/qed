@@ -19,8 +19,6 @@ package cache
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 )
@@ -28,23 +26,23 @@ import (
 func TestSimpleCache(t *testing.T) {
 
 	testCases := []struct {
-		pos    navigator.Position
-		value  hashing.Digest
+		key    []byte
+		value  []byte
 		cached bool
 	}{
-		{&navigator.FakePosition{[]byte{0x0}, 0}, hashing.Digest{0x1}, true},
-		{&navigator.FakePosition{[]byte{0x1}, 0}, hashing.Digest{0x2}, true},
-		{&navigator.FakePosition{[]byte{0x2}, 0}, hashing.Digest{0x3}, false},
+		{[]byte{0x0, 0x0}, []byte{0x1}, true},
+		{[]byte{0x1, 0x0}, []byte{0x2}, true},
+		{[]byte{0x2, 0x0}, []byte{0x3}, false},
 	}
 
 	cache := NewSimpleCache(0)
 
 	for i, c := range testCases {
 		if c.cached {
-			cache.Put(c.pos, c.value)
+			cache.Put(c.key, c.value)
 		}
 
-		cachedValue, ok := cache.Get(c.pos)
+		cachedValue, ok := cache.Get(c.key)
 
 		if c.cached {
 			require.Truef(t, ok, "The key should exists in cache in test case %d", i)
@@ -67,8 +65,8 @@ func TestFillSimpleCache(t *testing.T) {
 	require.Truef(t, reader.Remaining == 0, "All elements should be cached. Remaining: %d", reader.Remaining)
 
 	for i := uint64(0); i < numElems; i++ {
-		pos := &navigator.FakePosition{util.Uint64AsBytes(i), 0}
-		_, ok := cache.Get(pos)
-		require.Truef(t, ok, "The element in position %v should be in cache", pos)
+		key := util.Uint64AsBytes(i)
+		_, ok := cache.Get(key)
+		require.Truef(t, ok, "The element with key %v should be in cache", key)
 	}
 }

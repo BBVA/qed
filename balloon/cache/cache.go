@@ -17,17 +17,15 @@
 package cache
 
 import (
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 )
 
 type Cache interface {
-	Get(pos navigator.Position) (hashing.Digest, bool)
+	Get(key []byte) ([]byte, bool)
 }
 
 type ModifiableCache interface {
-	Put(pos navigator.Position, value hashing.Digest)
+	Put(key []byte, value []byte)
 	Fill(r storage.KVPairReader) error
 	Size() int
 	Cache

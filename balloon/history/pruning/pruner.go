@@ -14,28 +14,32 @@
    limitations under the License.
 */
 
-package cache
+package pruning
 
 import (
-	"github.com/bbva/qed/storage"
+	"errors"
+
+	"github.com/bbva/qed/balloon/history/visit"
+
+	"github.com/bbva/qed/balloon/cache"
 )
 
-type PassThroughCache struct {
-	prefix byte
-	store  storage.Store
+type PruningContext struct {
+	cacheResolver CacheResolver
+	cache         cache.Cache
 }
 
-func NewPassThroughCache(prefix byte, store storage.Store) *PassThroughCache {
-	return &PassThroughCache{
-		prefix: prefix,
-		store:  store,
+func NewPruningContext(cacheResolver CacheResolver, cache cache.Cache) *PruningContext {
+	return &PruningContext{
+		cacheResolver: cacheResolver,
+		cache:         cache,
 	}
 }
 
-func (c PassThroughCache) Get(key []byte) ([]byte, bool) {
-	pair, err := c.store.Get(c.prefix, key)
-	if err != nil {
-		return nil, false
-	}
-	return pair.Value, true
+type Pruner interface {
+	Prune() (visit.Visitable, error)
 }
+
+var (
+	ErrCacheNotFound = errors.New("this digest should be in cache")
+)
