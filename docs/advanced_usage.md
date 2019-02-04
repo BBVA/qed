@@ -84,7 +84,7 @@ To be production-ready, both services must be developed and deployed separatelly
 
 ```bash
 # this variables will be used in all the publiser, auditor and monitor examples.
-export masterEndpoint="127.0.0.1:8400"
+export masterEndpoint="127.0.0.1:8100"
 export publisherEndpoint="http://127.0.0.1:8888"
 export alertsEndpoint="http://127.0.0.1:8888"
 export qedEndpoint="http://127.0.0.1:8800"
@@ -95,7 +95,7 @@ go run main.go agent \
     --alertsUrls $alertsEndpoint \
     publisher \
     -k my-key \
-    --bind 127.0.0.1:9300 \
+    --bind 127.0.0.1:8300 \
     --join $masterEndpoint \
     --endpoints $publisherEndpoint \
     --node publisher0 \
@@ -109,7 +109,7 @@ go run main.go agent \
     --alertsUrls $alertsEndpoint \
     auditor \
     -k my-key \
-    --bind 127.0.0.1:8400 \
+    --bind 127.0.0.1:8100 \
     --join $masterEndpoint \
     --qedUrls $qedEndpoint \
     --pubUrls $publisherEndpoint \
@@ -124,7 +124,7 @@ go run main.go agent \
     --alertsUrls $alertsEndpoint \
     monitor \
     -k my-key \
-    --bind 127.0.0.1:9200 \
+    --bind 127.0.0.1:8200 \
     --join $masterEndpoint \
     --endpoints $qedEndpoint \
     --node monitor0 \
