@@ -166,16 +166,18 @@ func NewServer(conf *Config) (*Server, error) {
 		tamperMux := tampering.NewTamperingApi(store, hashing.NewSha256Hasher())
 		server.tamperingServer = newHTTPServer("localhost:8081", tamperMux)
 	}
+
 	if conf.EnableProfiling {
 		server.profilingServer = newHTTPServer("localhost:6060", nil)
 	}
+
 	if conf.EnableMetrics {
 		r := prometheus.NewRegistry()
 		metrics.Register(r)
 		server.prometheusRegistry = r
 		metricsMux := metricshttp.NewMetricsHTTP(r)
 
-		server.metricsServer = newHTTPServer("localhost:9990", metricsMux)
+		server.metricsServer = newHTTPServer(conf.MetricsAddr, metricsMux)
 	}
 
 	return server, nil
