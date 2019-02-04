@@ -37,7 +37,7 @@ module "leader" {
     addr:
       http: ":8800"
       mgmt: ":8700"
-      raft: ":9000"
+      raft: ":8500"
       gossip: ":9100"
   CONFIG
 
@@ -62,7 +62,7 @@ module "follower-1" {
     addr:
       http: ":8800"
       mgmt: ":8700"
-      raft: ":9000"
+      raft: ":8500"
       gossip: ":9100"
       raft_join:
        - "${module.leader.private_ip}:8700"
@@ -91,7 +91,7 @@ module "follower-2" {
     addr:
       http: ":8800"
       mgmt: ":8700"
-      raft: ":9000"
+      raft: ":8500"
       gossip: ":9100"
       raft_join:
        - "${module.leader.private_ip}:8700"
