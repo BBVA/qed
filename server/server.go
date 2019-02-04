@@ -211,7 +211,7 @@ func (s *Server) Start() error {
 
 	if s.conf.EnableMetrics {
 		go func() {
-			log.Debugf("	* Starting metrics HTTP server in addr: localhost:9990")
+			log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
 			if err := s.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
 				log.Errorf("Can't start metrics HTTP server: %s", err)
 			}

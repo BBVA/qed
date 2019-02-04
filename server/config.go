@@ -91,7 +91,7 @@ func DefaultConfig() *Config {
 		HTTPAddr:          "127.0.0.1:8800",
 		RaftAddr:          "127.0.0.1:9000",
 		MgmtAddr:          "127.0.0.1:8700",
-		MetricsAddr:       "127.0.0.1:9990",
+		MetricsAddr:       "127.0.0.1:8600",
 		RaftJoinAddr:      []string{},
 		GossipAddr:        "127.0.0.1:9100",
 		GossipJoinAddr:    []string{},
