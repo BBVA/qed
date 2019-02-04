@@ -171,14 +171,12 @@ func NewServer(conf *Config) (*Server, error) {
 		server.profilingServer = newHTTPServer("localhost:6060", nil)
 	}
 
-	if conf.EnableMetrics {
-		r := prometheus.NewRegistry()
-		metrics.Register(r)
-		server.prometheusRegistry = r
-		metricsMux := metricshttp.NewMetricsHTTP(r)
+	r := prometheus.NewRegistry()
+	metrics.Register(r)
+	server.prometheusRegistry = r
+	metricsMux := metricshttp.NewMetricsHTTP(r)
 
-		server.metricsServer = newHTTPServer(conf.MetricsAddr, metricsMux)
-	}
+	server.metricsServer = newHTTPServer(conf.MetricsAddr, metricsMux)
 
 	return server, nil
 }
@@ -209,14 +207,12 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	if s.conf.EnableMetrics {
-		go func() {
-			log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
-			if err := s.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-				log.Errorf("Can't start metrics HTTP server: %s", err)
-			}
-		}()
-	}
+	go func() {
+		log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
+		if err := s.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start metrics HTTP server: %s", err)
+		}
+	}()
 
 	if s.profilingServer != nil {
 		go func() {
@@ -291,14 +287,12 @@ func (s *Server) Start() error {
 func (s *Server) Stop() error {
 	fmt.Printf("\nShutting down QED server %s", s.conf.NodeID)
 
-	if s.conf.EnableMetrics {
-		log.Debugf("Metrics enabled: stopping server...")
-		if err := s.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-			log.Error(err)
-			return err
-		}
-		log.Debugf("Done.\n")
+	log.Debugf("Metrics enabled: stopping server...")
+	if err := s.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+		log.Error(err)
+		return err
 	}
+	log.Debugf("Done.\n")
 
 	if s.tamperingServer != nil {
 		log.Debugf("Tampering enabled: stopping server...")
