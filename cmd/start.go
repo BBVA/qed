@@ -92,9 +92,9 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	f.StringVar(&conf.SSLCertificateKey, "certificate-key", fmt.Sprintf("%s/%s", ctx.path, "server.key"), "Server key file")
 
 	f.StringVar(&conf.HTTPAddr, "http-addr", ":8800", "Endpoint for REST requests on (host:port)")
-	f.StringVar(&conf.RaftAddr, "raft-addr", "9000", "Raft bind address (host:port)")
-	f.StringVar(&conf.MgmtAddr, "mgmt-addr", "8090", "Management endpoint bind address (host:port)")
-	f.StringVar(&conf.MgmtAddr, "metrics-addr", "9990", "Metrics export bind address (host:port)")
+	f.StringVar(&conf.RaftAddr, "raft-addr", ":9000", "Raft bind address (host:port)")
+	f.StringVar(&conf.MgmtAddr, "mgmt-addr", ":8700", "Management endpoint bind address (host:port)")
+	f.StringVar(&conf.MgmtAddr, "metrics-addr", ":9990", "Metrics export bind address (host:port)")
 	f.StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 	f.StringVar(&conf.GossipAddr, "gossip-addr", ":9100", "Gossip: management endpoint bind address (host:port)")
 	f.StringSliceVar(&conf.GossipJoinAddr, "gossip-join-addr", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
