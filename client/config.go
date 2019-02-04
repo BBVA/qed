@@ -38,7 +38,7 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
-		Endpoint:                "localhost:8080",
+		Endpoint:                "localhost:8800",
 		APIKey:                  "my-key",
 		Insecure:                true,
 		TimeoutSeconds:          10,

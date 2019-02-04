@@ -18,7 +18,7 @@ echo Cleanup...
 if [ $(uname) == "Darwin" ]; then
     killall main || exit 0
 else
-    fuser -k -n tcp 8080 8081 8082 8083 8084 || true
+    fuser -k -n tcp 8800 8801 8802 8803 8804 || true
 fi
 sleep 5
 [ -f /var/tmp/keepme ] || rm -rf /var/tmp/demo.*

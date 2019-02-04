@@ -24,7 +24,7 @@ go run main.go start \
     -p $(mktemp -d /var/tmp/demo.XXX) \
     --raftpath $(mktemp -d /var/tmp/demo.XXX) \
     -y ~/.ssh/id_ed25519-qed \
-    --http-addr :8080 \
+    --http-addr :8800 \
     --raft-addr :9000 \
     --mgmt-addr :8090 \
     -l error
@@ -87,7 +87,7 @@ To be production-ready, both services must be developed and deployed separatelly
 export masterEndpoint="127.0.0.1:9100"
 export publisherEndpoint="http://127.0.0.1:8888"
 export alertsEndpoint="http://127.0.0.1:8888"
-export qedEndpoint="http://127.0.0.1:8080"
+export qedEndpoint="http://127.0.0.1:8800"
 ```
 
 ```bash

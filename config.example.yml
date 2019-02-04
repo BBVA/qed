@@ -35,7 +35,7 @@ server:
     certificate: "/var/tmp/qed/server.crt" # Server certificate file
     certificate_key: "/var/tmp/qed/server.key" # Server certificate key file
   addr:
-    http: ":8080"  # Endpoint for REST requests on (host:port).
+    http: ":8800"  # Endpoint for REST requests on (host:port).
     mgmt: ":8090"  # Management endpoint bind address (host:port).
     metrics: ":9990"  # Metrics endpoint (host:port).
     raft: ":9000"  # Raft bind address (host:port).
@@ -53,7 +53,7 @@ server:
 # Cient Configuration (cli commands `add` `incremental` and `verify`)
 ###############################################################################
 client:
-  endpoint: "127.0.0.1:8080"  # Endpoint for REST requests on (host:port)
+  endpoint: "127.0.0.1:8800"  # Endpoint for REST requests on (host:port)
   insecure: false  # Allow self signed certificates
   timeout:
     connection: 10  # time in seconds to cut the ongoing connection
@@ -73,6 +73,6 @@ agent:
   alert_urls:  # List of Alert servers ([host]:port), through which an agent can post alerts
     - "127.0.0.1:8888"
   server_urls:  # List of QED servers ([host]:port), through which an auditor can make queries
-    - "127.0.0.1:8080"
+    - "127.0.0.1:8800"
   snapshots_store_urls:  # List of end-publishers ([host]:port), through which an agent can send signedSnapshots or alerts
     - "127.0.0.1:8888"

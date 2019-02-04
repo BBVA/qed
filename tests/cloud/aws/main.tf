@@ -64,7 +64,7 @@ module "security_group" {
   vpc_id      = "${data.aws_vpc.default.id}"
 
   ingress_cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
-  ingress_rules       = ["http-8080-tcp", "all-icmp", "ssh-tcp" ]
+  ingress_rules       = ["http-8800-tcp", "all-icmp", "ssh-tcp" ]
   egress_rules        = ["all-all"]
 }
 

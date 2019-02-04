@@ -17,7 +17,7 @@
 ./start_server
 
 echo Stress time!
-go run attack_add/attack_add.go -w 100 -r 1000 -d 60s -k pepe -e http://localhost:8080/events > report.bin
+go run attack_add/attack_add.go -w 100 -r 1000 -d 60s -k pepe -e http://localhost:8800/events > report.bin
 cat report.bin | vegeta report
 cat report.bin | vegeta plot > plot.html
 echo done.
