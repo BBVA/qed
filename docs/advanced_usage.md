@@ -26,7 +26,7 @@ go run main.go start \
     -y ~/.ssh/id_ed25519-qed \
     --http-addr :8800 \
     --raft-addr :9000 \
-    --mgmt-addr :8090 \
+    --mgmt-addr :8700 \
     -l error
 ```
 
@@ -40,7 +40,7 @@ for i in $(seq 1 $FOLLOWERS); do
         --raftpath $(mktemp -d /var/tmp/demo.XXX) \
         -y ~/.ssh/id_ed25519-qed \
         --http-addr :808$i \
-        --join-addr :8090 \
+        --join-addr :8700 \
         --raft-addr :900$i \
         --mgmt-addr :809$i \
         --node-id node$i \
