@@ -227,7 +227,7 @@ module "prometheus" {
     - job_name: 'Qed-00-Service'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.leader.private_ip}:9990']
+        - targets: ['${module.leader.private_ip}:8600']
     - job_name: 'Qed-01-Host'
       scrape_interval: 10s
       static_configs:
@@ -235,7 +235,7 @@ module "prometheus" {
     - job_name: 'Qed-01-Service'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.follower-1.private_ip}:9990']
+        - targets: ['${module.follower-1.private_ip}:8600']
     - job_name: 'Qed-02-Host'
       scrape_interval: 10s
       static_configs:
@@ -243,6 +243,6 @@ module "prometheus" {
     - job_name: 'Qed-02-Service'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.follower-2.private_ip}:9990']
+        - targets: ['${module.follower-2.private_ip}:8600']
   CONFIG
 }
