@@ -96,7 +96,7 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	f.StringVar(&conf.MgmtAddr, "mgmt-addr", ":8700", "Management endpoint bind address (host:port)")
 	f.StringVar(&conf.MgmtAddr, "metrics-addr", ":8600", "Metrics export bind address (host:port)")
 	f.StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
-	f.StringVar(&conf.GossipAddr, "gossip-addr", ":9100", "Gossip: management endpoint bind address (host:port)")
+	f.StringVar(&conf.GossipAddr, "gossip-addr", ":8400", "Gossip: management endpoint bind address (host:port)")
 	f.StringSliceVar(&conf.GossipJoinAddr, "gossip-join-addr", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 
 	// INFO: testing purposes
