@@ -25,7 +25,7 @@ go run main.go start \
     --raftpath $(mktemp -d /var/tmp/demo.XXX) \
     -y ~/.ssh/id_ed25519-qed \
     --http-addr :8800 \
-    --raft-addr :9000 \
+    --raft-addr :8500 \
     --mgmt-addr :8700 \
     -l error
 ```

@@ -23,7 +23,7 @@ if [ ! -f "$keyFile" ]; then
 	echo -e 'y\n' | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 fi
 
-$QED start -k key -l silent --node-id server0 --gossip-addr $qedGossipEndpoint --raft-addr 127.0.0.1:9000 -y $keyFile &
+$QED start -k key -l silent --node-id server0 --gossip-addr $qedGossipEndpoint --raft-addr 127.0.0.1:8500 -y $keyFile &
 pids[0]=$!
 sleep 2s
 

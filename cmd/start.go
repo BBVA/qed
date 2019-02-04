@@ -92,7 +92,7 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	f.StringVar(&conf.SSLCertificateKey, "certificate-key", fmt.Sprintf("%s/%s", ctx.path, "server.key"), "Server key file")
 
 	f.StringVar(&conf.HTTPAddr, "http-addr", ":8800", "Endpoint for REST requests on (host:port)")
-	f.StringVar(&conf.RaftAddr, "raft-addr", ":9000", "Raft bind address (host:port)")
+	f.StringVar(&conf.RaftAddr, "raft-addr", ":8500", "Raft bind address (host:port)")
 	f.StringVar(&conf.MgmtAddr, "mgmt-addr", ":8700", "Management endpoint bind address (host:port)")
 	f.StringVar(&conf.MgmtAddr, "metrics-addr", ":8600", "Metrics export bind address (host:port)")
 	f.StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
