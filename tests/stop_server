@@ -22,6 +22,5 @@ else
 fi
 sleep 5
 [ -f /var/tmp/keepme ] || rm -rf /var/tmp/demo.*
-rm -f /var/tmp/id_ed25519{,.pub}
 echo done.
 
