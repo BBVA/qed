@@ -17,8 +17,10 @@
 echo "export CLUSTER_SIZE=N [2|4] env variable to execute the benchmark in replica mode. N number of folowers"
 echo "export PROFILING=true env variable to enable go profiling"
 
+tdir=$(mktemp -d /var/tmp/demo.XXX)
+
 echo Create id_ed25519 key
-ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+ssh-keygen -t ed25519 -N '' -f ${tdir}/id_ed25519
 
 if [ ! -z "$PROFILING" ]
 then
@@ -29,20 +31,50 @@ else
     echo PROFILING=disabled
 fi
 
+leader() {
+    mkdir -p ${tdir}/0/
+
+    go run ../main.go start \
+        -k test_key \
+        -p ${tdir}/0/ \
+        --node-id leader \
+        --keypath ${tdir}/id_ed25519 \
+        -l error \
+        $PROFILING \
+        &
+}
+
+follower() {
+    mkdir -p ${tdir}/$1
+
+    go run ../main.go start \
+        -k test_key \
+        --node-id follower_$1 \
+        -p ${tdir}/$1 \
+        --keypath ${tdir}/id_ed25519 \
+        -l error \
+        --http-addr :880$1 \
+        --mgmt-addr :870$1 \
+        --metrics-addr :860$1 \
+        --raft-addr :850$1 \
+        --gossip-addr :840$1 \
+        --join-addr :8700 \
+        --gossip-join-addr :8400 \
+        $PROFILING  \
+        &
+}
+
 if [ -z "$CLUSTER_SIZE" ]
 then
-    echo Starting single server...
-    go run ../main.go start -k pepe -p /var/tmp/demo.dbpath --raftpath /var/tmp/demo.raftpath -y /var/tmp/id_ed25519 -l error --http-addr :8800 --raft-addr :8500 --mgmt-addr :8700 $PROFILING &
-    sleep 10
-    echo done.
+    echo '>>>> Starting single node...'
+    leader
 else
-    echo Starting cluster mode...
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8800 --raft-addr :8500 --mgmt-addr :8700 $PROFILING &
-    sleep 10
-    echo Starting followers
+    echo '>>>> Starting cluster mode...'
+    leader
+    echo '>>>> Starting followers'
     for i in $(seq 1 $CLUSTER_SIZE); do
-        go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :880$i --join-addr :8700 --raft-addr :900$i --mgmt-addr :809$i --node-id node$i &
+        follower ${i}
     done
-    sleep 10
-    echo done.
 fi
+sleep 10
+echo '>>>> done.'
