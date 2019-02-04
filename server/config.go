@@ -93,7 +93,7 @@ func DefaultConfig() *Config {
 		MgmtAddr:          "127.0.0.1:8700",
 		MetricsAddr:       "127.0.0.1:8600",
 		RaftJoinAddr:      []string{},
-		GossipAddr:        "127.0.0.1:9100",
+		GossipAddr:        "127.0.0.1:8400",
 		GossipJoinAddr:    []string{},
 		DBPath:            currentDir + "/db",
 		RaftPath:          currentDir + "/wal",

@@ -11,7 +11,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-qedGossipEndpoint="127.0.0.1:9100"
+qedGossipEndpoint="127.0.0.1:8400"
 snapshotStoreEndpoint="http://127.0.0.1:8888"
 alertsStoreEndpoint="http://127.0.0.1:8888"
 qedHTTPEndpoint="http://127.0.0.1:8800"
