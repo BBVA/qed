@@ -36,11 +36,11 @@ server:
     certificate_key: "/var/tmp/qed/server.key" # Server certificate key file
   addr:
     http: ":8800"  # Endpoint for REST requests on (host:port).
-    mgmt: ":8090"  # Management endpoint bind address (host:port).
-    metrics: ":9990"  # Metrics endpoint (host:port).
-    raft: ":9000"  # Raft bind address (host:port).
-    raft_join:  # Raft: list of nodes ([host]:port), through which a cluster can be joined.
-     - "127.0.0.1:9000"
+    mgmt: ":8700"  # Management endpoint bind address (host:port).
+    metrics: ":9990"  # Metrics endpoint (host:port). where raft node can join the current cluster
+    raft: ":9000"  # Raft bind address (host:port). internal message passing
+    raft_join:  # Raft: list of nodes ([host]:port), where the node can join the cluster using the mgmt endpoint
+     - "127.0.0.1:8700"
     gossip: ":9100"  # Gossip: management endpoint bind address (host:port).
     gossip_join:  # Gossip: list of nodes ([host]:port), through which a cluster can be joined.
       - "127.0.0.1:9100"

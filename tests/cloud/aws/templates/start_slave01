@@ -20,7 +20,7 @@ yes | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 sleep 10
 
 echo Starting slave01...
-nohup /tmp/to_upload/qed start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr ${slave01_address}:8081 --join-addr ${master_address}:8090 --raft-addr ${slave01_address}:9001 --mgmt-addr ${slave01_address}:8091 --node-id slave1 &
+nohup /tmp/to_upload/qed start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr ${slave01_address}:8081 --join-addr ${master_address}:8700 --raft-addr ${slave01_address}:9001 --mgmt-addr ${slave01_address}:8091 --node-id slave1 &
 echo done.
 
 sleep 10

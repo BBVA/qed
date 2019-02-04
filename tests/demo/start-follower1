@@ -15,5 +15,5 @@
 # limitations under the License.
 
 echo 'Starting follower #1...'
-go run ../../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l debug --http-addr :8081 --join-addr :8090 --raft-addr :9001 --mgmt-addr :8091 --node-id follower1
+go run ../../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l debug --http-addr :8081 --join-addr :8700 --raft-addr :9001 --mgmt-addr :8091 --node-id follower1
 echo done.
