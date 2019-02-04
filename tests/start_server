@@ -32,12 +32,12 @@ fi
 if [ -z "$CLUSTER_SIZE" ]
 then
     echo Starting single server...
-    go run ../main.go start -k pepe -p /var/tmp/demo.dbpath --raftpath /var/tmp/demo.raftpath -y /var/tmp/id_ed25519 -l error --http-addr :8800 --raft-addr :9000 --mgmt-addr :8700 $PROFILING &
+    go run ../main.go start -k pepe -p /var/tmp/demo.dbpath --raftpath /var/tmp/demo.raftpath -y /var/tmp/id_ed25519 -l error --http-addr :8800 --raft-addr :8500 --mgmt-addr :8700 $PROFILING &
     sleep 10
     echo done.
 else
     echo Starting cluster mode...
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8800 --raft-addr :9000 --mgmt-addr :8700 $PROFILING &
+    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8800 --raft-addr :8500 --mgmt-addr :8700 $PROFILING &
     sleep 10
     echo Starting followers
     for i in $(seq 1 $CLUSTER_SIZE); do
