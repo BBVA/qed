@@ -24,8 +24,15 @@ variable "subnet_id" {}
 
 variable "key_name" {}
 
+variable "name" {}
+
 variable "config" {}
 
 variable "path" {
-  default = "/etc/prometheus"
+  default = "/var/tmp/qed"
 }
+
+variable "command" {
+  default = "start"
+}
+
