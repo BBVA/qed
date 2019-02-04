@@ -29,19 +29,19 @@ sleep 2s
 
 for i in `seq 1 $1`;
 do
-	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint auditor -k key -l info --bind 127.0.0.1:910$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node auditor$i" &
+	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint auditor -k key -l info --bind 127.0.0.1:810$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node auditor$i" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $2`;
 do
-	xterm  -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint monitor -k key -l info --bind 127.0.0.1:920$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node monitor$i" &
+	xterm  -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint monitor -k key -l info --bind 127.0.0.1:820$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node monitor$i" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $3`;
 do
-	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint publisher -k key -l info --bind 127.0.0.1:930$i --join $qedGossipEndpoint --endpoints $snapshotStoreEndpoint --node publisher$i" &
+	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint publisher -k key -l info --bind 127.0.0.1:830$i --join $qedGossipEndpoint --endpoints $snapshotStoreEndpoint --node publisher$i" &
 	pids+=($!)
 done 
 
