@@ -16,6 +16,8 @@ github.com/bbva/raft-badger v0.1.0 h1:2Rs2cE84pYaqE4IqI6ZZr/wXUvetZ8jV4doOH0Yaw8
 github.com/bbva/raft-badger v0.1.0/go.mod h1:/XINu34Us6PULTVQn0D6I/WtniWHHjut9lnsfFVECDA=
 github.com/bbva/raft-badger v0.1.1 h1:v0BlEP2glTd3o1U4ShD4HtyGc08PXt4gcEBdO6Fh7Oc=
 github.com/bbva/raft-badger v0.1.1/go.mod h1:KqKb1IrW6hsgFSzXTavxddJH+5E3TmDxBbFhitk0vpY=
+github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 h1:xJ4a3vCFaGF/jqvzLMYoU8P317H5OQ+Via4RmuPwCS0=
+github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
 github.com/boltdb/bolt v1.3.1/go.mod h1:clJnj/oiGkjum5o1McbSZDSLxVThjynRyGBgiAx27Ps=
 github.com/cespare/xxhash v1.1.0 h1:a6HrQnmkObjyL+Gs60czilIUGqrzKutQD6XZog3p+ko=
@@ -166,6 +168,7 @@ github.com/prometheus/common v0.0.0-20181126121408-4724e9255275 h1:PnBWHBf+6L0jO
 github.com/prometheus/common v0.0.0-20181126121408-4724e9255275/go.mod h1:daVV7qP5qjZbuso7PdcryaAu0sAZbrN9i7WWcTMWvro=
 github.com/prometheus/procfs v0.0.0-20181126161756-619930b0b471 h1:yLaU2uaatUJcbMacSwa4Dvstrkh6GXm2LhIpo0eGAms=
 github.com/prometheus/procfs v0.0.0-20181126161756-619930b0b471/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
+github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a h1:9a8MnZMP0X2nLJdBg+pBmGgkJlSaKC2KaQmTCk1XDtE=
 github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a/go.mod h1:c3At6R/oaqEKCNdg8wHV1ftS6bRYblBhIjjI8uT2IGk=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 h1:nn5Wsu0esKSJiIVhscUtVbo7ada43DJhG55ua/hjS5I=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
