@@ -27,7 +27,7 @@ check_profiling() {
 
 profiler_cmd() {
     ELAPSED=0
-    while curl -s -X POST http://localhost:8080/health-check 2>&1 > /dev/null ; do
+    while curl -s -X POST http://localhost:8800/health-check 2>&1 > /dev/null ; do
         (BALLOON_VERSION=$(curl -s http://localhost:6060/debug/vars | awk -F '"version": ' '/balloon_stats/ {print $2}' | tr -d '},')
         # Avoid empty version because preload process is not already started...
         : ${BALLOON_VERSION:=0}

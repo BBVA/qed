@@ -14,7 +14,7 @@
 qedGossipEndpoint="127.0.0.1:9100"
 snapshotStoreEndpoint="http://127.0.0.1:8888"
 alertsStoreEndpoint="http://127.0.0.1:8888"
-qedHTTPEndpoint="http://127.0.0.1:8080"
+qedHTTPEndpoint="http://127.0.0.1:8800"
 keyFile="/var/tmp/id_ed25519"
 QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
 

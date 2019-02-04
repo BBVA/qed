@@ -32,16 +32,16 @@ fi
 if [ -z "$CLUSTER_SIZE" ]
 then
     echo Starting single server...
-    go run ../main.go start -k pepe -p /var/tmp/demo.dbpath --raftpath /var/tmp/demo.raftpath -y /var/tmp/id_ed25519 -l error --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 $PROFILING &
+    go run ../main.go start -k pepe -p /var/tmp/demo.dbpath --raftpath /var/tmp/demo.raftpath -y /var/tmp/id_ed25519 -l error --http-addr :8800 --raft-addr :9000 --mgmt-addr :8090 $PROFILING &
     sleep 10
     echo done.
 else
     echo Starting cluster mode...
-    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8080 --raft-addr :9000 --mgmt-addr :8090 $PROFILING &
+    go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :8800 --raft-addr :9000 --mgmt-addr :8090 $PROFILING &
     sleep 10
     echo Starting followers
     for i in $(seq 1 $CLUSTER_SIZE); do
-        go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :808$i --join-addr :8090 --raft-addr :900$i --mgmt-addr :809$i --node-id node$i &
+        go run ../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr :880$i --join-addr :8090 --raft-addr :900$i --mgmt-addr :809$i --node-id node$i &
     done
     sleep 10
     echo done.
