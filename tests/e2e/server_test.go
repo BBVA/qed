@@ -27,7 +27,7 @@ import (
 
 const (
 	QEDProfilingURL = "http://localhost:6060/debug/pprof"
-	QEDMetricsURL   = "http://localhost:9990/metrics"
+	QEDMetricsURL   = "http://localhost:8600/metrics"
 )
 
 // FIXME: This function should also include testing for the other servers, not
