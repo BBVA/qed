@@ -43,7 +43,6 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 			conf.APIKey = ctx.apiKey
 			conf.NodeID = v.GetString("server.node-id")
 			conf.EnableProfiling = v.GetBool("server.profiling")
-			conf.EnableMetrics = v.GetBool("server.metrics")
 			conf.PrivateKeyPath, _ = homedir.Expand(v.GetString("server.key"))
 			conf.SSLCertificate, _ = homedir.Expand(v.GetString("server.tls.certificate"))
 			conf.SSLCertificateKey, _ = homedir.Expand(v.GetString("server.tls.certificate_key"))
@@ -86,7 +85,6 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	hostname, _ := os.Hostname()
 	f.StringVar(&conf.NodeID, "node-id", hostname, "Unique name for node. If not set, fallback to hostname")
 	f.BoolVarP(&conf.EnableProfiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
-	f.BoolVarP(&conf.EnableMetrics, "metrics", "m", false, "Allow export metrics through --metrics-addr (default localhost:8600)")
 	f.StringVar(&conf.PrivateKeyPath, "keypath", fmt.Sprintf("%s/%s", ctx.path, "id_ed25519"), "Server Singning private key file path")
 	f.StringVar(&conf.SSLCertificate, "certificate", fmt.Sprintf("%s/%s", ctx.path, "server.crt"), "Server crt file")
 	f.StringVar(&conf.SSLCertificateKey, "certificate-key", fmt.Sprintf("%s/%s", ctx.path, "server.key"), "Server key file")
@@ -94,7 +92,7 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	f.StringVar(&conf.HTTPAddr, "http-addr", ":8800", "Endpoint for REST requests on (host:port)")
 	f.StringVar(&conf.RaftAddr, "raft-addr", ":8500", "Raft bind address (host:port)")
 	f.StringVar(&conf.MgmtAddr, "mgmt-addr", ":8700", "Management endpoint bind address (host:port)")
-	f.StringVar(&conf.MgmtAddr, "metrics-addr", ":8600", "Metrics export bind address (host:port)")
+	f.StringVar(&conf.MetricsAddr, "metrics-addr", ":8600", "Metrics export bind address (host:port)")
 	f.StringSliceVar(&conf.RaftJoinAddr, "join-addr", []string{}, "Raft: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 	f.StringVar(&conf.GossipAddr, "gossip-addr", ":8400", "Gossip: management endpoint bind address (host:port)")
 	f.StringSliceVar(&conf.GossipJoinAddr, "gossip-join-addr", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
@@ -106,7 +104,6 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	// Lookups
 	v.BindPFlag("server.node-id", f.Lookup("node-id"))
 	v.BindPFlag("server.profiling", f.Lookup("profiling"))
-	v.BindPFlag("server.metrics", f.Lookup("metrics"))
 	v.BindPFlag("server.key", f.Lookup("keypath"))
 	v.BindPFlag("server.tls.certificate", f.Lookup("certificate"))
 	v.BindPFlag("server.tls.certificate_key", f.Lookup("certificate-key"))

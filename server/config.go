@@ -68,9 +68,6 @@ type Config struct {
 	// Enables tampering endpoint.
 	EnableTampering bool
 
-	// Enables metrics endpoint.
-	EnableMetrics bool
-
 	// Enable TLS service
 	EnableTLS bool
 
@@ -99,7 +96,6 @@ func DefaultConfig() *Config {
 		RaftPath:          currentDir + "/wal",
 		EnableProfiling:   false,
 		EnableTampering:   false,
-		EnableMetrics:     false,
 		EnableTLS:         false,
 		SSLCertificate:    "",
 		SSLCertificateKey: "",
