@@ -40,6 +40,9 @@ type Config struct {
 	// and get cluster information.
 	MgmtAddr string
 
+	// Metrics bind address/port.
+	MetricsAddr string
+
 	// List of raft nodes, through which a cluster can be joined
 	// (protocol://host:port).
 	RaftJoinAddr []string
@@ -88,6 +91,7 @@ func DefaultConfig() *Config {
 		HTTPAddr:          "127.0.0.1:8080",
 		RaftAddr:          "127.0.0.1:9000",
 		MgmtAddr:          "127.0.0.1:8090",
+		MetricsAddr:       "127.0.0.1:9990",
 		RaftJoinAddr:      []string{},
 		GossipAddr:        "127.0.0.1:9100",
 		GossipJoinAddr:    []string{},
@@ -95,7 +99,7 @@ func DefaultConfig() *Config {
 		RaftPath:          currentDir + "/wal",
 		EnableProfiling:   false,
 		EnableTampering:   false,
-		EnableMetrics:     true,
+		EnableMetrics:     false,
 		EnableTLS:         false,
 		SSLCertificate:    "",
 		SSLCertificateKey: "",

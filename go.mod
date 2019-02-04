@@ -3,6 +3,7 @@ module github.com/bbva/qed
 require (
 	github.com/VictoriaMetrics/fastcache v1.3.0
 	github.com/bbva/raft-badger v0.1.1
+	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/coocood/freecache v1.0.1
 	github.com/coreos/bbolt v1.3.0
@@ -43,7 +44,7 @@ require (
 	github.com/onsi/ginkgo v1.7.0 // indirect
 	github.com/onsi/gomega v1.4.3 // indirect
 	github.com/pborman/uuid v1.2.0
-	github.com/prometheus/client_golang v0.9.1 // indirect
+	github.com/prometheus/client_golang v0.9.1
 	github.com/prometheus/client_model v0.0.0-20180712105110-5c3871d89910 // indirect
 	github.com/prometheus/common v0.0.0-20181126121408-4724e9255275 // indirect
 	github.com/prometheus/procfs v0.0.0-20181204211112-1dc9a6cbc91a // indirect
