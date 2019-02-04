@@ -34,7 +34,7 @@ func main() {
 	workers := flag.Uint64("w", 1, "Request per second")
 	timeout := flag.Duration("t", 30*time.Second, "Timeout")
 	duration := flag.Duration("d", 10*time.Second, "Duration")
-	endpoint := flag.String("e", "http://localhost:8080/events", "Endpoint")
+	endpoint := flag.String("e", "http://localhost:8800/events", "Endpoint")
 	apikey := flag.String("k", "apikey", "apikey")
 	rate := flag.Int("r", 100, "Request per second")
 	flag.Parse()

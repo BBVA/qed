@@ -35,7 +35,7 @@ func newClientCommand(ctx *cmdContext) *cobra.Command {
 	}
 
 	f := cmd.PersistentFlags()
-	f.StringVarP(&clientCtx.config.Endpoint, "endpoint", "e", "127.0.0.1:8080", "Endpoint for REST requests on (host:port)")
+	f.StringVarP(&clientCtx.config.Endpoint, "endpoint", "e", "127.0.0.1:8800", "Endpoint for REST requests on (host:port)")
 	f.BoolVar(&clientCtx.config.Insecure, "insecure", false, "Allow self signed certificates")
 	f.IntVar(&clientCtx.config.TimeoutSeconds, "timeout-seconds", 10, "Seconds to cut the connection")
 	f.IntVar(&clientCtx.config.DialTimeoutSeconds, "dial-timeout-seconds", 5, "Seconds to cut the dialing")

@@ -17,7 +17,7 @@
 ./start_server
 
 echo Stress time!
-wrk -t100 -c1000 -d60s --latency -s attack_add/attack_add.lua http://localhost:8080
+wrk -t100 -c1000 -d60s --latency -s attack_add/attack_add.lua http://localhost:8800
 echo done.
 
 ./stop_server

@@ -91,7 +91,7 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	f.StringVar(&conf.SSLCertificate, "certificate", fmt.Sprintf("%s/%s", ctx.path, "server.crt"), "Server crt file")
 	f.StringVar(&conf.SSLCertificateKey, "certificate-key", fmt.Sprintf("%s/%s", ctx.path, "server.key"), "Server key file")
 
-	f.StringVar(&conf.HTTPAddr, "http-addr", ":8080", "Endpoint for REST requests on (host:port)")
+	f.StringVar(&conf.HTTPAddr, "http-addr", ":8800", "Endpoint for REST requests on (host:port)")
 	f.StringVar(&conf.RaftAddr, "raft-addr", "9000", "Raft bind address (host:port)")
 	f.StringVar(&conf.MgmtAddr, "mgmt-addr", "8090", "Management endpoint bind address (host:port)")
 	f.StringVar(&conf.MgmtAddr, "metrics-addr", "9990", "Metrics export bind address (host:port)")

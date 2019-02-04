@@ -68,7 +68,7 @@ func NewDefaultConfig() *Config {
 		req: HTTPClient{
 			client:             nil,
 			method:             "POST",
-			endpoint:           "http://localhost:8080",
+			endpoint:           "http://localhost:8800",
 			expectedStatusCode: 200,
 		},
 	}

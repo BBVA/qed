@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	QEDUrl       = "http://127.0.0.1:8080"
-	QEDTLS       = "https://localhost:8080"
+	QEDUrl       = "http://127.0.0.1:8800"
+	QEDTLS       = "https://localhost:8800"
 	QEDGossip    = "127.0.0.1:9010"
 	QEDTamperURL = "http://127.0.0.1:8081/tamper"
 	StoreURL     = "http://127.0.0.1:8888"
