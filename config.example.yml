@@ -65,8 +65,8 @@ client:
 # Agent Configuration
 ###############################################################################
 agent:
-  node: "nodeName"  # Unique name for node. If not set, fallback to hostname
-  bind: ":9200"  # Bind address for TCP/UDP gossip on (host:port)
+  node: "nodeName"  # Role for node, it can be only `auditor`, `monitor` or `publisher`
+  bind: ":8200"  # Bind address for TCP/UDP gossip on (host:port)
   advertise: ""  # Address to advertise to cluster
   join:  # Comma-delimited list of nodes ([host]:port), through which a cluster can be joined
     - "127.0.0.1:8400"

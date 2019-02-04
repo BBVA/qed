@@ -128,7 +128,7 @@ module "follower-2" {
 #   path: "/var/tmp/qed/"
 #   agent:
 #     node: "publisher"
-#     bind: ":9300"
+#     bind: ":8300"
 #     advertise: ""
 #     join:
 #       - "${module.leader.private_ip}:8400"
@@ -159,7 +159,7 @@ module "follower-2" {
 #   path: "/var/tmp/qed/"
 #   agent:
 #     node: "monitor"
-#     bind: ":9200"
+#     bind: ":8200"
 #     advertise: ""
 #     join:
 #       - "${module.leader.private_ip}:8400"
@@ -189,7 +189,7 @@ module "follower-2" {
 #   path: "/var/tmp/qed/"
 #   agent:
 #     node: "auditor"
-#     bind: ":8400"
+#     bind: ":8100"
 #     advertise: ""
 #     join:
 #       - "${module.leader.private_ip}:8400"
