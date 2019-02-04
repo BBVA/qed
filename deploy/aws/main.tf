@@ -35,7 +35,7 @@ module "leader" {
   server:
     node_id: "leader"
     addr:
-      http: ":8080"
+      http: ":8800"
       mgmt: ":8090"
       raft: ":9000"
       gossip: ":9100"
@@ -60,7 +60,7 @@ module "follower-1" {
   server:
     node_id: "follower-1"
     addr:
-      http: ":8080"
+      http: ":8800"
       mgmt: ":8090"
       raft: ":9000"
       gossip: ":9100"
@@ -89,7 +89,7 @@ module "follower-2" {
   server:
     node_id: "follower-2"
     addr:
-      http: ":8080"
+      http: ":8800"
       mgmt: ":8090"
       raft: ":9000"
       gossip: ":9100"
@@ -133,7 +133,7 @@ module "follower-2" {
 #     join:
 #       - "${module.leader.private_ip}:9100"
 #     server_urls:
-#       - "${module.leader.private_ip}:8080"
+#       - "${module.leader.private_ip}:8800"
 #     alert_urls:
 #       - "${module.inmemory-storage.private_ip}:8888"
 #     snapshots_store_urls:
@@ -164,7 +164,7 @@ module "follower-2" {
 #     join:
 #       - "${module.leader.private_ip}:9100"
 #     server_urls:
-#       - "${module.leader.private_ip}:8080"
+#       - "${module.leader.private_ip}:8800"
 #     alert_urls:
 #       - "${module.inmemory-storage.private_ip}:8888"
 #     snapshots_store_urls:
@@ -194,7 +194,7 @@ module "follower-2" {
 #     join:
 #       - "${module.leader.private_ip}:9100"
 #     server_urls:
-#       - "${module.leader.private_ip}:8080"
+#       - "${module.leader.private_ip}:8800"
 #     alert_urls:
 #       - "${module.inmemory-storage.private_ip}:8888"
 #     snapshots_store_urls:

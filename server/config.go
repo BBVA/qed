@@ -88,7 +88,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		APIKey:            "",
 		NodeID:            hostname,
-		HTTPAddr:          "127.0.0.1:8080",
+		HTTPAddr:          "127.0.0.1:8800",
 		RaftAddr:          "127.0.0.1:9000",
 		MgmtAddr:          "127.0.0.1:8090",
 		MetricsAddr:       "127.0.0.1:9990",
