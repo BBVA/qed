@@ -38,7 +38,7 @@ module "leader" {
       http: ":8800"
       mgmt: ":8700"
       raft: ":8500"
-      gossip: ":9100"
+      gossip: ":8400"
   CONFIG
 
 }
@@ -63,11 +63,11 @@ module "follower-1" {
       http: ":8800"
       mgmt: ":8700"
       raft: ":8500"
-      gossip: ":9100"
+      gossip: ":8400"
       raft_join:
        - "${module.leader.private_ip}:8700"
       gossip_join:
-        - "${module.leader.private_ip}:9100"
+        - "${module.leader.private_ip}:8400"
   CONFIG
 
 }
@@ -92,11 +92,11 @@ module "follower-2" {
       http: ":8800"
       mgmt: ":8700"
       raft: ":8500"
-      gossip: ":9100"
+      gossip: ":8400"
       raft_join:
        - "${module.leader.private_ip}:8700"
       gossip_join:
-        - "${module.leader.private_ip}:9100"
+        - "${module.leader.private_ip}:8400"
   CONFIG
 }
 
@@ -131,7 +131,7 @@ module "follower-2" {
 #     bind: ":9300"
 #     advertise: ""
 #     join:
-#       - "${module.leader.private_ip}:9100"
+#       - "${module.leader.private_ip}:8400"
 #     server_urls:
 #       - "${module.leader.private_ip}:8800"
 #     alert_urls:
@@ -162,7 +162,7 @@ module "follower-2" {
 #     bind: ":9200"
 #     advertise: ""
 #     join:
-#       - "${module.leader.private_ip}:9100"
+#       - "${module.leader.private_ip}:8400"
 #     server_urls:
 #       - "${module.leader.private_ip}:8800"
 #     alert_urls:
@@ -189,10 +189,10 @@ module "follower-2" {
 #   path: "/var/tmp/qed/"
 #   agent:
 #     node: "auditor"
-#     bind: ":9100"
+#     bind: ":8400"
 #     advertise: ""
 #     join:
-#       - "${module.leader.private_ip}:9100"
+#       - "${module.leader.private_ip}:8400"
 #     server_urls:
 #       - "${module.leader.private_ip}:8800"
 #     alert_urls:

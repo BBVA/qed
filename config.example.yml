@@ -41,9 +41,9 @@ server:
     raft: ":8500"  # Raft bind address (host:port). internal message passing
     raft_join:  # Raft: list of nodes ([host]:port), where the node can join the cluster using the mgmt endpoint
      - "127.0.0.1:8700"
-    gossip: ":9100"  # Gossip: management endpoint bind address (host:port).
+    gossip: ":8400"  # Gossip: management endpoint bind address (host:port).
     gossip_join:  # Gossip: list of nodes ([host]:port), through which a cluster can be joined.
-      - "127.0.0.1:9100"
+      - "127.0.0.1:8400"
     path:
       db: "/var/tmp/qed/db"  # Set default storage path.
       wal: "/var/tmp/qed/wal"  # Set raft storage path.
@@ -69,7 +69,7 @@ agent:
   bind: ":9200"  # Bind address for TCP/UDP gossip on (host:port)
   advertise: ""  # Address to advertise to cluster
   join:  # Comma-delimited list of nodes ([host]:port), through which a cluster can be joined
-    - "127.0.0.1:9100"
+    - "127.0.0.1:8400"
   alert_urls:  # List of Alert servers ([host]:port), through which an agent can post alerts
     - "127.0.0.1:8888"
   server_urls:  # List of QED servers ([host]:port), through which an auditor can make queries
