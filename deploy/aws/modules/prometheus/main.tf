@@ -59,6 +59,7 @@ resource "aws_instance" "prometheus" {
 
       connection {
         user = "ec2-user"
+        private_key = "${file("${var.key_path}")}"
       }
   }
 
@@ -68,14 +69,15 @@ resource "aws_instance" "prometheus" {
 
       connection {
         user = "ec2-user"
+        private_key = "${file("${var.key_path}")}"
       }
   }
 
   user_data = <<-DATA
   #!/bin/bash
 
-  yum install https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
-  service grafana-server start
+  sudo yum install -y https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
+  sudo service grafana-server start
 
   while [ ! -f ${var.path}/prometheus ]; do
     sleep 1 # INFO: wait until binary exists
@@ -83,7 +85,7 @@ resource "aws_instance" "prometheus" {
   sleep 1
 
   chmod +x ${var.path}/prometheus
-  ${var.path}/prometheus --config-file=${var.path}/prometheus.yml
+  nohup ${var.path}/prometheus --config.file=${var.path}/prometheus.yml &
 
 
   

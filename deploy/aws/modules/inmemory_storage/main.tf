@@ -60,6 +60,7 @@ resource "aws_instance" "inmemory-storage" {
 
       connection {
         user = "ec2-user"
+        private_key = "${file("${var.key_path}")}"
       }
   }
 
