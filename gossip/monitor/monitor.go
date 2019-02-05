@@ -31,7 +31,7 @@ import (
 )
 
 type Config struct {
-	QedUrls               []string
+	QEDUrls               []string
 	PubUrls               []string
 	APIKey                string
 	TaskExecutionInterval time.Duration
@@ -58,8 +58,8 @@ func NewMonitor(conf Config) (*Monitor, error) {
 
 	monitor := Monitor{
 		client: client.NewHTTPClient(client.Config{
-			Endpoint:  conf.QedUrls[0],
-			APIKey:    conf.APIKey,
+			Endpoint: conf.QEDUrls[0],
+			APIKey:   conf.APIKey,
 			Insecure: false,
 		}),
 		conf:   conf,
