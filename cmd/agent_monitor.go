@@ -41,7 +41,7 @@ func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun 
 			agentPreRun(cmd, args)
 
 			// Bindings
-			monitorConfig.QedUrls = v.GetStringSlice("agent.server_urls")
+			monitorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
 			monitorConfig.PubUrls = v.GetStringSlice("agent.alert_urls")
 			markSliceStringRequired(monitorConfig.QedUrls, "qedUrls")
 			markSliceStringRequired(monitorConfig.PubUrls, "pubUrls")
@@ -75,7 +75,7 @@ func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun 
 	}
 
 	f := cmd.Flags()
-	f.StringSliceVarP(&monitorConfig.QedUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
+	f.StringSliceVarP(&monitorConfig.QEDUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
 	f.StringSliceVarP(&monitorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an monitor can publish alerts")
 
 	// Lookups
