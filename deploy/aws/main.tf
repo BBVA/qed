@@ -21,8 +21,8 @@ resource "null_resource" "prebuild" {
 module "leader" {
   source = "./modules/qed"
 
-  name = "leader"
-  instance_type = "t2.2xlarge"
+  name = "qed0"
+  instance_type = "t3.2xlarge"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -46,8 +46,8 @@ module "leader" {
 module "follower-1" {
   source = "./modules/qed"
 
-  name = "follower-1"
-  instance_type = "t2.2xlarge"
+  name = "qed1"
+  instance_type = "t3.2xlarge"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -58,7 +58,7 @@ module "follower-1" {
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
   server:
-    node_id: "follower-1"
+    node_id: "qed1"
     addr:
       http: ":8800"
       mgmt: ":8700"
@@ -75,8 +75,8 @@ module "follower-1" {
 module "follower-2" {
   source = "./modules/qed"
 
-  name = "follower-2"
-  instance_type = "t2.2xlarge"
+  name = "qed2"
+  instance_type = "t3.2xlarge"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -87,7 +87,7 @@ module "follower-2" {
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
   server:
-    node_id: "follower-2"
+    node_id: "qed2"
     addr:
       http: ":8800"
       mgmt: ":8700"
@@ -104,7 +104,7 @@ module "follower-2" {
 #   source = "./modules/inmemory_storage"
 #
 #   name = "inmemory-storage"
-#   instance_type = "t2.2xlarge"
+#   instance_type = "t3.small"
 #   volume_size = "20"
 #   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
 #   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -115,7 +115,7 @@ module "follower-2" {
 #   source = "./modules/qed"
 #
 #   name = "agent-publisher"
-#   instance_type = "t2.2xlarge"
+#   instance_type = "t3.small"
 #   volume_size = "20"
 #   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
 #   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -146,7 +146,7 @@ module "follower-2" {
 #   source = "./modules/qed"
 #
 #   name = "agent-monitor"
-#   instance_type = "t2.2xlarge"
+#   instance_type = "t3.small"
 #   volume_size = "20"
 #   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
 #   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -205,7 +205,7 @@ module "follower-2" {
 module "prometheus" {
   source = "./modules/prometheus"
 
-  instance_type = "t2.2xlarge"
+  instance_type = "t3.medium"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -220,27 +220,27 @@ module "prometheus" {
       scrape_interval: 5s
       static_configs:
         - targets: ['localhost:9090']
-    - job_name: 'Qed-00-Host'
+    - job_name: 'Qed0-HostMetrics'
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.leader.private_ip}:9100', ]
-    - job_name: 'Qed-00-Service'
+    - job_name: 'Qed0-QedMetrics'
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.leader.private_ip}:8600']
-    - job_name: 'Qed-01-Host'
+    - job_name: 'Qed1-HostMetrics'
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.follower-1.private_ip}:9100']
-    - job_name: 'Qed-01-Service'
+    - job_name: 'Qed1-QedMetrics'
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.follower-1.private_ip}:8600']
-    - job_name: 'Qed-02-Host'
+    - job_name: 'Qed2-HostMetrics'
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.follower-2.private_ip}:9100']
-    - job_name: 'Qed-02-Service'
+    - job_name: 'Qed2-QedMetrics'
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.follower-2.private_ip}:8600']
