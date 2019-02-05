@@ -23,7 +23,14 @@ if [ ! -f "$keyFile" ]; then
 	echo -e 'y\n' | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 fi
 
-$QED start -k key -l silent --node-id server0 --gossip-addr $qedGossipEndpoint --raft-addr 127.0.0.1:8500 -y $keyFile &
+$QED start \
+    -k key \
+    -l silent \
+    --node-id server0 \
+    --gossip-addr $qedGossipEndpoint \
+    --raft-addr 127.0.0.1:8500 \
+    --keypath $keyFile &
+
 pids[0]=$!
 sleep 2s
 
@@ -41,7 +48,7 @@ done
 
 for i in `seq 1 $3`;
 do
-	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint publisher -k key -l info --bind 127.0.0.1:830$i --join $qedGossipEndpoint --endpoints $snapshotStoreEndpoint --node publisher$i" &
+	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint publisher -k key -l info --bind 127.0.0.1:830$i --join $qedGossipEndpoint --pubUrls $snapshotStoreEndpoint --node publisher$i" &
 	pids+=($!)
 done 
 
