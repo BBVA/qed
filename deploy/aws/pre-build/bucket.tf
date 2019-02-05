@@ -7,6 +7,7 @@ provider "aws" {
   region = "eu-west-1"
   profile = "${var.aws_profile}"
 }
+
 resource "aws_s3_bucket" "terraform-qed-cluster" {
     bucket = "terraform-qed-cluster"
  
