@@ -18,6 +18,14 @@ resource "null_resource" "prebuild" {
   }
 }
 
+# Bucket config must be here: https://github.com/hashicorp/terraform/issues/13589 
+terraform {
+    backend "s3" {
+    bucket = "terraform-qed-cluster"
+    key    = "terraform.tfstate"
+    region = "eu-west-1"
+  }
+}
 module "leader" {
   source = "./modules/qed"
 
