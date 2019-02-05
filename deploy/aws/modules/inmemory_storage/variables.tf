@@ -24,6 +24,8 @@ variable "subnet_id" {}
 
 variable "key_name" {}
 
+variable "key_path" {}
+
 variable "name" {}
 
 variable "path" {

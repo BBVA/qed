@@ -42,7 +42,7 @@ resource "aws_instance" "qed-server" {
   }]
 
   tags {
-    Name = "qed-${var.name}"
+    Name = "${var.name}"
   }
 
 
@@ -52,6 +52,7 @@ resource "aws_instance" "qed-server" {
 
       connection {
         user = "ec2-user"
+        private_key = "${file("${var.key_path}")}"
       }
   }
 
@@ -61,6 +62,7 @@ resource "aws_instance" "qed-server" {
 
       connection {
         user = "ec2-user"
+        private_key = "${file("${var.key_path}")}"
       }
   }
 
