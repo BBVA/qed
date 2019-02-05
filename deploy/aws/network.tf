@@ -42,8 +42,14 @@ module "security_group" {
   egress_rules        = ["all-all"]
 
   ingress_cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
-  ingress_rules       = ["http-8800-tcp", "all-icmp", "ssh-tcp" ]
+  ingress_rules       = ["all-icmp", "ssh-tcp" ]
   ingress_with_cidr_blocks = [
+    {
+      from_port       = 8800
+      to_port         = 8800
+      protocol        = "tcp"
+      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+    },
     {
       from_port       = 6060
       to_port         = 6060
