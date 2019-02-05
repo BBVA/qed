@@ -40,5 +40,4 @@ coverage.txt
 config.yml
 deploy/aws/config_files/*
 !deploy/aws/config_files/README.md
-deploy/aws/modules/inmemory_storage/data
-deploy/aws/modules/prometheus/data
+deploy/aws/modules/*/data
