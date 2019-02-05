@@ -41,7 +41,7 @@ module "leader" {
   api_key: "terraform_qed"
   path: "/var/tmp/qed/"
   server:
-    node_id: "leader"
+    node_id: "qed0"
     addr:
       http: ":8800"
       mgmt: ":8700"
@@ -215,7 +215,7 @@ module "prometheus" {
 
   instance_type = "t3.medium"
   volume_size = "20"
-  vpc_security_group_ids = "${module.security_group.this_security_group_id}"
+  vpc_security_group_ids = "${module.prometheus_security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
 

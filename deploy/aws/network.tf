@@ -80,3 +80,41 @@ module "security_group" {
   number_of_computed_ingress_with_source_security_group_id = 1
 
 }
+
+module "prometheus_security_group" {
+  source = "terraform-aws-modules/security-group/aws"
+  version = "2.11.0"
+
+  name        = "prometheus"
+  description = "Security group for Prometheus/Grafana usage"
+  vpc_id      = "${data.aws_vpc.default.id}"
+
+  egress_rules        = ["all-all"]
+
+  ingress_cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
+  ingress_rules       = ["all-icmp", "ssh-tcp" ]
+  ingress_with_cidr_blocks = [
+    {
+      from_port       = 9090
+      to_port         = 9090
+      protocol        = "tcp"
+      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+    },
+    {
+      from_port       = 3000
+      to_port         = 3000
+      protocol        = "tcp"
+      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+    },
+  ]
+  computed_ingress_with_source_security_group_id = [
+    {
+      from_port       = 0
+      to_port         = 65535
+      protocol        = "tcp"
+      source_security_group_id  = "${module.security_group.this_security_group_id}"
+    }
+  ]
+  number_of_computed_ingress_with_source_security_group_id = 1
+
+}

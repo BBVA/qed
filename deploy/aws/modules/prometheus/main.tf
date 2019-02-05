@@ -12,6 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+resource "null_resource" "prebuild" {
+  provisioner "local-exec" {
+    command = "bash build.sh"
+    working_dir = "${path.module}"
+  }
+}
+
 data "aws_ami" "amazon_linux" {
   most_recent = true
 
@@ -67,6 +74,9 @@ resource "aws_instance" "prometheus" {
   user_data = <<-DATA
   #!/bin/bash
 
+  yum install https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
+  service grafana-server start
+
   while [ ! -f ${var.path}/prometheus ]; do
     sleep 1 # INFO: wait until binary exists
   done
@@ -74,5 +84,8 @@ resource "aws_instance" "prometheus" {
 
   chmod +x ${var.path}/prometheus
   ${var.path}/prometheus --config-file=${var.path}/prometheus.yml
+
+
+  
   DATA
 }
