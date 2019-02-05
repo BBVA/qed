@@ -51,8 +51,20 @@ module "security_group" {
       cidr_blocks     = "${chomp(data.http.ip.body)}/32"
     },
     {
+      from_port       = 8600
+      to_port         = 8600
+      protocol        = "tcp"
+      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+    },
+    {
       from_port       = 6060
       to_port         = 6060
+      protocol        = "tcp"
+      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+    },
+    {
+      from_port       = 9100
+      to_port         = 9100
       protocol        = "tcp"
       cidr_blocks     = "${chomp(data.http.ip.body)}/32"
     }
