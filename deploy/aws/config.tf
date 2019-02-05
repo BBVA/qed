@@ -14,8 +14,15 @@
    limitations under the License.
 */
 
+# Bucket config must be here: https://github.com/hashicorp/terraform/issues/13589
 terraform {
   required_version = ">= 0.11.11"
+
+  backend "s3" {
+    bucket = "terraform-qed-cluster"
+    key    = "terraform.tfstate"
+    region = "eu-west-1"
+  }
 }
 
 provider "aws" {
