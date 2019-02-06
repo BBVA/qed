@@ -24,7 +24,7 @@ import (
 	"github.com/bbva/qed/util"
 )
 
-func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun func(*cobra.Command, []string)) *cobra.Command {
+func newAgentMonitorCommand(ctx cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
 
 	monitorConfig := monitor.DefaultConfig()
 
@@ -38,7 +38,7 @@ func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun 
 
 			// WARN: PersitentPreRun can't be nested and we're using it in cmd/root so inbetween preRuns
 			// must be curried.
-			agentPreRun(cmd, args)
+			config = agentPreRun(config)
 
 			// Bindings
 			monitorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
@@ -57,7 +57,7 @@ func newAgentMonitorCommand(ctx *cmdContext, config *gossip.Config, agentPreRun 
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
 
-			agent, err := gossip.NewAgent(config, []gossip.Processor{monitor})
+			agent, err := gossip.NewAgent(&config, []gossip.Processor{monitor})
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}

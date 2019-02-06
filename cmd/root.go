@@ -25,13 +25,13 @@ import (
 )
 
 // NewRootCommand is the main Parser for the qed cli.
-func NewRootCommand() *cobra.Command {
+func NewRootCommand(args []string) *cobra.Command {
 	ctx := &cmdContext{}
 
 	cmd := &cobra.Command{
-		Use:              "qed",
-		Short:            "QED is a client for the verifiable log server",
-		TraverseChildren: true,
+		Use:   "qed",
+		Short: "QED is a client for the verifiable log server",
+		// TraverseChildren: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 
 			if ctx.configFile != "" {
@@ -83,7 +83,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddCommand(
 		newStartCommand(ctx),
 		newClientCommand(ctx),
-		newAgentCommand(ctx),
+		newAgentCommand(*ctx, args),
 	)
 
 	return cmd

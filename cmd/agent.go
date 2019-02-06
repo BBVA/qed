@@ -17,13 +17,15 @@
 package cmd
 
 import (
+	"regexp"
+
 	"github.com/spf13/cobra"
 	v "github.com/spf13/viper"
 
 	"github.com/bbva/qed/gossip"
 )
 
-func newAgentCommand(cmdCtx *cmdContext) *cobra.Command {
+func newAgentCommand(cmdCtx cmdContext, args []string) *cobra.Command {
 
 	config := gossip.DefaultConfig()
 
@@ -39,7 +41,14 @@ func newAgentCommand(cmdCtx *cmdContext) *cobra.Command {
 	f.StringSliceVar(&config.StartJoin, "join", []string{}, "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 	f.StringSliceVar(&config.AlertsUrls, "alertsUrls", []string{}, "Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts")
 
-	agentPreRun := func(cmd *cobra.Command, args []string) {
+	// Lookups
+	v.BindPFlag("agent.node", f.Lookup("node"))
+	v.BindPFlag("agent.bind", f.Lookup("bind"))
+	v.BindPFlag("agent.advertise", f.Lookup("advertise"))
+	v.BindPFlag("agent.join", f.Lookup("join"))
+	v.BindPFlag("agent.alert_urls", f.Lookup("alertsUrls"))
+
+	agentPreRun := func(config gossip.Config) gossip.Config {
 		config.EnableCompression = true
 		config.NodeName = v.GetString("agent.node")
 		config.BindAddr = v.GetString("agent.bind")
@@ -51,20 +60,29 @@ func newAgentCommand(cmdCtx *cmdContext) *cobra.Command {
 		markStringRequired(config.BindAddr, "bind")
 		markSliceStringRequired(config.StartJoin, "join")
 		markSliceStringRequired(config.AlertsUrls, "alertsUrls")
+
+		return config
 	}
 
-	cmd.AddCommand(
-		newAgentMonitorCommand(cmdCtx, config, agentPreRun),
-		newAgentAuditorCommand(cmdCtx, config, agentPreRun),
-		newAgentPublisherCommand(cmdCtx, config, agentPreRun),
-	)
+	var kind string
+	re := regexp.MustCompile("^monitor$|^auditor$|^publisher$")
+	for _, arg := range args {
+		if re.MatchString(arg) {
+			kind = arg
+			break
+		}
+	}
 
-	// Lookups
-	v.BindPFlag("agent.node", f.Lookup("node"))
-	v.BindPFlag("agent.bind", f.Lookup("bind"))
-	v.BindPFlag("agent.advertise", f.Lookup("advertise"))
-	v.BindPFlag("agent.join", f.Lookup("join"))
-	v.BindPFlag("agent.alert_urls", f.Lookup("alertsUrls"))
+	switch kind {
+	case "publisher":
+		cmd.AddCommand(newAgentPublisherCommand(cmdCtx, *config, agentPreRun))
+
+	case "auditor":
+		cmd.AddCommand(newAgentAuditorCommand(cmdCtx, *config, agentPreRun))
+
+	case "monitor":
+		cmd.AddCommand(newAgentMonitorCommand(cmdCtx, *config, agentPreRun))
+	}
 
 	return cmd
 
