@@ -54,6 +54,16 @@ resource "aws_instance" "prometheus" {
 
 
   provisioner "file" {
+      source     = "${path.module}/provisioning"
+      destination = "/etc/grafana/provisioning"
+
+      connection {
+        user = "ec2-user"
+        private_key = "${file("${var.key_path}")}"
+      }
+  }
+
+ provisioner "file" {
       source     = "${path.module}/data"
       destination = "${var.path}"
 
