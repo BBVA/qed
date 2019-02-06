@@ -29,8 +29,8 @@ var (
 	Hyper *expvar.Map
 	// HistoryStats has a Map of all the stats relative to our History Tree
 	History *expvar.Map
-	// Qed_balloonStats has a Map of all the stats relative to Qed_balloon
-	Qed_balloon *expvar.Map
+	// BalloonStats has a Map of all the stats relative to Balloon
+	Balloon *expvar.Map
 
 	// Prometheus
 	// API
@@ -42,7 +42,7 @@ var (
 	)
 
 	// Qed_balloon
-	Qed_Qed_balloon_add_duration_seconds = prometheus.NewGauge(
+	Qed_balloon_add_duration_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "Qed_balloon_add_duration_seconds",
 			Help: "Duration of the 'Add' Qed_balloon method.",
@@ -256,5 +256,5 @@ func (v Uint64ToVar) String() string {
 func init() {
 	Hyper = expvar.NewMap("hyper_stats")
 	History = expvar.NewMap("history_stats")
-	Qed_balloon = expvar.NewMap("Qed_balloon_stats")
+	Balloon = expvar.NewMap("Qed_balloon_stats")
 }
