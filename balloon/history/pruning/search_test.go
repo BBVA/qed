@@ -22,6 +22,7 @@ import (
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/history/visit"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -319,6 +320,21 @@ func TestSearchPrunerIncremental(t *testing.T) {
 		context := NewPruningContext(NewIncrementalCacheResolver(c.start, c.end), cache)
 		pruned, _ := NewSearchPruner(c.end, context).Prune()
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
+	}
+
+}
+
+func BenchmarkSearchPruner(b *testing.B) {
+
+	log.SetLogger("BenchmarkSearchPruner", log.SILENT)
+
+	cache := cache.NewFakeCache(hashing.Digest{0x0})
+
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		context := NewPruningContext(NewDoubleTargetedCacheResolver(0, i), cache)
+		_, err := NewSearchPruner(i, context).Prune()
+		assert.NoError(b, err)
 	}
 
 }
