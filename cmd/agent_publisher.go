@@ -24,7 +24,7 @@ import (
 	"github.com/bbva/qed/util"
 )
 
-func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config, agentPreRun func(*cobra.Command, []string)) *cobra.Command {
+func newAgentPublisherCommand(ctx cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
 
 	var endpoints []string
 
@@ -38,7 +38,7 @@ func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config, agentPreRu
 
 			// WARN: PersitentPreRun can't be nested and we're using it in
 			// cmd/root so inbetween preRuns must be curried.
-			agentPreRun(cmd, args)
+			config = agentPreRun(config)
 
 			// Bindings
 			endpoints = v.GetStringSlice("agent.snapshots_store_urls")
@@ -55,7 +55,7 @@ func newAgentPublisherCommand(ctx *cmdContext, config *gossip.Config, agentPreRu
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
 
-			agent, err := gossip.NewAgent(config, []gossip.Processor{publisher})
+			agent, err := gossip.NewAgent(&config, []gossip.Processor{publisher})
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
