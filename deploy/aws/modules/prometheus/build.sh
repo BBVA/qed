@@ -14,6 +14,7 @@ tdir=$(mktemp -d /tmp/prometheus.XXX)
 prometheus_path=${pub}/prometheus
 
 mkdir -p ${pub}
+cp -r ./provisioning ${pub}
 
 (
 cd ${tdir}
