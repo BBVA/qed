@@ -75,9 +75,16 @@ module "security_group" {
       to_port         = 65535
       protocol        = "tcp"
       source_security_group_id  = "${module.security_group.this_security_group_id}"
+    },
+    {
+      from_port       = 0
+      to_port         = 65535
+      protocol        = "tcp"
+      source_security_group_id  = "${module.prometheus_security_group.this_security_group_id}"
     }
   ]
-  number_of_computed_ingress_with_source_security_group_id = 1
+
+  number_of_computed_ingress_with_source_security_group_id = 2
 
 }
 
