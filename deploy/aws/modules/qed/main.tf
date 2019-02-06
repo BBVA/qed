@@ -82,6 +82,10 @@ resource "aws_instance" "qed-server" {
   done
 
   chmod +x ${var.path}/qed
+  chmod +x ${var.path}/node_exporter
+
+  ${var.path}/node_exporter &
   ${var.path}/qed ${var.command}
+
   DATA
 }
