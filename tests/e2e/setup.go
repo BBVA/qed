@@ -36,7 +36,7 @@ import (
 const (
 	QEDUrl       = "http://127.0.0.1:8800"
 	QEDTLS       = "https://localhost:8800"
-	QEDGossip    = "127.0.0.1:9010"
+	QEDGossip    = "127.0.0.1:8400"
 	QEDTamperURL = "http://127.0.0.1:8081/tamper"
 	StoreURL     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
@@ -198,16 +198,20 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 
 		hostname, _ := os.Hostname()
 		conf := server.DefaultConfig()
+		conf.APIKey = APIKey
 		conf.NodeID = fmt.Sprintf("%s-%d", hostname, id)
-		conf.HTTPAddr = fmt.Sprintf("127.0.0.1:808%d", id)
-		conf.RaftAddr = fmt.Sprintf("127.0.0.1:900%d", id)
-		conf.MgmtAddr = fmt.Sprintf("127.0.0.1:809%d", id)
-		conf.GossipAddr = fmt.Sprintf("127.0.0.1:901%d", id)
+		conf.HTTPAddr = fmt.Sprintf("127.0.0.1:880%d", id)
+		conf.MgmtAddr = fmt.Sprintf("127.0.0.1:870%d", id)
+		conf.MetricsAddr = fmt.Sprintf("127.0.0.1:860%d", id)
+		conf.RaftAddr = fmt.Sprintf("127.0.0.1:850%d", id)
+		conf.GossipAddr = fmt.Sprintf("127.0.0.1:840%d", id)
 		conf.DBPath = path + "data"
 		conf.RaftPath = path + "raft"
 		conf.PrivateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
-		conf.SSLCertificate = fmt.Sprintf("%s/.ssh/server.crt", usr.HomeDir)
-		conf.SSLCertificateKey = fmt.Sprintf("%s/.ssh/server.key", usr.HomeDir)
+		if tls {
+			conf.SSLCertificate = fmt.Sprintf("%s/.ssh/server.crt", usr.HomeDir)
+			conf.SSLCertificateKey = fmt.Sprintf("%s/.ssh/server.key", usr.HomeDir)
+		}
 		conf.EnableProfiling = true
 		conf.EnableTampering = true
 		conf.EnableTLS = tls
@@ -242,7 +246,7 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 }
 
 func endPoint(id int) string {
-	return fmt.Sprintf("http://127.0.0.1:808%d", id)
+	return fmt.Sprintf("http://127.0.0.1:880%d", id)
 }
 
 func getClient(id int) *client.HTTPClient {
