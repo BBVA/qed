@@ -227,7 +227,7 @@ module "prometheus" {
     - job_name: 'Qed0-HostMetrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.leader.private_ip}:9100', ]
+        - targets: ['${module.leader.private_ip}:9100']
     - job_name: 'Qed0-QedMetrics'
       scrape_interval: 10s
       static_configs:

@@ -79,15 +79,12 @@ resource "aws_instance" "prometheus" {
   sudo yum install -y https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
   sudo service grafana-server start
 
-  while [ ! -f ${var.path}/prometheus ]; do
-    sleep 1 # INFO: wait until binary exists
+  while [ `lsof ${var.path}/prometheus | wc -l` -gt 0 ]; do
+    sleep 1 # INFO: prevents Error of `text file busy`
   done
-  sleep 1
 
   chmod +x ${var.path}/prometheus
-  nohup ${var.path}/prometheus --config.file=${var.path}/prometheus.yml &
+  ${var.path}/prometheus --config.file=${var.path}/prometheus.yml
 
-
-  
   DATA
 }
