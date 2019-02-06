@@ -75,12 +75,14 @@ resource "aws_instance" "prometheus" {
   user_data = <<-DATA
   #!/bin/bash
 
-   while [ `lsof ${var.path}/provisioning | wc -l` -gt 0 ]; do
+  while [ `lsof ${var.path}/provisioning | wc -l` -gt 0 ]; do
     sleep 1 # INFO: prevents Error of `text file busy`
   done 
 
   sudo yum install -y https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
+  sudo rm -rf /etc/grafana/provisioning
   sudo mv ${var.path}/provisioning /etc/grafana
+  sudo chown -R root:grafana /etc/grafana
   sudo service grafana-server start
 
   while [ `lsof ${var.path}/prometheus | wc -l` -gt 0 ]; do
