@@ -52,17 +52,6 @@ resource "aws_instance" "prometheus" {
     Name = "qed-prometheus"
   }
 
-
-  provisioner "file" {
-      source     = "${path.module}/provisioning"
-      destination = "/etc/grafana/provisioning"
-
-      connection {
-        user = "ec2-user"
-        private_key = "${file("${var.key_path}")}"
-      }
-  }
-
  provisioner "file" {
       source     = "${path.module}/data"
       destination = "${var.path}"
@@ -86,7 +75,12 @@ resource "aws_instance" "prometheus" {
   user_data = <<-DATA
   #!/bin/bash
 
+   while [ `lsof ${var.path}/provisioning | wc -l` -gt 0 ]; do
+    sleep 1 # INFO: prevents Error of `text file busy`
+  done 
+
   sudo yum install -y https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
+  sudo mv ${var.path}/provisioning /etc/grafana
   sudo service grafana-server start
 
   while [ `lsof ${var.path}/prometheus | wc -l` -gt 0 ]; do
