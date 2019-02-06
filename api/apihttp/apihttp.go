@@ -48,15 +48,15 @@ type HealthCheckResponse struct {
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
-	metrics.API_healthcheck_requests_total.Inc()
+	metrics.Qed_api_healthcheck_requests_total.Inc()
 
-	timer := prometheus.NewTimer(metrics.RequestDuration)
+	timer := prometheus.NewTimer(metrics.Qed_exampleHistogram)
 	defer timer.ObserveDuration()
 
-	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(metrics.FuncDuration.Set))
+	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(metrics.Qed_exampleGauge.Set))
 	defer timer2.ObserveDuration()
 
-	timer3 := prometheus.NewTimer(metrics.RequestSummary)
+	timer3 := prometheus.NewTimer(metrics.Qed_exampleSummary)
 	defer timer3.ObserveDuration()
 
 	// Do something here that takes time.
