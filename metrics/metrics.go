@@ -29,169 +29,169 @@ var (
 	Hyper *expvar.Map
 	// HistoryStats has a Map of all the stats relative to our History Tree
 	History *expvar.Map
-	// BalloonStats has a Map of all the stats relative to Balloon
-	Balloon *expvar.Map
+	// Qed_balloonStats has a Map of all the stats relative to Qed_balloon
+	Qed_balloon *expvar.Map
 
 	// Prometheus
 	// API
-	API_healthcheck_requests_total = prometheus.NewCounter(
+	Qed_api_healthcheck_requests_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "API_healthcheck_requests_total",
 			Help: "The total number of healthcheck api requests",
 		},
 	)
 
-	// Balloon
-	Balloon_add_duration_seconds = prometheus.NewGauge(
+	// Qed_balloon
+	Qed_Qed_balloon_add_duration_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Balloon_add_duration_seconds",
-			Help: "Duration of the 'Add' balloon method.",
+			Name: "Qed_balloon_add_duration_seconds",
+			Help: "Duration of the 'Add' Qed_balloon method.",
 		},
 	)
 
-	Balloon_membership_duration_seconds = prometheus.NewGauge(
+	Qed_balloon_membership_duration_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Balloon_membership_duration_seconds",
-			Help: "Duration of the 'Membership' balloon method.",
+			Name: "Qed_balloon_membership_duration_seconds",
+			Help: "Duration of the 'Membership' Qed_balloon method.",
 		},
 	)
 
-	Balloon_digest_membership_duration_seconds = prometheus.NewGauge(
+	Qed_balloon_digest_membership_duration_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Balloon_digest_membership_duration_seconds",
-			Help: "Duration of the 'Digest Membership' balloon method",
+			Name: "Qed_balloon_digest_membership_duration_seconds",
+			Help: "Duration of the 'Digest Membership' Qed_balloon method",
 		},
 	)
 
-	Balloon_incremental_duration_seconds = prometheus.NewGauge(
+	Qed_balloon_incremental_duration_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Balloon_incremental_duration_seconds",
-			Help: "Duration of the 'Incremental' balloon method.",
+			Name: "Qed_balloon_incremental_duration_seconds",
+			Help: "Duration of the 'Incremental' Qed_balloon method.",
 		},
 	)
 
-	Balloon_add_total = prometheus.NewCounter(
+	Qed_balloon_add_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Balloon_add_total",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_balloon_add_total",
+			Help: "Amount of 'Add' operation API calls.",
 		},
 	)
 
-	Balloon_membership_total = prometheus.NewCounter(
+	Qed_balloon_membership_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Balloon_membership_total",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_balloon_membership_total",
+			Help: "Amount of 'Membership' operation API calls.",
 		},
 	)
 
-	Balloon_digest_membership_total = prometheus.NewCounter(
+	Qed_balloon_digest_membership_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Balloon_digest_membership_total",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_balloon_digest_membership_total",
+			Help: "Amount of 'Membership by digest' operation API calls.",
 		},
 	)
 
-	Balloon_incremental_total = prometheus.NewCounter(
+	Qed_balloon_incremental_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Balloon_incremental_total",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_balloon_incremental_total",
+			Help: "Amount of 'Incremental' operation API calls.",
 		},
 	)
 
 	// Agents
-	Sender_instances_count = prometheus.NewGauge(
+	Qed_sender_instances_count = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Sender_instances_count",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_sender_instances_count",
+			Help: "Amount of Qed_sender agents instanciated",
 		},
 	)
 
-	Auditor_instances_count = prometheus.NewGauge(
+	Qed_auditor_instances_count = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Auditor_instances_count",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_auditor_instances_count",
+			Help: "Amount of Qed_auditor agents instanciated",
 		},
 	)
 
-	Monitor_instances_count = prometheus.NewGauge(
+	Qed_monitor_instances_count = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Monitor_instances_count",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_monitor_instances_count",
+			Help: "Amount of Qed_monitor agents instanciated",
 		},
 	)
 
-	Publisher_instances_count = prometheus.NewGauge(
+	Qed_publisher_instances_count = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Publisher_instances_count",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_publisher_instances_count",
+			Help: "Amount of Qed_publisher agents instanciated.",
 		},
 	)
 
-	Sender_batches_sent_total = prometheus.NewCounter(
+	Qed_sender_batches_sent_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Sender_batches_sent_total",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_sender_batches_sent_total",
+			Help: "Amount of batches sent by Sender.",
 		},
 	)
 
-	Auditor_batches_received_total = prometheus.NewCounter(
+	Qed_auditor_batches_received_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Auditor_batches_received_total",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_auditor_batches_received_total",
+			Help: "Amount of batches received by Auditor.",
 		},
 	)
 
-	Monitor_batches_received_total = prometheus.NewCounter(
+	Qed_monitor_batches_received_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Monitor_batches_received_total",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_monitor_batches_received_total",
+			Help: "Amount of batches received by Monitor.",
 		},
 	)
 
-	Publisher_batches_received_total = prometheus.NewCounter(
+	Qed_publisher_batches_received_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Publisher_batches_received_total",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_publisher_batches_received_total",
+			Help: "Amount of batches received by Publisher.",
 		},
 	)
 
-	Auditor_batches_process_seconds = prometheus.NewGauge(
+	Qed_auditor_batches_process_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Auditor_batches_process_seconds",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_auditor_batches_process_seconds",
+			Help: "Duration of Auditor batch processing",
 		},
 	)
 
-	Monitor_batches_process_seconds = prometheus.NewGauge(
+	Qed_monitor_batches_process_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Monitor_batches_process_seconds",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_monitor_batches_process_seconds",
+			Help: "Duration of Monitor batch processing",
 		},
 	)
 
-	Publisher_batches_process_seconds = prometheus.NewGauge(
+	Qed_publisher_batches_process_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Publisher_batches_process_seconds",
-			Help: "Duration of the last call of an example function.",
+			Name: "Qed_publisher_batches_process_seconds",
+			Help: "Duration of Publisher batch processing",
 		},
 	)
 
 	// Example
-	FuncDuration = prometheus.NewGauge(
+	Qed_exampleGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "example_function_duration_seconds",
 			Help: "Duration of the last call of an example function.",
 		},
 	)
 
-	RequestSummary = prometheus.NewSummary(
+	Qed_exampleSummary = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "example_function_durations_seconds",
 			Help: "example function latency distributions.",
 		},
 	)
 
-	RequestDuration = prometheus.NewHistogram(
+	Qed_exampleHistogram = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "example_request_duration_seconds",
 			Help:    "Histogram for the runtime of a simple example function.",
@@ -200,35 +200,35 @@ var (
 	)
 
 	metricsList = []prometheus.Collector{
-		API_healthcheck_requests_total,
+		Qed_api_healthcheck_requests_total,
 
-		Balloon_add_duration_seconds,
-		Balloon_membership_duration_seconds,
-		Balloon_digest_membership_duration_seconds,
-		Balloon_incremental_duration_seconds,
+		Qed_balloon_add_duration_seconds,
+		Qed_balloon_membership_duration_seconds,
+		Qed_balloon_digest_membership_duration_seconds,
+		Qed_balloon_incremental_duration_seconds,
 
-		Balloon_add_total,
-		Balloon_membership_total,
-		Balloon_digest_membership_total,
-		Balloon_incremental_total,
+		Qed_balloon_add_total,
+		Qed_balloon_membership_total,
+		Qed_balloon_digest_membership_total,
+		Qed_balloon_incremental_total,
 
-		Sender_instances_count,
-		Auditor_instances_count,
-		Monitor_instances_count,
-		Publisher_instances_count,
+		Qed_sender_instances_count,
+		Qed_auditor_instances_count,
+		Qed_monitor_instances_count,
+		Qed_publisher_instances_count,
 
-		Sender_batches_sent_total,
-		Auditor_batches_received_total,
-		Monitor_batches_received_total,
-		Publisher_batches_received_total,
+		Qed_sender_batches_sent_total,
+		Qed_auditor_batches_received_total,
+		Qed_monitor_batches_received_total,
+		Qed_publisher_batches_received_total,
 
-		Auditor_batches_process_seconds,
-		Monitor_batches_process_seconds,
-		Publisher_batches_process_seconds,
+		Qed_auditor_batches_process_seconds,
+		Qed_monitor_batches_process_seconds,
+		Qed_publisher_batches_process_seconds,
 
-		FuncDuration,
-		RequestSummary,
-		RequestDuration,
+		Qed_exampleGauge,
+		Qed_exampleSummary,
+		Qed_exampleHistogram,
 	}
 )
 
@@ -256,5 +256,5 @@ func (v Uint64ToVar) String() string {
 func init() {
 	Hyper = expvar.NewMap("hyper_stats")
 	History = expvar.NewMap("history_stats")
-	Balloon = expvar.NewMap("Balloon_stats")
+	Qed_balloon = expvar.NewMap("Qed_balloon_stats")
 }
