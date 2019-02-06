@@ -84,22 +84,14 @@ func (p Position) IsLeaf() bool {
 
 func (p Position) FirstDescendant() *Position {
 	if p.IsLeaf() {
-		return nil
+		return &p
 	}
 	return NewPosition(p.Index, 0)
 }
 
 func (p Position) LastDescendant() *Position {
 	if p.IsLeaf() {
-		return nil
+		return &p
 	}
 	return NewPosition(p.Index+1<<p.Height-1, 0)
-}
-
-func (p Position) IsAncestorOf(pos *Position) bool {
-	return p.FirstDescendant().Index <= pos.Index && pos.Index <= p.LastDescendant().Index
-}
-
-func (p Position) IsDescendantOf(pos *Position) bool {
-	return pos.FirstDescendant().Index <= p.Index && p.Index <= pos.LastDescendant().Index
 }

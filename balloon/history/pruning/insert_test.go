@@ -22,6 +22,8 @@ import (
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/history/visit"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -116,6 +118,22 @@ func TestInsertPruner(t *testing.T) {
 		context := NewPruningContext(NewSingleTargetedCacheResolver(c.version), cache)
 		pruned, _ := NewInsertPruner(c.version, c.eventDigest, context).Prune()
 		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
+	}
+
+}
+
+func BenchmarkInsertPruner(b *testing.B) {
+
+	log.SetLogger("BenchmarkInsertPruner", log.SILENT)
+
+	cache := cache.NewFakeCache(hashing.Digest{0x0})
+
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		eventDigest := rand.Bytes(32)
+		context := NewPruningContext(NewSingleTargetedCacheResolver(i), cache)
+		_, err := NewInsertPruner(i, eventDigest, context).Prune()
+		assert.NoError(b, err)
 	}
 
 }
