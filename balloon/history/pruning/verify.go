@@ -1,121 +1,101 @@
-/*
-   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
 package pruning
 
 import (
 	"github.com/bbva/qed/balloon/history/navigation"
-	"github.com/bbva/qed/balloon/history/visit"
 	"github.com/bbva/qed/hashing"
 )
 
-type VerifyPruner struct {
-	version     uint64
-	eventDigest hashing.Digest
-	*PruningContext
-}
+func PruneToVerify(index, version uint64, eventDigest hashing.Digest) Operation {
 
-func NewVerifyPruner(version uint64, eventDigest hashing.Digest, context *PruningContext) *VerifyPruner {
-	return &VerifyPruner{
-		version:        version,
-		eventDigest:    eventDigest,
-		PruningContext: context,
-	}
-}
+	var traverse Traverse
+	traverse = func(pos *navigation.Position) Operation {
 
-func (p *VerifyPruner) Prune() (visit.Visitable, error) {
-	return p.traverse(navigation.NewRootPosition(p.version), p.eventDigest)
-}
-
-func (p *VerifyPruner) traverse(pos *navigation.Position, eventDigest hashing.Digest) (visit.Visitable, error) {
-	if p.cacheResolver.ShouldGetFromCache(pos) {
-		digest, ok := p.cache.Get(pos.Bytes())
-		if !ok {
-			return nil, ErrCacheNotFound
+		if pos.IsLeaf() {
+			return NewLeafHashOp(pos, eventDigest)
 		}
-		return visit.NewCached(pos, digest), nil
-	}
-	if pos.IsLeaf() {
-		return visit.NewLeaf(pos, eventDigest), nil
-	}
 
-	// we do a post-order traversal
-	left, err := p.traverse(pos.Left(), eventDigest)
-	if err != nil {
-		return nil, err
-	}
+		var left, right Operation
 
-	rightPos := pos.Right()
-	if rightPos.Index > p.version {
-		return visit.NewPartialNode(pos, left), nil
-	}
-
-	right, err := p.traverse(rightPos, eventDigest)
-	if err != nil {
-		return nil, err
-	}
-
-	return visit.NewNode(pos, left, right), nil
-
-}
-
-type VerifyIncrementalPruner struct {
-	version uint64
-	*PruningContext
-}
-
-func NewVerifyIncrementalPruner(version uint64, context *PruningContext) *VerifyIncrementalPruner {
-	return &VerifyIncrementalPruner{
-		version:        version,
-		PruningContext: context,
-	}
-}
-
-func (p *VerifyIncrementalPruner) Prune() (visit.Visitable, error) {
-	return p.traverse(navigation.NewRootPosition(p.version))
-}
-
-func (p *VerifyIncrementalPruner) traverse(pos *navigation.Position) (visit.Visitable, error) {
-	if p.cacheResolver.ShouldGetFromCache(pos) {
-		digest, ok := p.cache.Get(pos.Bytes())
-		if !ok {
-			return nil, ErrCacheNotFound
+		rightPos := pos.Right()
+		if index < rightPos.Index { // go to left
+			left = traverse(pos.Left())
+			right = NewGetCacheOp(rightPos)
+		} else { // go to right
+			left = NewGetCacheOp(pos.Left())
+			right = traverse(rightPos)
 		}
-		return visit.NewCached(pos, digest), nil
+
+		if rightPos.Index > version { // partial
+			return NewPartialInnerHashOp(pos, left)
+		}
+
+		return NewInnerHashOp(pos, left, right)
+
 	}
 
-	if pos.IsLeaf() {
-		return nil, ErrCacheNotFound
+	return traverse(navigation.NewRootPosition(version))
+}
+
+func PruneToVerifyIncrementalStart(version uint64) Operation {
+
+	var traverse Traverse
+	traverse = func(pos *navigation.Position) Operation {
+
+		if pos.IsLeaf() {
+			return NewGetCacheOp(pos)
+		}
+
+		var left, right Operation
+
+		rightPos := pos.Right()
+		if version < rightPos.Index { // go to left
+			left = traverse(pos.Left())
+			right = NewGetCacheOp(rightPos)
+		} else { // go to right
+			left = NewGetCacheOp(pos.Left())
+			right = traverse(rightPos)
+		}
+
+		if rightPos.Index > version { // partial
+			return NewPartialInnerHashOp(pos, left)
+		}
+		return NewInnerHashOp(pos, left, right)
+
 	}
 
-	// we do a post-order traversal
-	left, err := p.traverse(pos.Left())
-	if err != nil {
-		return nil, err
+	return traverse(navigation.NewRootPosition(version))
+}
+
+func PruneToVerifyIncrementalEnd(start, end uint64) Operation {
+
+	var traverse func(pos *navigation.Position, targets Targets) Operation
+
+	traverse = func(pos *navigation.Position, targets Targets) Operation {
+
+		if len(targets) == 0 {
+			return NewGetCacheOp(pos)
+		}
+
+		if pos.IsLeaf() {
+			return NewGetCacheOp(pos)
+		}
+
+		rightPos := pos.Right()
+		leftTargets, rightTargets := targets.Split(rightPos.Index)
+
+		left := traverse(pos.Left(), leftTargets)
+		right := traverse(rightPos, rightTargets)
+
+		if end < rightPos.Index {
+			return NewPartialInnerHashOp(pos, left)
+		}
+
+		return NewInnerHashOp(pos, left, right)
+
 	}
 
-	rightPos := pos.Right()
-	if rightPos.Index > p.version {
-		return visit.NewPartialNode(pos, left), nil
-	}
-
-	right, err := p.traverse(rightPos)
-	if err != nil {
-		return nil, err
-	}
-
-	return visit.NewNode(pos, left, right), nil
+	targets := make(Targets, 0)
+	targets = targets.InsertSorted(start)
+	targets = targets.InsertSorted(end)
+	return traverse(navigation.NewRootPosition(end), targets)
 }

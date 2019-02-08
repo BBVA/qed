@@ -18,42 +18,40 @@ package pruning
 
 import (
 	"github.com/bbva/qed/balloon/history/navigation"
-	"github.com/bbva/qed/balloon/history/visit"
-	"github.com/bbva/qed/hashing"
 )
 
 func pos(index uint64, height uint16) *navigation.Position {
 	return navigation.NewPosition(index, height)
 }
 
-func node(pos *navigation.Position, left, right visit.Visitable) *visit.Node {
-	return visit.NewNode(pos, left, right)
+func inner(pos *navigation.Position, left, right Operation) *InnerHashOp {
+	return NewInnerHashOp(pos, left, right)
 }
 
-func partialnode(pos *navigation.Position, left visit.Visitable) *visit.PartialNode {
-	return visit.NewPartialNode(pos, left)
+func partial(pos *navigation.Position, left Operation) *PartialInnerHashOp {
+	return NewPartialInnerHashOp(pos, left)
 }
 
-func leaf(pos *navigation.Position, value byte) *visit.Leaf {
-	return visit.NewLeaf(pos, []byte{value})
+func leaf(pos *navigation.Position, value byte) *LeafHashOp {
+	return NewLeafHashOp(pos, []byte{value})
 }
 
-func leafnil(pos *navigation.Position) *visit.Leaf {
-	return visit.NewLeaf(pos, nil)
+func leafnil(pos *navigation.Position) *LeafHashOp {
+	return NewLeafHashOp(pos, nil)
 }
 
-func cached(pos *navigation.Position) *visit.Cached {
-	return visit.NewCached(pos, hashing.Digest{0})
+func getCache(pos *navigation.Position) *GetCacheOp {
+	return NewGetCacheOp(pos)
 }
 
-func mutable(underlying visit.Visitable) *visit.Mutable {
-	return visit.NewMutable(underlying)
+func putCache(op Operation) *PutCacheOp {
+	return NewPutCacheOp(op)
 }
 
-func collectable(underlying visit.Visitable) *visit.Collectable {
-	return visit.NewCollectable(underlying)
+func mutate(op Operation) *MutateOp {
+	return NewMutateOp(op)
 }
 
-func cacheable(underlying visit.Visitable) *visit.Cacheable {
-	return visit.NewCacheable(underlying)
+func collect(op Operation) *CollectOp {
+	return NewCollectOp(op)
 }

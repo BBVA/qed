@@ -68,25 +68,24 @@ func TestIsLeaf(t *testing.T) {
 func TestLeft(t *testing.T) {
 
 	testCases := []struct {
-		version      uint64
 		position     *Position
 		expectedLeft *Position
 	}{
-		{0, NewPosition(0, 0), nil},
-		{1, NewPosition(0, 0), nil},
-		{1, NewPosition(1, 0), nil},
-		{1, NewPosition(0, 1), NewPosition(0, 0)},
-		{2, NewPosition(0, 0), nil},
-		{2, NewPosition(1, 0), nil},
-		{2, NewPosition(2, 0), nil},
-		{2, NewPosition(0, 1), NewPosition(0, 0)},
-		{2, NewPosition(2, 1), NewPosition(2, 0)}, // TODO check invalid positions like (1,1)?
-		{3, NewPosition(0, 0), nil},
-		{3, NewPosition(1, 0), nil},
-		{3, NewPosition(2, 0), nil},
-		{3, NewPosition(0, 1), NewPosition(0, 0)},
-		{3, NewPosition(2, 1), NewPosition(2, 0)},
-		{3, NewPosition(0, 2), NewPosition(0, 1)},
+		{NewPosition(0, 0), nil},
+		{NewPosition(0, 0), nil},
+		{NewPosition(1, 0), nil},
+		{NewPosition(0, 1), NewPosition(0, 0)},
+		{NewPosition(0, 0), nil},
+		{NewPosition(1, 0), nil},
+		{NewPosition(2, 0), nil},
+		{NewPosition(0, 1), NewPosition(0, 0)},
+		{NewPosition(2, 1), NewPosition(2, 0)}, // TODO check invalid positions like (1,1)?
+		{NewPosition(0, 0), nil},
+		{NewPosition(1, 0), nil},
+		{NewPosition(2, 0), nil},
+		{NewPosition(0, 1), NewPosition(0, 0)},
+		{NewPosition(2, 1), NewPosition(2, 0)},
+		{NewPosition(0, 2), NewPosition(0, 1)},
 	}
 
 	for i, c := range testCases {
@@ -98,29 +97,70 @@ func TestLeft(t *testing.T) {
 func TestRight(t *testing.T) {
 
 	testCases := []struct {
-		version       uint64
 		position      *Position
 		expectedRight *Position
 	}{
-		{0, NewPosition(0, 0), nil},
-		{1, NewPosition(0, 0), nil},
-		{1, NewPosition(1, 0), nil},
-		{1, NewPosition(0, 1), NewPosition(1, 0)},
-		{2, NewPosition(0, 0), nil},
-		{2, NewPosition(1, 0), nil},
-		{2, NewPosition(2, 0), nil},
-		{2, NewPosition(0, 1), NewPosition(1, 0)},
-		{2, NewPosition(2, 1), NewPosition(3, 0)},
-		{3, NewPosition(0, 0), nil},
-		{3, NewPosition(1, 0), nil},
-		{3, NewPosition(2, 0), nil},
-		{3, NewPosition(0, 1), NewPosition(1, 0)},
-		{3, NewPosition(2, 1), NewPosition(3, 0)},
-		{3, NewPosition(0, 2), NewPosition(2, 1)},
+		{NewPosition(0, 0), nil},
+		{NewPosition(0, 0), nil},
+		{NewPosition(1, 0), nil},
+		{NewPosition(0, 1), NewPosition(1, 0)},
+		{NewPosition(0, 0), nil},
+		{NewPosition(1, 0), nil},
+		{NewPosition(2, 0), nil},
+		{NewPosition(0, 1), NewPosition(1, 0)},
+		{NewPosition(2, 1), NewPosition(3, 0)},
+		{NewPosition(0, 0), nil},
+		{NewPosition(1, 0), nil},
+		{NewPosition(2, 0), nil},
+		{NewPosition(0, 1), NewPosition(1, 0)},
+		{NewPosition(2, 1), NewPosition(3, 0)},
+		{NewPosition(0, 2), NewPosition(2, 1)},
 	}
 
 	for i, c := range testCases {
 		right := c.position.Right()
 		require.Equalf(t, c.expectedRight, right, "The right positions should match for test case %d", i)
 	}
+}
+
+func TestFirstDescendant(t *testing.T) {
+
+	testCases := []struct {
+		position    *Position
+		expectedPos *Position
+	}{
+		{NewPosition(0, 0), NewPosition(0, 0)},
+		{NewPosition(1, 0), NewPosition(1, 0)},
+		{NewPosition(0, 1), NewPosition(0, 0)},
+		{NewPosition(2, 0), NewPosition(2, 0)},
+		{NewPosition(2, 1), NewPosition(2, 0)},
+		{NewPosition(0, 2), NewPosition(0, 0)},
+	}
+
+	for i, c := range testCases {
+		first := c.position.FirstDescendant()
+		require.Equalf(t, c.expectedPos, first, "The first descentant position should match for test case %d", i)
+	}
+
+}
+
+func TestLastDescendant(t *testing.T) {
+
+	testCases := []struct {
+		position    *Position
+		expectedPos *Position
+	}{
+		{NewPosition(0, 0), NewPosition(0, 0)},
+		{NewPosition(1, 0), NewPosition(1, 0)},
+		{NewPosition(0, 1), NewPosition(1, 0)},
+		{NewPosition(2, 0), NewPosition(2, 0)},
+		{NewPosition(2, 1), NewPosition(3, 0)},
+		{NewPosition(0, 2), NewPosition(3, 0)},
+	}
+
+	for i, c := range testCases {
+		last := c.position.LastDescendant()
+		require.Equalf(t, c.expectedPos, last, "The first descentant position should match for test case %d", i)
+	}
+
 }

@@ -1,4 +1,4 @@
-package pruning5
+package pruning
 
 import (
 	"sort"
