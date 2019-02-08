@@ -21,7 +21,6 @@ import (
 
 	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/balloon/history/pruning"
-	"github.com/bbva/qed/balloon/history/visit"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
@@ -30,7 +29,6 @@ type MembershipProof struct {
 	auditPath      navigation.AuditPath
 	Index, Version uint64
 	hasher         hashing.Hasher // TODO should we remove this and pass as an argument when verifying?
-	// TODO should we include the eventDigest?
 }
 
 func NewMembershipProof(index, version uint64, auditPath navigation.AuditPath, hasher hashing.Hasher) *MembershipProof {
@@ -49,29 +47,11 @@ func (p MembershipProof) AuditPath() navigation.AuditPath {
 // Verify verifies a membership proof
 func (p MembershipProof) Verify(eventDigest []byte, expectedDigest hashing.Digest) (correct bool) {
 
-	// visitors
-	computeHash := visit.NewComputeHashVisitor(p.hasher)
+	log.Debugf("Verifying membership proof for index %d and version %d", p.Index, p.Version)
 
-	// build pruning context
-	var cacheResolver pruning.CacheResolver
-	if p.Index == p.Version {
-		cacheResolver = pruning.NewSingleTargetedCacheResolver(p.Version)
-	} else {
-		cacheResolver = pruning.NewDoubleTargetedCacheResolver(p.Index, p.Version)
-	}
-	context := pruning.NewPruningContext(
-		cacheResolver,
-		p.auditPath,
-	)
-
-	// traverse from root and generate a visitable pruned tree
-	pruned, err := pruning.NewVerifyPruner(p.Version, eventDigest, context).Prune()
-	if err != nil {
-		return false
-	}
-
-	// visit the pruned tree
-	recomputed := pruned.PostOrder(computeHash)
+	// build a visitable pruned tree and then visit it to recompute root hash
+	visitor := pruning.NewComputeHashVisitor(p.hasher, p.auditPath)
+	recomputed := pruning.PruneToVerify(p.Index, p.Version, eventDigest).Accept(visitor)
 
 	return bytes.Equal(recomputed, expectedDigest)
 }
@@ -93,34 +73,12 @@ func NewIncrementalProof(start, end uint64, auditPath navigation.AuditPath, hash
 
 func (p IncrementalProof) Verify(startDigest, endDigest hashing.Digest) (correct bool) {
 
-	log.Debugf("Verifying incremental between versions %d and %d", p.StartVersion, p.EndVersion)
+	log.Debugf("Verifying incremental proof between versions %d and %d", p.StartVersion, p.EndVersion)
 
-	// visitors
-	computeHash := visit.NewComputeHashVisitor(p.hasher)
-
-	// build pruning context
-	startContext := pruning.NewPruningContext(
-		pruning.NewIncrementalCacheResolver(p.StartVersion, p.EndVersion),
-		p.AuditPath,
-	)
-	endContext := pruning.NewPruningContext(
-		pruning.NewIncrementalCacheResolver(p.StartVersion, p.EndVersion),
-		p.AuditPath,
-	)
-
-	// traverse from root and generate a visitable pruned tree
-	startPruned, err := pruning.NewVerifyPruner(p.StartVersion, startDigest, startContext).Prune()
-	if err != nil {
-		return false
-	}
-	endPruned, err := pruning.NewVerifyPruner(p.EndVersion, endDigest, endContext).Prune()
-	if err != nil {
-		return false
-	}
-
-	// visit the pruned trees
-	startRecomputed := startPruned.PostOrder(computeHash)
-	endRecomputed := endPruned.PostOrder(computeHash)
+	// build two visitable pruned trees and then visit them to recompute root hash
+	visitor := pruning.NewComputeHashVisitor(p.hasher, p.AuditPath)
+	startRecomputed := pruning.PruneToVerifyIncrementalStart(p.StartVersion).Accept(visitor)
+	endRecomputed := pruning.PruneToVerifyIncrementalEnd(p.StartVersion, p.EndVersion).Accept(visitor)
 
 	return bytes.Equal(startRecomputed, startDigest) && bytes.Equal(endRecomputed, endDigest)
 

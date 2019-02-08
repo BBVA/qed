@@ -1,215 +1,252 @@
-/*
-   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
-
 package pruning
 
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/history/visit"
-
-	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestVerifyPruner(t *testing.T) {
-
-	cache := cache.NewFakeCache(hashing.Digest{0x0})
+func TestPruneToVerify(t *testing.T) {
 
 	testCases := []struct {
 		index, version uint64
 		eventDigest    hashing.Digest
-		expectedPruned visit.Visitable
+		expectedOp     Operation
 	}{
 		{
-			index:          0,
-			version:        0,
-			eventDigest:    hashing.Digest{0x0},
-			expectedPruned: leaf(pos(0, 0), 0),
+			index:       0,
+			version:     0,
+			eventDigest: hashing.Digest{0x0},
+			expectedOp:  leaf(pos(0, 0), 0),
 		},
 		{
 			index:       0,
 			version:     1,
 			eventDigest: hashing.Digest{0x0},
-			expectedPruned: node(pos(0, 1),
+			expectedOp: inner(pos(0, 1),
 				leaf(pos(0, 0), 0),
-				cached(pos(1, 0))),
+				getCache(pos(1, 0))),
 		},
 		{
 			index:       1,
 			version:     1,
 			eventDigest: hashing.Digest{0x1},
-			expectedPruned: node(pos(0, 1),
-				cached(pos(0, 0)),
+			expectedOp: inner(pos(0, 1),
+				getCache(pos(0, 0)),
 				leaf(pos(1, 0), 1)),
 		},
 		{
 			index:       1,
 			version:     2,
 			eventDigest: hashing.Digest{0x1},
-			expectedPruned: node(pos(0, 2),
-				node(pos(0, 1),
-					cached(pos(0, 0)),
+			expectedOp: inner(pos(0, 2),
+				inner(pos(0, 1),
+					getCache(pos(0, 0)),
 					leaf(pos(1, 0), 1)),
-				partialnode(pos(2, 1),
-					cached(pos(2, 0)))),
+				getCache(pos(2, 1)),
+			),
 		},
 		{
 			index:       6,
 			version:     6,
 			eventDigest: hashing.Digest{0x6},
-			expectedPruned: node(pos(0, 3),
-				cached(pos(0, 2)),
-				node(pos(4, 2),
-					cached(pos(4, 1)),
-					partialnode(pos(6, 1),
+			expectedOp: inner(pos(0, 3),
+				getCache(pos(0, 2)),
+				inner(pos(4, 2),
+					getCache(pos(4, 1)),
+					partial(pos(6, 1),
 						leaf(pos(6, 0), 6)))),
 		},
 		{
 			index:       1,
 			version:     7,
 			eventDigest: hashing.Digest{0x1},
-			expectedPruned: node(pos(0, 3),
-				node(pos(0, 2),
-					node(pos(0, 1),
-						cached(pos(0, 0)),
+			expectedOp: inner(pos(0, 3),
+				inner(pos(0, 2),
+					inner(pos(0, 1),
+						getCache(pos(0, 0)),
 						leaf(pos(1, 0), 1)),
-					cached(pos(2, 1))),
-				cached(pos(4, 2))),
+					getCache(pos(2, 1))),
+				getCache(pos(4, 2))),
 		},
 	}
 
-	for i, c := range testCases {
-
-		var cacheResolver CacheResolver
-		if c.index == c.version {
-			cacheResolver = NewSingleTargetedCacheResolver(c.version)
-		} else {
-			cacheResolver = NewDoubleTargetedCacheResolver(c.index, c.version)
-		}
-		context := NewPruningContext(cacheResolver, cache)
-		pruned, _ := NewVerifyPruner(c.version, c.eventDigest, context).Prune()
-		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
+	for _, c := range testCases {
+		prunedOp := PruneToVerify(c.index, c.version, c.eventDigest)
+		assert.Equalf(t, c.expectedOp, prunedOp, "The pruned operation should match for test case with index %d and version %d", c.index, c.version)
 	}
 
 }
 
-func TestVerifyPrunerIncremental(t *testing.T) {
-
-	cache := cache.NewFakeCache(hashing.Digest{0x0})
+func TestPruneToVerifyIncrementalEnd(t *testing.T) {
 
 	testCases := []struct {
-		start, end     uint64
-		expectedPruned visit.Visitable
+		index, version uint64
+		expectedOp     Operation
 	}{
 		{
-			start:          0,
-			end:            0,
-			expectedPruned: cached(pos(0, 0)),
+			index:      0,
+			version:    0,
+			expectedOp: getCache(pos(0, 0)),
 		},
 		{
-			start: 0,
-			end:   1,
-			expectedPruned: node(pos(0, 1),
-				cached(pos(0, 0)),
-				cached(pos(1, 0)),
+			index:   0,
+			version: 1,
+			expectedOp: inner(pos(0, 1),
+				getCache(pos(0, 0)),
+				getCache(pos(1, 0)),
 			),
 		},
 		{
-			start: 0,
-			end:   2,
-			expectedPruned: node(pos(0, 2),
-				node(pos(0, 1),
-					cached(pos(0, 0)),
-					cached(pos(1, 0))),
-				partialnode(pos(2, 1),
-					cached(pos(2, 0))),
+			index:   0,
+			version: 2,
+			expectedOp: inner(pos(0, 2),
+				inner(pos(0, 1),
+					getCache(pos(0, 0)),
+					getCache(pos(1, 0)),
+				),
+				partial(pos(2, 1),
+					getCache(pos(2, 0))),
 			),
 		},
 		{
-			start: 0,
-			end:   3,
-			expectedPruned: node(pos(0, 2),
-				node(pos(0, 1),
-					cached(pos(0, 0)),
-					cached(pos(1, 0))),
-				cached(pos(2, 1)),
+			index:   0,
+			version: 3,
+			expectedOp: inner(pos(0, 2),
+				inner(pos(0, 1),
+					getCache(pos(0, 0)),
+					getCache(pos(1, 0)),
+				),
+				inner(pos(2, 1),
+					getCache(pos(2, 0)),
+					getCache(pos(3, 0)),
+				),
 			),
 		},
 		{
-			start: 0,
-			end:   4,
-			expectedPruned: node(pos(0, 3),
-				node(pos(0, 2),
-					node(pos(0, 1),
-						cached(pos(0, 0)),
-						cached(pos(1, 0))),
-					cached(pos(2, 1))),
-				partialnode(pos(4, 2),
-					partialnode(pos(4, 1),
-						cached(pos(4, 0)))),
+			index:   0,
+			version: 4,
+			expectedOp: inner(pos(0, 3),
+				inner(pos(0, 2),
+					inner(pos(0, 1),
+						getCache(pos(0, 0)),
+						getCache(pos(1, 0))),
+					getCache(pos(2, 1)),
+				),
+				partial(pos(4, 2),
+					partial(pos(4, 1),
+						getCache(pos(4, 0)))),
 			),
 		},
 		{
-			start: 0,
-			end:   5,
-			expectedPruned: node(pos(0, 3),
-				node(pos(0, 2),
-					node(pos(0, 1),
-						cached(pos(0, 0)),
-						cached(pos(1, 0))),
-					cached(pos(2, 1))),
-				partialnode(pos(4, 2),
-					cached(pos(4, 1))),
+			index:   0,
+			version: 5,
+			expectedOp: inner(pos(0, 3),
+				inner(pos(0, 2),
+					inner(pos(0, 1),
+						getCache(pos(0, 0)),
+						getCache(pos(1, 0))),
+					getCache(pos(2, 1)),
+				),
+				partial(pos(4, 2),
+					inner(pos(4, 1),
+						getCache(pos(4, 0)),
+						getCache(pos(5, 0)),
+					),
+				),
 			),
 		},
 		{
-			start: 0,
-			end:   6,
-			expectedPruned: node(pos(0, 3),
-				node(pos(0, 2),
-					node(pos(0, 1),
-						cached(pos(0, 0)),
-						cached(pos(1, 0))),
-					cached(pos(2, 1))),
-				node(pos(4, 2),
-					cached(pos(4, 1)),
-					partialnode(pos(6, 1),
-						cached(pos(6, 0)))),
+			index:   0,
+			version: 6,
+			expectedOp: inner(pos(0, 3),
+				inner(pos(0, 2),
+					inner(pos(0, 1),
+						getCache(pos(0, 0)),
+						getCache(pos(1, 0))),
+					getCache(pos(2, 1)),
+				),
+				inner(pos(4, 2),
+					getCache(pos(4, 1)),
+					partial(pos(6, 1),
+						getCache(pos(6, 0)))),
 			),
 		},
 		{
-			start: 0,
-			end:   7,
-			expectedPruned: node(pos(0, 3),
-				node(pos(0, 2),
-					node(pos(0, 1),
-						cached(pos(0, 0)),
-						cached(pos(1, 0))),
-					cached(pos(2, 1))),
-				cached(pos(4, 2)),
+			index:   0,
+			version: 7,
+			expectedOp: inner(pos(0, 3),
+				inner(pos(0, 2),
+					inner(pos(0, 1),
+						getCache(pos(0, 0)),
+						getCache(pos(1, 0))),
+					getCache(pos(2, 1)),
+				),
+				inner(pos(4, 2),
+					getCache(pos(4, 1)),
+					inner(pos(6, 1),
+						getCache(pos(6, 0)),
+						getCache(pos(7, 0)),
+					),
+				),
 			),
 		},
 	}
 
-	for i, c := range testCases {
-		context := NewPruningContext(NewIncrementalCacheResolver(c.start, c.end), cache)
-		pruned, _ := NewVerifyIncrementalPruner(c.end, context).Prune()
-		assert.Equalf(t, c.expectedPruned, pruned, "The pruned trees should match for test case %d", i)
+	for _, c := range testCases {
+		prunedOp := PruneToVerifyIncrementalEnd(c.index, c.version)
+		assert.Equalf(t, c.expectedOp, prunedOp, "The pruned operation should match for test case with index %d and version %d", c.index, c.version)
+	}
+
+}
+
+func BenchmarkPruneToVerify(b *testing.B) {
+
+	log.SetLogger("BenchmarkPruneToVerify", log.SILENT)
+
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		pruned := PruneToVerify(0, i, rand.Bytes(32))
+		assert.NotNil(b, pruned)
+	}
+
+}
+
+func BenchmarkPruneToVerifyConsistent(b *testing.B) {
+
+	log.SetLogger("BenchmarkPruneToVerify", log.SILENT)
+
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		pruned := PruneToVerify(i, i, rand.Bytes(32))
+		assert.NotNil(b, pruned)
+	}
+
+}
+
+func BenchmarkPruneToVerifyIncrementalEnd(b *testing.B) {
+
+	log.SetLogger("BenchmarkPruneToVerifyIncrementalEnd", log.SILENT)
+
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		pruned := PruneToVerifyIncrementalEnd(0, i)
+		assert.NotNil(b, pruned)
+	}
+
+}
+
+func BenchmarkPruneToVerifyIncrementalStart(b *testing.B) {
+
+	log.SetLogger("BenchmarkPruneToVerifyIncrementalStart", log.SILENT)
+
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		pruned := PruneToVerifyIncrementalStart(i)
+		assert.NotNil(b, pruned)
 	}
 
 }
