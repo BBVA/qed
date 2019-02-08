@@ -1,4 +1,4 @@
-package pruning5
+package pruning
 
 import (
 	"fmt"
@@ -11,6 +11,16 @@ type Operation interface {
 	Accept(visitor OpVisitor) hashing.Digest
 	String() string
 	Position() *navigation.Position
+}
+
+type OpVisitor interface { // THROW ERRORS?
+	VisitLeafHashOp(op LeafHashOp) hashing.Digest
+	VisitInnerHashOp(op InnerHashOp) hashing.Digest
+	VisitPartialInnerHashOp(op PartialInnerHashOp) hashing.Digest
+	VisitGetCacheOp(op GetCacheOp) hashing.Digest
+	VisitPutCacheOp(op PutCacheOp) hashing.Digest
+	VisitMutateOp(op MutateOp) hashing.Digest
+	VisitCollectOp(op CollectOp) hashing.Digest
 }
 
 type LeafHashOp struct {
