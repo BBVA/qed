@@ -67,7 +67,7 @@ fi
 
 )
 
-GOOS=linux
-GOARCH=amd64
+export GOOS=linux
+export GOARCH=amd64
 #build server binary
 go build -o ${pub}/qed ../../
