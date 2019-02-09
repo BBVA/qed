@@ -21,3 +21,7 @@ output "follower-2" {
 # output "agent-auditor" {
 #   value = "${module.agent-auditor.public_ip}"
 # }
+
+output "prometheus" {
+  value = "${module.prometheus.public_ip}"
+}

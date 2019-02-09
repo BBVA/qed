@@ -28,4 +28,5 @@ if [ ! -f ${prometheus_path} ]; then (
 ) fi
 
 )
- rm -rf ${tdir}
+
+rm -rf ${tdir}
