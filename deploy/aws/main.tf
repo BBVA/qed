@@ -144,7 +144,6 @@ module "follower-2" {
 #   CONFIG
 # }
 
-
 # module "agent-monitor" {
 #   source = "./modules/qed"
 #
@@ -248,5 +247,23 @@ module "prometheus" {
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.follower-2.private_ip}:8600']
+    - job_name: 'riot'
+      scrape_interval: 10s
+      static_configs:
+        - targets: ['${module.riot.private_ip}:9100']
   CONFIG
+}
+
+module "riot" {
+  source = "./modules/riot"
+
+  instance_type = "t3.medium"
+  volume_size = "20"
+  vpc_security_group_ids = "${module.security_group.this_security_group_id}"
+  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name = "${aws_key_pair.qed.key_name}"
+  key_path = "${var.keypath}"
+  endpoint =  "${module.leader.private_ip}"
+  num_requests = 10000000
+
 }
