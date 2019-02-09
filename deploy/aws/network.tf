@@ -102,13 +102,13 @@ module "prometheus_security_group" {
   ingress_rules       = ["all-icmp", "ssh-tcp" ]
   ingress_with_cidr_blocks = [
     {
-      from_port       = 9090
+      from_port       = 9090 # prometheus metrics
       to_port         = 9090
       protocol        = "tcp"
       cidr_blocks     = "${chomp(data.http.ip.body)}/32"
     },
     {
-      from_port       = 3000
+      from_port       = 3000 # graphana
       to_port         = 3000
       protocol        = "tcp"
       cidr_blocks     = "${chomp(data.http.ip.body)}/32"

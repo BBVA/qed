@@ -12,13 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-resource "null_resource" "prebuild" {
-  provisioner "local-exec" {
-    command = "bash build.sh"
-    working_dir = "${path.module}"
-  }
-}
-
 data "aws_ami" "amazon_linux" {
   most_recent = true
 
@@ -33,7 +26,15 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-resource "aws_instance" "prometheus" {
+resource "null_resource" "prebuild" {
+  provisioner "local-exec" {
+    command = "bash build.sh"
+    working_dir = "${path.module}"
+  }
+}
+
+
+resource "aws_instance" "riot" {
   count                       = "1"
   ami                         = "${data.aws_ami.amazon_linux.id}"
   instance_type               = "${var.instance_type}"
@@ -49,10 +50,11 @@ resource "aws_instance" "prometheus" {
   }]
 
   tags {
-    Name = "qed-prometheus"
+    Name = "qed-riot"
   }
 
- provisioner "file" {
+
+  provisioner "file" {
       source     = "${path.module}/data"
       destination = "${var.path}"
 
@@ -63,8 +65,8 @@ resource "aws_instance" "prometheus" {
   }
 
   provisioner "file" {
-      content     = "${var.config}"
-      destination = "${var.path}/prometheus.yml"
+      source     = "./config_files/node_exporter"
+      destination = "${var.path}/node_exporter"
 
       connection {
         user = "ec2-user"
@@ -75,22 +77,15 @@ resource "aws_instance" "prometheus" {
   user_data = <<-DATA
   #!/bin/bash
 
-  sudo yum install -y https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
-  sudo rm -rf /etc/grafana/provisioning
-
-  while [ ! -f ${var.path}/prometheus ] || \
-        [ ! -f ${var.path}/prometheus.yml ] || \
-        [ `lsof ${var.path}/* | wc -l` -gt 0 ]; do
-    sleep 1
+  while [ ! -f ${var.path}/riot ]; do
+    sleep 1 # INFO: wait until binary is complete
   done
-  sleep1
+  sleep 1
 
-  sudo mv ${var.path}/provisioning /etc/grafana
-  sudo chown -R root:grafana /etc/grafana
-  sudo service grafana-server start
+  chmod +x ${var.path}/node_exporter
+  ${var.path}/node_exporter &
 
-  chmod +x ${var.path}/prometheus
-  ${var.path}/prometheus --config.file=${var.path}/prometheus.yml
-
+  chmod +x ${var.path}/riot
+  ${var.path}/riot --endpoint ${var.endpoint} --apikey ${var.api_key} --add
   DATA
 }

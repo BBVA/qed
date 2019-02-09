@@ -33,9 +33,53 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bbva/qed/protocol"
 	chart "github.com/wcharczuk/go-chart"
+
+	"github.com/bbva/qed/protocol"
 )
+
+var (
+	endpoint         string
+	apiKey           string
+	wantAdd          bool
+	wantIncremental  bool
+	wantMembership   bool
+	offload          bool
+	charts           bool
+	profiling        bool
+	incrementalDelta int
+	offset           int
+	numRequests      int
+	readConcurrency  int
+	writeConcurrency int
+)
+
+func init() {
+	// Create a default config to use as default values in flags
+	config := NewDefaultConfig()
+
+	flag.StringVar(&endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
+	flag.StringVar(&apiKey, "apikey", "my-key", "The key to use qed servers")
+	flag.BoolVar(&wantAdd, "add", false, "Execute add benchmark")
+
+	usage := "Benchmark MembershipProof"
+	flag.BoolVar(&wantMembership, "membership", false, usage)
+	flag.BoolVar(&wantMembership, "m", false, usage+" (shorthand)")
+
+	flag.BoolVar(&wantIncremental, "incremental", false, "Execute Incremental benchmark")
+	flag.BoolVar(&offload, "offload", false, "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)")
+	flag.BoolVar(&charts, "charts", false, "Create charts while executing the benchmarks. Output: graph-$testname.png")
+	flag.BoolVar(&profiling, "profiling", false, "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 ")
+
+	usageDelta := "Specify delta for the IncrementalProof"
+	flag.IntVar(&incrementalDelta, "delta", 1000, usageDelta)
+	flag.IntVar(&incrementalDelta, "d", 1000, usageDelta+" (shorthand)")
+
+	flag.IntVar(&numRequests, "n", 10e4, "Number of requests for the attack")
+	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, "Set read concurrency value")
+	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, "Set write concurrency value")
+	flag.IntVar(&offset, "offset", 0, "The starting version from which we start the load")
+}
 
 type Config struct {
 	maxGoRoutines  int
@@ -48,6 +92,7 @@ type Config struct {
 	delay_ms       time.Duration
 	req            HTTPClient
 }
+
 type HTTPClient struct {
 	client             *http.Client
 	method             string
@@ -60,7 +105,7 @@ func NewDefaultConfig() *Config {
 	return &Config{
 		maxGoRoutines:  10,
 		numRequests:    numRequests,
-		apiKey:         "pepe",
+		apiKey:         apiKey,
 		startVersion:   0,
 		continuous:     false,
 		balloonVersion: uint64(numRequests) - 1,
@@ -68,7 +113,7 @@ func NewDefaultConfig() *Config {
 		req: HTTPClient{
 			client:             nil,
 			method:             "POST",
-			endpoint:           "http://localhost:8800",
+			endpoint:           endpoint,
 			expectedStatusCode: 200,
 		},
 	}
@@ -116,7 +161,7 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 
 		c.counter++
 
-		io.Copy(ioutil.Discard, res.Body)
+		_, _ = io.Copy(ioutil.Discard, res.Body)
 		res.Body.Close()
 		time.Sleep(c.delay_ms * time.Millisecond)
 	}
@@ -227,8 +272,8 @@ func drawChart(m string, a *axis) {
 }
 
 func chartsData(a *axis, elapsed, reqs float64) *axis {
-	a.x = append(a.x, float64(elapsed))
-	a.y = append(a.y, float64(reqs))
+	a.x = append(a.x, elapsed)
+	a.y = append(a.y, reqs)
 
 	return a
 }
@@ -459,64 +504,6 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 		c.maxGoRoutines,
 	)
 }
-
-var (
-	wantAdd          bool
-	wantIncremental  bool
-	wantMembership   bool
-	offload          bool
-	charts           bool
-	profiling        bool
-	incrementalDelta int
-	offset           int
-	numRequests      int
-	readConcurrency  int
-	writeConcurrency int
-)
-
-func init() {
-	const (
-		// Default values
-		defaultWantAdd          = false
-		defaultWantIncremental  = false
-		defaultWantMembership   = false
-		defaultOffset           = 0
-		defaultIncrementalDelta = 1000
-		defaultNumRequests      = 100000
-
-		// Usage
-		usage                 = "Benchmark MembershipProof"
-		usageDelta            = "Specify delta for the IncrementalProof"
-		usageNumRequests      = "Number of requests for the attack"
-		usageReadConcurrency  = "Set read concurrency value"
-		usageWriteConcurrency = "Set write concurrency value"
-		usageOffload          = "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)"
-		usageCharts           = "Create charts while executing the benchmarks. Output: graph-$testname.png"
-		usageProfiling        = "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 "
-		usageOffset           = "The starting version from which we start the load"
-		usageWantAdd          = "Execute add benchmark"
-		usageWantIncremental  = "Execute Incremental benchmark"
-	)
-
-	// Create a default config to use as default values in flags
-	config := NewDefaultConfig()
-
-	flag.BoolVar(&wantAdd, "add", defaultWantAdd, usageWantAdd)
-	flag.BoolVar(&wantMembership, "membership", defaultWantMembership, usage)
-	flag.BoolVar(&wantMembership, "m", defaultWantMembership, usage+" (shorthand)")
-	flag.BoolVar(&wantIncremental, "incremental", defaultWantIncremental, usageWantIncremental)
-	flag.BoolVar(&offload, "offload", false, usageOffload)
-	flag.BoolVar(&charts, "charts", false, usageCharts)
-	flag.BoolVar(&profiling, "profiling", false, usageProfiling)
-	flag.IntVar(&incrementalDelta, "delta", defaultIncrementalDelta, usageDelta)
-	flag.IntVar(&incrementalDelta, "d", defaultIncrementalDelta, usageDelta+" (shorthand)")
-	flag.IntVar(&numRequests, "n", defaultNumRequests, usageNumRequests)
-	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, usageReadConcurrency)
-	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, usageWriteConcurrency)
-	flag.IntVar(&offset, "offset", defaultOffset, usageOffset)
-
-}
-
 func hotParams(config []*Config) {
 	scanner := bufio.NewScanner(os.Stdin)
 
