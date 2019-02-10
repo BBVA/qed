@@ -17,8 +17,17 @@
 echo Create id_ed25519 key
 ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 
+tdir=$(mktemp -d /var/tmp/demo.XXX)
+
 echo 'Starting leader...'
-go run ../../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l debug --http-addr :8800 --raft-addr :8500 --mgmt-addr :8700
+go run ../../main.go start \
+    -k test_key \
+    -p ${tdir} \
+    --keypath /var/tmp/id_ed25519 \
+    -l debug \
+    --http-addr :8800 \
+    --raft-addr :8500 \
+    --mgmt-addr :8700
 echo done.
 
 echo Cleanup...
