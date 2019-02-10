@@ -31,7 +31,7 @@ case "$1" in
 esac
 
 go run ../../main.go										\
-	-k pepe											\
+	-k test_key											\
 	client											\
 	--endpoint "$endpoint"									\
 	membership										\

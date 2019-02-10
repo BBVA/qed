@@ -15,14 +15,17 @@
 # limitations under the License.
 
 case "$1" in
+    0)
 	leader)
 		endpoint=http://localhost:8800
 	;;
+    1)
 	follower1)
-		endpoint=http://localhost:8081
+		endpoint=http://localhost:8801
 	;;
+    2)
 	follower2)
-		endpoint=http://localhost:8082
+		endpoint=http://localhost:8802
 	;;
 	*)
 	echo "usage: $0 <leader|follower1|follower2>"
@@ -31,7 +34,7 @@ case "$1" in
 esac
 
 go run ../../main.go										\
-	-k pepe											\
+	-k test_key											\
 	client											\
 	--endpoint "$endpoint"									\
 	incremental										\
