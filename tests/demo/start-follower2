@@ -15,5 +15,16 @@
 # limitations under the License.
 
 echo 'Starting follower #2...'
-go run ../../main.go start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l debug --http-addr :8082 --join-addr :8700 --raft-addr :9002 --mgmt-addr :8092 --node-id follower2
+go run ../../main.go start \
+    -k test_key \
+    -p $(mktemp -d /var/tmp/demo.XXX) \
+    --raftpath /var/tmp/id_ed25519 \
+    -l debug \
+    --http-addr :8802 \
+    --mgmt-addr :8702 \
+    --metrics-addr :8602 \
+    --raft-addr :8502 \
+    --gossip-addr :8402 \
+    --join-addr :8700 \
+    --node-id follower2
 echo done.
