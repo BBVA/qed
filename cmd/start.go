@@ -50,7 +50,7 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 			conf.RaftAddr = v.GetString("server.addr.raft")
 			conf.MgmtAddr = v.GetString("server.addr.mgmt")
 			conf.MetricsAddr = v.GetString("server.addr.metrics")
-			conf.RaftJoinAddr = v.GetStringSlice("server.addr.join")
+			conf.RaftJoinAddr = v.GetStringSlice("server.addr.raft_join")
 			conf.GossipAddr = v.GetString("server.addr.gossip")
 			conf.GossipJoinAddr = v.GetStringSlice("server.addr.gossip_join")
 			conf.DBPath = fmt.Sprintf("%s/%s", ctx.path, "db")
