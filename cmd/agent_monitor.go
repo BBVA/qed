@@ -41,11 +41,12 @@ func newAgentMonitorCommand(ctx cmdContext, config gossip.Config, agentPreRun fu
 			config = agentPreRun(config)
 
 			// Bindings
+			monitorConfig.MetricsAddr = config.BindAddr // TODO: make MetricsAddr configurable
 			monitorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
 			monitorConfig.PubUrls = v.GetStringSlice("agent.alert_urls")
+
 			markSliceStringRequired(monitorConfig.QEDUrls, "qedUrls")
 			markSliceStringRequired(monitorConfig.PubUrls, "pubUrls")
-
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 

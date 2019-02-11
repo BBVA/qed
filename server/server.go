@@ -198,7 +198,7 @@ func join(joinAddr, raftAddr, nodeID string) error {
 
 // Start will start the server in a non-blockable fashion.
 func (s *Server) Start() error {
-
+	metrics.Qed_instances_count.Inc()
 	log.Debugf("Starting QED server...")
 	fmt.Printf("Starting QED server %s\n", s.conf.NodeID)
 
@@ -285,6 +285,7 @@ func (s *Server) Start() error {
 
 // Stop will close all the channels from the mux servers.
 func (s *Server) Stop() error {
+	metrics.Qed_instances_count.Dec()
 	fmt.Printf("\nShutting down QED server %s", s.conf.NodeID)
 
 	log.Debugf("Metrics enabled: stopping server...")
