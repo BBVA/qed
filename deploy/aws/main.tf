@@ -181,7 +181,7 @@ module "agent-auditor" {
   source = "./modules/qed"
 
   name = "agent-auditor"
-  instance_type = "t2.2xlarge"
+  instance_type = "t3.small"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
