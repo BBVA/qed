@@ -19,6 +19,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -102,6 +103,7 @@ type HTTPClient struct {
 
 // type Config map[string]interface{}
 func NewDefaultConfig() *Config {
+
 	return &Config{
 		maxGoRoutines:  10,
 		numRequests:    numRequests,
@@ -199,7 +201,11 @@ func queryIncremental(eventIndex int, c *Config) ([]byte, error) {
 }
 
 func getVersion(eventTemplate string, c *Config) uint64 {
-	client := &http.Client{}
+	ssl := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{Transport: ssl}
 
 	buf := fmt.Sprintf(eventTemplate)
 
@@ -334,7 +340,11 @@ func stats(c *Config, t Task, message string) {
 func benchmarkAdd(numFollowers, numReqests, readConcurrency, writeConcurrency, offset int) {
 	fmt.Println("\nStarting benchmark run...")
 
-	client := &http.Client{}
+	ssl := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{Transport: ssl}
 
 	c := NewDefaultConfig()
 	c.req.client = client
@@ -350,8 +360,11 @@ func benchmarkAdd(numFollowers, numReqests, readConcurrency, writeConcurrency, o
 func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
 	fmt.Println("\nStarting benchmark run...")
 	var queryWg sync.WaitGroup
+	ssl := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 
-	client := &http.Client{}
+	client := &http.Client{Transport: ssl}
 
 	c := NewDefaultConfig()
 	c.req.client = client
@@ -429,8 +442,10 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
 	fmt.Println("\nStarting benchmark run...")
 	var queryWg sync.WaitGroup
-
-	client := &http.Client{}
+	ssl := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: ssl}
 
 	c := NewDefaultConfig()
 	c.req.client = client
