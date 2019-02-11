@@ -17,6 +17,9 @@
 package cache
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/util"
@@ -24,21 +27,52 @@ import (
 
 type FakeCache struct {
 	FixedValue []byte
+	cached     map[[keySize]byte][]byte
 }
 
 func NewFakeCache(fixedValue []byte) *FakeCache {
-	return &FakeCache{fixedValue}
+	return &FakeCache{
+		FixedValue: fixedValue,
+		cached:     make(map[[keySize]byte][]byte),
+	}
 }
 
-func (c FakeCache) Get([]byte) ([]byte, bool) {
-	return []byte{0x0}, true
+func (c FakeCache) Get(key []byte) ([]byte, bool) {
+	var k [keySize]byte
+	copy(k[:], key)
+	value, ok := c.cached[k]
+	if !ok {
+		return []byte{0x0}, true
+	}
+	return value, ok
 }
 
-func (c *FakeCache) Put(key []byte, value []byte) {}
+func (c *FakeCache) Put(key []byte, value []byte) {
+	var k [keySize]byte
+	copy(k[:], key)
+	c.cached[k] = value
+}
 
-func (c *FakeCache) Fill(r storage.KVPairReader) error { return nil }
+func (c *FakeCache) Fill(r storage.KVPairReader) error {
+	return fmt.Errorf("Operation not supported")
+}
 
-func (c FakeCache) Size() int { return 1 }
+func (c FakeCache) Size() int {
+	return len(c.cached)
+}
+
+func (c FakeCache) Equal(o *FakeCache) bool {
+	for k, v1 := range c.cached {
+		v2, ok := o.cached[k]
+		if !ok {
+			return false
+		}
+		if !bytes.Equal(v1, v2) {
+			return false
+		}
+	}
+	return true
+}
 
 type FakeKVPairReader struct {
 	Remaining uint64

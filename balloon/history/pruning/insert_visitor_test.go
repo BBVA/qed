@@ -30,22 +30,22 @@ func TestInsertVisitor(t *testing.T) {
 			))),
 			expectedMutations: []*storage.Mutation{
 				{
-					Prefix: storage.HyperCachePrefix,
+					Prefix: storage.HistoryCachePrefix,
 					Key:    pos(7, 0).Bytes(),
 					Value:  []byte{7},
 				},
 				{
-					Prefix: storage.HyperCachePrefix,
+					Prefix: storage.HistoryCachePrefix,
 					Key:    pos(6, 1).Bytes(),
 					Value:  []byte{7},
 				},
 				{
-					Prefix: storage.HyperCachePrefix,
+					Prefix: storage.HistoryCachePrefix,
 					Key:    pos(4, 2).Bytes(),
 					Value:  []byte{7},
 				},
 				{
-					Prefix: storage.HyperCachePrefix,
+					Prefix: storage.HistoryCachePrefix,
 					Key:    pos(0, 3).Bytes(),
 					Value:  []byte{7},
 				},
@@ -60,15 +60,17 @@ func TestInsertVisitor(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		visitor := NewInsertVisitor(
-			hashing.NewFakeXorHasher(),
-			cache.NewFakeCache([]byte{0x0}),
-			storage.HyperCachePrefix,
-		)
+		cache := cache.NewFakeCache([]byte{0x0})
+		visitor := NewInsertVisitor(hashing.NewFakeXorHasher(), cache, storage.HistoryCachePrefix)
+
 		c.op.Accept(visitor)
 
 		mutations := visitor.Result()
-		assert.ElementsMatchf(t, mutations, c.expectedMutations, "Mutation error in test case %d", i)
+		assert.ElementsMatchf(t, c.expectedMutations, mutations, "Mutation error in test case %d", i)
+		for _, e := range c.expectedElements {
+			v, _ := cache.Get(e.Pos.Bytes())
+			assert.Equalf(t, e.Digest, v, "The cached element %v should be cached in test case %d", e, i)
+		}
 	}
 }
 
