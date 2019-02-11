@@ -111,6 +111,11 @@ type QueryTask struct {
 }
 
 func (m Monitor) Process(b protocol.BatchSnapshots) {
+	// Metrics
+	metrics.Qed_monitor_batches_received_total.Inc()
+	timer := prometheus.NewTimer(metrics.Qed_monitor_batches_process_seconds)
+	defer timer.ObserveDuration()
+
 	first := b.Snapshots[0].Snapshot
 	last := b.Snapshots[len(b.Snapshots)-1].Snapshot
 
