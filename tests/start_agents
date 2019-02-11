@@ -55,7 +55,7 @@ do
 		publisher \
 		-k key  \
 		-l info \
-		--bind 127.0.0.1:831$i  \
+		--bind 127.0.0.1:830$i  \
 		--join $qedGossipEndpoint \
 		--pubUrls $snapshotStoreEndpoint \
 		--node publisher$i &
