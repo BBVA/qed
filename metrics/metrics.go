@@ -33,146 +33,91 @@ var (
 	Balloon *expvar.Map
 
 	// Prometheus
+
+	// QED
+	Qed_instances_count = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_instances_count",
+			Help: "Amount of Qeds instanciated",
+		},
+	)
+
 	// API
 	Qed_api_healthcheck_requests_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "API_healthcheck_requests_total",
+			Name: "qed_api_healthcheck_requests_total",
 			Help: "The total number of healthcheck api requests",
 		},
 	)
 
-	// Qed_balloon
-	Qed_balloon_add_duration_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_balloon_add_duration_seconds",
+	Qed_balloon_add_duration_seconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_balloon_add_duration_seconds",
 			Help: "Duration of the 'Add' Qed_balloon method.",
 		},
 	)
 
-	Qed_balloon_membership_duration_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_balloon_membership_duration_seconds",
+	Qed_balloon_membership_duration_seconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_balloon_membership_duration_seconds",
 			Help: "Duration of the 'Membership' Qed_balloon method.",
 		},
 	)
 
 	Qed_balloon_digest_membership_duration_seconds = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Qed_balloon_digest_membership_duration_seconds",
-			Help: "Duration of the 'Digest Membership' Qed_balloon method",
+			Name: "qed_balloon_digest_membership_duration_seconds",
+			Help: "Duration of the 'Digest Membership' Qed_balloon method.",
 		},
 	)
 
-	Qed_balloon_incremental_duration_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_balloon_incremental_duration_seconds",
+	Qed_balloon_incremental_duration_seconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_balloon_incremental_duration_seconds",
 			Help: "Duration of the 'Incremental' Qed_balloon method.",
 		},
 	)
 
 	Qed_balloon_add_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Qed_balloon_add_total",
+			Name: "qed_balloon_add_total",
 			Help: "Amount of 'Add' operation API calls.",
 		},
 	)
 
 	Qed_balloon_membership_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Qed_balloon_membership_total",
+			Name: "qed_balloon_membership_total",
 			Help: "Amount of 'Membership' operation API calls.",
 		},
 	)
 
 	Qed_balloon_digest_membership_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Qed_balloon_digest_membership_total",
+			Name: "qed_balloon_digest_membership_total",
 			Help: "Amount of 'Membership by digest' operation API calls.",
 		},
 	)
 
 	Qed_balloon_incremental_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Qed_balloon_incremental_total",
+			Name: "qed_balloon_incremental_total",
 			Help: "Amount of 'Incremental' operation API calls.",
 		},
 	)
 
-	// Agents
+	// Sender
 	Qed_sender_instances_count = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "Qed_sender_instances_count",
+			Name: "qed_sender_instances_count",
 			Help: "Amount of Qed_sender agents instanciated",
-		},
-	)
-
-	Qed_auditor_instances_count = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_auditor_instances_count",
-			Help: "Amount of Qed_auditor agents instanciated",
-		},
-	)
-
-	Qed_monitor_instances_count = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_monitor_instances_count",
-			Help: "Amount of Qed_monitor agents instanciated",
-		},
-	)
-
-	Qed_publisher_instances_count = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_publisher_instances_count",
-			Help: "Amount of Qed_publisher agents instanciated.",
 		},
 	)
 
 	Qed_sender_batches_sent_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "Qed_sender_batches_sent_total",
+			Name: "qed_sender_batches_sent_total",
 			Help: "Amount of batches sent by Sender.",
-		},
-	)
-
-	Qed_auditor_batches_received_total = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "Qed_auditor_batches_received_total",
-			Help: "Amount of batches received by Auditor.",
-		},
-	)
-
-	Qed_monitor_batches_received_total = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "Qed_monitor_batches_received_total",
-			Help: "Amount of batches received by Monitor.",
-		},
-	)
-
-	Qed_publisher_batches_received_total = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "Qed_publisher_batches_received_total",
-			Help: "Amount of batches received by Publisher.",
-		},
-	)
-
-	Qed_auditor_batches_process_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_auditor_batches_process_seconds",
-			Help: "Duration of Auditor batch processing",
-		},
-	)
-
-	Qed_monitor_batches_process_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_monitor_batches_process_seconds",
-			Help: "Duration of Monitor batch processing",
-		},
-	)
-
-	Qed_publisher_batches_process_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "Qed_publisher_batches_process_seconds",
-			Help: "Duration of Publisher batch processing",
 		},
 	)
 
@@ -200,6 +145,7 @@ var (
 	)
 
 	metricsList = []prometheus.Collector{
+		Qed_instances_count,
 		Qed_api_healthcheck_requests_total,
 
 		Qed_balloon_add_duration_seconds,
@@ -213,18 +159,7 @@ var (
 		Qed_balloon_incremental_total,
 
 		Qed_sender_instances_count,
-		Qed_auditor_instances_count,
-		Qed_monitor_instances_count,
-		Qed_publisher_instances_count,
-
 		Qed_sender_batches_sent_total,
-		Qed_auditor_batches_received_total,
-		Qed_monitor_batches_received_total,
-		Qed_publisher_batches_received_total,
-
-		Qed_auditor_batches_process_seconds,
-		Qed_monitor_batches_process_seconds,
-		Qed_publisher_batches_process_seconds,
 
 		Qed_exampleGauge,
 		Qed_exampleSummary,

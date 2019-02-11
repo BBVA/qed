@@ -41,11 +41,12 @@ func newAgentAuditorCommand(ctx cmdContext, config gossip.Config, agentPreRun fu
 			config = agentPreRun(config)
 
 			// Bindings
+			auditorConfig.MetricsAddr = config.BindAddr // TODO: make MetricsAddr configurable
 			auditorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
 			auditorConfig.PubUrls = v.GetStringSlice("agent.alert_urls")
+
 			markSliceStringRequired(auditorConfig.QEDUrls, "qedUrls")
 			markSliceStringRequired(auditorConfig.PubUrls, "pubUrls")
-
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 

@@ -18,16 +18,22 @@ package auditor
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/gossip/metrics"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Config struct {
@@ -36,6 +42,7 @@ type Config struct {
 	APIKey                string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
+	MetricsAddr           string
 }
 
 func DefaultConfig() *Config {
@@ -49,22 +56,44 @@ type Auditor struct {
 	qed  *client.HTTPClient
 	conf Config
 
+	metricsServer      *http.Server
+	prometheusRegistry *prometheus.Registry
+
 	taskCh          chan Task
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
 
 func NewAuditor(conf Config) (*Auditor, error) {
+	metrics.Qed_auditor_instances_count.Inc()
 	auditor := Auditor{
 		qed: client.NewHTTPClient(client.Config{
-			Endpoint:  conf.QEDUrls[0],
-			APIKey:    conf.APIKey,
+			Endpoint: conf.QEDUrls[0],
+			APIKey:   conf.APIKey,
 			Insecure: false,
 		}),
 		conf:   conf,
 		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
 	}
+
+	r := prometheus.NewRegistry()
+	metrics.Register(r)
+	auditor.prometheusRegistry = r
+	metricsMux := metricshttp.NewMetricsHTTP(r)
+
+	addr := strings.Split(conf.MetricsAddr, ":")
+	auditor.metricsServer = &http.Server{
+		Addr:    ":1" + addr[1],
+		Handler: metricsMux,
+	}
+
+	go func() {
+		log.Debugf("	* Starting metrics HTTP server in addr: %s", conf.MetricsAddr)
+		if err := auditor.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start metrics HTTP server: %s", err)
+		}
+	}()
 
 	auditor.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go auditor.runTaskDispatcher()
@@ -190,6 +219,15 @@ func (a Auditor) Process(b protocol.BatchSnapshots) {
 }
 
 func (a *Auditor) Shutdown() {
+	// Metrics
+	metrics.Qed_auditor_instances_count.Dec()
+
+	log.Debugf("Metrics enabled: stopping server...")
+	if err := a.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+		log.Error(err)
+	}
+	log.Debugf("Done.\n")
+
 	a.executionTicker.Stop()
 	a.quitCh <- true
 	close(a.quitCh)

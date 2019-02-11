@@ -18,16 +18,22 @@ package monitor
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/gossip/metrics"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Config struct {
@@ -36,6 +42,7 @@ type Config struct {
 	APIKey                string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
+	MetricsAddr           string
 }
 
 func DefaultConfig() *Config {
@@ -49,12 +56,17 @@ type Monitor struct {
 	client *client.HTTPClient
 	conf   Config
 
+	metricsServer      *http.Server
+	prometheusRegistry *prometheus.Registry
+
 	taskCh          chan QueryTask
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
 
 func NewMonitor(conf Config) (*Monitor, error) {
+	// Metrics
+	metrics.Qed_monitor_instances_count.Inc()
 
 	monitor := Monitor{
 		client: client.NewHTTPClient(client.Config{
@@ -66,6 +78,26 @@ func NewMonitor(conf Config) (*Monitor, error) {
 		taskCh: make(chan QueryTask, 100),
 		quitCh: make(chan bool),
 	}
+
+	r := prometheus.NewRegistry()
+	metrics.Register(r)
+	monitor.prometheusRegistry = r
+	metricsMux := metricshttp.NewMetricsHTTP(r)
+
+	addr := strings.Split(conf.MetricsAddr, ":")
+	monitor.metricsServer = &http.Server{
+		Addr:    ":1" + addr[1],
+		Handler: metricsMux,
+	}
+
+	// fmt.Println(">>>>>>>>>< ", monitor.metricsServer.Addr)
+
+	go func() {
+		log.Debugf("	* Starting metrics HTTP server in addr: %s", conf.MetricsAddr)
+		if err := monitor.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start metrics HTTP server: %s", err)
+		}
+	}()
 
 	monitor.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go monitor.runTaskDispatcher()
@@ -108,6 +140,15 @@ func (m Monitor) runTaskDispatcher() {
 }
 
 func (m *Monitor) Shutdown() {
+	// Metrics
+	metrics.Qed_monitor_instances_count.Dec()
+
+	log.Debugf("Metrics enabled: stopping server...")
+	if err := m.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+		log.Error(err)
+	}
+	log.Debugf("Done.\n")
+
 	m.executionTicker.Stop()
 	m.quitCh <- true
 	close(m.quitCh)

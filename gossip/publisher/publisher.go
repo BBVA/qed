@@ -18,21 +18,28 @@ package publisher
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/bbva/qed/api/metricshttp"
+	"github.com/bbva/qed/gossip/metrics"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/valyala/fasthttp"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Config struct {
 	PubUrls               []string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
+	MetricsAddr           string
 }
 
 func DefaultConfig() *Config {
@@ -52,19 +59,40 @@ type Publisher struct {
 	client *fasthttp.Client
 	conf   Config
 
+	metricsServer      *http.Server
+	prometheusRegistry *prometheus.Registry
+
 	taskCh          chan PublishTask
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
 
 func NewPublisher(conf Config) (*Publisher, error) {
-
+	metrics.Qed_publisher_instances_count.Inc()
 	publisher := Publisher{
 		client: &fasthttp.Client{},
 		conf:   conf,
 		taskCh: make(chan PublishTask, 100),
 		quitCh: make(chan bool),
 	}
+
+	r := prometheus.NewRegistry()
+	metrics.Register(r)
+	publisher.prometheusRegistry = r
+	metricsMux := metricshttp.NewMetricsHTTP(r)
+
+	addr := strings.Split(conf.MetricsAddr, ":")
+	publisher.metricsServer = &http.Server{
+		Addr:    ":1" + addr[1],
+		Handler: metricsMux,
+	}
+
+	go func() {
+		log.Debugf("	* Starting metrics HTTP server in addr: %s", conf.MetricsAddr)
+		if err := publisher.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start metrics HTTP server: %s", err)
+		}
+	}()
 
 	publisher.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go publisher.runTaskDispatcher()
@@ -97,6 +125,15 @@ func (p Publisher) runTaskDispatcher() {
 }
 
 func (p *Publisher) Shutdown() {
+	// Metrics
+	metrics.Qed_publisher_instances_count.Dec()
+
+	log.Debugf("Metrics enabled: stopping server...")
+	if err := p.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+		log.Error(err)
+	}
+	log.Debugf("Done.\n")
+
 	p.executionTicker.Stop()
 	p.quitCh <- true
 	close(p.quitCh)

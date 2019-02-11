@@ -26,7 +26,7 @@ import (
 
 func newAgentPublisherCommand(ctx cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
 
-	var endpoints []string
+	publisherConfig := publisher.DefaultConfig()
 
 	cmd := &cobra.Command{
 		Use:   "publisher",
@@ -41,14 +41,14 @@ func newAgentPublisherCommand(ctx cmdContext, config gossip.Config, agentPreRun 
 			config = agentPreRun(config)
 
 			// Bindings
-			endpoints = v.GetStringSlice("agent.snapshots_store_urls")
-			markSliceStringRequired(endpoints, "pubUrls")
+			publisherConfig.MetricsAddr = config.BindAddr // TODO: make MetricsAddr configurable
+			publisherConfig.PubUrls = v.GetStringSlice("agent.snapshots_store_urls")
 
+			markSliceStringRequired(publisherConfig.PubUrls, "pubUrls")
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
 			config.Role = member.Publisher
-			publisherConfig := publisher.NewConfig(endpoints)
 
 			publisher, err := publisher.NewPublisher(*publisherConfig)
 			if err != nil {
@@ -72,7 +72,7 @@ func newAgentPublisherCommand(ctx cmdContext, config gossip.Config, agentPreRun 
 	}
 
 	f := cmd.Flags()
-	f.StringSliceVarP(&endpoints, "pubUrls", "", []string{},
+	f.StringSliceVarP(&publisherConfig.PubUrls, "pubUrls", "", []string{},
 		"Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
 
 	// Lookups

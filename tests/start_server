@@ -39,6 +39,7 @@ leader() {
         -p ${tdir}/0/ \
         --node-id leader \
         --keypath ${tdir}/id_ed25519 \
+        --gossip-addr 127.0.0.1:8400 \
         -l error \
         $PROFILING \
         &
@@ -57,9 +58,9 @@ follower() {
         --mgmt-addr :870$1 \
         --metrics-addr :860$1 \
         --raft-addr :850$1 \
-        --gossip-addr :840$1 \
-        --join-addr :8700 \
-        --gossip-join-addr :8400 \
+        --gossip-addr 127.0.0.1:840$1 \
+        --join-addr 127.0.0.1:8700 \
+        --gossip-join-addr 127.0.0.1:8400 \
         $PROFILING  \
         &
 }
@@ -71,6 +72,7 @@ then
 else
     echo '>>>> Starting cluster mode...'
     leader
+    sleep 2
     echo '>>>> Starting followers'
     for i in $(seq 1 $CLUSTER_SIZE); do
         follower ${i}
