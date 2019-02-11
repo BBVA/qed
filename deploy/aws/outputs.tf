@@ -25,3 +25,7 @@ output "follower-2" {
 output "prometheus" {
   value = "${module.prometheus.public_ip}"
 }
+output "riot" {
+  value = "${module.riot.public_ip}"
+}
+
