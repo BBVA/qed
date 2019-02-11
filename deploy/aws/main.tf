@@ -112,6 +112,7 @@ module "inmemory-storage" {
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
+  key_path = "${var.keypath}"
 }
 
 module "agent-publisher" {
@@ -123,6 +124,7 @@ module "agent-publisher" {
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
+  key_path = "${var.keypath}"
 
   command="agent publisher"
   config = <<-CONFIG
@@ -153,6 +155,7 @@ module "agent-monitor" {
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
+  key_path = "${var.keypath}"
 
   command="agent monitor"
   config = <<-CONFIG
@@ -183,6 +186,7 @@ module "agent-auditor" {
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
+  key_path = "${var.keypath}"
 
   command="agent auditor"
   config = <<-CONFIG
