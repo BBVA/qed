@@ -208,6 +208,11 @@ func (t MembershipTask) sendAlert(msg string) {
 }
 
 func (a Auditor) Process(b protocol.BatchSnapshots) {
+	// Metrics
+	metrics.Qed_auditor_batches_received_total.Inc()
+	timer := prometheus.NewTimer(metrics.Qed_auditor_batches_process_seconds)
+	defer timer.ObserveDuration()
+
 	task := &MembershipTask{
 		qed:    a.qed,
 		pubUrl: a.conf.PubUrls[0],
