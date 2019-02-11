@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -26,7 +26,7 @@
       "fill": 1,
       "gridPos": {
         "h": 5,
-        "w": 24,
+        "w": 14,
         "x": 0,
         "y": 0
       },
@@ -148,10 +148,10 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 3,
+        "h": 5,
         "w": 5,
-        "x": 5,
-        "y": 5
+        "x": 14,
+        "y": 0
       },
       "id": 4,
       "interval": null,
@@ -227,10 +227,10 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 3,
+        "h": 5,
         "w": 5,
-        "x": 14,
-        "y": 5
+        "x": 19,
+        "y": 0
       },
       "id": 20,
       "interval": null,
@@ -298,7 +298,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 8
+        "y": 5
       },
       "id": 2,
       "legend": {
@@ -328,7 +328,7 @@
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
@@ -383,7 +383,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 8
+        "y": 5
       },
       "id": 10,
       "legend": {
@@ -412,6 +412,7 @@
           "expr": "sum(rate(qed_balloon_membership_total[30s])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
@@ -466,7 +467,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 8
+        "y": 5
       },
       "id": 12,
       "legend": {
@@ -495,6 +496,7 @@
           "expr": "sum(rate(qed_balloon_incremental_total[30s])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
@@ -549,7 +551,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 14
       },
       "id": 19,
       "legend": {
@@ -578,6 +580,7 @@
           "expr": "sum(rate(qed_sender_batches_sent_total[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
@@ -632,7 +635,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 14
       },
       "id": 17,
       "legend": {
@@ -661,18 +664,21 @@
           "expr": "sum(rate(qed_monitor_batches_received_total[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "A"
         },
         {
           "expr": "sum(rate(qed_auditor_batches_received_total[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "B"
         },
         {
           "expr": "sum(rate(qed_publisher_batches_received_total[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "C"
         }
       ],
@@ -727,7 +733,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 14
       },
       "id": 18,
       "legend": {
@@ -756,18 +762,21 @@
           "expr": "sum(rate(qed_monitor_batches_process_seconds[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "A"
         },
         {
           "expr": "sum(rate(qed_auditor_batches_process_seconds[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "B"
         },
         {
           "expr": "sum(rate(qed_auditor_batches_process_seconds[1m])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
+          "legendFormat": "{{job}}",
           "refId": "C"
         }
       ],
@@ -821,7 +830,7 @@
     "list": []
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {
