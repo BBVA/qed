@@ -379,7 +379,7 @@ func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurr
 		c.numRequests = numReqests
 		c.maxGoRoutines = readConcurrency
 		c.req.expectedStatusCode = 200
-		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
+		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8801+i)
 		c.req.endpoint += "/proofs/membership"
 
 		config = append(config, c)
@@ -459,7 +459,7 @@ func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcur
 		c.numRequests = numReqests
 		c.maxGoRoutines = readConcurrency
 		c.req.expectedStatusCode = 200
-		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8081+i)
+		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8801+i)
 		c.req.endpoint += "/proofs/incremental"
 
 		config = append(config, c)

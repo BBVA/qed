@@ -23,6 +23,7 @@ import (
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/sign"
 )
@@ -51,6 +52,7 @@ func DefaultConfig() *Config {
 }
 
 func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
+	metrics.Qed_sender_instances_count.Inc()
 	return &Sender{
 		Agent:  a,
 		Config: c,
@@ -114,6 +116,9 @@ func (s Sender) sender(batch protocol.BatchSnapshots) {
 
 	peers := s.Agent.Topology.Each(s.Config.EachN, nil)
 	for _, peer := range peers.L {
+		// Metrics
+		metrics.Qed_sender_batches_sent_total.Inc()
+
 		dst := peer.Node()
 		log.Infof("Sending batch %+v to node %+v\n", batch, dst.Name)
 		wg.Add(1)
@@ -146,6 +151,7 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 }
 
 func (s Sender) Stop() {
+	metrics.Qed_sender_instances_count.Dec()
 	s.quit <- true
 }
 
