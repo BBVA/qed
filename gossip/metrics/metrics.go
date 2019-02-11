@@ -67,22 +67,22 @@ var (
 		},
 	)
 
-	Qed_auditor_batches_process_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Qed_auditor_batches_process_seconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
 			Name: "qed_auditor_batches_process_seconds",
 			Help: "Duration of Auditor batch processing",
 		},
 	)
 
-	Qed_monitor_batches_process_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Qed_monitor_batches_process_seconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
 			Name: "qed_monitor_batches_process_seconds",
 			Help: "Duration of Monitor batch processing",
 		},
 	)
 
-	Qed_publisher_batches_process_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Qed_publisher_batches_process_seconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
 			Name: "qed_publisher_batches_process_seconds",
 			Help: "Duration of Publisher batch processing",
 		},

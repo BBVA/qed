@@ -105,6 +105,11 @@ type PublishTask struct {
 }
 
 func (p *Publisher) Process(b protocol.BatchSnapshots) {
+	// Metrics
+	metrics.Qed_publisher_batches_received_total.Inc()
+	timer := prometheus.NewTimer(metrics.Qed_publisher_batches_process_seconds)
+	defer timer.ObserveDuration()
+
 	task := &PublishTask{
 		Batch: b,
 	}
