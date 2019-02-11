@@ -88,6 +88,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		auditorConf := auditor.DefaultConfig()
+		auditorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:810%d", id)
 		auditorConf.QEDUrls = []string{QEDUrl}
 		auditorConf.PubUrls = []string{StoreURL}
 		auditorConf.APIKey = APIKey
@@ -118,6 +119,7 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		monitorConf := monitor.DefaultConfig()
+		monitorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:820%d", id)
 		monitorConf.QEDUrls = []string{QEDUrl}
 		monitorConf.PubUrls = []string{StoreURL}
 		monitorConf.APIKey = APIKey
@@ -148,6 +150,7 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		conf := publisher.DefaultConfig()
+		conf.MetricsAddr = fmt.Sprintf("127.0.0.1:830%d", id)
 		conf.PubUrls = []string{StoreURL}
 
 		pu, err = publisher.NewPublisher(*conf)
