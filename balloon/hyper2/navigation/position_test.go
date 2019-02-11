@@ -19,29 +19,25 @@ package navigation
 import (
 	"testing"
 
-	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRoot(t *testing.T) {
 
 	testCases := []struct {
-		version     uint64
+		numBits     uint16
 		expectedPos *Position
 	}{
-		{0, pos(0, 0)},
-		{1, pos(0, 1)},
-		{2, pos(0, 2)},
-		{3, pos(0, 2)},
-		{4, pos(0, 3)},
-		{5, pos(0, 3)},
-		{6, pos(0, 3)},
-		{7, pos(0, 3)},
-		{8, pos(0, 4)},
+		{8, NewPosition(make([]byte, 1), 8)},
+		{16, NewPosition(make([]byte, 2), 16)},
+		{32, NewPosition(make([]byte, 4), 32)},
+		{64, NewPosition(make([]byte, 8), 64)},
+		{128, NewPosition(make([]byte, 16), 128)},
+		{256, NewPosition(make([]byte, 32), 256)},
 	}
 
 	for i, c := range testCases {
-		rootPos := NewRootPosition(util.Uint64AsBytes(c.version))
+		rootPos := NewRootPosition(c.numBits)
 		require.Equalf(t, c.expectedPos, rootPos, "The root position should match in test case %d", i)
 	}
 
