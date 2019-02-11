@@ -11,7 +11,7 @@ import (
 type InsertVisitor struct {
 	hasher        hashing.Hasher
 	cache         cache.ModifiableCache
-	storagePrefix byte
+	storagePrefix byte // TODO shall i remove this?
 
 	mutations []*storage.Mutation
 }

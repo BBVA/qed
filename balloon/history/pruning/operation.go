@@ -145,7 +145,7 @@ func (o PutCacheOp) Position() *navigation.Position {
 }
 
 func (o PutCacheOp) String() string {
-	return fmt.Sprintf("PutCacheOp[ %v ]", o.Operation)
+	return fmt.Sprintf("PutCacheOp( %v )", o.Operation)
 }
 
 func NewMutateOp(op Operation) *MutateOp {
@@ -163,7 +163,7 @@ func (o MutateOp) Position() *navigation.Position {
 }
 
 func (o MutateOp) String() string {
-	return fmt.Sprintf("MutateOp[ %v ]", o.Operation)
+	return fmt.Sprintf("MutateOp( %v )", o.Operation)
 }
 
 func NewCollectOp(op Operation) *CollectOp {
@@ -181,5 +181,5 @@ func (o CollectOp) Position() *navigation.Position {
 }
 
 func (o CollectOp) String() string {
-	return fmt.Sprintf("CollectOp[ %v ]", o.Operation)
+	return fmt.Sprintf("CollectOp( %v )", o.Operation)
 }
