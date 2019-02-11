@@ -103,106 +103,106 @@ module "follower-2" {
   CONFIG
 }
 
-# module "inmemory-storage" {
-#   source = "./modules/inmemory_storage"
-#
-#   name = "inmemory-storage"
-#   instance_type = "t3.small"
-#   volume_size = "20"
-#   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-#   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-#   key_name = "${aws_key_pair.qed.key_name}"
-# }
+module "inmemory-storage" {
+  source = "./modules/inmemory_storage"
 
-# module "agent-publisher" {
-#   source = "./modules/qed"
-#
-#   name = "agent-publisher"
-#   instance_type = "t3.small"
-#   volume_size = "20"
-#   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-#   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-#   key_name = "${aws_key_pair.qed.key_name}"
-#
-#   command="agent publisher"
-#   config = <<-CONFIG
-#   ---
-#   api_key: "terraform_qed"
-#   path: "/var/tmp/qed/"
-#   agent:
-#     node: "publisher"
-#     bind: ":8300"
-#     advertise: ""
-#     join:
-#       - "${module.leader.private_ip}:8400"
-#     server_urls:
-#       - "${module.leader.private_ip}:8800"
-#     alert_urls:
-#       - "${module.inmemory-storage.private_ip}:8888"
-#     snapshots_store_urls:
-#       - "${module.inmemory-storage.private_ip}:8888"
-#   CONFIG
-# }
+  name = "inmemory-storage"
+  instance_type = "t3.small"
+  volume_size = "20"
+  vpc_security_group_ids = "${module.security_group.this_security_group_id}"
+  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name = "${aws_key_pair.qed.key_name}"
+}
 
-# module "agent-monitor" {
-#   source = "./modules/qed"
-#
-#   name = "agent-monitor"
-#   instance_type = "t3.small"
-#   volume_size = "20"
-#   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-#   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-#   key_name = "${aws_key_pair.qed.key_name}"
-#
-#   command="agent monitor"
-#   config = <<-CONFIG
-#   ---
-#   api_key: "terraform_qed"
-#   path: "/var/tmp/qed/"
-#   agent:
-#     node: "monitor"
-#     bind: ":8200"
-#     advertise: ""
-#     join:
-#       - "${module.leader.private_ip}:8400"
-#     server_urls:
-#       - "${module.leader.private_ip}:8800"
-#     alert_urls:
-#       - "${module.inmemory-storage.private_ip}:8888"
-#     snapshots_store_urls:
-#       - "${module.inmemory-storage.private_ip}:8888"
-#   CONFIG
-# }
+module "agent-publisher" {
+  source = "./modules/qed"
 
-# module "agent-auditor" {
-#   source = "./modules/qed"
-#
-#   name = "agent-auditor"
-#   instance_type = "t2.2xlarge"
-#   volume_size = "20"
-#   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-#   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-#   key_name = "${aws_key_pair.qed.key_name}"
-#
-#   command="agent auditor"
-#   config = <<-CONFIG
-#   ---
-#   api_key: "terraform_qed"
-#   path: "/var/tmp/qed/"
-#   agent:
-#     node: "auditor"
-#     bind: ":8100"
-#     advertise: ""
-#     join:
-#       - "${module.leader.private_ip}:8400"
-#     server_urls:
-#       - "${module.leader.private_ip}:8800"
-#     alert_urls:
-#       - "${module.inmemory-storage.private_ip}:8888"
-#     snapshots_store_urls:
-#       - "${module.inmemory-storage.private_ip}:8888"
-#   CONFIG
-# }
+  name = "agent-publisher"
+  instance_type = "t3.small"
+  volume_size = "20"
+  vpc_security_group_ids = "${module.security_group.this_security_group_id}"
+  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name = "${aws_key_pair.qed.key_name}"
+
+  command="agent publisher"
+  config = <<-CONFIG
+  ---
+  api_key: "terraform_qed"
+  path: "/var/tmp/qed/"
+  agent:
+    node: "publisher"
+    bind: ":8300"
+    advertise: ""
+    join:
+      - "${module.leader.private_ip}:8400"
+    server_urls:
+      - "${module.leader.private_ip}:8800"
+    alert_urls:
+      - "${module.inmemory-storage.private_ip}:8888"
+    snapshots_store_urls:
+      - "${module.inmemory-storage.private_ip}:8888"
+  CONFIG
+}
+
+module "agent-monitor" {
+  source = "./modules/qed"
+
+  name = "agent-monitor"
+  instance_type = "t3.small"
+  volume_size = "20"
+  vpc_security_group_ids = "${module.security_group.this_security_group_id}"
+  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name = "${aws_key_pair.qed.key_name}"
+
+  command="agent monitor"
+  config = <<-CONFIG
+  ---
+  api_key: "terraform_qed"
+  path: "/var/tmp/qed/"
+  agent:
+    node: "monitor"
+    bind: ":8200"
+    advertise: ""
+    join:
+      - "${module.leader.private_ip}:8400"
+    server_urls:
+      - "${module.leader.private_ip}:8800"
+    alert_urls:
+      - "${module.inmemory-storage.private_ip}:8888"
+    snapshots_store_urls:
+      - "${module.inmemory-storage.private_ip}:8888"
+  CONFIG
+}
+
+module "agent-auditor" {
+  source = "./modules/qed"
+
+  name = "agent-auditor"
+  instance_type = "t2.2xlarge"
+  volume_size = "20"
+  vpc_security_group_ids = "${module.security_group.this_security_group_id}"
+  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name = "${aws_key_pair.qed.key_name}"
+
+  command="agent auditor"
+  config = <<-CONFIG
+  ---
+  api_key: "terraform_qed"
+  path: "/var/tmp/qed/"
+  agent:
+    node: "auditor"
+    bind: ":8100"
+    advertise: ""
+    join:
+      - "${module.leader.private_ip}:8400"
+    server_urls:
+      - "${module.leader.private_ip}:8800"
+    alert_urls:
+      - "${module.inmemory-storage.private_ip}:8888"
+    snapshots_store_urls:
+      - "${module.inmemory-storage.private_ip}:8888"
+  CONFIG
+}
 
 module "prometheus" {
   source = "./modules/prometheus"
@@ -247,6 +247,18 @@ module "prometheus" {
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.follower-2.private_ip}:8600']
+    - job_name: 'Agent-Publisher-Metrics'
+      scrape_interval: 10s
+      static_configs:
+        - targets: ['${module.agent-publisher.private_ip}:18300']
+    - job_name: 'Agent-Monitor-Metrics'
+      scrape_interval: 10s
+      static_configs:
+        - targets: ['${module.agent-monitor.private_ip}:18200']
+    - job_name: 'Agent-Auditor-Metrics'
+      scrape_interval: 10s
+      static_configs:
+        - targets: ['${module.agent-auditor.private_ip}:18100']
     - job_name: 'riot'
       scrape_interval: 10s
       static_configs:
