@@ -234,29 +234,29 @@ func (s *Server) Start() error {
 
 	if s.conf.EnableTLS {
 		go func() {
-			log.Debug("	* Starting QED API HTTPS server in addr: ", s.conf.HTTPAddr)
+			log.Debug("	* Starting API HTTPS server in addr: ", s.conf.HTTPAddr)
 			err := s.httpServer.ListenAndServeTLS(
 				s.conf.SSLCertificate,
 				s.conf.SSLCertificateKey,
 			)
 			if err != http.ErrServerClosed {
-				log.Errorf("Can't start QED API HTTP Server: %s", err)
+				log.Errorf("Can't start API HTTPS server: %s", err)
 			}
 		}()
 	} else {
 		go func() {
-			log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.HTTPAddr)
+			log.Debug("	* Starting API HTTP server in addr: ", s.conf.HTTPAddr)
 			if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-				log.Errorf("Can't start QED API HTTP Server: %s", err)
+				log.Errorf("Can't start API HTTP server: %s", err)
 			}
 		}()
 
 	}
 
 	go func() {
-		log.Debug("	* Starting QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
+		log.Debug("	* Starting management HTTP server in addr: ", s.conf.MgmtAddr)
 		if err := s.mgmtServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start QED MGMT HTTP Server: %s", err)
+			log.Errorf("Can't start management HTTP server: %s", err)
 		}
 	}()
 
@@ -264,7 +264,7 @@ func (s *Server) Start() error {
 
 	if !s.bootstrap {
 		for _, addr := range s.conf.RaftJoinAddr {
-			log.Debug("	* Joining existent cluster QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
+			log.Debug("	* Joining existing QED cluster in addr: ", addr)
 			if err := join(addr, s.conf.RaftAddr, s.conf.NodeID); err != nil {
 				log.Fatalf("failed to join node at %s: %s", addr, err.Error())
 			}
@@ -313,13 +313,13 @@ func (s *Server) Stop() error {
 		log.Debugf("Done.\n")
 	}
 
-	log.Debugf("Stopping MGMT server...")
+	log.Debugf("Stopping management server...")
 	if err := s.mgmtServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
 		log.Error(err)
 		return err
 	}
 
-	log.Debugf("Stopping HTTP server...")
+	log.Debugf("Stopping API HTTP server...")
 	if err := s.httpServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
 		log.Error(err)
 		return err

@@ -104,8 +104,6 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 
 		case <-quit:
 			return
-			// default:
-			// fmt.Println("Doing nothing", id)
 		}
 	}
 }
@@ -143,7 +141,7 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 	for {
 		select {
 		case <-ticker.C:
-			log.Debug("QUEUE LENGTH: ", len(ch))
+			log.Debug("Messages in sender queue: ", len(ch))
 		case <-s.quit:
 			return
 		}
