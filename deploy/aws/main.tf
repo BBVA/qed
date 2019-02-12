@@ -267,6 +267,10 @@ module "prometheus" {
       scrape_interval: 10s
       static_configs:
         - targets: ['${module.riot.private_ip}:9100']
+    - job_name: 'inmemory-storage'
+      scrape_interval: 10s
+      static_configs:
+        - targets: ['${module.inmemory-storage.private_ip}:18888']
   CONFIG
 }
 

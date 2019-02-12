@@ -77,8 +77,11 @@ resource "aws_instance" "riot" {
   user_data = <<-DATA
   #!/bin/bash
 
-  while [ ! -f ${var.path}/riot ]; do
-    sleep 1 # INFO: wait until binary is complete
+
+  while [ ! -f ${var.path}/riot ] || \
+        [ ! -f ${var.path}/node_exporter ] || \
+        [ `lsof ${var.path}/* | wc -l` -gt 0 ]; do
+    sleep 1
   done
   sleep 1
 
