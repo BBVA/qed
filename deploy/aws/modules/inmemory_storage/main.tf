@@ -64,16 +64,28 @@ resource "aws_instance" "inmemory-storage" {
       }
   }
 
+  provisioner "file" {
+    source     = "./config_files/node_exporter"
+    destination = "${var.path}/node_exporter"
+
+    connection {
+      user = "ec2-user"
+      private_key = "${file("${var.key_path}")}"
+    }
+  }
+
   user_data = <<-DATA
   #!/bin/bash
 
-  while [ ! -f ${var.path}/storage ]; do
-    sleep 1 # INFO: wait until binary is complete
+  while [ ! -f ${var.path}/storage ] || \
+        [ ! -f ${var.path}/node_exporter ] || \
+        [ `lsof ${var.path}/* | wc -l` -gt 0 ]; do
+    sleep 1
   done
+  sleep 1
 
-  while [ `lsof ${var.path}/storage | wc -l` -gt 0 ]; do
-    sleep 1 # INFO: prevents Error of `text file busy`
-  done
+  chmod +x ${var.path}/node_exporter
+  ${var.path}/node_exporter &
 
   chmod +x ${var.path}/storage
   ${var.path}/storage
