@@ -39,7 +39,7 @@ module "leader" {
       http: ":8800"
       mgmt: ":8700"
       raft: "MYIP:8500"
-      gossip: ":8400"
+      gossip: "MYIP:8400"
   CONFIG
 
 }
@@ -65,7 +65,7 @@ module "follower-1" {
       http: ":8800"
       mgmt: ":8700"
       raft: "MYIP:8500"
-      gossip: ":8400"
+      gossip: "MYIP:8400"
       raft_join:
        - "${module.leader.private_ip}:8700"
       gossip_join:
@@ -95,7 +95,7 @@ module "follower-2" {
       http: ":8800"
       mgmt: ":8700"
       raft: "MYIP:8500"
-      gossip: ":8400"
+      gossip: "MYIP:8400"
       raft_join:
        - "${module.leader.private_ip}:8700"
       gossip_join:
@@ -133,7 +133,7 @@ module "agent-publisher" {
   path: "/var/tmp/qed/"
   agent:
     node: "publisher"
-    bind: ":8300"
+    bind: "MYIP:8300"
     advertise: ""
     join:
       - "${module.leader.private_ip}:8400"
@@ -164,7 +164,7 @@ module "agent-monitor" {
   path: "/var/tmp/qed/"
   agent:
     node: "monitor"
-    bind: ":8200"
+    bind: "MYIP:8200"
     advertise: ""
     join:
       - "${module.leader.private_ip}:8400"
@@ -195,7 +195,7 @@ module "agent-auditor" {
   path: "/var/tmp/qed/"
   agent:
     node: "auditor"
-    bind: ":8100"
+    bind: "MYIP:8100"
     advertise: ""
     join:
       - "${module.leader.private_ip}:8400"
