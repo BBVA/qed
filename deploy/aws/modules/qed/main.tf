@@ -85,6 +85,9 @@ resource "aws_instance" "qed-server" {
   chmod +x ${var.path}/node_exporter
 
   ${var.path}/node_exporter &
+  
+  # TONIGHT WE DINE IN HELL
+  sed -i "s/MYIP/$(ifconfig | awk '/inet addr/{print substr($2,6)}' | head -1)/g" ${var.path}/config.yml
   ${var.path}/qed ${var.command}
 
   DATA
