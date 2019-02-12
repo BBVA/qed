@@ -17,5 +17,6 @@ import "github.com/bbva/qed/tests/e2e"
 
 func main() {
 	s := e2e.NewService()
-	s.Start()
+	foreground := true
+	s.Start(foreground)
 }
