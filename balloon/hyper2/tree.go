@@ -27,7 +27,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 
 	hasher := hasherF()
 	numBits := hasher.Len()
-	cacheHeightLimit := numBits - 24 // TODO change this!!!
+	cacheHeightLimit := numBits - min(24, numBits/8*4)
 
 	tree := &HyperTree{
 		store:            store,
@@ -58,6 +58,7 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 
 	// build a visitable pruned tree and then visit it to generate the root hash
 	versionAsBytes := util.Uint64AsPaddedBytes(version, len(eventDigest))
+	versionAsBytes = versionAsBytes[len(versionAsBytes)-len(eventDigest):]
 	visitor := pruning.NewInsertVisitor(t.hasher, t.cache, t.defaultHashes)
 	op, err := pruning.PruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)
 	if err != nil {
@@ -67,4 +68,11 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	rh := op.Accept(visitor)
 
 	return rh, visitor.Result(), nil
+}
+
+func min(x, y uint16) uint16 {
+	if x < y {
+		return x
+	}
+	return y
 }
