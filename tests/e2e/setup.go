@@ -176,7 +176,8 @@ func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
 	var s *Service
 	before := func(t *testing.T) {
 		s = NewService()
-		s.Start()
+		foreground := false
+		s.Start(foreground)
 	}
 
 	after := func(t *testing.T) {
