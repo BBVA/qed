@@ -29,7 +29,7 @@ func NewBatchNode(nodeSize int, batch [][]byte) *BatchNode {
 func (b BatchNode) String() string {
 	var strs []string
 	for i, n := range b.Batch {
-		strs = append(strs, fmt.Sprintf("[%d - %x]", i, n))
+		strs = append(strs, fmt.Sprintf("[%d - %#x]", i, n))
 	}
 	return strings.Join(strs, "\n")
 }
