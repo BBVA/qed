@@ -43,21 +43,29 @@ var (
 	Qed_store_snapshots_received_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_store_snapshots_received_total",
-			Help: "Amount of snapshots received.",
+			Help: "Amount of snapshots received (POST from publishers).",
 		},
 	)
 
-	Qed_store_alerts_received_total = prometheus.NewCounter(
+	Qed_store_snapshots_retrieved_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "qed_store_alerts_received_total",
-			Help: "Duration of alerts received.",
+			Name: "qed_store_snapshots_retrieved_total",
+			Help: "Amount of snapshots retrieved (GET from auditors).",
+		},
+	)
+
+	Qed_store_alerts_generated_total = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_store_alerts_generated_total",
+			Help: "Amount of alerts generated.",
 		},
 	)
 
 	metricsList = []prometheus.Collector{
 		Qed_store_instances_count,
 		Qed_store_snapshots_received_total,
-		Qed_store_alerts_received_total,
+		Qed_store_snapshots_retrieved_total,
+		Qed_store_alerts_generated_total,
 	}
 )
 
@@ -193,6 +201,7 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 		atomic.AddUint64(&s.stats.count[RPS], 1)
 		atomic.AddUint64(&s.stats.count[SNAP], 1)
 		if r.Method == "GET" {
+			Qed_store_snapshots_retrieved_total.Inc()
 			q := r.URL.Query()
 			version, err := strconv.ParseInt(q.Get("v"), 10, 64)
 			if err != nil {
@@ -235,7 +244,7 @@ func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 			}
 			return
 		} else if r.Method == "POST" {
-			Qed_store_alerts_received_total.Inc()
+			Qed_store_alerts_generated_total.Inc()
 
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -301,7 +310,7 @@ func (s *Service) Start(foreground bool) {
 	router.HandleFunc("/snapshot", s.getSnapshotHandler())
 	router.HandleFunc("/alert", s.alertHandler())
 
-	s.httpServer = &http.Server{Addr: "127.0.0.1:8888", Handler: router}
+	s.httpServer = &http.Server{Addr: ":8888", Handler: router}
 	fmt.Println("Starting test service...")
 	go func() {
 		ticker := time.NewTicker(1 * time.Second)
