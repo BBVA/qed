@@ -122,6 +122,16 @@ func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 
 }
 
+// Ping will do a request to the server
+func (c HTTPClient) Ping() error {
+	_, err := c.doReq("GET", "/health-check", nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Add will do a request to the server with a post data to store a new event.
 func (c HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
