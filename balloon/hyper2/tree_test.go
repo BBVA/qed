@@ -39,9 +39,9 @@ func TestAdd(t *testing.T) {
 	tree := NewHyperTree(hashing.NewFakeXorHasher, store, cache.NewSimpleCache(10))
 
 	for i, c := range testCases {
-		index := uint64(i)
-		rootHash, mutations, err := tree.Add(c.eventDigest, index)
-		require.NoErrorf(t, err, "This should not fail for index %d", i)
+		version := uint64(i)
+		rootHash, mutations, err := tree.Add(c.eventDigest, version)
+		require.NoErrorf(t, err, "This should not fail for version %d", i)
 		tree.store.Mutate(mutations)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for index %d", i)
 	}
