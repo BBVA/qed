@@ -111,11 +111,11 @@ func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode >= 500 {
-		return nil, fmt.Errorf("Unexpected server error")
+		return nil, fmt.Errorf("Server error: %v", string(bodyBytes))
 	}
 
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		return nil, fmt.Errorf("Invalid request")
+		return nil, fmt.Errorf("Invalid request %v", string(bodyBytes))
 	}
 
 	return bodyBytes, nil
@@ -163,7 +163,7 @@ func (c HTTPClient) Membership(key []byte, version uint64) (*protocol.Membership
 	}
 
 	var proof *protocol.MembershipResult
-	json.Unmarshal(body, &proof)
+	_ = json.Unmarshal(body, &proof)
 
 	return proof, nil
 
@@ -173,8 +173,8 @@ func (c HTTPClient) Membership(key []byte, version uint64) (*protocol.Membership
 func (c HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipDigest{
-		keyDigest,
-		version,
+		KeyDigest: keyDigest,
+		Version:   version,
 	})
 
 	body, err := c.doReq("POST", "/proofs/digest-membership", query)
@@ -183,7 +183,7 @@ func (c HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (
 	}
 
 	var proof *protocol.MembershipResult
-	json.Unmarshal(body, &proof)
+	_ = json.Unmarshal(body, &proof)
 
 	return proof, nil
 
@@ -193,8 +193,8 @@ func (c HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (
 func (c HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
 
 	query, _ := json.Marshal(&protocol.IncrementalRequest{
-		start,
-		end,
+		Start: start,
+		End:   end,
 	})
 
 	body, err := c.doReq("POST", "/proofs/incremental", query)
@@ -203,7 +203,7 @@ func (c HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalRespons
 	}
 
 	var response *protocol.IncrementalResponse
-	json.Unmarshal(body, &response)
+	_ = json.Unmarshal(body, &response)
 
 	return response, nil
 }
