@@ -266,7 +266,7 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 			historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, proof.QueryVersion)
 		}()
 	} else {
-		return nil, fmt.Errorf("query version %d is not on history tree which version is %d", proof.QueryVersion, proof.ActualVersion)
+		return nil, fmt.Errorf("Query version %d is not on history tree which version is %d", proof.QueryVersion, proof.ActualVersion)
 	}
 
 	hyperProof, hyperErr = b.hyperTree.QueryMembership(leaf.Key, leaf.Value)
