@@ -55,7 +55,8 @@ func newIncrementalCommand(ctx *clientContext, clientPreRun func(*cobra.Command,
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Infof("Querying incremental between versions [ %d ] and [ %d ]\n", start, end)
-
+			// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
+			cmd.SilenceUsage = true
 			proof, err := ctx.client.Incremental(start, end)
 			if err != nil {
 				return err

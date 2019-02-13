@@ -60,6 +60,8 @@ func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, 
 			var membershipResult *protocol.MembershipResult
 			var digest hashing.Digest
 			var err error
+			// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
+			cmd.SilenceUsage = true
 
 			if eventDigest == "" {
 				log.Debugf("Querying key [ %s ] with version [ %d ]\n", key, version)
