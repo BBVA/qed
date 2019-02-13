@@ -64,7 +64,6 @@ func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, 
 			if eventDigest == "" {
 				log.Infof("Querying key [ %s ] with version [ %d ]\n", key, version)
 				digest = hasherF().Do([]byte(key))
-
 			} else {
 				log.Infof("Querying digest [ %s ] with version [ %d ]\n", eventDigest, version)
 				digest, _ = hex.DecodeString(eventDigest)
