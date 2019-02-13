@@ -40,10 +40,10 @@ var (
 		},
 	)
 
-	Qed_store_snapshots_received_total = prometheus.NewCounter(
+	Qed_store_batches_stored_total = prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Name: "qed_store_snapshots_received_total",
-			Help: "Amount of snapshots received (POST from publishers).",
+			Name: "qed_store_batches_stored_total",
+			Help: "Amount of batches received (POST from publishers).",
 		},
 	)
 
@@ -63,7 +63,7 @@ var (
 
 	metricsList = []prometheus.Collector{
 		Qed_store_instances_count,
-		Qed_store_snapshots_received_total,
+		Qed_store_batches_stored_total,
 		Qed_store_snapshots_retrieved_total,
 		Qed_store_alerts_generated_total,
 	}
@@ -175,7 +175,7 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 		atomic.AddUint64(&s.stats.count[RPS], 1)
 		atomic.AddUint64(&s.stats.count[SNAP], 1)
 		if r.Method == "POST" {
-			Qed_store_snapshots_received_total.Inc()
+			Qed_store_batches_stored_total.Inc()
 			// Decode batch to get signed snapshots and batch version.
 			var b protocol.BatchSnapshots
 			buf, err := ioutil.ReadAll(r.Body)
