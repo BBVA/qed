@@ -37,7 +37,8 @@ func newAddCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []strin
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.Infof("Adding key [ %s ] with value [ %s ]\n", key, value)
-
+			// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
+			cmd.SilenceUsage = true
 			snapshot, err := ctx.client.Add(key)
 			if err != nil {
 				return err
