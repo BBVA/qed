@@ -17,9 +17,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 
+	"github.com/imdario/mergo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -66,7 +69,7 @@ func newRiotCommand() *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if APIMode {
-				Api(config)
+				Serve(config)
 			} else {
 				Run(config)
 			}
@@ -76,7 +79,7 @@ func newRiotCommand() *cobra.Command {
 	f := cmd.Flags()
 	f.BoolVar(&APIMode, "api", false, "Raise a HTTP api in port 11111 ")
 	f.StringVar(&config.Endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
-	f.StringVar(&config.ApiKey, "apikey", "my-key", "The key to use qed servers")
+	f.StringVar(&config.APIKey, "apikey", "my-key", "The key to use qed servers")
 	f.BoolVar(&config.Insecure, "insecure", false, "Allow self-signed TLS certificates")
 	f.BoolVar(&config.WantAdd, "add", false, "Execute add benchmark")
 	f.BoolVarP(&config.WantMembership, "membership", "m", false, "Benchmark MembershipProof")
@@ -96,7 +99,52 @@ func newRiotCommand() *cobra.Command {
 	return cmd
 }
 
-func Run(conf Config) error {
+func Serve(defaultConf Config) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			w.Header().Set("Allow", "POST")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		if r.Body == nil {
+			http.Error(w, "Please send a request body", http.StatusBadRequest)
+			return
+		}
+
+		var newConf Config
+		err := json.NewDecoder(r.Body).Decode(&newConf)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		var localConf Config
+		if err := mergo.Merge(&localConf, defaultConf); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		if err := mergo.Merge(&localConf, newConf); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		fmt.Printf(">>>>>>>>>>>>> %+v", localConf)
+	})
+
+	api := &http.Server{
+		Addr:    ":18800",
+		Handler: mux,
+	}
+
+	if err := api.ListenAndServe(); err != http.ErrServerClosed {
+		log.Errorf("Can't start Riot API HTTP server: %s", err)
+	}
+}
+
+func Run(conf Config) {
 	var attack Attack
 
 	if conf.WantAdd { // nolint:gocritic
@@ -109,9 +157,9 @@ func Run(conf Config) error {
 
 		attack = Attack{
 			kind:           "membership",
-			balloonVersion: uint64(conf.numRequests + conf.offset - 1),
+			balloonVersion: uint64(conf.NumRequests + conf.Offset - 1),
 		}
-	} else if conf.wantIncremental {
+	} else if conf.WantIncremental {
 		log.Info("Benchmark INCREMENTAL")
 
 		attack = Attack{
@@ -122,7 +170,6 @@ func Run(conf Config) error {
 	attack.config = conf
 
 	attack.Run()
-	return nil
 }
 
 type Attack struct {
