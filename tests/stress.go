@@ -29,20 +29,20 @@ import (
 
 type Config struct {
 	// flags
-	endpoint         string
-	apiKey           string
-	insecure         bool
-	wantAdd          bool
-	wantIncremental  bool
-	wantMembership   bool
-	offload          bool
-	charts           bool
-	profiling        bool
-	incrementalDelta uint
-	offset           uint
-	numRequests      uint
-	maxGoRoutines    uint
-	clusterSize      uint
+	Endpoint         string
+	APIKey           string
+	Insecure         bool
+	WantAdd          bool
+	WantIncremental  bool
+	WantMembership   bool
+	Offload          bool
+	Charts           bool
+	Profiling        bool
+	IncrementalDelta uint
+	Offset           uint
+	NumRequests      uint
+	MaxGoRoutines    uint
+	ClusterSize      uint
 }
 
 func main() {
@@ -52,37 +52,43 @@ func main() {
 }
 
 func newRiotCommand() *cobra.Command {
+	var APIMode bool
 	config := Config{}
 
 	cmd := &cobra.Command{
 		Use:   "riot",
 		Short: "Stresser tool for qed server",
 		PreRun: func(cmd *cobra.Command, args []string) {
-			config.clusterSize = uint(viper.GetInt("cluster_size"))
-			if config.clusterSize != 0 && config.clusterSize != 2 && config.clusterSize != 4 {
-				log.Fatalf("invalid cluster-size specified: %d (only 2 or 4)", config.clusterSize)
+			config.ClusterSize = uint(viper.GetInt("cluster_size"))
+			if config.ClusterSize != 0 && config.ClusterSize != 2 && config.ClusterSize != 4 {
+				log.Fatalf("invalid cluster-size specified: %d (only 2 or 4)", config.ClusterSize)
 			}
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return Run(config)
+		Run: func(cmd *cobra.Command, args []string) {
+			if APIMode {
+				Api(config)
+			} else {
+				Run(config)
+			}
 		},
 	}
 
 	f := cmd.Flags()
-	f.StringVar(&config.endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
-	f.StringVar(&config.apiKey, "apikey", "my-key", "The key to use qed servers")
-	f.BoolVar(&config.insecure, "insecure", false, "Allow self-signed TLS certificates")
-	f.BoolVar(&config.wantAdd, "add", false, "Execute add benchmark")
-	f.BoolVarP(&config.wantMembership, "membership", "m", false, "Benchmark MembershipProof")
-	f.BoolVar(&config.wantIncremental, "incremental", false, "Execute Incremental benchmark")
-	f.BoolVar(&config.offload, "offload", false, "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)")
-	f.BoolVar(&config.charts, "charts", false, "Create charts while executing the benchmarks. Output: graph-$testname.png")
-	f.BoolVar(&config.profiling, "profiling", false, "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 ")
-	f.UintVarP(&config.incrementalDelta, "delta", "d", 1000, "Specify delta for the IncrementalProof")
-	f.UintVar(&config.numRequests, "n", 10e4, "Number of requests for the attack")
-	f.UintVar(&config.maxGoRoutines, "r", 10, "Set the concurrency value")
-	f.UintVar(&config.offset, "offset", 0, "The starting version from which we start the load")
-	f.UintVar(&config.clusterSize, "cluster-size", 0, "")
+	f.BoolVar(&APIMode, "api", false, "Raise a HTTP api in port 11111 ")
+	f.StringVar(&config.Endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
+	f.StringVar(&config.ApiKey, "apikey", "my-key", "The key to use qed servers")
+	f.BoolVar(&config.Insecure, "insecure", false, "Allow self-signed TLS certificates")
+	f.BoolVar(&config.WantAdd, "add", false, "Execute add benchmark")
+	f.BoolVarP(&config.WantMembership, "membership", "m", false, "Benchmark MembershipProof")
+	f.BoolVar(&config.WantIncremental, "incremental", false, "Execute Incremental benchmark")
+	f.BoolVar(&config.Offload, "offload", false, "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)")
+	f.BoolVar(&config.Charts, "charts", false, "Create charts while executing the benchmarks. Output: graph-$testname.png")
+	f.BoolVar(&config.Profiling, "profiling", false, "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 ")
+	f.UintVarP(&config.IncrementalDelta, "delta", "d", 1000, "Specify delta for the IncrementalProof")
+	f.UintVar(&config.NumRequests, "n", 10e4, "Number of requests for the attack")
+	f.UintVar(&config.MaxGoRoutines, "r", 10, "Set the concurrency value")
+	f.UintVar(&config.Offset, "offset", 0, "The starting version from which we start the load")
+	f.UintVar(&config.ClusterSize, "cluster-size", 0, "")
 
 	_ = viper.BindPFlag("cluster_size", f.Lookup("cluster-size"))
 	_ = viper.BindEnv("cluster_size", "CLUSTER_SIZE")
@@ -93,12 +99,12 @@ func newRiotCommand() *cobra.Command {
 func Run(conf Config) error {
 	var attack Attack
 
-	if conf.wantAdd { // nolint:gocritic
+	if conf.WantAdd { // nolint:gocritic
 		log.Info("Benchmark ADD")
 		attack = Attack{
 			kind: "add",
 		}
-	} else if conf.wantMembership {
+	} else if conf.WantMembership {
 		log.Info("Benchmark MEMBERSHIP")
 
 		attack = Attack{
@@ -141,7 +147,7 @@ func (a *Attack) Run() {
 	a.CreateFanOut()
 	a.CreateFanIn()
 
-	for i := a.config.offset; i < a.config.offset+a.config.numRequests; i++ {
+	for i := a.config.Offset; i < a.config.Offset+a.config.NumRequests; i++ {
 		a.reqChan <- i
 	}
 
@@ -152,9 +158,9 @@ func (a *Attack) Shutdown() {
 }
 
 func (a *Attack) CreateFanIn() {
-	a.reqChan = make(chan uint, a.config.numRequests/100)
+	a.reqChan = make(chan uint, a.config.NumRequests/100)
 
-	for rID := uint(0); rID < a.config.maxGoRoutines; rID++ {
+	for rID := uint(0); rID < a.config.MaxGoRoutines; rID++ {
 		go func(rID uint) {
 			for {
 				id, ok := <-a.reqChan
@@ -179,7 +185,7 @@ func (a *Attack) CreateFanIn() {
 					a.senChan <- Task{
 						kind:  a.kind,
 						start: uint64(id),
-						end:   uint64(id + a.config.incrementalDelta),
+						end:   uint64(id + a.config.IncrementalDelta),
 					}
 				}
 			}
@@ -191,16 +197,16 @@ func (a *Attack) CreateFanIn() {
 func (a *Attack) CreateFanOut() {
 
 	cConf := client.DefaultConfig()
-	cConf.Endpoint = a.config.endpoint
-	cConf.APIKey = a.config.apiKey
-	cConf.Insecure = a.config.insecure
+	cConf.Endpoint = a.config.Endpoint
+	cConf.APIKey = a.config.APIKey
+	cConf.Insecure = a.config.Insecure
 	a.client = client.NewHTTPClient(*cConf)
 	if err := a.client.Ping(); err != nil {
 		panic(err)
 	}
-	a.senChan = make(chan Task, a.config.numRequests/100)
+	a.senChan = make(chan Task, a.config.NumRequests/100)
 
-	for rID := uint(0); rID < a.config.maxGoRoutines; rID++ {
+	for rID := uint(0); rID < a.config.MaxGoRoutines; rID++ {
 
 		go func(rID uint) {
 			for {
