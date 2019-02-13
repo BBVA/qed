@@ -62,10 +62,10 @@ func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, 
 			var err error
 
 			if eventDigest == "" {
-				log.Infof("Querying key [ %s ] with version [ %d ]\n", key, version)
+				log.Debugf("Querying key [ %s ] with version [ %d ]\n", key, version)
 				digest = hasherF().Do([]byte(key))
 			} else {
-				log.Infof("Querying digest [ %s ] with version [ %d ]\n", eventDigest, version)
+				log.Debugf("Querying digest [ %s ] with version [ %d ]\n", eventDigest, version)
 				digest, _ = hex.DecodeString(eventDigest)
 			}
 
@@ -74,7 +74,7 @@ func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, 
 				return err
 			}
 			log.Debugf(`MembershipResult:
-	Exists: %b
+	Exists: %t
 	Hyper: <TRUNCATED>
 	History: <TRUNCATED>
 	CurrentVersion: %d
@@ -95,7 +95,11 @@ func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, 
 			if verify {
 				hdBytes, _ := hex.DecodeString(hyperDigest)
 				htdBytes, _ := hex.DecodeString(historyDigest)
-				snapshot := &protocol.Snapshot{htdBytes, hdBytes, version, digest}
+				snapshot := &protocol.Snapshot{
+					HistoryDigest: htdBytes,
+					HyperDigest:   hdBytes,
+					Version:       version,
+					EventDigest:   digest}
 
 				log.Infof("Verifying with Snapshot: \n\tEventDigest:%x\n\tHyperDigest: %s\n\tHistoryDigest: %s\n\tVersion: %d\n",
 					digest, hyperDigest, historyDigest, version)
@@ -105,9 +109,7 @@ func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, 
 				} else {
 					log.Info("Verify: KO")
 				}
-
 			}
-
 			return nil
 		},
 	}
