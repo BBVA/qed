@@ -134,7 +134,7 @@ func (s Sender) sender(batch protocol.BatchSnapshots) {
 func (s Sender) Start(ch chan *protocol.Snapshot) {
 	ticker := time.NewTicker(1000 * time.Millisecond)
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 10; i++ {
 		go s.batcherSender(i, ch, s.quit)
 	}
 
