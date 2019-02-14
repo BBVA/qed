@@ -53,6 +53,7 @@ var (
 	numRequests      int
 	readConcurrency  int
 	writeConcurrency int
+	delay_ms         int
 )
 
 func init() {
@@ -62,6 +63,7 @@ func init() {
 	flag.StringVar(&endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
 	flag.StringVar(&apiKey, "apikey", "my-key", "The key to use qed servers")
 	flag.BoolVar(&wantAdd, "add", false, "Execute add benchmark")
+	flag.IntVar(&delay_ms, "delay", 0, "Set request delay in milliseconds")
 
 	usage := "Benchmark MembershipProof"
 	flag.BoolVar(&wantMembership, "membership", false, usage)
@@ -165,6 +167,8 @@ func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, erro
 
 		_, _ = io.Copy(ioutil.Discard, res.Body)
 		res.Body.Close()
+
+		c.delay_ms = time.Duration(delay_ms)
 		time.Sleep(c.delay_ms * time.Millisecond)
 	}
 	c.counter = 0
