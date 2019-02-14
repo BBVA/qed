@@ -67,9 +67,9 @@ module "follower-1" {
       raft: "MYIP:8500"
       gossip: "MYIP:8400"
       raft_join:
-       - "${module.leader.private_ip}:8700"
+       - "${module.leader.private_ip[0]}:8700"
       gossip_join:
-        - "${module.leader.private_ip}:8400"
+        - "${module.leader.private_ip[0]}:8400"
   CONFIG
 
 }
@@ -97,9 +97,9 @@ module "follower-2" {
       raft: "MYIP:8500"
       gossip: "MYIP:8400"
       raft_join:
-       - "${module.leader.private_ip}:8700"
+       - "${module.leader.private_ip[0]}:8700"
       gossip_join:
-        - "${module.leader.private_ip}:8400"
+        - "${module.leader.private_ip[0]}:8400"
   CONFIG
 }
 
@@ -136,9 +136,9 @@ module "agent-publisher" {
     bind: "MYIP:8300"
     advertise: ""
     join:
-      - "${module.leader.private_ip}:8400"
+      - "${module.leader.private_ip[0]}:8400"
     server_urls:
-      - "${module.leader.private_ip}:8800"
+      - "${module.leader.private_ip[0]}:8800"
     alert_urls:
       - "${module.inmemory-storage.private_ip}:8888"
     snapshots_store_urls:
@@ -150,6 +150,7 @@ module "agent-monitor" {
   source = "./modules/qed"
 
   name = "agent-monitor"
+  count = 2
   instance_type = "t3.small"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -167,9 +168,9 @@ module "agent-monitor" {
     bind: "MYIP:8200"
     advertise: ""
     join:
-      - "${module.leader.private_ip}:8400"
+      - "${module.leader.private_ip[0]}:8400"
     server_urls:
-      - "${module.leader.private_ip}:8800"
+      - "${module.leader.private_ip[0]}:8800"
     alert_urls:
       - "${module.inmemory-storage.private_ip}:8888"
     snapshots_store_urls:
@@ -198,9 +199,9 @@ module "agent-auditor" {
     bind: "MYIP:8100"
     advertise: ""
     join:
-      - "${module.leader.private_ip}:8400"
+      - "${module.leader.private_ip[0]}:8400"
     server_urls:
-      - "${module.leader.private_ip}:8800"
+      - "${module.leader.private_ip[0]}:8800"
     alert_urls:
       - "${module.inmemory-storage.private_ip}:8888"
     snapshots_store_urls:
@@ -230,39 +231,43 @@ module "prometheus" {
     - job_name: 'Qed0-HostMetrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.leader.private_ip}:9100']
+        - targets: ['${module.leader.private_ip[0]}:9100']
     - job_name: 'Qed0-QedMetrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.leader.private_ip}:8600']
+        - targets: ['${module.leader.private_ip[0]}:8600']
     - job_name: 'Qed1-HostMetrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.follower-1.private_ip}:9100']
+        - targets: ['${module.follower-1.private_ip[0]}:9100']
     - job_name: 'Qed1-QedMetrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.follower-1.private_ip}:8600']
+        - targets: ['${module.follower-1.private_ip[0]}:8600']
     - job_name: 'Qed2-HostMetrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.follower-2.private_ip}:9100']
+        - targets: ['${module.follower-2.private_ip[0]}:9100']
     - job_name: 'Qed2-QedMetrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.follower-2.private_ip}:8600']
+        - targets: ['${module.follower-2.private_ip[0]}:8600']
     - job_name: 'Agent-Publisher-Metrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.agent-publisher.private_ip}:18300']
-    - job_name: 'Agent-Monitor-Metrics'
+        - targets: ['${module.agent-publisher.private_ip[0]}:18300']
+    - job_name: 'Agent-Monitor-0-Metrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.agent-monitor.private_ip}:18200']
+        - targets: ['${module.agent-monitor.private_ip[0]}:18200']
+    - job_name: 'Agent-Monitor-1-Metrics'
+      scrape_interval: 10s
+      static_configs:
+        - targets: ['${module.agent-monitor.private_ip[1]}:18200']
     - job_name: 'Agent-Auditor-Metrics'
       scrape_interval: 10s
       static_configs:
-        - targets: ['${module.agent-auditor.private_ip}:18100']
+        - targets: ['${module.agent-auditor.private_ip[0]}:18100']
     - job_name: 'riot'
       scrape_interval: 10s
       static_configs:
@@ -283,7 +288,7 @@ module "riot" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
-  endpoint =  "${module.leader.private_ip}"
+  endpoint =  "${module.leader.private_ip[0]}"
   num_requests = 10000000
 
 }
