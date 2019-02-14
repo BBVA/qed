@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 12,
+  "id": 3,
   "links": [],
   "panels": [
     {
@@ -213,7 +213,7 @@
       "tableColumn": "Value",
       "targets": [
         {
-          "expr": "sum(qed_balloon_add_total) / 3",
+          "expr": "sum(qed_balloon_add_total) / sum(qed_instances_count)",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -1471,7 +1471,7 @@
     "list": []
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -1502,5 +1502,5 @@
   "timezone": "",
   "title": "QED",
   "uid": "rjPFfGuik",
-  "version": 2
+  "version": 1
 }
