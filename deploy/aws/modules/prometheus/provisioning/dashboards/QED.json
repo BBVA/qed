@@ -16,6 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 3,
+  "iteration": 1550162878246,
   "links": [],
   "panels": [
     {
@@ -441,22 +442,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_balloon_add_total[5s])) by (job)",
+          "expr": "sum(rate(qed_balloon_add_total[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
           "refId": "A"
-        },
-        {
-          "expr": "sum(qed_balloon_add_total) / 3",
-          "format": "time_series",
-          "hide": true,
-          "instant": false,
-          "intervalFactor": 1,
-          "legendFormat": "total_add",
-          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -536,7 +528,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_balloon_membership_total[5s])) by (job)",
+          "expr": "sum(rate(qed_balloon_membership_total[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
@@ -620,7 +612,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_balloon_incremental_total[5s])) by (job)",
+          "expr": "sum(rate(qed_balloon_incremental_total[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
@@ -704,7 +696,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_sender_batches_sent_total[5s])) by (job)",
+          "expr": "sum(rate(qed_sender_batches_sent_total[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
@@ -1038,7 +1030,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_monitor_batches_received_total{job=~\"Monitor.*\"}[5s])) by (job)",
+          "expr": "sum(rate(qed_monitor_batches_received_total{job=~\"Monitor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1046,7 +1038,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(qed_auditor_batches_received_total{job=~\"Auditor.*\"}[5s])) by (job)",
+          "expr": "sum(rate(qed_auditor_batches_received_total{job=~\"Auditor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1054,7 +1046,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(rate(qed_publisher_batches_received_total{job=~\"Publisher.*\"}[5s])) by (job)",
+          "expr": "sum(rate(qed_publisher_batches_received_total{job=~\"Publisher.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1147,21 +1139,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_monitor_batches_process_seconds{job=~\"Monitor.*\"}[30s])) by (job)",
+          "expr": "sum(rate(qed_monitor_batches_process_seconds{job=~\"Monitor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(qed_auditor_batches_process_seconds{job=~\"Auditor.*\"}[30s])) by (job)",
+          "expr": "sum(rate(qed_auditor_batches_process_seconds{job=~\"Auditor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(qed_publisher_batches_process_seconds{job=~\"Publisher.*\"}[30s])) by (job)",
+          "expr": "sum(rate(qed_publisher_batches_process_seconds{job=~\"Publisher.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
@@ -1468,7 +1460,56 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "auto": false,
+        "auto_count": 30,
+        "auto_min": "10s",
+        "current": {
+          "text": "30s",
+          "value": "30s"
+        },
+        "hide": 0,
+        "label": null,
+        "name": "interval",
+        "options": [
+          {
+            "selected": false,
+            "text": "5s",
+            "value": "5s"
+          },
+          {
+            "selected": false,
+            "text": "15s",
+            "value": "15s"
+          },
+          {
+            "selected": true,
+            "text": "30s",
+            "value": "30s"
+          },
+          {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": false,
+            "text": "10m",
+            "value": "10m"
+          },
+          {
+            "selected": false,
+            "text": "30m",
+            "value": "30m"
+          }
+        ],
+        "query": "5s,15s,30s,1m,10m,30m",
+        "refresh": 2,
+        "skipUrlSync": false,
+        "type": "interval"
+      }
+    ]
   },
   "time": {
     "from": "now-15m",
