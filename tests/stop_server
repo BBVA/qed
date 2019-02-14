@@ -16,7 +16,7 @@
 
 echo Cleanup...
 if [ $(uname) == "Darwin" ]; then
-    killall main || exit 0
+    killall -9 main || exit 0
 else
     fuser -k -n tcp 8800 8801 8802 8803 8804 || true
 fi
