@@ -34,6 +34,10 @@ variable "path" {
   default = "/var/tmp/qed"
 }
 
+variable "count" {
+  default = 1 
+}
+
 variable "command" {
   default = "start"
 }

@@ -27,9 +27,10 @@ data "aws_ami" "amazon_linux" {
 }
 
 resource "aws_instance" "qed-server" {
-  count                       = "1"
+  count                       = "${var.count}"
   ami                         = "${data.aws_ami.amazon_linux.id}"
   instance_type               = "${var.instance_type}"
+  iam_instance_profile        = "${aws_iam_instance_profile.iam-profile.name}"
 
   vpc_security_group_ids      = ["${var.vpc_security_group_ids}"]
   subnet_id                   = "${var.subnet_id}"
@@ -42,7 +43,7 @@ resource "aws_instance" "qed-server" {
   }]
 
   tags {
-    Name = "${var.name}"
+    Name = "${format("${var.name}-%01d", count.index)}"
   }
 
 
@@ -68,6 +69,11 @@ resource "aws_instance" "qed-server" {
 
   user_data = <<-DATA
   #!/bin/bash
+
+  echo "Install and enable AWS CloudWatch"
+  aws configure set region eu-west-1 
+  sudo yum install -y awslogs
+  sudo service awslogs start
 
   while [ ! -f ${var.path}/qed ]; do
     sleep 1 # INFO: wait until binary exists
