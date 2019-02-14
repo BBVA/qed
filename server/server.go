@@ -137,7 +137,7 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// TODO: add queue size to config
-	server.agentsQueue = make(chan *protocol.Snapshot, 10000)
+	server.agentsQueue = make(chan *protocol.Snapshot, 100000)
 
 	// Create sender
 	server.sender = sender.NewSender(server.agent, sender.DefaultConfig(), server.signer)
