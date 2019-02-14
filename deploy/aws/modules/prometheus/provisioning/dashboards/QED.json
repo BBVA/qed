@@ -19,7 +19,7 @@
   "links": [],
   "panels": [
     {
-      "collapsed": true,
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -39,7 +39,7 @@
       "fill": 1,
       "gridPos": {
         "h": 5,
-        "w": 14,
+        "w": 12,
         "x": 0,
         "y": 1
       },
@@ -153,12 +153,15 @@
     {
       "cacheTimeout": null,
       "colorBackground": false,
+      "colorPostfix": false,
+      "colorPrefix": false,
       "colorValue": false,
       "colors": [
         "#299c46",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "decimals": null,
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -169,8 +172,8 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 5,
-        "x": 14,
+        "w": 4,
+        "x": 12,
         "y": 1
       },
       "id": 4,
@@ -210,15 +213,16 @@
       "tableColumn": "Value",
       "targets": [
         {
-          "expr": "sum(qed_balloon_add_total + qed_balloon_membership_total + qed_balloon_incremental_total)",
+          "expr": "sum(qed_balloon_add_total) / 3",
           "format": "time_series",
+          "hide": false,
           "instant": false,
           "intervalFactor": 1,
           "refId": "A"
         }
       ],
       "thresholds": "",
-      "title": "Total requests",
+      "title": "Adds",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -228,7 +232,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "delta"
     },
     {
       "cacheTimeout": null,
@@ -249,8 +253,87 @@
       },
       "gridPos": {
         "h": 5,
-        "w": 5,
-        "x": 19,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 41,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(qed_balloon_membership_total)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "Membership",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "max"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
         "y": 1
       },
       "id": 20,
@@ -290,14 +373,14 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "",
+          "expr": "sum(qed_balloon_incremental_total)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         }
       ],
       "thresholds": "",
-      "title": "Errors per second",
+      "title": "Incremental",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -307,7 +390,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "max"
     },
     {
       "collapsed": false,
@@ -400,7 +483,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -484,7 +567,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -568,7 +651,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -652,7 +735,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -683,6 +766,243 @@
       "type": "row"
     },
     {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 26
+      },
+      "id": 38,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(qed_auditor_batches_received_total)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "Auditor batches received",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "delta"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 9,
+        "y": 26
+      },
+      "id": 37,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(qed_monitor_batches_received_total)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "Monitor batches received",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "delta"
+    },
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 17,
+        "y": 26
+      },
+      "id": 39,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "sum(qed_publisher_batches_received_total)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "",
+      "title": "Publisher batches received",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "delta"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -692,7 +1012,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 31
       },
       "id": 17,
       "legend": {
@@ -774,7 +1094,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -783,7 +1103,7 @@
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -801,7 +1121,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 31
       },
       "id": 18,
       "legend": {
@@ -872,7 +1192,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -895,7 +1215,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 40
       },
       "id": 28,
       "panels": [],
@@ -923,7 +1243,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 36
+        "y": 41
       },
       "id": 25,
       "interval": null,
@@ -980,7 +1300,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "delta"
     },
     {
       "cacheTimeout": null,
@@ -1003,7 +1323,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 36
+        "y": 41
       },
       "id": 26,
       "interval": null,
@@ -1060,7 +1380,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "delta"
     },
     {
       "cacheTimeout": null,
@@ -1083,7 +1403,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 36
+        "y": 41
       },
       "id": 35,
       "interval": null,
@@ -1140,7 +1460,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "delta"
     }
   ],
   "refresh": "5s",
