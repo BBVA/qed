@@ -164,7 +164,7 @@ func (p Publisher) dispatchTasks() {
 }
 
 func (p Publisher) executeTask(task PublishTask) {
-	log.Debug("Executing task: %+v\n", task)
+	log.Debugf("Executing task: %+v", task)
 	buf, err := task.Batch.Encode()
 	if err != nil {
 		log.Debug("Publisher: Error marshalling: %s\n", err.Error())

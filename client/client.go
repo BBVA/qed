@@ -100,7 +100,9 @@ func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Api-Key", c.conf.APIKey)
+	// TOFIX: c.conf.APIKey arrives empty. It causes failures when doing
+	// memberships and incrementals by auditors and monitors.
+	req.Header.Set("Api-Key", "AAAAAAA") // c.conf.APIKey) //
 
 	resp, err := c.exponentialBackoff(req)
 	if err != nil {
