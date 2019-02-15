@@ -25,7 +25,7 @@ do
     $QED agent \
 		--alertsUrls $alertsStoreEndpoint  \
 		auditor \
-		-k key  \
+		-k test_key  \
 		-l info \
 		--bind 127.0.0.1:810$i  \
 		--join $qedGossipEndpoint \
@@ -39,7 +39,7 @@ do
     $QED agent \
 		--alertsUrls $alertsStoreEndpoint  \
 		monitor \
-		-k key  \
+		-k test_key  \
 		-l info \
 		--bind 127.0.0.1:820$i  \
 		--join $qedGossipEndpoint \
@@ -53,7 +53,7 @@ do
     $QED agent \
 		--alertsUrls $alertsStoreEndpoint  \
 		publisher \
-		-k key  \
+		-k test_key  \
 		-l info \
 		--bind 127.0.0.1:830$i  \
 		--join $qedGossipEndpoint \

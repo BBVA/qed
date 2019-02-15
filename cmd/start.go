@@ -99,7 +99,7 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 
 	// INFO: testing purposes
 	f.BoolVar(&conf.EnableTampering, "tampering", false, "Allow tampering api for proof demostrations")
-	f.MarkHidden("tampering")
+	_ = f.MarkHidden("tampering")
 
 	// Lookups
 	v.BindPFlag("server.node-id", f.Lookup("node-id"))
