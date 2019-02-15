@@ -28,6 +28,7 @@ module "leader" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
+  command = "start >> /var/tmp/qed/qed.log"
 
   config = <<-CONFIG
   ---
@@ -54,6 +55,7 @@ module "follower-1" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
+  command = "start >> /var/tmp/qed/qed.log"
 
   config = <<-CONFIG
   ---
@@ -84,6 +86,7 @@ module "follower-2" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
+  command = "start >> /var/tmp/qed/qed.log"
 
   config = <<-CONFIG
   ---
@@ -126,7 +129,7 @@ module "agent-publisher" {
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
 
-  command="agent publisher"
+  command = "agent publisher >> /var/tmp/qed/qed.log"
   config = <<-CONFIG
   ---
   api_key: "terraform_qed"
@@ -137,12 +140,10 @@ module "agent-publisher" {
     advertise: ""
     join:
       - "${module.leader.private_ip[0]}:8400"
-    server_urls:
-      - "${module.leader.private_ip[0]}:8800"
     alert_urls:
-      - "${module.inmemory-storage.private_ip}:8888"
+      - "http://${module.inmemory-storage.private_ip}:8888"
     snapshots_store_urls:
-      - "${module.inmemory-storage.private_ip}:8888"
+      - "http://${module.inmemory-storage.private_ip}:8888"
   CONFIG
 }
 
@@ -158,7 +159,7 @@ module "agent-monitor" {
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
 
-  command="agent monitor"
+  command="agent monitor >> /var/tmp/qed/qed.log"
   config = <<-CONFIG
   ---
   api_key: "terraform_qed"
@@ -170,11 +171,11 @@ module "agent-monitor" {
     join:
       - "${module.leader.private_ip[0]}:8400"
     server_urls:
-      - "${module.leader.private_ip[0]}:8800"
+      - "https://${module.follower-1.private_ip[0]}:8800"
     alert_urls:
-      - "${module.inmemory-storage.private_ip}:8888"
+      - "http://${module.inmemory-storage.private_ip}:8888"
     snapshots_store_urls:
-      - "${module.inmemory-storage.private_ip}:8888"
+      - "http://${module.inmemory-storage.private_ip}:8888"
   CONFIG
 }
 
@@ -189,7 +190,7 @@ module "agent-auditor" {
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
 
-  command="agent auditor"
+  command="agent auditor >> /var/tmp/qed/qed.log"
   config = <<-CONFIG
   ---
   api_key: "terraform_qed"
@@ -201,11 +202,11 @@ module "agent-auditor" {
     join:
       - "${module.leader.private_ip[0]}:8400"
     server_urls:
-      - "${module.leader.private_ip[0]}:8800"
+      - "https://${module.follower-2.private_ip[0]}:8800"
     alert_urls:
-      - "${module.inmemory-storage.private_ip}:8888"
+      - "http://${module.inmemory-storage.private_ip}:8888"
     snapshots_store_urls:
-      - "${module.inmemory-storage.private_ip}:8888"
+      - "http://${module.inmemory-storage.private_ip}:8888"
   CONFIG
 }
 
