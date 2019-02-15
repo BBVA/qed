@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
-  "iteration": 1550162878246,
+  "id": 8,
+  "iteration": 1550228062274,
   "links": [],
   "panels": [
     {
@@ -295,7 +295,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(qed_balloon_membership_total)",
+          "expr": "sum(qed_balloon_membership_total) + sum(qed_balloon_digest_membership_total)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -524,15 +524,22 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": false,
+      "stack": true,
       "steppedLine": false,
       "targets": [
         {
           "expr": "sum(rate(qed_balloon_membership_total[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{job}}",
+          "legendFormat": "{{job}}-memb",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(qed_balloon_digest_membership_total[$interval])) by (job)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{job}}-digest_memb",
+          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -1434,7 +1441,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(qed_store_alerts_received_total)",
+          "expr": "sum(qed_store_alerts_generated_total)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
@@ -1512,7 +1519,7 @@
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {
