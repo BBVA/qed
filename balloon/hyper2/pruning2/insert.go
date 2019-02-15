@@ -1,4 +1,4 @@
-package pruning
+package pruning2
 
 import (
 	"bytes"
@@ -43,45 +43,41 @@ func (l Leaves) Split(index []byte) (left, right Leaves) {
 	return l[:splitIndex], l[splitIndex:]
 }
 
-type TraverseBatch func(pos *navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8) (Operation, error)
+type TraverseBatch func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack)
 
-func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches BatchLoader) (Operation, error) {
+func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches BatchLoader) *OperationsStack {
 
 	var traverse, traverseThroughCache, traverseAfterCache TraverseBatch
 
-	traverse = func(pos *navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8) (Operation, error) {
+	traverse = func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack) {
 
-		var err error
 		if batch == nil {
-			batch, err = batches.Load(pos)
-			if err != nil {
-				return nil, err
-			}
+			batch = batches.Load(pos)
 		}
 
 		if pos.Height > cacheHeightLimit {
-			return traverseThroughCache(pos, leaves, batch, iBatch)
+			traverseThroughCache(pos, leaves, batch, iBatch, ops)
+		} else {
+			traverseAfterCache(pos, leaves, batch, iBatch, ops)
 		}
-		return traverseAfterCache(pos, leaves, batch, iBatch)
-
 	}
 
-	traverseThroughCache = func(pos *navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8) (Operation, error) {
+	traverseThroughCache = func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack) {
 
 		if len(leaves) == 0 { // discarded branch
 			if batch.HasElementAt(iBatch) {
-				return NewUseProvidedOp(pos, batch, iBatch), nil
+				ops.Push(getProvidedHash(pos, iBatch, batch))
+			} else {
+				ops.Push(getDefaultHash(pos))
 			}
-			return NewGetDefaultOp(pos), nil
+			return
 		}
 
 		// at the end of a batch tree
 		if iBatch > 0 && pos.Height%4 == 0 {
-			op, err := traverse(pos, leaves, nil, 0)
-			if err != nil {
-				return nil, err
-			}
-			return NewPutBatchOp(op, batch), nil
+			traverse(pos, leaves, nil, 0, ops)
+			ops.Push(putInCache(pos, batch))
+			return
 		}
 
 		// on an internal node of the subtree
@@ -96,40 +92,35 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 				batch.ResetElementAt(iBatch)
 				batch.ResetElementAt(2*iBatch + 1)
 				batch.ResetElementAt(2*iBatch + 2)
-				return traverse(pos, leaves, batch, iBatch)
+				traverse(pos, leaves, batch, iBatch, ops)
+				return
 			}
 		}
 
 		// on an internal node with more than one leaf
 
 		rightPos := pos.Right()
-		leftPos := pos.Left()
 		leftLeaves, rightLeaves := leaves.Split(rightPos.Index)
 
-		left, err := traverse(&leftPos, leftLeaves, batch, 2*iBatch+1)
-		if err != nil {
-			return nil, err
-		}
-		right, err := traverse(&rightPos, rightLeaves, batch, 2*iBatch+2)
-		if err != nil {
-			return nil, err
-		}
+		traverse(pos.Left(), leftLeaves, batch, 2*iBatch+1, ops)
+		traverse(rightPos, rightLeaves, batch, 2*iBatch+2, ops)
 
-		op := NewInnerHashOp(pos, batch, iBatch, left, right)
+		ops.PushAll(innerHash(pos), updateBatchNode(pos, iBatch, batch))
 		if iBatch == 0 { // it's the root of the batch tree
-			return NewPutBatchOp(op, batch), nil
+			ops.Push(putInCache(pos, batch))
 		}
-		return op, nil
 
 	}
 
-	traverseAfterCache = func(pos *navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8) (Operation, error) {
+	traverseAfterCache = func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack) {
 
 		if len(leaves) == 0 { // discarded branch
 			if batch.HasElementAt(iBatch) {
-				return NewUseProvidedOp(pos, batch, iBatch), nil
+				ops.Push(getProvidedHash(pos, iBatch, batch))
+			} else {
+				ops.Push(getDefaultHash(pos))
 			}
-			return NewGetDefaultOp(pos), nil
+			return
 		}
 
 		// at the end of the main tree
@@ -140,39 +131,39 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 			}
 			// create or update the leaf with a new shortcut
 			newBatch := NewEmptyBatchNode(len(pos.Index))
-			shortcut := NewMutateBatchOp(
-				NewShortcutLeafOp(pos, newBatch, 0, leaves[0].Index, leaves[0].Value),
-				newBatch,
+			ops.PushAll(
+				shortcutHash(pos, leaves[0].Index, leaves[0].Value),
+				updateBatchLeaf(pos, 0, newBatch, leaves[0].Index, leaves[0].Value),
+				mutateBatch(pos, newBatch),
+				updateBatchNode(pos, iBatch, batch),
 			)
-			return NewLeafOp(pos, batch, iBatch, shortcut), nil
+			return
 		}
 
 		// at the end of a subtree
 		if iBatch > 0 && pos.Height%4 == 0 {
 			if len(leaves) > 1 {
 				// with more than one leaf to insert -> it's impossible to be a shortcut leaf
-				op, err := traverse(pos, leaves, nil, 0)
-				if err != nil {
-					return nil, err
-				}
-				return NewLeafOp(pos, batch, iBatch, op), nil
+				traverse(pos, leaves, nil, 0, ops)
+				ops.Push(updateBatchNode(pos, iBatch, batch))
+				return
 			}
 			// with only one leaf to insert -> add a new shortcut leaf or continue traversing
 			if batch.HasElementAt(iBatch) {
 				// continue traversing
-				op, err := traverse(pos, leaves, nil, 0)
-				if err != nil {
-					return nil, err
-				}
-				return NewLeafOp(pos, batch, iBatch, op), nil
+				traverse(pos, leaves, nil, 0, ops)
+				ops.Push(updateBatchNode(pos, iBatch, batch))
+				return
 			}
 			// nil value (no previous node stored) so create a new shortcut batch
 			newBatch := NewEmptyBatchNode(len(pos.Index))
-			shortcut := NewMutateBatchOp(
-				NewShortcutLeafOp(pos, newBatch, 0, leaves[0].Index, leaves[0].Value),
-				newBatch,
+			ops.PushAll(
+				shortcutHash(pos, leaves[0].Index, leaves[0].Value),
+				updateBatchLeaf(pos, 0, newBatch, leaves[0].Index, leaves[0].Value),
+				mutateBatch(pos, newBatch),
+				updateBatchNode(pos, iBatch, batch),
 			)
-			return NewLeafOp(pos, batch, iBatch, shortcut), nil
+			return
 		}
 
 		// on an internal node with only one leaf to insert
@@ -180,11 +171,14 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 		if len(leaves) == 1 {
 			// we found a nil in our path -> create a shortcut leaf
 			if !batch.HasElementAt(iBatch) {
-				shortcut := NewShortcutLeafOp(pos, batch, iBatch, leaves[0].Index, leaves[0].Value)
-				if pos.Height%4 == 0 { // at the root or at leaf of the subtree
-					return NewMutateBatchOp(shortcut, NewEmptyBatchNode(len(pos.Index))), nil
+				ops.PushAll(
+					shortcutHash(pos, leaves[0].Index, leaves[0].Value),
+					updateBatchLeaf(pos, iBatch, batch, leaves[0].Index, leaves[0].Value),
+				)
+				if pos.Height%4 == 0 { // at the root or at a leaf of the subtree
+					ops.Push(mutateBatch(pos, batch))
 				}
-				return shortcut, nil
+				return
 			}
 
 			// we found a node in our path
@@ -197,35 +191,29 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 					batch.ResetElementAt(iBatch)
 					batch.ResetElementAt(2*iBatch + 1)
 					batch.ResetElementAt(2*iBatch + 2)
-					return traverse(pos, leaves, batch, iBatch)
+					traverse(pos, leaves, batch, iBatch, ops)
+					return
 				}
 			}
 		}
 
 		// on an internal node with more than one leaf
 		rightPos := pos.Right()
-		leftPos := pos.Left()
 		leftLeaves, rightLeaves := leaves.Split(rightPos.Index)
 
-		left, err := traverse(&leftPos, leftLeaves, batch, 2*iBatch+1)
-		if err != nil {
-			return nil, err
-		}
-		right, err := traverse(&rightPos, rightLeaves, batch, 2*iBatch+2)
-		if err != nil {
-			return nil, err
-		}
+		traverse(pos.Left(), leftLeaves, batch, 2*iBatch+1, ops)
+		traverse(rightPos, rightLeaves, batch, 2*iBatch+2, ops)
 
-		op := NewInnerHashOp(pos, batch, iBatch, left, right)
+		ops.PushAll(innerHash(pos), updateBatchNode(pos, iBatch, batch))
 		if iBatch == 0 { // at root node -> mutate batch
-			return NewMutateBatchOp(op, batch), nil
+			ops.Push(mutateBatch(pos, batch))
 		}
-		return op, nil
 
 	}
 
+	ops := NewOperationsStack()
 	leaves := make(Leaves, 0)
 	leaves = leaves.InsertSorted(Leaf{index, value})
-	root := navigation.NewRootPosition(uint16(len(index) * 8))
-	return traverse(&root, leaves, nil, 0)
+	traverse(navigation.NewRootPosition(uint16(len(index)*8)), leaves, nil, 0, ops)
+	return ops
 }

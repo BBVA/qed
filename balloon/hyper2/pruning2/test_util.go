@@ -14,47 +14,50 @@
    limitations under the License.
 */
 
-package pruning
+package pruning2
 
 import (
 	"github.com/bbva/qed/balloon/hyper2/navigation"
 )
 
-func pos(index byte, height uint16) *navigation.Position {
-	p := navigation.NewPosition([]byte{index}, height)
-	return &p
+func pos(index byte, height uint16) navigation.Position {
+	return navigation.NewPosition([]byte{index}, height)
 }
 
-func inner(pos *navigation.Position, iBatch int8, batch []byte, left, right Operation) *InnerHashOp {
-	return NewInnerHashOp(pos, ParseBatchNode(1, batch), iBatch, left, right)
+func shortcut(pos navigation.Position, key, value []byte) *Operation {
+	return shortcutHash(pos, key, value)
 }
 
-func leaf(pos *navigation.Position, iBatch int8, batch []byte, op Operation) *LeafOp {
-	return NewLeafOp(pos, ParseBatchNode(1, batch), iBatch, op)
+func inner(pos navigation.Position) *Operation {
+	return innerHash(pos)
 }
 
-func shortcut(pos *navigation.Position, iBatch int8, batch []byte, key, value []byte) *ShortcutLeafOp {
-	return NewShortcutLeafOp(pos, ParseBatchNode(1, batch), iBatch, key, value)
+func updateNode(pos navigation.Position, iBatch int8, batch []byte) *Operation {
+	return updateBatchNode(pos, iBatch, ParseBatchNode(1, batch))
 }
 
-func getDefault(pos *navigation.Position) *GetDefaultOp {
-	return NewGetDefaultOp(pos)
+func updateLeaf(pos navigation.Position, iBatch int8, batch, key, value []byte) *Operation {
+	return updateBatchLeaf(pos, iBatch, ParseBatchNode(1, batch), key, value)
 }
 
-func useProvided(pos *navigation.Position, iBatch int8, batch []byte) *UseProvidedOp {
-	return NewUseProvidedOp(pos, ParseBatchNode(1, batch), iBatch)
+func getDefault(pos navigation.Position) *Operation {
+	return getDefaultHash(pos)
 }
 
-func putBatch(op Operation, batch []byte) *PutBatchOp {
-	return NewPutBatchOp(op, ParseBatchNode(1, batch))
+func getProvided(pos navigation.Position, iBatch int8, batch []byte) *Operation {
+	return getProvidedHash(pos, iBatch, ParseBatchNode(1, batch))
 }
 
-func mutate(op Operation, batch []byte) *MutateBatchOp {
-	return NewMutateBatchOp(op, ParseBatchNode(1, batch))
+func put(pos navigation.Position, batch []byte) *Operation {
+	return putInCache(pos, ParseBatchNode(1, batch))
 }
 
-func collect(op Operation) *CollectOp {
-	return NewCollectOp(op)
+func mutate(pos navigation.Position, batch []byte) *Operation {
+	return mutateBatch(pos, ParseBatchNode(1, batch))
+}
+
+func collect(pos navigation.Position) *Operation {
+	return collectHash(pos)
 }
 
 type FakeBatchLoader struct {
@@ -78,17 +81,17 @@ func NewFakeBatchLoader(cached map[string][]byte, stored map[string][]byte, cach
 	return loader
 }
 
-func (l *FakeBatchLoader) Load(pos *navigation.Position) (*BatchNode, error) {
+func (l *FakeBatchLoader) Load(pos navigation.Position) *BatchNode {
 	if pos.Height > l.cacheHeightLimit {
 		batch, ok := l.cached[pos.StringId()]
-		if ok {
-			return batch, nil
+		if !ok {
+			return NewEmptyBatchNode(len(pos.Index))
 		}
-		return NewEmptyBatchNode(len(pos.Index)), nil
+		return batch
 	}
 	batch, ok := l.stored[pos.StringId()]
-	if ok {
-		return batch, nil
+	if !ok {
+		return NewEmptyBatchNode(len(pos.Index))
 	}
-	return NewEmptyBatchNode(len(pos.Index)), nil
+	return batch
 }

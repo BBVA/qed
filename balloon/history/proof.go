@@ -45,7 +45,7 @@ func (p MembershipProof) AuditPath() navigation.AuditPath {
 }
 
 // Verify verifies a membership proof
-func (p MembershipProof) Verify(eventDigest []byte, expectedDigest hashing.Digest) (correct bool) {
+func (p MembershipProof) Verify(eventDigest []byte, expectedRootHash hashing.Digest) (correct bool) {
 
 	log.Debugf("Verifying membership proof for index %d and version %d", p.Index, p.Version)
 
@@ -53,7 +53,7 @@ func (p MembershipProof) Verify(eventDigest []byte, expectedDigest hashing.Diges
 	visitor := pruning.NewComputeHashVisitor(p.hasher, p.auditPath)
 	recomputed := pruning.PruneToVerify(p.Index, p.Version, eventDigest).Accept(visitor)
 
-	return bytes.Equal(recomputed, expectedDigest)
+	return bytes.Equal(recomputed, expectedRootHash)
 }
 
 type IncrementalProof struct {

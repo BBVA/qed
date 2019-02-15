@@ -3,8 +3,10 @@ package hyper2
 import (
 	"sync"
 
+	"github.com/bbva/qed/balloon/hyper2/navigation"
+
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/hyper2/pruning"
+	"github.com/bbva/qed/balloon/hyper2/pruning2"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
@@ -18,7 +20,7 @@ type HyperTree struct {
 	hasher           hashing.Hasher
 	cacheHeightLimit uint16
 	defaultHashes    []hashing.Digest
-	batchLoader      pruning.BatchLoader
+	batchLoader      pruning2.BatchLoader
 
 	sync.RWMutex
 }
@@ -36,7 +38,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 		hasher:           hasher,
 		cacheHeightLimit: cacheHeightLimit,
 		defaultHashes:    make([]hashing.Digest, numBits),
-		batchLoader:      pruning.NewDefaultBatchLoader(store, cache, cacheHeightLimit),
+		batchLoader:      pruning2.NewDefaultBatchLoader(store, cache, cacheHeightLimit),
 	}
 
 	tree.defaultHashes[0] = tree.hasher.Do([]byte{0x0}, []byte{0x0})
@@ -56,18 +58,41 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 
 	//log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
 
-	// build a visitable pruned tree and then visit it to generate the root hash
 	versionAsBytes := util.Uint64AsPaddedBytes(version, len(eventDigest))
 	versionAsBytes = versionAsBytes[len(versionAsBytes)-len(eventDigest):]
-	visitor := pruning.NewInsertVisitor(t.hasher, t.cache, t.defaultHashes)
-	op, err := pruning.PruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)
-	if err != nil {
-		return nil, nil, err
+
+	// build a stack of operations and then interpret it to generate the root hash
+	ops := pruning2.PruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)
+	ctx := &pruning2.Context{
+		Hasher:        t.hasher,
+		Cache:         t.cache,
+		DefaultHashes: t.defaultHashes,
+		Mutations:     make([]*storage.Mutation, 0),
 	}
 
-	rh := op.Accept(visitor)
+	rh := ops.Pop().Interpret(ops, ctx)
 
-	return rh, visitor.Result(), nil
+	return rh, ctx.Mutations, nil
+}
+
+func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) (proof *QueryProof, err error) {
+	t.Lock()
+	defer t.Unlock()
+
+	//log.Debugf("Proving membership for index %d with version %d", eventDigest, version)
+
+	// build a stack of operations and then interpret it to generate the audit path
+	ops := pruning2.PruneToFind(eventDigest, t.batchLoader)
+	ctx := &pruning2.Context{
+		Hasher:        t.hasher,
+		Cache:         t.cache,
+		DefaultHashes: t.defaultHashes,
+		AuditPath:     make(navigation.AuditPath, 0),
+	}
+
+	ops.Pop().Interpret(ops, ctx)
+
+	return NewQueryProof(eventDigest, version, ctx.AuditPath, t.hasherF()), nil
 }
 
 func min(x, y uint16) uint16 {
