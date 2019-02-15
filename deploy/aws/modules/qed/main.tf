@@ -72,6 +72,18 @@ resource "aws_instance" "qed-server" {
   echo "Install and enable AWS CloudWatch"
   aws configure set region eu-west-1 
   sudo yum install -y awslogs
+  sudo sed -i "s/us-east-1/eu-west-1/g" /etc/awslogs/awscli.conf
+sudo cat << EOF >> /etc/awslogs/awslogs.conf
+
+[/var/tmp/qed]
+datetime_format = %b %d %H:%M:%S
+file = /var/tmp/qed/qed.log
+buffer_duration = 5000
+log_stream_name = ${var.name}
+initial_position = start_of_file
+log_group_name = qed
+EOF
+
   sudo service awslogs start
 
   while [ ! -f ${var.path}/qed ]; do
