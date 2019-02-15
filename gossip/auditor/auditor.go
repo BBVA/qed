@@ -132,29 +132,40 @@ func (a Auditor) dispatchTasks() {
 	}
 }
 
-type Task interface {
-	Do()
+func (a Auditor) Process(b protocol.BatchSnapshots) {
+	// Metrics
+	metrics.Qed_auditor_batches_received_total.Inc()
+	timer := prometheus.NewTimer(metrics.Qed_auditor_batches_process_seconds)
+	defer timer.ObserveDuration()
+
+	task := &MembershipTask{
+		qed:    a.qed,
+		pubUrl: a.conf.PubUrls[0],
+		taskCh: a.taskCh,
+		s:      *b.Snapshots[0],
+	}
+
+	a.taskCh <- task
 }
 
-func (t MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/snapshot?v=%d", t.pubUrl, version))
-	if err != nil {
-		return nil, fmt.Errorf("Error getting snapshot from the store: %v", err)
+func (a *Auditor) Shutdown() {
+	// Metrics
+	metrics.Qed_auditor_instances_count.Dec()
+
+	log.Debugf("Metrics enabled: stopping server...")
+	if err := a.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+		log.Error(err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Error getting snapshot from the store. Status: %d", resp.StatusCode)
-	}
-	buf, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Infof("Error reading request body: %v", err)
-	}
-	var s protocol.SignedSnapshot
-	err = s.Decode(buf)
-	if err != nil {
-		return nil, fmt.Errorf("Error decoding signed snapshot %d codec", t.s.Snapshot.Version)
-	}
-	return &s, nil
+	log.Debugf("Done.\n")
+
+	a.executionTicker.Stop()
+	a.quitCh <- true
+	close(a.quitCh)
+	close(a.taskCh)
+}
+
+type Task interface {
+	Do()
 }
 
 type MembershipTask struct {
@@ -193,6 +204,27 @@ func (t MembershipTask) Do() {
 	log.Infof("MembershipTask.Do(): Snapshot %v has been verified by QED", t.s.Snapshot)
 }
 
+func (t MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
+	resp, err := http.Get(fmt.Sprintf("%s/snapshot?v=%d", t.pubUrl, version))
+	if err != nil {
+		return nil, fmt.Errorf("Error getting snapshot from the store: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Error getting snapshot from the store. Status: %d", resp.StatusCode)
+	}
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Infof("Error reading request body: %v", err)
+	}
+	var s protocol.SignedSnapshot
+	err = s.Decode(buf)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding signed snapshot %d codec", t.s.Snapshot.Version)
+	}
+	return &s, nil
+}
+
 func (t MembershipTask) sendAlert(msg string) {
 	resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json",
 		bytes.NewBufferString(msg))
@@ -205,36 +237,4 @@ func (t MembershipTask) sendAlert(msg string) {
 	if err != nil {
 		log.Infof("Error reading request body: %v", err)
 	}
-}
-
-func (a Auditor) Process(b protocol.BatchSnapshots) {
-	// Metrics
-	metrics.Qed_auditor_batches_received_total.Inc()
-	timer := prometheus.NewTimer(metrics.Qed_auditor_batches_process_seconds)
-	defer timer.ObserveDuration()
-
-	task := &MembershipTask{
-		qed:    a.qed,
-		pubUrl: a.conf.PubUrls[0],
-		taskCh: a.taskCh,
-		s:      *b.Snapshots[0],
-	}
-
-	a.taskCh <- task
-}
-
-func (a *Auditor) Shutdown() {
-	// Metrics
-	metrics.Qed_auditor_instances_count.Dec()
-
-	log.Debugf("Metrics enabled: stopping server...")
-	if err := a.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-		log.Error(err)
-	}
-	log.Debugf("Done.\n")
-
-	a.executionTicker.Stop()
-	a.quitCh <- true
-	close(a.quitCh)
-	close(a.taskCh)
 }

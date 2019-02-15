@@ -64,8 +64,8 @@ var (
 		},
 	)
 
-	Qed_balloon_digest_membership_duration_seconds = prometheus.NewGauge(
-		prometheus.GaugeOpts{
+	Qed_balloon_digest_membership_duration_seconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
 			Name: "qed_balloon_digest_membership_duration_seconds",
 			Help: "Duration of the 'Digest Membership' Qed_balloon method.",
 		},

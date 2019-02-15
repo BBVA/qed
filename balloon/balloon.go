@@ -238,6 +238,11 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 }
 
 func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
+	// Metrics
+	metrics.Qed_balloon_digest_membership_total.Inc()
+	timer := prometheus.NewTimer(metrics.Qed_balloon_digest_membership_duration_seconds)
+	defer timer.ObserveDuration()
+
 	stats := metrics.Balloon
 	stats.AddFloat("QueryMembership", 1)
 	var proof MembershipProof

@@ -90,8 +90,6 @@ func NewMonitor(conf Config) (*Monitor, error) {
 		Handler: metricsMux,
 	}
 
-	// fmt.Println(">>>>>>>>>< ", monitor.metricsServer.Addr)
-
 	go func() {
 		log.Debugf("	* Starting metrics HTTP server in addr: %s", conf.MetricsAddr)
 		if err := monitor.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
