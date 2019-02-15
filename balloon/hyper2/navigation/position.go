@@ -29,11 +29,11 @@ type Position struct {
 	numBits    uint16
 }
 
-func NewPosition(index []byte, height uint16) *Position {
+func NewPosition(index []byte, height uint16) Position {
 	var b [KeySize]byte // Size of the index plus 2 bytes for the height
 	copy(b[:], index[:len(index)])
 	copy(b[len(index):], util.Uint16AsBytes(height))
-	return &Position{
+	return Position{
 		Index:      index,
 		Height:     height,
 		serialized: b, // memoized
@@ -41,7 +41,7 @@ func NewPosition(index []byte, height uint16) *Position {
 	}
 }
 
-func NewRootPosition(numBits uint16) *Position {
+func NewRootPosition(numBits uint16) Position {
 	return NewPosition(make([]byte, numBits/8), numBits)
 }
 
@@ -61,16 +61,16 @@ func (p Position) StringId() string {
 	return fmt.Sprintf("%x|%d", p.Index, p.Height)
 }
 
-func (p Position) Left() *Position {
+func (p Position) Left() Position {
 	if p.IsLeaf() {
-		return nil
+		return p
 	}
 	return NewPosition(p.Index, p.Height-1)
 }
 
-func (p Position) Right() *Position {
+func (p Position) Right() Position {
 	if p.IsLeaf() {
-		return nil
+		return p
 	}
 	return NewPosition(p.splitBase(), p.Height-1)
 }
@@ -79,16 +79,16 @@ func (p Position) IsLeaf() bool {
 	return p.Height == 0
 }
 
-func (p Position) FirstDescendant() *Position {
+func (p Position) FirstDescendant() Position {
 	if p.IsLeaf() {
-		return &p
+		return p
 	}
 	return NewPosition(p.Index, 0)
 }
 
-func (p Position) LastDescendant() *Position {
+func (p Position) LastDescendant() Position {
 	if p.IsLeaf() {
-		return &p
+		return p
 	}
 	index := make([]byte, p.numBits/8)
 	copy(index, p.Index)

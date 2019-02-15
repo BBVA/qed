@@ -2,6 +2,7 @@ package pruning
 
 import (
 	"github.com/bbva/qed/balloon/cache"
+	"github.com/bbva/qed/balloon/hyper2/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 )
@@ -78,4 +79,58 @@ func (v *InsertVisitor) VisitMutateBatchOp(op MutateBatchOp) hashing.Digest {
 
 func (v *InsertVisitor) VisitCollectOp(op CollectOp) hashing.Digest {
 	return op.Operation.Accept(v)
+}
+
+type AuditPathVisitor struct {
+	hasher        hashing.Hasher
+	defaultHashes []hashing.Digest
+	auditPath     navigation.AuditPath
+}
+
+func NewAuditPathVisitor(hasher hashing.Hasher, defaultHashes []hashing.Digest) *AuditPathVisitor {
+	return &AuditPathVisitor{
+		hasher:        hasher,
+		defaultHashes: defaultHashes,
+		auditPath:     navigation.NewAuditPath(),
+	}
+}
+
+func (v AuditPathVisitor) Result() navigation.AuditPath {
+	return v.auditPath
+}
+
+func (v *AuditPathVisitor) VisitShortcutLeafOp(op ShortcutLeafOp) hashing.Digest {
+	return nil
+}
+
+func (v *AuditPathVisitor) VisitLeafOp(op LeafOp) hashing.Digest {
+	return op.Operation.Accept(v)
+}
+
+func (v *AuditPathVisitor) VisitInnerHashOp(op InnerHashOp) hashing.Digest {
+	op.Left.Accept(v)
+	op.Right.Accept(v)
+	return nil
+}
+
+func (v *AuditPathVisitor) VisitGetDefaultOp(op GetDefaultOp) hashing.Digest {
+	return v.defaultHashes[op.Position().Height]
+}
+
+func (v *AuditPathVisitor) VisitUseProvidedOp(op UseProvidedOp) hashing.Digest {
+	return op.Batch.GetElementAt(op.Idx)
+}
+
+func (v *AuditPathVisitor) VisitPutBatchOp(op PutBatchOp) hashing.Digest {
+	return op.Operation.Accept(v)
+}
+
+func (v *AuditPathVisitor) VisitMutateBatchOp(op MutateBatchOp) hashing.Digest {
+	return op.Operation.Accept(v)
+}
+
+func (v *AuditPathVisitor) VisitCollectOp(op CollectOp) hashing.Digest {
+	hash := op.Operation.Accept(v)
+	v.auditPath = append(v.auditPath, hash)
+	return hash
 }

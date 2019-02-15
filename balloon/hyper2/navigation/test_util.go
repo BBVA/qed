@@ -15,6 +15,6 @@ package navigation
 
 import "github.com/bbva/qed/util"
 
-func pos(index uint64, height uint16) *Position {
+func pos(index uint64, height uint16) Position {
 	return NewPosition(util.Uint64AsBytes(index), height)
 }
