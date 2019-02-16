@@ -60,7 +60,7 @@ func BenchmarkAdd(b *testing.B) {
 	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
 	b.ResetTimer()
-	b.N = 1000000
+	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		index := make([]byte, 8)
 		binary.LittleEndian.PutUint64(index, uint64(i))

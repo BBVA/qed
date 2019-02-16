@@ -33,7 +33,7 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 		// path so we stop traversing because the index does no exist in the tree.
 		// We return a new shortcut without mutating.
 		if !batch.HasElementAt(iBatch) {
-			ops.Push(shortcutHash(pos, index, nil)) // TODO shall i return nothing?
+			ops.Push(leafHash(pos, nil)) // TODO shall i return nothing?
 			return
 		}
 
@@ -51,12 +51,12 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 			key, value := batch.GetLeafKVAt(iBatch)
 			if bytes.Equal(index, key) {
 				// we found the searched index
-				ops.Push(shortcutHash(pos, key, value))
+				ops.Push(leafHash(pos, value))
 				return
 			}
 			// we found another shortcut leaf on our path so the index
 			// we are looking for has never been inserted in the tree
-			ops.Push(shortcutHash(pos, key, nil))
+			ops.Push(leafHash(pos, nil))
 			return
 		}
 

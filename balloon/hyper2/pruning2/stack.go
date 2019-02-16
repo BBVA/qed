@@ -25,10 +25,8 @@ func (s *OperationsStack) Push(op *Operation) {
 	*s = append(*s, op)
 }
 
-func (s *OperationsStack) PushAll(values ...*Operation) {
-	for _, value := range values {
-		s.Push(value)
-	}
+func (s *OperationsStack) PushAll(ops ...*Operation) {
+	*s = append(*s, ops...)
 }
 
 func (s *OperationsStack) List() []*Operation {
