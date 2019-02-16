@@ -24,42 +24,6 @@ func pos(index byte, height uint16) navigation.Position {
 	return navigation.NewPosition([]byte{index}, height)
 }
 
-func shortcut(pos navigation.Position, key, value []byte) *Operation {
-	return shortcutHash(pos, key, value)
-}
-
-func inner(pos navigation.Position) *Operation {
-	return innerHash(pos)
-}
-
-func updateNode(pos navigation.Position, iBatch int8, batch []byte) *Operation {
-	return updateBatchNode(pos, iBatch, ParseBatchNode(1, batch))
-}
-
-func updateLeaf(pos navigation.Position, iBatch int8, batch, key, value []byte) *Operation {
-	return updateBatchLeaf(pos, iBatch, ParseBatchNode(1, batch), key, value)
-}
-
-func getDefault(pos navigation.Position) *Operation {
-	return getDefaultHash(pos)
-}
-
-func getProvided(pos navigation.Position, iBatch int8, batch []byte) *Operation {
-	return getProvidedHash(pos, iBatch, ParseBatchNode(1, batch))
-}
-
-func put(pos navigation.Position, batch []byte) *Operation {
-	return putInCache(pos, ParseBatchNode(1, batch))
-}
-
-func mutate(pos navigation.Position, batch []byte) *Operation {
-	return mutateBatch(pos, ParseBatchNode(1, batch))
-}
-
-func collect(pos navigation.Position) *Operation {
-	return collectHash(pos)
-}
-
 type FakeBatchLoader struct {
 	cacheHeightLimit uint16
 	cached           map[string]*BatchNode
