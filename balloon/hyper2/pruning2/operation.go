@@ -18,12 +18,11 @@ type Context struct {
 type OperationCode int
 
 const (
-	ShortcutHashCode OperationCode = iota
+	LeafHashCode OperationCode = iota
 	InnerHashCode
-	LeafHashCode
 	UpdateBatchNodeCode
-	UpdateBatchLeafCode
-	DefaultHashCode
+	UpdateBatchShortcutCode
+	GetDefaultHashCode
 	GetProvidedHashCode
 	PutInCacheCode
 	MutateBatchCode
@@ -38,9 +37,9 @@ type Operation struct {
 	Interpret Interpreter
 }
 
-func shortcutHash(pos navigation.Position, key, value []byte) *Operation {
+func leafHash(pos navigation.Position, value []byte) *Operation {
 	return &Operation{
-		Code: ShortcutHashCode,
+		Code: LeafHashCode,
 		Pos:  pos,
 		Interpret: func(ops *OperationsStack, c *Context) hashing.Digest {
 			return c.Hasher.Salted(pos.Bytes(), value)
@@ -72,9 +71,9 @@ func updateBatchNode(pos navigation.Position, idx int8, batch *BatchNode) *Opera
 	}
 }
 
-func updateBatchLeaf(pos navigation.Position, idx int8, batch *BatchNode, key, value []byte) *Operation {
+func updateBatchShortcut(pos navigation.Position, idx int8, batch *BatchNode, key, value []byte) *Operation {
 	return &Operation{
-		Code: UpdateBatchLeafCode,
+		Code: UpdateBatchShortcutCode,
 		Pos:  pos,
 		Interpret: func(ops *OperationsStack, c *Context) hashing.Digest {
 			hash := ops.Pop().Interpret(ops, c)
@@ -86,7 +85,7 @@ func updateBatchLeaf(pos navigation.Position, idx int8, batch *BatchNode, key, v
 
 func getDefaultHash(pos navigation.Position) *Operation {
 	return &Operation{
-		Code: DefaultHashCode,
+		Code: GetDefaultHashCode,
 		Pos:  pos,
 		Interpret: func(ops *OperationsStack, c *Context) hashing.Digest {
 			return c.DefaultHashes[pos.Height]
