@@ -7,6 +7,8 @@ github.com/VictoriaMetrics/fastcache v1.0.2 h1:dj179vXczNtKDLjmiOHRasMMv437rPpUt
 github.com/VictoriaMetrics/fastcache v1.0.2/go.mod h1:4zLf+tCNHtaJzQfIkJ+vBXS1O98gXA/KbKtUv/W1Tdo=
 github.com/VictoriaMetrics/fastcache v1.3.0 h1:6QIxfjt2tCFH+rqAgoOIuYvm230IwLwiLyxoocTcHIc=
 github.com/VictoriaMetrics/fastcache v1.3.0/go.mod h1:CH4+tdFBMyTCU9HV/ifYqJvn7ECWfK1E7ES6eWt6F2o=
+github.com/adammck/terraform-inventory v0.6.1 h1:rlUJV0ooEYDYr/RFBjlXwIz2EVH9BeGlcxlk26wYw4s=
+github.com/adammck/terraform-inventory v0.6.1/go.mod h1:ARrwFGZ06YoSbxqJ1RlwljUYFM8fo4edCA4Tiq3Nvtw=
 github.com/allegro/bigcache v1.1.0 h1:MLuIKTjdxDc+qsG2rhjsYjsHQC5LUGjIWzutg7M+W68=
 github.com/allegro/bigcache v1.1.0/go.mod h1:Cb/ax3seSYIx7SuZdm2G2xzfwmv3TPSk2ucNfQESPXM=
 github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 h1:G1bPvciwNyF7IUmKXNt9Ak3m6u9DE1rF+RmtIkBpVdA=

@@ -2,6 +2,7 @@ module github.com/bbva/qed
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.3.0
+	github.com/adammck/terraform-inventory v0.6.1 // indirect
 	github.com/bbva/raft-badger v0.1.1
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
