@@ -26,7 +26,7 @@ func TestRoot(t *testing.T) {
 
 	testCases := []struct {
 		numBits     uint16
-		expectedPos *Position
+		expectedPos Position
 	}{
 		{8, NewPosition(make([]byte, 1), 8)},
 		{16, NewPosition(make([]byte, 2), 16)},
@@ -46,7 +46,7 @@ func TestRoot(t *testing.T) {
 func TestIsLeaf(t *testing.T) {
 
 	testCases := []struct {
-		position *Position
+		position Position
 		ok       bool
 	}{
 		{pos(0, 0), true},
@@ -65,21 +65,21 @@ func TestIsLeaf(t *testing.T) {
 func TestLeft(t *testing.T) {
 
 	testCases := []struct {
-		position     *Position
-		expectedLeft *Position
+		position     Position
+		expectedLeft Position
 	}{
-		{pos(0, 0), nil},
-		{pos(0, 0), nil},
-		{pos(1, 0), nil},
+		{pos(0, 0), pos(0, 0)},
+		{pos(0, 0), pos(0, 0)},
+		{pos(1, 0), pos(1, 0)},
 		{pos(0, 1), pos(0, 0)},
-		{pos(0, 0), nil},
-		{pos(1, 0), nil},
-		{pos(2, 0), nil},
+		{pos(0, 0), pos(0, 0)},
+		{pos(1, 0), pos(1, 0)},
+		{pos(2, 0), pos(2, 0)},
 		{pos(0, 1), pos(0, 0)},
 		{pos(2, 1), pos(2, 0)}, // TODO check invalid positions like (1,1)?
-		{pos(0, 0), nil},
-		{pos(1, 0), nil},
-		{pos(2, 0), nil},
+		{pos(0, 0), pos(0, 0)},
+		{pos(1, 0), pos(1, 0)},
+		{pos(2, 0), pos(2, 0)},
 		{pos(0, 1), pos(0, 0)},
 		{pos(2, 1), pos(2, 0)},
 		{pos(0, 2), pos(0, 1)},
@@ -94,21 +94,21 @@ func TestLeft(t *testing.T) {
 func TestRight(t *testing.T) {
 
 	testCases := []struct {
-		position      *Position
-		expectedRight *Position
+		position      Position
+		expectedRight Position
 	}{
-		{pos(0, 0), nil},
-		{pos(0, 0), nil},
-		{pos(1, 0), nil},
+		{pos(0, 0), pos(0, 0)},
+		{pos(0, 0), pos(0, 0)},
+		{pos(1, 0), pos(1, 0)},
 		{pos(0, 1), pos(1, 0)},
-		{pos(0, 0), nil},
-		{pos(1, 0), nil},
-		{pos(2, 0), nil},
+		{pos(0, 0), pos(0, 0)},
+		{pos(1, 0), pos(1, 0)},
+		{pos(2, 0), pos(2, 0)},
 		{pos(0, 1), pos(1, 0)},
 		{pos(2, 1), pos(3, 0)},
-		{pos(0, 0), nil},
-		{pos(1, 0), nil},
-		{pos(2, 0), nil},
+		{pos(0, 0), pos(0, 0)},
+		{pos(1, 0), pos(1, 0)},
+		{pos(2, 0), pos(2, 0)},
 		{pos(0, 1), pos(1, 0)},
 		{pos(2, 1), pos(3, 0)},
 		{pos(0, 2), pos(2, 1)},
@@ -123,8 +123,8 @@ func TestRight(t *testing.T) {
 func TestFirstDescendant(t *testing.T) {
 
 	testCases := []struct {
-		position    *Position
-		expectedPos *Position
+		position    Position
+		expectedPos Position
 	}{
 		{pos(0, 0), pos(0, 0)},
 		{pos(1, 0), pos(1, 0)},
@@ -144,8 +144,8 @@ func TestFirstDescendant(t *testing.T) {
 func TestLastDescendant(t *testing.T) {
 
 	testCases := []struct {
-		position    *Position
-		expectedPos *Position
+		position    Position
+		expectedPos Position
 	}{
 		{pos(0, 0), pos(0, 0)},
 		{pos(1, 0), pos(1, 0)},
