@@ -1,0 +1,15 @@
+[/var/log/messages]
+datetime_format = %b %d %H:%M:%S
+file = /var/log/messages
+buffer_duration = 5000
+log_stream_name = {{ ansible_hostname }}
+initial_position = start_of_file
+log_group_name = /var/log/messages
+
+[/var/tmp/qed]
+datetime_format = %b %d %H:%M:%S
+file = /var/qed/qed.log
+buffer_duration = 5000
+log_stream_name = {{ ansible_hostname }}
+initial_position = start_of_file
+log_group_name = qed

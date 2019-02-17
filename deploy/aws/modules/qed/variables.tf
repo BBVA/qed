@@ -28,7 +28,9 @@ variable "key_path" {}
 
 variable "name" {}
 
-variable "config" {}
+variable "role" {
+  default = "qed"
+}
 
 variable "path" {
   default = "/var/tmp/qed"
