@@ -25,15 +25,6 @@ data "aws_ami" "amazon_linux" {
     values = ["amazon"]
   }
 }
-
-resource "null_resource" "prebuild" {
-  provisioner "local-exec" {
-    command = "bash build.sh"
-    working_dir = "${path.module}"
-  }
-}
-
-
 resource "aws_instance" "riot" {
   count                       = "1"
   ami                         = "${data.aws_ami.amazon_linux.id}"
@@ -51,44 +42,6 @@ resource "aws_instance" "riot" {
 
   tags {
     Name = "qed-riot"
+    Role = "${var.role}"
   }
-
-
-  provisioner "file" {
-      source     = "${path.module}/data"
-      destination = "${var.path}"
-
-      connection {
-        user = "ec2-user"
-        private_key = "${file("${var.key_path}")}"
-      }
-  }
-
-  provisioner "file" {
-      source     = "./config_files/node_exporter"
-      destination = "${var.path}/node_exporter"
-
-      connection {
-        user = "ec2-user"
-        private_key = "${file("${var.key_path}")}"
-      }
-  }
-
-  user_data = <<-DATA
-  #!/bin/bash
-
-
-  while [ ! -f ${var.path}/riot ] || \
-        [ ! -f ${var.path}/node_exporter ] || \
-        [ `lsof ${var.path}/* | wc -l` -gt 0 ]; do
-    sleep 1
-  done
-  sleep 1
-
-  chmod +x ${var.path}/node_exporter
-  ${var.path}/node_exporter &
-
-  chmod +x ${var.path}/riot
-  ${var.path}/riot --endpoint ${var.endpoint} --apikey ${var.api_key} --add
-  DATA
 }

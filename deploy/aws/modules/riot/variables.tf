@@ -30,6 +30,10 @@ variable "path" {
   default = "/var/tmp/qed"
 }
 
+variable "role" {
+  default = "riot"
+}
+
 variable "endpoint" {}
 
 variable "api_key" {

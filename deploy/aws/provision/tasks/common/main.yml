@@ -14,8 +14,10 @@
 #  limitations under the License.
 - name: Create QED and Node Exporter install dir
   file:
-      path: /var/qed
+      path: /var/{{ item }}
       state: directory
+  with_items:
+    - qed
 
 - name: Install additional packages
   yum:
@@ -23,6 +25,16 @@
   vars:
     packages:
     - awslogs
+
+- name: Configure AWS CloudWatch
+  template:
+    dest: /etc/awslogs/{{ item }}
+    src: ../../templates/{{ item }}.j2
+    force: true
+    mode: 0644
+  with_items:
+    - awslogs.conf
+    - awscli.conf
 
 - name: Download Node Exporter
   unarchive:
@@ -44,3 +56,18 @@
     - server.crt
     - server.key
     - id_ed25519
+
+- name: Create Node Exporter start script
+  template:
+    dest: /var/qed/exporter-{{ item }} 
+    src: ../../templates/exporter-{{ item }}.j2
+    force: true
+    mode: 0775
+  with_items:
+    - start.sh
+
+- name: Create QED tmp dir link
+  file:
+    src: /var/qed
+    dest: /var/tmp/qed
+    state: link

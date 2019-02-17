@@ -26,6 +26,10 @@ variable "key_name" {}
 
 variable "key_path" {}
 
+variable "role" {
+  default = "storage"
+}
+
 variable "name" {}
 
 variable "path" {
