@@ -1,0 +1,80 @@
+---
+api_key: "terraform_qed"
+path: "/var/qed/"
+{% if 'role_qed' in group_names %}
+server:
+node_id: "{{ ansible_hostname }}"
+addr:
+    http: ":8800"
+    mgmt: ":8700"
+    raft: "{{ ansible_eth0.ipv4.address }}:8500"
+    gossip: "{{ ansible_eth0.ipv4.address }}:8400"
+{% if groups.role_qed.index(inventory_hostname) != 0  %}
+    raft_join:
+{% for host in groups['name_qed-0'] %}
+    - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8700"
+    gossip_join:
+    - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if 'role_monitor' in group_names %}
+agent:
+  node: "monitor"
+  bind: "{{ ansible_eth0.ipv4.address }}:8200"
+  advertise: ""
+  join:
+{% for host in groups['name_qed-0'] %}
+    - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
+{% endfor %}
+  server_urls:
+{% for host in groups['name_qed-1'] %}
+    - "https://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
+{% endfor %}
+{% for host in groups['role_storage'] %}
+  alert_urls:
+    - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
+  snapshots_store_urls:
+    - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
+{% endfor %}
+{% endif %}
+{% if 'role_auditor' in group_names %}
+agent:
+  node: "auditor"
+  bind: "{{ ansible_eth0.ipv4.address }}:8100"
+  advertise: ""
+  join:
+{% for host in groups['name_qed-0'] %}
+    - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
+{% endfor %}
+  server_urls:
+{% for host in groups['name_qed-1'] %}
+    - "https://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
+{% endfor %}
+{% for host in groups['role_storage'] %}
+  alert_urls:
+    - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
+  snapshots_store_urls:
+    - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
+{% endfor %}
+{% endif %}
+{% if 'role_publisher' in group_names %}
+agent:
+  node: "publisher"
+  bind: "{{ ansible_eth0.ipv4.address }}:8300"
+  advertise: ""
+  join:
+{% for host in groups['name_qed-0'] %}
+    - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
+{% endfor %}
+  server_urls:
+{% for host in groups['name_qed-1'] %}
+    - "https://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
+{% endfor %}
+{% for host in groups['role_storage'] %}
+  alert_urls:
+    - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
+  snapshots_store_urls:
+    - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
+{% endfor %}
+{% endif %}

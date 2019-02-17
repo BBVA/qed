@@ -12,12 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-resource "null_resource" "prebuild" {
-  provisioner "local-exec" {
-    command = "bash build.sh"
-    working_dir = "${path.module}"
-  }
-}
+# resource "null_resource" "prebuild" {
+#   provisioner "local-exec" {
+#     command = "bash build.sh"
+#     working_dir = "${path.module}"
+#   }
+# }
 
 data "aws_ami" "amazon_linux" {
   most_recent = true
@@ -50,47 +50,6 @@ resource "aws_instance" "prometheus" {
 
   tags {
     Name = "qed-prometheus"
+    Role = "${var.role}"
   }
-
- provisioner "file" {
-      source     = "${path.module}/data"
-      destination = "${var.path}"
-
-      connection {
-        user = "ec2-user"
-        private_key = "${file("${var.key_path}")}"
-      }
-  }
-
-  provisioner "file" {
-      content     = "${var.config}"
-      destination = "${var.path}/prometheus.yml"
-
-      connection {
-        user = "ec2-user"
-        private_key = "${file("${var.key_path}")}"
-      }
-  }
-
-  user_data = <<-DATA
-  #!/bin/bash
-
-  sudo yum install -y https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
-  sudo rm -rf /etc/grafana/provisioning
-
-  while [ ! -f ${var.path}/prometheus ] || \
-        [ ! -f ${var.path}/prometheus.yml ] || \
-        [ `lsof ${var.path}/* | wc -l` -gt 0 ]; do
-    sleep 1
-  done
-  sleep1
-
-  sudo mv ${var.path}/provisioning /etc/grafana
-  sudo chown -R root:grafana /etc/grafana
-  sudo service grafana-server start
-
-  chmod +x ${var.path}/prometheus
-  ${var.path}/prometheus --config.file=${var.path}/prometheus.yml
-
-  DATA
 }
