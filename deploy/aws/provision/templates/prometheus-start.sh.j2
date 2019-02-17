@@ -1,5 +1,5 @@
 #!/bin/bash
 
 export PROMETHEUS_HOME=/var/prometheus
-nohup $PROMETHEUS_HOME/prometheus --config.file=$PROMETHEUS_HOME/prometheus.yml &
+nohup $PROMETHEUS_HOME/prometheus --config.file=$PROMETHEUS_HOME/prometheus.yml >> prometheus.log 2>&1 &
 
