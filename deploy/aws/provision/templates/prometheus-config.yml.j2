@@ -1,0 +1,51 @@
+---
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:9090']
+{% for host in groups['role_qed'] %}
+  - job_name: 'Qed{{loop.index}}-HostMetrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
+{% endfor %}
+{% for host in groups['role_qed'] %}
+  - job_name: 'Qed{{loop.index}}-QedMetrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8600']
+{% endfor %}
+{% for host in groups['role_publisher'] %}
+  - job_name: 'Agent-Publisher{{loop.index}}-Metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:18300']
+{% endfor %}
+{% for host in groups['role_monitor'] %}
+  - job_name: 'Agent-Monitor{{loop.index}}-Metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:18200']
+{% endfor %}
+{% for host in groups['role_auditor'] %}
+  - job_name: 'Agent-Auditor{{loop.index}}-Metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:18100']
+{% endfor %}
+{% for host in groups['role_riot'] %}
+  - job_name: 'Riot{{loop.index}}-Metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
+{% endfor %}
+{% for host in groups['role_storage'] %}
+  - job_name: 'Storage{{loop.index}}-Metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:18888']
+{% endfor %}

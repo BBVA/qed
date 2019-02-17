@@ -18,7 +18,8 @@
   unarchive:
     src: https://github.com/prometheus/prometheus/releases/download/v2.7.0/prometheus-2.7.0.linux-amd64.tar.gz
     dest: /var
-    remote_src: yes
+    keep_newer: true
+    remote_src: true
 
 - name: Create Node Exporter link 
   file:
@@ -33,13 +34,10 @@
       
 - name: Copy Grafana config and dashboards to remote
   copy:
-      dest: /etc/grafana/provisioning/{{ item }}
-      src: ../modules/prometheus/data/provisioning/{{ item }}
+      dest: /etc/grafana/
+      src: ../modules/prometheus/data/provisioning
       owner: root
       group: grafana
-  with_items:
-    - dashboards
-    - datasources
   register: grafana_config
 
 - name: Restart Grafana
@@ -48,3 +46,17 @@
     state: restarted
   when: grafana_config.changed
 
+- name: Create Prometheus config
+  template:
+    dest: /var/prometheus/prometheus.yml 
+    src: ../../templates/prometheus-config.yml.j2
+    force: yes
+
+- name: Create Prometheus start script
+  template:
+    dest: /var/prometheus/{{ item }} 
+    src: ../../templates/{{ item }}.j2
+    force: yes
+    mode: 0775
+  with_items:
+    - prometheus-start.sh

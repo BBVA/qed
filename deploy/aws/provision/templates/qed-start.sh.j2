@@ -1,0 +1,15 @@
+#!/bin/bash
+
+export QED_HOME=/var/qed
+{% if 'role_qed' in group_names %}
+nohup $QED_HOME/qed start >> $QED_HOME/qed.log &
+{% endif %}
+{% if 'role_monitor' in group_names %}
+nohup $QED_HOME/qed agent monitor >> $QED_HOME/qed.log &
+{% endif %}
+{% if 'role_auditor' in group_names %}
+nohup $QED_HOME/qed agent auditor >> $QED_HOME/qed.log &
+{% endif %}
+{% if 'role_publisher' in group_names %}
+nohup $QED_HOME/qed agent publisher >> $QED_HOME/qed.log &
+{% endif %}

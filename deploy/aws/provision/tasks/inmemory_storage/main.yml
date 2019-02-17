@@ -19,3 +19,12 @@
       mode: 0777
   with_items:
     - storage
+
+- name: Create Inmemory Storage start script
+  template:
+    dest: /var/qed/{{ item }} 
+    src: ../../templates/{{ item }}.j2
+    force: true
+    mode: 0775
+  with_items:
+    - storage-start.sh

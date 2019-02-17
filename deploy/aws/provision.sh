@@ -23,10 +23,11 @@ fi
 
 echo "Pulling terraform remote state to: $TF_STATE"
 terraform state pull > $TF_STATE
+cd provision
 
 if [ -z "$@" ];
 then
-    ansible-playbook --inventory-file=$GOBIN/terraform-inventory --private-key ~/.ssh/id_rsa_free provision/main.yml -f 10
+    ansible-playbook --inventory-file=$GOBIN/terraform-inventory --private-key ~/.ssh/id_rsa_free main.yml -f 10
 else
     echo "Using custom Ansible Playbook command."
     ansible-playbook $@

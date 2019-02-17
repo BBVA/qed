@@ -12,98 +12,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-resource "null_resource" "prebuild" {
-  provisioner "local-exec" {
-    command = "bash ./config_build.sh"
-  }
-}
-
-module "leader" {
+module "qed" {
   source = "./modules/qed"
 
-  name = "qed0"
+  name = "qed"
+  count = 3
   instance_type = "t3.2xlarge"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
-  command = "start >> /var/tmp/qed/qed.log"
-
-  config = <<-CONFIG
-  ---
-  api_key: "terraform_qed"
-  path: "/var/tmp/qed/"
-  server:
-    node_id: "qed0"
-    addr:
-      http: ":8800"
-      mgmt: ":8700"
-      raft: "MYIP:8500"
-      gossip: "MYIP:8400"
-  CONFIG
-
-}
-
-module "follower-1" {
-  source = "./modules/qed"
-
-  name = "qed1"
-  instance_type = "t3.2xlarge"
-  volume_size = "20"
-  vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
-  command = "start >> /var/tmp/qed/qed.log"
-
-  config = <<-CONFIG
-  ---
-  api_key: "terraform_qed"
-  path: "/var/tmp/qed/"
-  server:
-    node_id: "qed1"
-    addr:
-      http: ":8800"
-      mgmt: ":8700"
-      raft: "MYIP:8500"
-      gossip: "MYIP:8400"
-      raft_join:
-       - "${module.leader.private_ip[0]}:8700"
-      gossip_join:
-        - "${module.leader.private_ip[0]}:8400"
-  CONFIG
-
-}
-
-module "follower-2" {
-  source = "./modules/qed"
-
-  name = "qed2"
-  instance_type = "t3.2xlarge"
-  volume_size = "20"
-  vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
-  command = "start >> /var/tmp/qed/qed.log"
-
-  config = <<-CONFIG
-  ---
-  api_key: "terraform_qed"
-  path: "/var/tmp/qed/"
-  server:
-    node_id: "qed2"
-    addr:
-      http: ":8800"
-      mgmt: ":8700"
-      raft: "MYIP:8500"
-      gossip: "MYIP:8400"
-      raft_join:
-       - "${module.leader.private_ip[0]}:8700"
-      gossip_join:
-        - "${module.leader.private_ip[0]}:8400"
-  CONFIG
 }
 
 module "inmemory-storage" {
@@ -128,23 +47,8 @@ module "agent-publisher" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
+  role = "publisher"
 
-  command = "agent publisher >> /var/tmp/qed/qed.log"
-  config = <<-CONFIG
-  ---
-  api_key: "terraform_qed"
-  path: "/var/tmp/qed/"
-  agent:
-    node: "publisher"
-    bind: "MYIP:8300"
-    advertise: ""
-    join:
-      - "${module.leader.private_ip[0]}:8400"
-    alert_urls:
-      - "http://${module.inmemory-storage.private_ip}:8888"
-    snapshots_store_urls:
-      - "http://${module.inmemory-storage.private_ip}:8888"
-  CONFIG
 }
 
 module "agent-monitor" {
@@ -158,25 +62,7 @@ module "agent-monitor" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
-
-  command="agent monitor >> /var/tmp/qed/qed.log"
-  config = <<-CONFIG
-  ---
-  api_key: "terraform_qed"
-  path: "/var/tmp/qed/"
-  agent:
-    node: "monitor"
-    bind: "MYIP:8200"
-    advertise: ""
-    join:
-      - "${module.leader.private_ip[0]}:8400"
-    server_urls:
-      - "https://${module.follower-1.private_ip[0]}:8800"
-    alert_urls:
-      - "http://${module.inmemory-storage.private_ip}:8888"
-    snapshots_store_urls:
-      - "http://${module.inmemory-storage.private_ip}:8888"
-  CONFIG
+  role = "monitor"
 }
 
 module "agent-auditor" {
@@ -189,25 +75,8 @@ module "agent-auditor" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
+  role = "auditor"
 
-  command="agent auditor >> /var/tmp/qed/qed.log"
-  config = <<-CONFIG
-  ---
-  api_key: "terraform_qed"
-  path: "/var/tmp/qed/"
-  agent:
-    node: "auditor"
-    bind: "MYIP:8100"
-    advertise: ""
-    join:
-      - "${module.leader.private_ip[0]}:8400"
-    server_urls:
-      - "https://${module.follower-2.private_ip[0]}:8800"
-    alert_urls:
-      - "http://${module.inmemory-storage.private_ip}:8888"
-    snapshots_store_urls:
-      - "http://${module.inmemory-storage.private_ip}:8888"
-  CONFIG
 }
 
 module "prometheus" {
@@ -220,64 +89,64 @@ module "prometheus" {
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
 
-  config = <<-CONFIG
-  global:
-    scrape_interval:     15s
-    evaluation_interval: 15s
-  scrape_configs:
-    - job_name: 'prometheus'
-      scrape_interval: 5s
-      static_configs:
-        - targets: ['localhost:9090']
-    - job_name: 'Qed0-HostMetrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.leader.private_ip[0]}:9100']
-    - job_name: 'Qed0-QedMetrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.leader.private_ip[0]}:8600']
-    - job_name: 'Qed1-HostMetrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.follower-1.private_ip[0]}:9100']
-    - job_name: 'Qed1-QedMetrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.follower-1.private_ip[0]}:8600']
-    - job_name: 'Qed2-HostMetrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.follower-2.private_ip[0]}:9100']
-    - job_name: 'Qed2-QedMetrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.follower-2.private_ip[0]}:8600']
-    - job_name: 'Agent-Publisher-Metrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.agent-publisher.private_ip[0]}:18300']
-    - job_name: 'Agent-Monitor-0-Metrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.agent-monitor.private_ip[0]}:18200']
-    - job_name: 'Agent-Monitor-1-Metrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.agent-monitor.private_ip[1]}:18200']
-    - job_name: 'Agent-Auditor-Metrics'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.agent-auditor.private_ip[0]}:18100']
-    - job_name: 'riot'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.riot.private_ip}:9100']
-    - job_name: 'inmemory-storage'
-      scrape_interval: 10s
-      static_configs:
-        - targets: ['${module.inmemory-storage.private_ip}:18888']
-  CONFIG
+  # config = <<-CONFIG
+  # global:
+  #   scrape_interval:     15s
+  #   evaluation_interval: 15s
+  # scrape_configs:
+  #   - job_name: 'prometheus'
+  #     scrape_interval: 5s
+  #     static_configs:
+  #       - targets: ['localhost:9090']
+  #   - job_name: 'Qed0-HostMetrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.leader.private_ip[0]}:9100']
+  #   - job_name: 'Qed0-QedMetrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.leader.private_ip[0]}:8600']
+  #   - job_name: 'Qed1-HostMetrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.follower-1.private_ip[0]}:9100']
+  #   - job_name: 'Qed1-QedMetrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.follower-1.private_ip[0]}:8600']
+  #   - job_name: 'Qed2-HostMetrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.follower-2.private_ip[0]}:9100']
+  #   - job_name: 'Qed2-QedMetrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.follower-2.private_ip[0]}:8600']
+  #   - job_name: 'Agent-Publisher-Metrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.agent-publisher.private_ip[0]}:18300']
+  #   - job_name: 'Agent-Monitor-0-Metrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.agent-monitor.private_ip[0]}:18200']
+  #   - job_name: 'Agent-Monitor-1-Metrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.agent-monitor.private_ip[1]}:18200']
+  #   - job_name: 'Agent-Auditor-Metrics'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.agent-auditor.private_ip[0]}:18100']
+  #   - job_name: 'riot'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.riot.private_ip}:9100']
+  #   - job_name: 'inmemory-storage'
+  #     scrape_interval: 10s
+  #     static_configs:
+  #       - targets: ['${module.inmemory-storage.private_ip}:18888']
+  # CONFIG
 }
 
 module "riot" {
@@ -289,7 +158,7 @@ module "riot" {
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name = "${aws_key_pair.qed.key_name}"
   key_path = "${var.keypath}"
-  endpoint =  "${module.leader.private_ip[0]}"
+  endpoint =  "${module.qed.private_ip[0]}"
   num_requests = 10000000
 
 }
