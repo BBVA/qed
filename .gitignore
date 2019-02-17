@@ -10,6 +10,7 @@
 tests/plot.hmtl
 tests/report.bin
 cover.html
+main.retry
 tests/cloud/aws/outputs.tf
 tests/cloud/aws/results
 tests/cloud/aws/to_upload/rendered
