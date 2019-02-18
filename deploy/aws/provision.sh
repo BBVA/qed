@@ -15,7 +15,7 @@
 
 export TF_STATE=/tmp/terraform.tfstate
 
-if [ ! -f $GOBIN/terraform-inventory ];
+if ! which terraform-inventory
 then
     echo -e "Please install terraform-inventory in your GOBIN \ngo get github.com/adammck/terraform-inventory"
     exit 1
@@ -27,7 +27,7 @@ cd provision
 
 if [ -z "$@" ];
 then
-    ansible-playbook --inventory-file=$GOBIN/terraform-inventory --private-key ~/.ssh/id_rsa_free main.yml -f 10
+    ansible-playbook --inventory-file=$(which terraform-inventory) --private-key ~/.ssh/id_rsa_free main.yml -f 10
 else
     echo "Using custom Ansible Playbook command."
     ansible-playbook "$@"
