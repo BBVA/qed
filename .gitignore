@@ -44,3 +44,5 @@ deploy/aws/provision/config_files/*
 !deploy/aws/config_files/README.md
 deploy/aws/modules/*/data
 
+# Ansible
+!deploy/aws/provision/tasks/common/config.yml
