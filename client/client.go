@@ -21,7 +21,6 @@ package client
 import (
 	"bytes"
 	"crypto/tls"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -208,12 +207,6 @@ func (c HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalRespons
 	_ = json.Unmarshal(body, &response)
 
 	return response, nil
-}
-
-func uint2bytes(i uint64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, i)
-	return bytes
 }
 
 // Verify will compute the Proof given in Membership and the snapshot from the
