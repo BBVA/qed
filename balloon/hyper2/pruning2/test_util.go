@@ -24,6 +24,11 @@ func pos(index byte, height uint16) navigation.Position {
 	return navigation.NewPosition([]byte{index}, height)
 }
 
+type op struct {
+	Code OperationCode
+	Pos  navigation.Position
+}
+
 type FakeBatchLoader struct {
 	cacheHeightLimit uint16
 	cached           map[string]*BatchNode

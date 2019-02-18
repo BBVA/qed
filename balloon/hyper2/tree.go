@@ -1,3 +1,19 @@
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package hyper2
 
 import (
@@ -29,7 +45,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 
 	hasher := hasherF()
 	numBits := hasher.Len()
-	cacheHeightLimit := numBits - min(24, numBits/8*4)
+	cacheHeightLimit := numBits - min(24, (numBits/8)*4)
 
 	tree := &HyperTree{
 		store:            store,
@@ -72,7 +88,13 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 
 	rh := ops.Pop().Interpret(ops, ctx)
 
-	return rh, ctx.Mutations, nil
+	// create a mutation for the new leaf
+	leafMutation := storage.NewMutation(storage.IndexPrefix, eventDigest, versionAsBytes)
+
+	// collect mutations
+	mutations := append(ctx.Mutations, leafMutation)
+
+	return rh, mutations, nil
 }
 
 func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) (proof *QueryProof, err error) {
