@@ -17,7 +17,7 @@ export TF_STATE=/tmp/terraform.tfstate
 
 if [ ! -f $GOBIN/terraform-inventory ];
 then
-    echo -e "Please install terraform-invenotry in your GOBIN \ngo get github.com/adammck/terraform-inventor"
+    echo -e "Please install terraform-inventory in your GOBIN \ngo get github.com/adammck/terraform-inventory"
     exit 1
 fi
 
