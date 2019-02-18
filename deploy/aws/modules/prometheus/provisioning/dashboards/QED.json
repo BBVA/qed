@@ -16,7 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 8,
-  "iteration": 1550228062274,
+  "iteration": 1550483779652,
   "links": [],
   "panels": [
     {
@@ -312,7 +312,7 @@
           "value": "null"
         }
       ],
-      "valueName": "max"
+      "valueName": "delta"
     },
     {
       "cacheTimeout": null,
@@ -391,7 +391,7 @@
           "value": "null"
         }
       ],
-      "valueName": "max"
+      "valueName": "delta"
     },
     {
       "collapsed": false,
@@ -1550,5 +1550,5 @@
   "timezone": "",
   "title": "QED",
   "uid": "rjPFfGuik",
-  "version": 1
+  "version": 2
 }
