@@ -26,7 +26,7 @@ variable "key_name" {}
 
 variable "key_path" {}
 variable "role" {
-  default = "promethreus"
+  default = "prometheus"
 }
 variable "path" {
   default = "/home/ec2-user/prometheus"
