@@ -1,3 +1,19 @@
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package pruning2
 
 import (
@@ -11,19 +27,17 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 	var traverse, traverseBatch, discardBranch func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack)
 
 	traverse = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
-
 		if batch == nil {
 			batch = batches.Load(pos)
 		}
-
 		traverseBatch(pos, batch, iBatch, ops)
 	}
 
 	discardBranch = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
 		if batch.HasElementAt(iBatch) {
-			ops.Push(getProvidedHash(pos, iBatch, batch))
+			ops.PushAll(getProvidedHash(pos, iBatch, batch), collectHash(pos))
 		} else {
-			ops.Push(getDefaultHash(pos))
+			ops.PushAll(getDefaultHash(pos), collectHash(pos))
 		}
 	}
 
@@ -31,32 +45,24 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 
 		// We found a nil value. That means there is no previous node stored on the current
 		// path so we stop traversing because the index does no exist in the tree.
-		// We return a new shortcut without mutating.
 		if !batch.HasElementAt(iBatch) {
-			ops.Push(leafHash(pos, nil)) // TODO shall i return nothing?
+			ops.Push(noOp(pos))
 			return
 		}
 
 		// at the end of the batch tree
 		if iBatch > 0 && pos.Height%4 == 0 {
-			traverse(pos, nil, 0, ops)
-			ops.Push(getProvidedHash(pos, iBatch, batch))
+			traverse(pos, nil, 0, ops) // load another batch
 			return
 		}
 
 		// on an internal node of the subtree
 
 		// we found a shortcut leaf in our path
-		if batch.HasElementAt(iBatch) && batch.HasLeafAt(iBatch) {
-			key, value := batch.GetLeafKVAt(iBatch)
-			if bytes.Equal(index, key) {
-				// we found the searched index
-				ops.Push(leafHash(pos, value))
-				return
-			}
-			// we found another shortcut leaf on our path so the index
-			// we are looking for has never been inserted in the tree
-			ops.Push(leafHash(pos, nil))
+		if batch.HasLeafAt(iBatch) {
+			// regardless if the key of the shortcut matches the searched index
+			// we must stop traversing because there is no more leaves below
+			ops.Push(getProvidedHash(pos, iBatch, batch)) // not collected
 			return
 		}
 
@@ -65,18 +71,19 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 		if bytes.Compare(index, rightPos.Index) < 0 { // go to left
 			traverse(pos.Left(), batch, 2*iBatch+1, ops)
 			discardBranch(rightPos, batch, 2*iBatch+2, ops)
-			ops.Push(collectHash(rightPos))
 		} else { // go to right
 			discardBranch(leftPos, batch, 2*iBatch+1, ops)
-			ops.Push(collectHash(leftPos))
 			traverse(rightPos, batch, 2*iBatch+2, ops)
 		}
 
 		ops.Push(innerHash(pos))
-
 	}
 
 	ops := NewOperationsStack()
-	traverse(navigation.NewRootPosition(uint16(len(index)*8)), nil, 0, ops)
+	root := navigation.NewRootPosition(uint16(len(index) * 8))
+	traverse(root, nil, 0, ops)
+	if ops.Len() == 0 {
+		ops.Push(noOp(root))
+	}
 	return ops
 }

@@ -1,3 +1,19 @@
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package pruning2
 
 import (
@@ -50,11 +66,9 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 	var traverse, traverseThroughCache, traverseAfterCache TraverseBatch
 
 	traverse = func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack) {
-
 		if batch == nil {
 			batch = batches.Load(pos)
 		}
-
 		if pos.Height > cacheHeightLimit {
 			traverseThroughCache(pos, leaves, batch, iBatch, ops)
 		} else {
@@ -82,19 +96,16 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 
 		// on an internal node of the subtree
 
-		// we found a node in our path
-		if batch.HasElementAt(iBatch) {
-			// we found a shortcut leaf in our path
-			if batch.HasLeafAt(iBatch) {
-				// push down leaf
-				key, value := batch.GetLeafKVAt(iBatch)
-				leaves = leaves.InsertSorted(Leaf{key, value})
-				batch.ResetElementAt(iBatch)
-				batch.ResetElementAt(2*iBatch + 1)
-				batch.ResetElementAt(2*iBatch + 2)
-				traverseThroughCache(pos, leaves, batch, iBatch, ops)
-				return
-			}
+		// we found a node in our path and it is a shortcut leaf
+		if batch.HasLeafAt(iBatch) {
+			// push down leaf
+			key, value := batch.GetLeafKVAt(iBatch)
+			leaves = leaves.InsertSorted(Leaf{key, value})
+			batch.ResetElementAt(iBatch)
+			batch.ResetElementAt(2*iBatch + 1)
+			batch.ResetElementAt(2*iBatch + 2)
+			traverseThroughCache(pos, leaves, batch, iBatch, ops)
+			return
 		}
 
 		// on an internal node with more than one leaf
@@ -148,9 +159,8 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 				ops.Push(updateBatchNode(pos, iBatch, batch))
 				return
 			}
-			// with only one leaf to insert -> add a new shortcut leaf or continue traversing
+			// with only one leaf to insert -> continue traversing
 			if batch.HasElementAt(iBatch) {
-				// continue traversing
 				traverse(pos, leaves, nil, 0, ops)
 				ops.Push(updateBatchNode(pos, iBatch, batch))
 				return
@@ -175,25 +185,22 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 					leafHash(pos, leaves[0].Value),
 					updateBatchShortcut(pos, iBatch, batch, leaves[0].Index, leaves[0].Value),
 				)
-				if pos.Height%4 == 0 { // at the root or at a leaf of the subtree
+				if pos.Height%4 == 0 { // at the root or at a leaf of the subtree (not necessary to check iBatch)
 					ops.Push(mutateBatch(pos, batch))
 				}
 				return
 			}
 
-			// we found a node in our path
-			if batch.HasElementAt(iBatch) {
-				// we found a shortcut leaf in our path
-				if batch.HasLeafAt(iBatch) {
-					// push down leaf
-					key, value := batch.GetLeafKVAt(iBatch)
-					leaves = leaves.InsertSorted(Leaf{key, value})
-					batch.ResetElementAt(iBatch)
-					batch.ResetElementAt(2*iBatch + 1)
-					batch.ResetElementAt(2*iBatch + 2)
-					traverseAfterCache(pos, leaves, batch, iBatch, ops)
-					return
-				}
+			// we found a node in our path and itis a shortcut leaf
+			if batch.HasLeafAt(iBatch) {
+				// push down leaf
+				key, value := batch.GetLeafKVAt(iBatch)
+				leaves = leaves.InsertSorted(Leaf{key, value})
+				batch.ResetElementAt(iBatch)
+				batch.ResetElementAt(2*iBatch + 1)
+				batch.ResetElementAt(2*iBatch + 2)
+				traverseAfterCache(pos, leaves, batch, iBatch, ops)
+				return
 			}
 		}
 
