@@ -31,11 +31,25 @@
   yum:
       update_cache: yes 
       name: https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
-      
+
 - name: Copy Grafana config and dashboards to remote
   copy:
-      dest: /etc/grafana/
-      src: ../modules/prometheus/data/provisioning
+      dest: /etc/grafana/provisioning/{{ item }}
+      src: files/grafana/{{ item }}
+      owner: root
+      group: grafana
+  with_items:
+    - datasources/datasource.yml
+    - dashboards/GoProcesses.json
+    - dashboards/dashboard.yml
+    - dashboards/Host.json
+    - dashboards/QED.json
+  register: grafana_config
+
+- name: Copy Grafana config and dashboards to remote
+  copy:
+      dest: /etc/grafana/provisioning/
+      src: files/grafana
       owner: root
       group: grafana
   register: grafana_config
