@@ -16,6 +16,8 @@
 
 variable "instance_type" {}
 
+variable "iam_instance_profile" {}
+
 variable "volume_size" {}
 
 variable "vpc_security_group_ids" {}
