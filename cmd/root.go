@@ -83,7 +83,7 @@ func NewRootCommand(args []string) *cobra.Command {
 	cmd.AddCommand(
 		newStartCommand(ctx),
 		newClientCommand(ctx),
-		newAgentCommand(*ctx, args),
+		newAgentCommand(ctx, args),
 	)
 
 	return cmd

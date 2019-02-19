@@ -24,7 +24,7 @@ import (
 	"github.com/bbva/qed/util"
 )
 
-func newAgentMonitorCommand(ctx cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
+func newAgentMonitorCommand(ctx *cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
 
 	monitorConfig := monitor.DefaultConfig()
 

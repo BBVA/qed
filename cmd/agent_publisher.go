@@ -24,7 +24,7 @@ import (
 	"github.com/bbva/qed/util"
 )
 
-func newAgentPublisherCommand(ctx cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
+func newAgentPublisherCommand(ctx *cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
 
 	publisherConfig := publisher.DefaultConfig()
 
