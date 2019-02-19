@@ -35,6 +35,13 @@
   with_items:
     - awslogs.conf
     - awscli.conf
+  register: aws_logs
+
+- name: Restart AWS CloudWatch service
+  service:
+    name: awslogs
+    state: restarted
+  when: aws_logs.changed
 
 - name: Download Node Exporter
   unarchive:
