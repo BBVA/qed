@@ -17,13 +17,12 @@
 package navigation
 
 import (
-	"github.com/bbva/qed/balloon/navigator"
 	"github.com/bbva/qed/hashing"
 )
 
 type AuditPath map[string]hashing.Digest
 
-func (p AuditPath) Get(pos navigator.Position) (hashing.Digest, bool) {
+func (p AuditPath) Get(pos Position) (hashing.Digest, bool) {
 	digest, ok := p[pos.StringId()]
 	return digest, ok
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/hyper2/navigation"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
@@ -42,8 +43,8 @@ const (
 	GetProvidedHashCode
 	PutInCacheCode
 	MutateBatchCode
-	CollectCode
 	CollectHashCode
+	GetFromPathCode
 	NoOpCode
 )
 
@@ -145,18 +146,6 @@ func mutateBatch(pos navigation.Position, batch *BatchNode) *Operation {
 	}
 }
 
-func collect(pos navigation.Position) *Operation {
-	return &Operation{
-		Code: CollectCode,
-		Pos:  pos,
-		Interpret: func(ops *OperationsStack, c *Context) hashing.Digest {
-			leftHash := ops.Pop().Interpret(ops, c)
-			rightHash := ops.Pop().Interpret(ops, c)
-			return c.Hasher.Salted(pos.Bytes(), leftHash, rightHash)
-		},
-	}
-}
-
 func collectHash(pos navigation.Position) *Operation {
 	return &Operation{
 		Code: CollectHashCode,
@@ -164,6 +153,20 @@ func collectHash(pos navigation.Position) *Operation {
 		Interpret: func(ops *OperationsStack, c *Context) hashing.Digest {
 			hash := ops.Pop().Interpret(ops, c)
 			c.AuditPath[pos.StringId()] = hash
+			return hash
+		},
+	}
+}
+
+func getFromPath(pos navigation.Position) *Operation {
+	return &Operation{
+		Code: GetFromPathCode,
+		Pos:  pos,
+		Interpret: func(ops *OperationsStack, c *Context) hashing.Digest {
+			hash, ok := c.AuditPath.Get(pos)
+			if !ok {
+				log.Fatalf("Oops, something went wrong. Invalid position in audit path")
+			}
 			return hash
 		},
 	}
