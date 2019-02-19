@@ -135,7 +135,9 @@ state_file = /var/lib/awslogs/agent-state
 datetime_format = %b %d %H:%M:%S
 file = /var/log/messages
 buffer_duration = 5000
-log_stream_name = {{ ansible_hostname }}
+{% if 'type_aws_instance' in group_names %}
+log_stream_name = {{ hostvars[inventory_hostname]['tags.Name'] }}
+{% endif %}
 initial_position = start_of_file
 log_group_name = /var/log/messages
 
@@ -143,6 +145,8 @@ log_group_name = /var/log/messages
 datetime_format = %b %d %H:%M:%S
 file = /var/qed/qed.log
 buffer_duration = 5000
-log_stream_name = {{ ansible_hostname }}
+{% if 'type_aws_instance' in group_names %}
+log_stream_name = {{ hostvars[inventory_hostname]['tags.Name'] }}
+{% endif %}
 initial_position = start_of_file
 log_group_name = qed
