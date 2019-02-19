@@ -34,11 +34,11 @@ import (
 )
 
 const (
-	QEDUrl       = "http://127.0.0.1:8080"
-	QEDTLS       = "https://localhost:8080"
+	QEDUrl       = "http://127.0.0.1:8800"
+	QEDTLS       = "https://localhost:8800"
 	QEDGossip    = "127.0.0.1:9010"
-	QEDTamperURL = "http://127.0.0.1:18080/tamper"
-	StoreUrl     = "http://127.0.0.1:8888"
+	QEDTamperURL = "http://127.0.0.1:7700/tamper"
+	StoreURL     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
 	cacheSize    = 50000
 	storageType  = "badger"
@@ -50,8 +50,8 @@ func merge(list ...scope.TestF) scope.TestF {
 	return func(t *testing.T) {
 		for _, elem := range list {
 			elem(t)
-			// time.Sleep(2 * time.Second)
 		}
+		// time.Sleep(2 * time.Second)
 	}
 }
 

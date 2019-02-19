@@ -315,7 +315,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/health-check -> HealthCheckHandler
 //	/events -> Add
 //	/proofs/membership -> Membership
-func NewApiHttp(httpEndpoint string, balloon raftwal.RaftBalloonApi) *http.ServeMux {
+func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
@@ -323,7 +323,7 @@ func NewApiHttp(httpEndpoint string, balloon raftwal.RaftBalloonApi) *http.Serve
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
-	api.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(httpEndpoint, balloon)))
+	api.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(balloon)))
 
 	return api
 }
@@ -363,7 +363,7 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 	}
 }
 
-func InfoShardsHandler(httpEndpoint string, balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			w.Header().Set("Allow", "GET")
@@ -379,7 +379,7 @@ func InfoShardsHandler(httpEndpoint string, balloon raftwal.RaftBalloonApi) http
 		}
 
 		info := balloon.Info()
-		info["httpEndpoint"] = scheme + httpEndpoint
+		info["URIScheme"] = scheme
 
 		out, err := json.Marshal(info)
 		if err != nil {
@@ -388,6 +388,6 @@ func InfoShardsHandler(httpEndpoint string, balloon raftwal.RaftBalloonApi) http
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write(out)
+		_, _ = w.Write(out)
 	}
 }

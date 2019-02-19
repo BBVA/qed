@@ -65,13 +65,17 @@ func NewHTTPClient(conf Config) *HTTPClient {
 				TLSHandshakeTimeout: 5 * time.Second,
 			},
 		},
-		Topology{
-			Leader: conf.Endpoints[0],
-			Endpoints: conf.Endpoints,
-		},
+		Topology{},
 	}
 
-	info, err := client.getClusterInfo()
+	// Initial topology assignment
+	client.topology.Leader = conf.Endpoints[0]
+	client.topology.Endpoints = conf.Endpoints
+
+	var info map[string]interface{}
+	var err error
+
+	info, err = client.getClusterInfo()
 	if err != nil {
 		log.Errorf("Failed to get raft cluster info. Error: %v", err)
 		return nil

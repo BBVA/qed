@@ -109,7 +109,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 	before1, after1 := setupServer(1, "", false, t)
 	before2, after2 := setupServer(2, "", false, t)
 
-	serversHttpAddr := "http://127.0.0.1:8080"
+	serversHttpAddr := "http://127.0.0.1:8800"
 
 	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after1, after2))
 
@@ -180,7 +180,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 		let("Kill server 0", func(t *testing.T) {
 			after0(t)
-			serversHttpAddr = "http://127.0.0.1:8081"
+			serversHttpAddr = "http://127.0.0.1:8801"
 
 			// Need time to propagate changes via RAFT.
 			time.Sleep(10 * time.Second)
@@ -211,7 +211,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 
-	serversHttpAddr := "badendpoint,http://127.0.0.1:8080"
+	serversHttpAddr := "badendpoint,http://127.0.0.1:8800"
 
 	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1))
 
@@ -263,7 +263,7 @@ func Test_Client_To_Cluster_Continuous_Load_Node_Fails(t *testing.T) {
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 
-	serversHttpAddr := "http://127.0.0.1:8080,http://127.0.0.1:8081"
+	serversHttpAddr := "http://127.0.0.1:8800,http://127.0.0.1:8801"
 
 	scenario, let := scope.Scope(t, merge(before0, before1), merge(after1))
 
