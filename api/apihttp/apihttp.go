@@ -20,7 +20,6 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -58,9 +57,6 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 	timer3 := prometheus.NewTimer(metrics.Qed_exampleSummary)
 	defer timer3.ObserveDuration()
-
-	// Do something here that takes time.
-	time.Sleep(time.Duration(rand.NormFloat64()*10000+50000) * time.Microsecond)
 
 	result := HealthCheckResponse{
 		Version: 0,
