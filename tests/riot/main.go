@@ -244,7 +244,7 @@ func (a *Attack) CreateFanIn() {
 func (a *Attack) CreateFanOut() {
 
 	cConf := client.DefaultConfig()
-	cConf.Endpoint = a.config.Endpoint
+	cConf.Endpoints = []string{a.config.Endpoint}
 	cConf.APIKey = a.config.APIKey
 	cConf.Insecure = a.config.Insecure
 	a.client = client.NewHTTPClient(*cConf)
