@@ -25,7 +25,7 @@ import (
 	"github.com/bbva/qed/gossip"
 )
 
-func newAgentCommand(cmdCtx cmdContext, args []string) *cobra.Command {
+func newAgentCommand(cmdCtx *cmdContext, args []string) *cobra.Command {
 
 	config := gossip.DefaultConfig()
 

@@ -24,7 +24,7 @@ import (
 	"github.com/bbva/qed/util"
 )
 
-func newAgentAuditorCommand(ctx cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
+func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
 
 	auditorConfig := auditor.DefaultConfig()
 
