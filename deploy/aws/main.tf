@@ -12,12 +12,39 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+data "aws_iam_policy_document" "CloudWatchLogsFullAccess-assume-role-policy" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "CloudWatchLogsFullAccess" {
+  name = "CloudWatchLogsFullAccess"
+  assume_role_policy = "${data.aws_iam_policy_document.CloudWatchLogsFullAccess-assume-role-policy.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "CloudWatchLogsFullAccess-attach" {
+  role       = "${aws_iam_role.CloudWatchLogsFullAccess.name}"
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+resource "aws_iam_instance_profile" "qed-profile" {
+  name = "qed-profile"
+  role = "${aws_iam_role.CloudWatchLogsFullAccess.name}"
+}
+
 module "qed" {
   source = "./modules/qed"
 
   name = "qed"
   count = 3
   instance_type = "t3.2xlarge"
+  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -30,6 +57,7 @@ module "inmemory-storage" {
 
   name = "inmemory-storage"
   instance_type = "t3.small"
+  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -42,6 +70,7 @@ module "agent-publisher" {
 
   name = "agent-publisher"
   instance_type = "t3.small"
+  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -57,6 +86,7 @@ module "agent-monitor" {
   name = "agent-monitor"
   count = 2
   instance_type = "t3.small"
+  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -70,6 +100,7 @@ module "agent-auditor" {
 
   name = "agent-auditor"
   instance_type = "t3.small"
+  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -83,6 +114,7 @@ module "prometheus" {
   source = "./modules/prometheus"
 
   instance_type = "t3.medium"
+  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size = "20"
   vpc_security_group_ids = "${module.prometheus_security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
@@ -94,6 +126,7 @@ module "riot" {
   source = "./modules/riot"
 
   instance_type = "t3.medium"
+  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
   subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"

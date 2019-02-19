@@ -37,6 +37,7 @@ resource "aws_instance" "prometheus" {
   count                       = "1"
   ami                         = "${data.aws_ami.amazon_linux.id}"
   instance_type               = "${var.instance_type}"
+  iam_instance_profile        = "${var.iam_instance_profile}"
 
   vpc_security_group_ids      = ["${var.vpc_security_group_ids}"]
   subnet_id                   = "${var.subnet_id}"
