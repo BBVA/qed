@@ -19,10 +19,10 @@ case "$1" in
 		endpoint=http://localhost:8800
 	;;
 	follower1)
-		endpoint=http://localhost:8081
+		endpoint=http://localhost:8801
 	;;
 	follower2)
-		endpoint=http://localhost:8082
+		endpoint=http://localhost:8802
 	;;
 	*)
 	echo "usage: $0 <leader|follower1|follower2>"
