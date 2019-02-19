@@ -28,6 +28,10 @@ import (
 	"github.com/bbva/qed/sign"
 )
 
+const (
+	NumSenders = 10
+)
+
 type Sender struct {
 	Agent  *gossip.Agent
 	Config *Config
@@ -64,7 +68,7 @@ func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
 func (s Sender) Start(ch chan *protocol.Snapshot) {
 	ticker := time.NewTicker(1000 * time.Millisecond)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < NumSenders; i++ {
 		go s.batcherSender(i, ch, s.quit)
 	}
 
@@ -150,7 +154,11 @@ func (s Sender) sender(batch protocol.BatchSnapshots) {
 
 func (s Sender) Stop() {
 	metrics.Qed_sender_instances_count.Dec()
-	s.quit <- true
+
+	for i := 0; i < NumSenders+1; i++ {
+		// INFO: we need NumSenders+1 for the debug ticker in Start function
+		s.quit <- true
+	}
 }
 
 func (s *Sender) doSign(snapshot *protocol.Snapshot) (*protocol.SignedSnapshot, error) {
