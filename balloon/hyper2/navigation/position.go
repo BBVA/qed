@@ -22,20 +22,17 @@ import (
 	"github.com/bbva/qed/util"
 )
 
-const KeySize = 34
-
 type Position struct {
 	Index  []byte
 	Height uint16
 
-	serialized [KeySize]byte
+	serialized []byte
 	numBits    uint16
 }
 
 func NewPosition(index []byte, height uint16) Position {
-	var b [KeySize]byte // Size of the index plus 2 bytes for the height
-	copy(b[:], index[:len(index)])
-	copy(b[len(index):], util.Uint16AsBytes(height))
+	// Size of the index plus 2 bytes for the height
+	b := append(append([]byte{}, index[:len(index)]...), util.Uint16AsBytes(height)...)
 	return Position{
 		Index:      index,
 		Height:     height,
@@ -49,10 +46,6 @@ func NewRootPosition(numBits uint16) Position {
 }
 
 func (p Position) Bytes() []byte {
-	return p.serialized[:]
-}
-
-func (p Position) FixedBytes() [KeySize]byte {
 	return p.serialized
 }
 
