@@ -39,7 +39,7 @@
 
 - name: Restart AWS CloudWatch service
   service:
-    name: awslogs
+    name: awslogsd
     state: restarted
   when: aws_logs.changed
 
