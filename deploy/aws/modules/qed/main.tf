@@ -16,21 +16,21 @@ data "aws_ami" "amazon_linux" {
   most_recent = true
 
   filter {
-    name = "name"
-    values = ["amzn-ami-hvm-*-x86_64-gp2"]
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
   }
 
   filter {
-    name = "owner-alias"
+    name   = "owner-alias"
     values = ["amazon"]
   }
 }
 
 resource "aws_instance" "qed-server" {
-  count                       = "${var.count}"
-  ami                         = "${data.aws_ami.amazon_linux.id}"
-  instance_type               = "${var.instance_type}"
-  iam_instance_profile        = "${var.iam_instance_profile}"
+  count                = "${var.count}"
+  ami                  = "${data.aws_ami.amazon_linux.id}"
+  instance_type        = "${var.instance_type}"
+  iam_instance_profile = "${var.iam_instance_profile}"
 
   vpc_security_group_ids      = ["${var.vpc_security_group_ids}"]
   subnet_id                   = "${var.subnet_id}"
