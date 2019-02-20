@@ -17,7 +17,10 @@
 package hyper2
 
 import (
+	"bytes"
+
 	"github.com/bbva/qed/balloon/hyper2/navigation"
+	"github.com/bbva/qed/balloon/hyper2/pruning2"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
@@ -44,11 +47,19 @@ func (p QueryProof) Verify(key []byte, expectedRootHash hashing.Digest) (valid b
 
 	log.Debugf("Verifying query proof for key %d", p.Key)
 
-	// build a visitable pruned tree and the visit it to recompute the root hash
-	// visitor := pruning.NewComputeHashVisitor(p)
-	// recomputed := pruning.PruneToVerify(key, p.Value, p.hasher.Len()-len(p.AuditPath)).Accept(visitor)
+	if len(p.AuditPath) == 0 {
+		// an empty audit path (empty tree) shows non-membersip for any key
+		return false
+	}
 
-	// return bytes.Equal(key, p.Key) && bytes.Equal(recomputed, expectedRootHash)
-	return true
+	// build a stack of operations and then interpret it to recompute the root hash
+	ops := pruning2.PruneToVerify(key, p.Value, p.hasher.Len()-uint16(len(p.AuditPath)))
+	ctx := &pruning2.Context{
+		Hasher:    p.hasher,
+		AuditPath: p.AuditPath,
+	}
+	recomputed := ops.Pop().Interpret(ops, ctx)
+
+	return bytes.Equal(key, p.Key) && bytes.Equal(recomputed, expectedRootHash)
 
 }
