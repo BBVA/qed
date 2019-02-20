@@ -1,3 +1,19 @@
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package pruning
 
 import (
@@ -6,86 +22,68 @@ import (
 	"github.com/bbva/qed/balloon/hyper2/navigation"
 )
 
-func PruneToFind(index []byte, batches BatchLoader) (Operation, error) {
+func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 
-	var traverse, traverseBatch func(pos *navigation.Position, batch *BatchNode, iBatch int8) (Operation, error)
-	var discardBranch func(pos *navigation.Position, batch *BatchNode, iBatch int8) Operation
+	var traverse, traverseBatch, discardBranch func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack)
 
-	traverse = func(pos *navigation.Position, batch *BatchNode, iBatch int8) (Operation, error) {
-
-		var err error
+	traverse = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
 		if batch == nil {
-			batch, err = batches.Load(pos)
-			if err != nil {
-				return nil, err
-			}
+			batch = batches.Load(pos)
 		}
-
-		return traverseBatch(pos, batch, iBatch)
+		traverseBatch(pos, batch, iBatch, ops)
 	}
 
-	discardBranch = func(pos *navigation.Position, batch *BatchNode, iBatch int8) Operation {
+	discardBranch = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
 		if batch.HasElementAt(iBatch) {
-			return NewUseProvidedOp(pos, batch, iBatch)
+			ops.PushAll(getProvidedHash(pos, iBatch, batch), collectHash(pos))
+		} else {
+			ops.PushAll(getDefaultHash(pos), collectHash(pos))
 		}
-		return NewGetDefaultOp(pos)
 	}
 
-	traverseBatch = func(pos *navigation.Position, batch *BatchNode, iBatch int8) (Operation, error) {
+	traverseBatch = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
 
 		// We found a nil value. That means there is no previous node stored on the current
 		// path so we stop traversing because the index does no exist in the tree.
-		// We return a new shortcut without mutating.
 		if !batch.HasElementAt(iBatch) {
-			return NewShortcutLeafOp(pos, batch, iBatch, index, nil), nil
+			ops.Push(noOp(pos))
+			return
 		}
 
 		// at the end of the batch tree
 		if iBatch > 0 && pos.Height%4 == 0 {
-			op, err := traverse(pos, nil, 0)
-			if err != nil {
-				return nil, err
-			}
-			return NewLeafOp(pos, batch, iBatch, op), nil
+			traverse(pos, nil, 0, ops) // load another batch
+			return
 		}
 
 		// on an internal node of the subtree
 
 		// we found a shortcut leaf in our path
-		if batch.HasElementAt(iBatch) && batch.HasLeafAt(iBatch) {
-			key, value := batch.GetLeafKVAt(iBatch)
-			if bytes.Equal(index, key) {
-				// we found the searched index
-				return NewShortcutLeafOp(pos, batch, iBatch, key, value), nil
-			}
-			// we found another shortcut leaf on our path so the we index
-			// we are looking for has never been inserted in the tree
-			return NewShortcutLeafOp(pos, batch, iBatch, key, nil), nil
+		if batch.HasLeafAt(iBatch) {
+			// regardless if the key of the shortcut matches the searched index
+			// we must stop traversing because there are no more leaves below
+			ops.Push(getProvidedHash(pos, iBatch, batch)) // not collected
+			return
 		}
-
-		var left, right Operation
-		var err error
 
 		rightPos := pos.Right()
 		leftPos := pos.Left()
 		if bytes.Compare(index, rightPos.Index) < 0 { // go to left
-			left, err = traverse(&leftPos, batch, 2*iBatch+1)
-			if err != nil {
-				return nil, err
-			}
-			right = NewCollectOp(discardBranch(&rightPos, batch, 2*iBatch+2))
+			traverse(pos.Left(), batch, 2*iBatch+1, ops)
+			discardBranch(rightPos, batch, 2*iBatch+2, ops)
 		} else { // go to right
-			left = NewCollectOp(discardBranch(&leftPos, batch, 2*iBatch+1))
-			right, err = traverse(&rightPos, batch, 2*iBatch+2)
-			if err != nil {
-				return nil, err
-			}
+			discardBranch(leftPos, batch, 2*iBatch+1, ops)
+			traverse(rightPos, batch, 2*iBatch+2, ops)
 		}
 
-		return NewInnerHashOp(pos, batch, iBatch, left, right), nil
-
+		ops.Push(innerHash(pos))
 	}
 
+	ops := NewOperationsStack()
 	root := navigation.NewRootPosition(uint16(len(index) * 8))
-	return traverse(&root, nil, 0)
+	traverse(root, nil, 0, ops)
+	if ops.Len() == 0 {
+		ops.Push(noOp(root))
+	}
+	return ops
 }

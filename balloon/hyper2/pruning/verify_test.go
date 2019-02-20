@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package pruning2
+package pruning
 
 import (
 	"testing"
