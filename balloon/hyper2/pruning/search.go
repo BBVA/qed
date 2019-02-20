@@ -80,7 +80,7 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 	}
 
 	ops := NewOperationsStack()
-	root := navigation.NewRootPosition(uint16(len(index) * 8))
+	root := navigation.NewRootPosition(uint16(len(index)))
 	traverse(root, nil, 0, ops)
 	if ops.Len() == 0 {
 		ops.Push(noOp(root))

@@ -26,13 +26,13 @@ type Position struct {
 	Index  []byte
 	Height uint16
 
-	serialized []byte
+	serialized []byte // height:index
 	numBits    uint16
 }
 
 func NewPosition(index []byte, height uint16) Position {
 	// Size of the index plus 2 bytes for the height
-	b := append(append([]byte{}, index[:len(index)]...), util.Uint16AsBytes(height)...)
+	b := append(util.Uint16AsBytes(height), index[:len(index)]...)
 	return Position{
 		Index:      index,
 		Height:     height,
@@ -41,8 +41,8 @@ func NewPosition(index []byte, height uint16) Position {
 	}
 }
 
-func NewRootPosition(numBits uint16) Position {
-	return NewPosition(make([]byte, numBits/8), numBits)
+func NewRootPosition(indexNumBytes uint16) Position {
+	return NewPosition(make([]byte, indexNumBytes), indexNumBytes*8)
 }
 
 func (p Position) Bytes() []byte {

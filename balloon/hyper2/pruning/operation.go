@@ -45,6 +45,7 @@ const (
 	MutateBatchCode
 	CollectHashCode
 	GetFromPathCode
+	UseHashCode
 	NoOpCode
 )
 
@@ -168,6 +169,16 @@ func getFromPath(pos navigation.Position) *Operation {
 				log.Fatalf("Oops, something went wrong. Invalid position in audit path")
 			}
 			return hash
+		},
+	}
+}
+
+func useHash(pos navigation.Position, digest []byte) *Operation {
+	return &Operation{
+		Code: UseHashCode,
+		Pos:  pos,
+		Interpret: func(ops *OperationsStack, c *Context) hashing.Digest {
+			return digest
 		},
 	}
 }

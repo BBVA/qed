@@ -16,7 +16,9 @@
 
 package util
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 func Uint64AsBytes(i uint64) []byte {
 	b := make([]byte, 8)
