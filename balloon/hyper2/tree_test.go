@@ -27,6 +27,7 @@ import (
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
+	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -125,6 +126,131 @@ func TestProveMembership(t *testing.T) {
 		require.NoErrorf(t, err, "Error adding to the tree: %v for index %d", err, i)
 		assert.Equalf(t, c.expectedAuditPath, proof.AuditPath, "Incorrect audit path for index %d", i)
 	}
+
+}
+
+func TestAddAndVerify(t *testing.T) {
+
+	log.SetLogger("TestAddAndVerify", log.SILENT)
+
+	value := uint64(0)
+
+	testCases := []struct {
+		hasherF func() hashing.Hasher
+	}{
+		{hasherF: hashing.NewXorHasher},
+		{hasherF: hashing.NewSha256Hasher},
+		{hasherF: hashing.NewPearsonHasher},
+	}
+
+	for i, c := range testCases {
+
+		hasher := c.hasherF()
+		store, closeF := storage_utils.OpenBPlusTreeStore()
+		defer closeF()
+		simpleCache := cache.NewSimpleCache(10)
+		tree := NewHyperTree(c.hasherF, store, simpleCache)
+
+		key := hasher.Do(hashing.Digest("a test event"))
+		valueBytes := util.Uint64AsPaddedBytes(value, int(hasher.Len()/8))
+		valueBytes = valueBytes[len(valueBytes)-len(key):] // adjust lenght to hasher len
+
+		rootHash, mutations, err := tree.Add(key, value)
+		require.NoErrorf(t, err, "Add operation should not fail for index %d", i)
+		tree.store.Mutate(mutations)
+
+		leaf, err := store.Get(storage.IndexPrefix, key)
+		require.NoErrorf(t, err, "No leaf with key %d: %v", key, err)
+
+		proof, err := tree.QueryMembership(leaf.Key, leaf.Value)
+		require.Nilf(t, err, "The membership query should not fail for index %d", i)
+		assert.Equalf(t, valueBytes, proof.Value, "Incorrect actual value for index %d", i)
+
+		correct := proof.Verify(key, rootHash)
+		assert.Truef(t, correct, "Key %x should be a member for index %d", key, i)
+	}
+
+}
+
+func TestDeterministicAdd(t *testing.T) {
+
+	log.SetLogger("TestDeterministicAdd", log.SILENT)
+
+	hasher := hashing.NewSha256Hasher()
+
+	// create two trees
+	cache1 := cache.NewSimpleCache(0)
+	cache2 := cache.NewSimpleCache(0)
+	store1, closeF1 := storage_utils.OpenBPlusTreeStore()
+	store2, closeF2 := storage_utils.OpenBPlusTreeStore()
+	defer closeF1()
+	defer closeF2()
+	tree1 := NewHyperTree(hashing.NewSha256Hasher, store1, cache1)
+	tree2 := NewHyperTree(hashing.NewSha256Hasher, store2, cache2)
+
+	// insert a bunch of events in both trees
+	for i := 0; i < 100; i++ {
+		event := rand.Bytes(32)
+		eventDigest := hasher.Do(event)
+		version := uint64(i)
+		_, m1, _ := tree1.Add(eventDigest, version)
+		store1.Mutate(m1)
+		_, m2, _ := tree2.Add(eventDigest, version)
+		store2.Mutate(m2)
+	}
+
+	// check index store equality
+	reader11 := store1.GetAll(storage.IndexPrefix)
+	reader21 := store2.GetAll(storage.IndexPrefix)
+	defer reader11.Close()
+	defer reader21.Close()
+	buff11 := make([]*storage.KVPair, 0)
+	buff21 := make([]*storage.KVPair, 0)
+	for {
+		b := make([]*storage.KVPair, 100)
+		n, err := reader11.Read(b)
+		if err != nil || n == 0 {
+			break
+		}
+		buff11 = append(buff11, b...)
+	}
+	for {
+		b := make([]*storage.KVPair, 100)
+		n, err := reader21.Read(b)
+		if err != nil || n == 0 {
+			break
+		}
+		buff21 = append(buff21, b...)
+	}
+	require.Equalf(t, buff11, buff21, "The stored indexes should be equal")
+
+	// check cache store equality
+	reader12 := store1.GetAll(storage.HyperCachePrefix)
+	reader22 := store2.GetAll(storage.HyperCachePrefix)
+	defer reader12.Close()
+	defer reader22.Close()
+	buff12 := make([]*storage.KVPair, 0)
+	buff22 := make([]*storage.KVPair, 0)
+	for {
+		b := make([]*storage.KVPair, 100)
+		n, err := reader12.Read(b)
+		if err != nil || n == 0 {
+			break
+		}
+		buff12 = append(buff12, b...)
+	}
+	for {
+		b := make([]*storage.KVPair, 100)
+		n, err := reader22.Read(b)
+		if err != nil || n == 0 {
+			break
+		}
+		buff22 = append(buff22, b...)
+	}
+	require.Equalf(t, buff12, buff22, "The stored cached digests should be equal")
+
+	// check cache equality
+	require.True(t, cache1.Equal(cache2), "Both caches should be equal")
 
 }
 

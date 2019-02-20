@@ -61,7 +61,7 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 		// we found a shortcut leaf in our path
 		if batch.HasLeafAt(iBatch) {
 			// regardless if the key of the shortcut matches the searched index
-			// we must stop traversing because there is no more leaves below
+			// we must stop traversing because there are no more leaves below
 			ops.Push(getProvidedHash(pos, iBatch, batch)) // not collected
 			return
 		}
