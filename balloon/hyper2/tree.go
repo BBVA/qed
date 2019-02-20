@@ -22,7 +22,7 @@ import (
 	"github.com/bbva/qed/balloon/hyper2/navigation"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/hyper2/pruning2"
+	"github.com/bbva/qed/balloon/hyper2/pruning"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
@@ -36,7 +36,7 @@ type HyperTree struct {
 	hasher           hashing.Hasher
 	cacheHeightLimit uint16
 	defaultHashes    []hashing.Digest
-	batchLoader      pruning2.BatchLoader
+	batchLoader      pruning.BatchLoader
 
 	sync.RWMutex
 }
@@ -54,7 +54,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 		hasher:           hasher,
 		cacheHeightLimit: cacheHeightLimit,
 		defaultHashes:    make([]hashing.Digest, numBits),
-		batchLoader:      pruning2.NewDefaultBatchLoader(store, cache, cacheHeightLimit),
+		batchLoader:      pruning.NewDefaultBatchLoader(store, cache, cacheHeightLimit),
 	}
 
 	tree.defaultHashes[0] = tree.hasher.Do([]byte{0x0}, []byte{0x0})
@@ -78,8 +78,8 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	versionAsBytes = versionAsBytes[len(versionAsBytes)-len(eventDigest):]
 
 	// build a stack of operations and then interpret it to generate the root hash
-	ops := pruning2.PruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)
-	ctx := &pruning2.Context{
+	ops := pruning.PruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)
+	ctx := &pruning.Context{
 		Hasher:        t.hasher,
 		Cache:         t.cache,
 		DefaultHashes: t.defaultHashes,
@@ -104,8 +104,8 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) 
 	//log.Debugf("Proving membership for index %d with version %d", eventDigest, version)
 
 	// build a stack of operations and then interpret it to generate the audit path
-	ops := pruning2.PruneToFind(eventDigest, t.batchLoader)
-	ctx := &pruning2.Context{
+	ops := pruning.PruneToFind(eventDigest, t.batchLoader)
+	ctx := &pruning.Context{
 		Hasher:        t.hasher,
 		Cache:         t.cache,
 		DefaultHashes: t.defaultHashes,

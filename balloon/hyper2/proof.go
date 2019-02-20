@@ -20,7 +20,7 @@ import (
 	"bytes"
 
 	"github.com/bbva/qed/balloon/hyper2/navigation"
-	"github.com/bbva/qed/balloon/hyper2/pruning2"
+	"github.com/bbva/qed/balloon/hyper2/pruning"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
@@ -53,8 +53,8 @@ func (p QueryProof) Verify(key []byte, expectedRootHash hashing.Digest) (valid b
 	}
 
 	// build a stack of operations and then interpret it to recompute the root hash
-	ops := pruning2.PruneToVerify(key, p.Value, p.hasher.Len()-uint16(len(p.AuditPath)))
-	ctx := &pruning2.Context{
+	ops := pruning.PruneToVerify(key, p.Value, p.hasher.Len()-uint16(len(p.AuditPath)))
+	ctx := &pruning.Context{
 		Hasher:    p.hasher,
 		AuditPath: p.AuditPath,
 	}
