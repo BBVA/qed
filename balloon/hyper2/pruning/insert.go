@@ -94,20 +94,6 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 			return
 		}
 
-		// on an internal node of the subtree
-
-		// we found a node in our path and it is a shortcut leaf
-		if batch.HasLeafAt(iBatch) {
-			// push down leaf
-			key, value := batch.GetLeafKVAt(iBatch)
-			leaves = leaves.InsertSorted(Leaf{key, value})
-			batch.ResetElementAt(iBatch)
-			batch.ResetElementAt(2*iBatch + 1)
-			batch.ResetElementAt(2*iBatch + 2)
-			traverseThroughCache(pos, leaves, batch, iBatch, ops)
-			return
-		}
-
 		// on an internal node with more than one leaf
 
 		rightPos := pos.Right()
