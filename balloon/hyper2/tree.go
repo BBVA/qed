@@ -20,6 +20,7 @@ import (
 	"sync"
 
 	"github.com/bbva/qed/balloon/hyper2/navigation"
+	"github.com/bbva/qed/log"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/hyper2/pruning"
@@ -63,7 +64,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 	}
 
 	// warm-up cache
-	//tree.RebuildCache()
+	tree.RebuildCache()
 
 	return tree
 }
@@ -115,6 +116,43 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) 
 	ops.Pop().Interpret(ops, ctx)
 
 	return NewQueryProof(eventDigest, version, ctx.AuditPath, t.hasherF()), nil
+}
+
+func (t *HyperTree) RebuildCache() {
+	t.Lock()
+	defer t.Unlock()
+
+	// warm up cache
+	log.Info("Warming up hyper cache...")
+
+	// get all nodes at cache limit height
+	start := make([]byte, 2+t.hasher.Len()/8)
+	end := make([]byte, 2+t.hasher.Len()/8)
+	start[1] = byte(t.cacheHeightLimit)
+	end[1] = byte(t.cacheHeightLimit + 1)
+	nodes, err := t.store.GetRange(storage.HyperCachePrefix, start, end)
+	if err != nil {
+		log.Fatalf("Oops, something went wrong: %v", err)
+	}
+
+	// insert every node into cache
+	for _, node := range nodes {
+		ops := pruning.PruneToRebuild(node.Key[2:], node.Value, t.cacheHeightLimit, t.batchLoader)
+		ctx := &pruning.Context{
+			Hasher:        t.hasher,
+			Cache:         t.cache,
+			DefaultHashes: t.defaultHashes,
+		}
+		ops.Pop().Interpret(ops, ctx)
+	}
+}
+
+func (t *HyperTree) Close() {
+	t.cache = nil
+	t.hasher = nil
+	t.defaultHashes = nil
+	t.store = nil
+	t.batchLoader = nil
 }
 
 func min(x, y uint16) uint16 {

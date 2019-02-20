@@ -254,6 +254,36 @@ func TestDeterministicAdd(t *testing.T) {
 
 }
 
+func TestRebuildCache(t *testing.T) {
+
+	log.SetLogger("TestRebuildCache", log.SILENT)
+
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
+	hasherF := hashing.NewSha256Hasher
+	hasher := hasherF()
+
+	firstCache := cache.NewSimpleCache(10)
+	tree := NewHyperTree(hasherF, store, firstCache)
+	require.True(t, firstCache.Size() == 0, "The cache should be empty")
+
+	// store multiple elements
+	for i := 0; i < 1000; i++ {
+		key := hasher.Do(rand.Bytes(32))
+		_, mutations, _ := tree.Add(key, uint64(i))
+		store.Mutate(mutations)
+	}
+	expectedSize := firstCache.Size()
+
+	// Close tree and reopen with a new fresh cache
+	tree.Close()
+	secondCache := cache.NewSimpleCache(10)
+	tree = NewHyperTree(hasherF, store, secondCache)
+
+	require.Equal(t, expectedSize, secondCache.Size(), "The size of the caches should match")
+	require.True(t, firstCache.Equal(secondCache), "The caches should be equal")
+}
+
 func BenchmarkAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkAdd", log.SILENT)

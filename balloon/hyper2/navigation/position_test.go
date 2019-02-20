@@ -25,19 +25,19 @@ import (
 func TestRoot(t *testing.T) {
 
 	testCases := []struct {
-		numBits     uint16
-		expectedPos Position
+		indexNumBytes uint16
+		expectedPos   Position
 	}{
-		{8, NewPosition(make([]byte, 1), 8)},
-		{16, NewPosition(make([]byte, 2), 16)},
-		{32, NewPosition(make([]byte, 4), 32)},
-		{64, NewPosition(make([]byte, 8), 64)},
-		{128, NewPosition(make([]byte, 16), 128)},
-		{256, NewPosition(make([]byte, 32), 256)},
+		{1, NewPosition(make([]byte, 1), 8)},
+		{2, NewPosition(make([]byte, 2), 16)},
+		{4, NewPosition(make([]byte, 4), 32)},
+		{8, NewPosition(make([]byte, 8), 64)},
+		{16, NewPosition(make([]byte, 16), 128)},
+		{32, NewPosition(make([]byte, 32), 256)},
 	}
 
 	for i, c := range testCases {
-		rootPos := NewRootPosition(c.numBits)
+		rootPos := NewRootPosition(c.indexNumBytes)
 		require.Equalf(t, c.expectedPos, rootPos, "The root position should match in test case %d", i)
 	}
 

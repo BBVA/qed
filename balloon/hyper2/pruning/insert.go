@@ -207,6 +207,6 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 	ops := NewOperationsStack()
 	leaves := make(Leaves, 0)
 	leaves = leaves.InsertSorted(Leaf{index, value})
-	traverse(navigation.NewRootPosition(uint16(len(index)*8)), leaves, nil, 0, ops)
+	traverse(navigation.NewRootPosition(uint16(len(index))), leaves, nil, 0, ops)
 	return ops
 }
