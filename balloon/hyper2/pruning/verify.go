@@ -47,7 +47,7 @@ func PruneToVerify(index, value []byte, auditPathHeight uint16) *OperationsStack
 	}
 
 	ops := NewOperationsStack()
-	traverse(navigation.NewRootPosition(uint16(len(index)*8)), ops)
+	traverse(navigation.NewRootPosition(uint16(len(index))), ops)
 	return ops
 
 }
