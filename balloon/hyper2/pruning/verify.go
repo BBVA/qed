@@ -1,3 +1,19 @@
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package pruning
 
 import (
@@ -6,33 +22,32 @@ import (
 	"github.com/bbva/qed/balloon/hyper2/navigation"
 )
 
-func PruneToVerify(key, value []byte, auditPathHeight uint16) Operation {
+func PruneToVerify(index, value []byte, auditPathHeight uint16) *OperationsStack {
 
-	var traverse func(pos *navigation.Position) Operation
+	var traverse func(pos navigation.Position, ops *OperationsStack)
 
-	traverse = func(pos *navigation.Position) Operation {
+	traverse = func(pos navigation.Position, ops *OperationsStack) {
 
 		if pos.Height <= auditPathHeight {
-			// we are at the leaf height
-			return NewShortcutLeafOp(pos, nil, 0, key, value)
+			ops.Push(leafHash(pos, value))
+			return
 		}
 
-		var left, right Operation
 		rightPos := pos.Right()
-		leftPos := pos.Left()
-		if bytes.Compare(key, rightPos.Index) < 0 { // go to left
-			left = traverse(&leftPos)
-			right = NewGetDefaultOp(&rightPos)
+		if bytes.Compare(index, rightPos.Index) < 0 { // go to left
+			traverse(pos.Left(), ops)
+			ops.Push(getFromPath(rightPos))
 		} else { // go to right
-			left = NewGetDefaultOp(&leftPos)
-			right = traverse(&rightPos)
+			ops.Push(getFromPath(pos.Left()))
+			traverse(rightPos, ops)
 		}
 
-		return NewInnerHashOp(pos, nil, 0, left, right)
+		ops.Push(innerHash(pos))
 
 	}
 
-	root := navigation.NewRootPosition(uint16(len(key) * 8))
-	return traverse(&root)
+	ops := NewOperationsStack()
+	traverse(navigation.NewRootPosition(uint16(len(index)*8)), ops)
+	return ops
 
 }
