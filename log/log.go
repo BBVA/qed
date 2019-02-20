@@ -22,14 +22,18 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/hashicorp/logutils"
 )
+
+type Level string
 
 // Log levels constants
 const (
-	SILENT = "silent"
-	ERROR  = "error"
-	INFO   = "info"
-	DEBUG  = "debug"
+	SILENT Level = "silent"
+	ERROR  Level = "error"
+	INFO   Level = "info"
+	DEBUG  Level = "debug"
 
 	caller = 3
 )
@@ -48,8 +52,23 @@ type logger interface {
 	GetLogger() *log.Logger
 }
 
+func getFilter(lv Level) *logutils.LevelFilter {
+
+	mapLevel := map[Level]logutils.LogLevel{
+		ERROR: "ERROR",
+		INFO:  "INFO",
+		DEBUG: "DEBUG",
+	}
+
+	return &logutils.LevelFilter{
+		Levels:   []logutils.LogLevel{"DEBUG", "INFO", "WARN", "ERROR"},
+		MinLevel: mapLevel[lv],
+		Writer:   os.Stdout,
+	}
+}
+
 // The default logger is an log.ERROR level.
-var std logger = newError(os.Stdout, "Qed: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+var std logger = newError(getFilter(ERROR), "Qed: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 
 // To allow mocking we require a switchable variable.
 var osExit = os.Exit
@@ -122,22 +141,22 @@ func GetLogger() *log.Logger {
 
 // SetLogger is a function that switches between verbosity loggers. Default
 // is error level. Available levels are "silent", "debug", "info" and "error".
-func SetLogger(namespace, level string) {
+func SetLogger(namespace, lv Level) {
 
 	prefix := fmt.Sprintf("%s: ", namespace)
 
-	switch level {
+	switch lv {
 	case SILENT:
 		std = newSilent()
 	case ERROR:
-		std = newError(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		std = newError(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	case INFO:
-		std = newInfo(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		std = newInfo(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	case DEBUG:
-		std = newDebug(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		std = newDebug(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
 	default:
-		l := newInfo(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
-		l.Infof("Incorrect level of verbosity (%v) fallback to log.INFO", level)
+		l := newInfo(getFilter(INFO), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		l.Infof("Incorrect level of verbosity (%v) fallback to log.INFO", lv)
 		std = l
 	}
 

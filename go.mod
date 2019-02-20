@@ -15,6 +15,7 @@ require (
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 	github.com/hashicorp/go-msgpack v0.0.0-20150518234257-fa3f63826f7c
 	github.com/hashicorp/go-sockaddr v1.0.1 // indirect
+	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/memberlist v0.1.0
 	github.com/hashicorp/raft v1.0.0
 	github.com/imdario/mergo v0.3.7
