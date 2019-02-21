@@ -26,14 +26,12 @@ import (
 	"github.com/hashicorp/logutils"
 )
 
-type Level string
-
 // Log levels constants
 const (
-	SILENT Level = "silent"
-	ERROR  Level = "error"
-	INFO   Level = "info"
-	DEBUG  Level = "debug"
+	SILENT = "silent"
+	ERROR  = "error"
+	INFO   = "info"
+	DEBUG  = "debug"
 
 	caller = 3
 )
@@ -52,9 +50,9 @@ type logger interface {
 	GetLogger() *log.Logger
 }
 
-func getFilter(lv Level) *logutils.LevelFilter {
+func getFilter(lv string) *logutils.LevelFilter {
 
-	mapLevel := map[Level]logutils.LogLevel{
+	mapLevel := map[string]logutils.LogLevel{
 		ERROR: "ERROR",
 		INFO:  "INFO",
 		DEBUG: "DEBUG",
@@ -141,7 +139,7 @@ func GetLogger() *log.Logger {
 
 // SetLogger is a function that switches between verbosity loggers. Default
 // is error level. Available levels are "silent", "debug", "info" and "error".
-func SetLogger(namespace, lv Level) {
+func SetLogger(namespace, lv string) {
 
 	prefix := fmt.Sprintf("%s: ", namespace)
 
