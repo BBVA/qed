@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/url"
@@ -31,14 +32,15 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 )
 
 // HTTPClient ist the stuct that has the required information for the cli.
 type HTTPClient struct {
 	conf *Config
-
 	*http.Client
+	topology Topology
 }
 
 // NewHTTPClient will return a new instance of HTTPClient.
@@ -51,7 +53,7 @@ func NewHTTPClient(conf Config) *HTTPClient {
 		tlsConf = &tls.Config{}
 	}
 
-	return &HTTPClient{
+	client := &HTTPClient{
 		&conf,
 		&http.Client{
 			Timeout: time.Second * 10,
@@ -63,11 +65,28 @@ func NewHTTPClient(conf Config) *HTTPClient {
 				TLSHandshakeTimeout: 5 * time.Second,
 			},
 		},
+		Topology{},
 	}
 
+	// Initial topology assignment
+	client.topology.Leader = conf.Endpoints[0]
+	client.topology.Endpoints = conf.Endpoints
+
+	var info map[string]interface{}
+	var err error
+
+	info, err = client.getClusterInfo()
+	if err != nil {
+		log.Errorf("Failed to get raft cluster info. Error: %v", err)
+		return nil
+	}
+
+	client.updateTopology(info)
+
+	return client
 }
 
-func (c HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
+func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
 
 	var retries uint
 
@@ -84,18 +103,75 @@ func (c HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error
 		}
 		return resp, err
 	}
-
 }
 
-func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
-	url, err := url.Parse(c.conf.Endpoint + path)
+func (c HTTPClient) getClusterInfo() (map[string]interface{}, error) {
+	var retries uint
+	info := make(map[string]interface{})
+
+	for {
+		body, err := c.doReq("GET", "/info/shards", []byte{})
+
+		if err != nil {
+			log.Debugf("Failed to get raft cluster info through server %s. Error: %v",
+				c.topology.Leader, err)
+			if retries == 5 {
+				return nil, err
+			}
+			c.topology.Leader = c.topology.Endpoints[rand.Intn(len(c.topology.Endpoints))]
+			retries = retries + 1
+			delay := time.Duration(10 << retries * time.Millisecond)
+			time.Sleep(delay)
+			continue
+		}
+
+		err = json.Unmarshal(body, &info)
+		if err != nil {
+			return nil, err
+		}
+
+		return info, err
+	}
+}
+
+func (c *HTTPClient) updateTopology(info map[string]interface{}) {
+
+	clusterMeta := info["meta"].(map[string]interface{})
+	leaderID := info["leaderID"].(string)
+	scheme := info["URIScheme"].(string)
+
+	var leaderAddr string
+	var endpoints []string
+
+	leaderMeta := clusterMeta[leaderID].(map[string]interface{})
+	for k, addr := range leaderMeta {
+		if k == "HTTPAddr" {
+			leaderAddr = scheme + addr.(string)
+		}
+	}
+	c.topology.Leader = leaderAddr
+
+	for _, nodeMeta := range clusterMeta {
+		for k, address := range nodeMeta.(map[string]interface{}) {
+			if k == "HTTPAddr" {
+				url := scheme + address.(string)
+				endpoints = append(endpoints, url)
+			}
+		}
+	}
+	c.topology.Endpoints = endpoints
+}
+
+func (c *HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
+
+	url, err := url.Parse(c.topology.Leader + path)
 	if err != nil {
-		panic(err)
+		return nil, err //panic(err)
 	}
 
 	req, err := http.NewRequest(method, fmt.Sprintf("%s", url), bytes.NewBuffer(data))
 	if err != nil {
-		panic(err)
+		return nil, err //panic(err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -104,6 +180,7 @@ func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 	resp, err := c.exponentialBackoff(req)
 	if err != nil {
 		return nil, err
+		// NetworkTransport error. Check topology info
 	}
 	defer resp.Body.Close()
 
@@ -111,6 +188,7 @@ func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 
 	if resp.StatusCode >= 500 {
 		return nil, fmt.Errorf("Server error: %v", string(bodyBytes))
+		// Non Leader error. Check topology info.
 	}
 
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
@@ -118,7 +196,6 @@ func (c HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
 	}
 
 	return bodyBytes, nil
-
 }
 
 // Ping will do a request to the server
@@ -132,9 +209,9 @@ func (c HTTPClient) Ping() error {
 }
 
 // Add will do a request to the server with a post data to store a new event.
-func (c HTTPClient) Add(event string) (*protocol.Snapshot, error) {
+func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
-	data, _ := json.Marshal(&protocol.Event{[]byte(event)})
+	data, _ := json.Marshal(&protocol.Event{Event: []byte(event)})
 
 	body, err := c.doReq("POST", "/events", data)
 	if err != nil {
@@ -142,18 +219,18 @@ func (c HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 	}
 
 	var snapshot protocol.Snapshot
-	json.Unmarshal(body, &snapshot)
+	_ = json.Unmarshal(body, &snapshot)
 
 	return &snapshot, nil
 
 }
 
 // Membership will ask for a Proof to the server.
-func (c HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
+func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipQuery{
-		key,
-		version,
+		Key:     key,
+		Version: version,
 	})
 
 	body, err := c.doReq("POST", "/proofs/membership", query)
@@ -169,7 +246,7 @@ func (c HTTPClient) Membership(key []byte, version uint64) (*protocol.Membership
 }
 
 // Membership will ask for a Proof to the server.
-func (c HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
+func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipDigest{
 		KeyDigest: keyDigest,
@@ -189,7 +266,7 @@ func (c HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (
 }
 
 // Incremental will ask for an IncrementalProof to the server.
-func (c HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
+func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
 
 	query, _ := json.Marshal(&protocol.IncrementalRequest{
 		Start: start,
@@ -218,10 +295,10 @@ func (c HTTPClient) Verify(
 	proof := protocol.ToBalloonProof(result, hasherF)
 
 	return proof.Verify(snap.EventDigest, &balloon.Snapshot{
-		snap.EventDigest,
-		snap.HistoryDigest,
-		snap.HyperDigest,
-		snap.Version,
+		EventDigest:   snap.EventDigest,
+		HistoryDigest: snap.HistoryDigest,
+		HyperDigest:   snap.HyperDigest,
+		Version:       snap.Version,
 	})
 
 }
@@ -237,10 +314,10 @@ func (c HTTPClient) DigestVerify(
 	proof := protocol.ToBalloonProof(result, hasherF)
 
 	return proof.DigestVerify(snap.EventDigest, &balloon.Snapshot{
-		snap.EventDigest,
-		snap.HistoryDigest,
-		snap.HyperDigest,
-		snap.Version,
+		EventDigest:   snap.EventDigest,
+		HistoryDigest: snap.HistoryDigest,
+		HyperDigest:   snap.HyperDigest,
+		Version:       snap.Version,
 	})
 
 }
@@ -254,18 +331,17 @@ func (c HTTPClient) VerifyIncremental(
 	proof := protocol.ToIncrementalProof(result, hasher)
 
 	start := &balloon.Snapshot{
-		startSnapshot.EventDigest,
-		startSnapshot.HistoryDigest,
-		startSnapshot.HyperDigest,
-		startSnapshot.Version,
+		EventDigest:   startSnapshot.EventDigest,
+		HistoryDigest: startSnapshot.HistoryDigest,
+		HyperDigest:   startSnapshot.HyperDigest,
+		Version:       startSnapshot.Version,
 	}
 	end := &balloon.Snapshot{
-		endSnapshot.EventDigest,
-		endSnapshot.HistoryDigest,
-		endSnapshot.HyperDigest,
-		endSnapshot.Version,
+		EventDigest:   endSnapshot.EventDigest,
+		HistoryDigest: endSnapshot.HistoryDigest,
+		HyperDigest:   endSnapshot.HyperDigest,
+		Version:       endSnapshot.Version,
 	}
 
 	return proof.Verify(start, end)
-
 }

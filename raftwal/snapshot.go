@@ -25,6 +25,7 @@ import (
 type fsmSnapshot struct {
 	lastVersion uint64
 	store       storage.ManagedStore
+	meta        []byte
 }
 
 // Persist writes the snapshot to the given sink.

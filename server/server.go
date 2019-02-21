@@ -29,6 +29,9 @@ import (
 	"net/http"
 	_ "net/http/pprof" // this will enable the default profiling capabilities
 	"os"
+	"strconv"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/metricshttp"
@@ -45,7 +48,6 @@ import (
 	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/util"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Server encapsulates the data and login to start/stop a QED server
@@ -133,7 +135,10 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	if len(conf.GossipJoinAddr) > 0 {
-		server.agent.Join(conf.GossipJoinAddr)
+		_, err = server.agent.Join(conf.GossipJoinAddr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// TODO: add queue size to config
@@ -162,13 +167,14 @@ func NewServer(conf *Config) (*Server, error) {
 	mgmtMux := mgmthttp.NewMgmtHttp(server.raftBalloon)
 	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux)
 
+	// Get id from the last number of any server Addr (HttpAddr in this case)
+	id, _ := strconv.Atoi(conf.HTTPAddr[len(conf.HTTPAddr)-1:])
 	if conf.EnableTampering {
 		tamperMux := tampering.NewTamperingApi(store, hashing.NewSha256Hasher())
-		server.tamperingServer = newHTTPServer("localhost:8081", tamperMux)
+		server.tamperingServer = newHTTPServer(fmt.Sprintf("localhost:1880%d", id), tamperMux)
 	}
-
 	if conf.EnableProfiling {
-		server.profilingServer = newHTTPServer("localhost:6060", nil)
+		server.profilingServer = newHTTPServer(fmt.Sprintf("localhost:606%d", id), nil)
 	}
 
 	r := prometheus.NewRegistry()
@@ -181,11 +187,16 @@ func NewServer(conf *Config) (*Server, error) {
 	return server, nil
 }
 
-func join(joinAddr, raftAddr, nodeID string) error {
-	b, err := json.Marshal(map[string]string{"addr": raftAddr, "id": nodeID})
+func join(joinAddr, raftAddr, nodeID string, metadata map[string]string) error {
+	body := make(map[string]interface{})
+	body["addr"] = raftAddr
+	body["id"] = nodeID
+	body["metadata"] = metadata
+	b, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
+
 	resp, err := http.Post(fmt.Sprintf("http://%s/join", joinAddr), "application-type/json", bytes.NewReader(b))
 	if err != nil {
 		return err
@@ -201,7 +212,10 @@ func (s *Server) Start() error {
 	metrics.Qed_instances_count.Inc()
 	log.Infof("Starting QED server %s\n", s.conf.NodeID)
 
-	err := s.raftBalloon.Open(s.bootstrap)
+	metadata := map[string]string{}
+	metadata["HTTPAddr"] = s.conf.HTTPAddr
+
+	err := s.raftBalloon.Open(s.bootstrap, metadata)
 	if err != nil {
 		return err
 	}
@@ -233,29 +247,29 @@ func (s *Server) Start() error {
 
 	if s.conf.EnableTLS {
 		go func() {
-			log.Debug("	* Starting API HTTPS server in addr: ", s.conf.HTTPAddr)
+			log.Debug("	* Starting QED API HTTPS server in addr: ", s.conf.HTTPAddr)
 			err := s.httpServer.ListenAndServeTLS(
 				s.conf.SSLCertificate,
 				s.conf.SSLCertificateKey,
 			)
 			if err != http.ErrServerClosed {
-				log.Errorf("Can't start API HTTPS server: %s", err)
+				log.Errorf("Can't start QED API HTTP Server: %s", err)
 			}
 		}()
 	} else {
 		go func() {
-			log.Debug("	* Starting API HTTP server in addr: ", s.conf.HTTPAddr)
+			log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.HTTPAddr)
 			if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-				log.Errorf("Can't start API HTTP server: %s", err)
+				log.Errorf("Can't start QED API HTTP Server: %s", err)
 			}
 		}()
 
 	}
 
 	go func() {
-		log.Debug("	* Starting management HTTP server in addr: ", s.conf.MgmtAddr)
+		log.Debug("	* Starting QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
 		if err := s.mgmtServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start management HTTP server: %s", err)
+			log.Errorf("Can't start QED MGMT HTTP Server: %s", err)
 		}
 	}()
 
@@ -263,8 +277,8 @@ func (s *Server) Start() error {
 
 	if !s.bootstrap {
 		for _, addr := range s.conf.RaftJoinAddr {
-			log.Debug("	* Joining existing QED cluster in addr: ", addr)
-			if err := join(addr, s.conf.RaftAddr, s.conf.NodeID); err != nil {
+			log.Debug("	* Joining existent cluster QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
+			if err := join(addr, s.conf.RaftAddr, s.conf.NodeID, metadata); err != nil {
 				log.Fatalf("failed to join node at %s: %s", addr, err.Error())
 			}
 		}
@@ -312,7 +326,7 @@ func (s *Server) Stop() error {
 		log.Debugf("Done.\n")
 	}
 
-	log.Debugf("Stopping management server...")
+	log.Debugf("Stopping MGMT server...")
 	if err := s.mgmtServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
 		log.Error(err)
 		return err

@@ -34,34 +34,46 @@ func NewMgmtHttp(raftBalloon raftwal.RaftBalloonApi) *http.ServeMux {
 
 func joinHandle(raftBalloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		m := map[string]string{}
+		body := make(map[string]interface{})
 
-		if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if len(m) != 2 {
+		if len(body) != 3 {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		remoteAddr, ok := m["addr"]
+		remoteAddr, ok := body["addr"].(string)
 		if !ok {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		nodeID, ok := m["id"]
+		nodeID, ok := body["id"].(string)
 		if !ok {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		if err := raftBalloon.Join(nodeID, remoteAddr); err != nil {
+		m, ok := body["metadata"].(map[string]interface{})
+		if !ok {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// TO IMPROVE: use map[string]interface{} for nested metadata.
+		metadata := make(map[string]string)
+		for k, v := range m {
+			metadata[k] = v.(string)
+		}
+
+		if err := raftBalloon.Join(nodeID, remoteAddr, metadata); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
+		w.WriteHeader(http.StatusOK)
 	}
 }
