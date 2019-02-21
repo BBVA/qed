@@ -18,7 +18,7 @@ package pruning
 
 import (
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/hyper2/navigation"
+	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"

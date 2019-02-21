@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"sort"
 
-	"github.com/bbva/qed/balloon/hyper2/navigation"
+	"github.com/bbva/qed/balloon/hyper/navigation"
 )
 
 type Leaf struct {

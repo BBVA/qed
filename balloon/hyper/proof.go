@@ -19,59 +19,47 @@ package hyper
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/visitor"
+	"github.com/bbva/qed/balloon/hyper/navigation"
+	"github.com/bbva/qed/balloon/hyper/pruning"
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
 )
 
 type QueryProof struct {
+	AuditPath  navigation.AuditPath
 	Key, Value []byte
-	auditPath  visitor.AuditPath
 	hasher     hashing.Hasher
 }
 
-func NewQueryProof(key, value []byte, auditPath visitor.AuditPath, hasher hashing.Hasher) *QueryProof {
+func NewQueryProof(key, value []byte, auditPath navigation.AuditPath, hasher hashing.Hasher) *QueryProof {
 	return &QueryProof{
 		Key:       key,
 		Value:     value,
-		auditPath: auditPath,
+		AuditPath: auditPath,
 		hasher:    hasher,
 	}
-}
-
-func (p QueryProof) AuditPath() visitor.AuditPath {
-	return p.auditPath
 }
 
 // Verify verifies a membership query for a provided key from an expected
 // root hash that fixes the hyper tree. Returns true if the proof is valid,
 // false otherwise.
-func (p QueryProof) Verify(key []byte, expectedDigest hashing.Digest) (valid bool) {
+func (p QueryProof) Verify(key []byte, expectedRootHash hashing.Digest) (valid bool) {
 
-	if len(p.auditPath) == 0 {
-		// and empty audit path shows non-membership for any key
-		return p.Value == nil
-	}
+	log.Debugf("Verifying query proof for key %d", p.Key)
 
-	// visitors
-	computeHash := visitor.NewComputeHashVisitor(p.hasher)
-
-	// build pruning context
-	context := PruningContext{
-		navigator:     NewHyperTreeNavigator(p.hasher.Len()),
-		cacheResolver: nil,
-		cache:         p.auditPath,
-		store:         nil,
-		defaultHashes: nil,
-	}
-
-	// traverse from root and generate a visitable pruned tree
-	pruned, err := NewVerifyPruner(key, p.Value, context).Prune()
-	if err != nil {
+	if len(p.AuditPath) == 0 {
+		// an empty audit path (empty tree) shows non-membersip for any key
 		return false
 	}
 
-	// visit the pruned tree
-	recomputed := pruned.PostOrder(computeHash).(hashing.Digest)
+	// build a stack of operations and then interpret it to recompute the root hash
+	ops := pruning.PruneToVerify(key, p.Value, p.hasher.Len()-uint16(len(p.AuditPath)))
+	ctx := &pruning.Context{
+		Hasher:    p.hasher,
+		AuditPath: p.AuditPath,
+	}
+	recomputed := ops.Pop().Interpret(ops, ctx)
 
-	return bytes.Equal(key, p.Key) && bytes.Equal(recomputed, expectedDigest)
+	return bytes.Equal(key, p.Key) && bytes.Equal(recomputed, expectedRootHash)
+
 }
