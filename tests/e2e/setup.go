@@ -36,8 +36,8 @@ import (
 const (
 	QEDUrl       = "http://127.0.0.1:8800"
 	QEDTLS       = "https://localhost:8800"
-	QEDGossip    = "127.0.0.1:8400"
-	QEDTamperURL = "http://127.0.0.1:8081/tamper"
+	QEDGossip    = "127.0.0.1:9010"
+	QEDTamperURL = "http://127.0.0.1:7700/tamper"
 	StoreURL     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
 	cacheSize    = 50000
@@ -50,8 +50,8 @@ func merge(list ...scope.TestF) scope.TestF {
 	return func(t *testing.T) {
 		for _, elem := range list {
 			elem(t)
-			// time.Sleep(2 * time.Second)
 		}
+		// time.Sleep(2 * time.Second)
 	}
 }
 
@@ -209,6 +209,10 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 		conf.MetricsAddr = fmt.Sprintf("127.0.0.1:860%d", id)
 		conf.RaftAddr = fmt.Sprintf("127.0.0.1:850%d", id)
 		conf.GossipAddr = fmt.Sprintf("127.0.0.1:840%d", id)
+		if id > 0 {
+			conf.RaftJoinAddr = []string{"127.0.0.1:8700"}
+			conf.GossipJoinAddr = []string{"127.0.0.1:8400"}
+		}
 		conf.DBPath = path + "data"
 		conf.RaftPath = path + "raft"
 		conf.PrivateKeyPath = fmt.Sprintf("%s/.ssh/id_ed25519", usr.HomeDir)
@@ -255,8 +259,8 @@ func endPoint(id int) string {
 
 func getClient(id int) *client.HTTPClient {
 	return client.NewHTTPClient(client.Config{
-		Endpoint: endPoint(id),
-		APIKey:   APIKey,
-		Insecure: false,
+		Endpoints: []string{endPoint(id)},
+		APIKey:    APIKey,
+		Insecure:  false,
 	})
 }

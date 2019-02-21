@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/bbva/qed/balloon/visitor"
@@ -29,66 +30,64 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	client *HTTPClient
-	mux    *http.ServeMux
-	server *httptest.Server
-)
-
 func init() {
 	log.SetLogger("client-test", "info")
 }
 
-func setup() func() {
-	mux = http.NewServeMux()
-	server = httptest.NewServer(mux)
-	client = NewHTTPClient(Config{
-		Endpoint:  server.URL,
-		APIKey:    "my-awesome-api-key",
-		Insecure: false,
-	})
-	return func() {
+func setupServer(input []byte) (string, func()) {
+	mux := http.NewServeMux()
+	server := httptest.NewServer(mux)
+
+	mux.HandleFunc("/info/shards", infoHandler(server.URL))
+	mux.HandleFunc("/events", defaultHandler(input))
+	mux.HandleFunc("/proofs/membership", defaultHandler(input))
+	mux.HandleFunc("/proofs/incremental", defaultHandler(input))
+	mux.HandleFunc("/proofs/digest-membership", defaultHandler(input))
+
+	return server.URL, func() {
 		server.Close()
 	}
 }
 
+func setupClient(urls []string) *HTTPClient {
+	return NewHTTPClient(Config{
+		Endpoints: urls,
+		APIKey:    "my-awesome-api-key",
+		Insecure:  false,
+	})
+}
+
 func TestAddSuccess(t *testing.T) {
-	tearDown := setup()
-	defer tearDown()
 
 	event := "Hello world!"
 	snap := &protocol.Snapshot{
-		[]byte("hyper"),
-		[]byte("history"),
-		0,
-		[]byte(event),
+		HistoryDigest: []byte("history"),
+		HyperDigest:   []byte("hyper"),
+		Version:       0,
+		EventDigest:   []byte(event),
 	}
+	input, _ := json.Marshal(snap)
 
-	result, _ := json.Marshal(snap)
-	mux.HandleFunc("/events", okHandler(result))
+	serverURL, tearDown := setupServer(input)
+	defer tearDown()
+	client := setupClient([]string{serverURL})
 
 	snapshot, err := client.Add(event)
 	assert.NoError(t, err)
 	assert.Equal(t, snap, snapshot, "The snapshots should match")
-
 }
 
 func TestAddWithServerFailure(t *testing.T) {
-	tearDown := setup()
+	serverURL, tearDown := setupServer(nil)
 	defer tearDown()
+	client := setupClient([]string{serverURL})
 
 	event := "Hello world!"
-	mux.HandleFunc("/events", serverErrorHandler())
-
 	_, err := client.Add(event)
 	assert.Error(t, err)
-
 }
 
 func TestMembership(t *testing.T) {
-	tearDown := setup()
-	defer tearDown()
-
 	event := "Hello world!"
 	version := uint64(0)
 	fakeResult := &protocol.MembershipResult{
@@ -101,18 +100,18 @@ func TestMembership(t *testing.T) {
 		QueryVersion:   version,
 		ActualVersion:  version,
 	}
-	resultJSON, _ := json.Marshal(fakeResult)
-	mux.HandleFunc("/proofs/membership", okHandler(resultJSON))
+	inputJSON, _ := json.Marshal(fakeResult)
+
+	serverURL, tearDown := setupServer(inputJSON)
+	defer tearDown()
+	client := setupClient([]string{serverURL})
 
 	result, err := client.Membership([]byte(event), version)
 	assert.NoError(t, err)
-	assert.Equal(t, fakeResult, result, "The results should match")
-
+	assert.Equal(t, fakeResult, result, "The inputs should match")
 }
 
 func TestDigestMembership(t *testing.T) {
-	tearDown := setup()
-	defer tearDown()
 
 	event := "Hello world!"
 	version := uint64(0)
@@ -126,8 +125,11 @@ func TestDigestMembership(t *testing.T) {
 		QueryVersion:   version,
 		ActualVersion:  version,
 	}
-	resultJSON, _ := json.Marshal(fakeResult)
-	mux.HandleFunc("/proofs/digest-membership", okHandler(resultJSON))
+	inputJSON, _ := json.Marshal(fakeResult)
+
+	serverURL, tearDown := setupServer(inputJSON)
+	defer tearDown()
+	client := setupClient([]string{serverURL})
 
 	result, err := client.MembershipDigest([]byte("digest"), version)
 	assert.NoError(t, err)
@@ -135,63 +137,85 @@ func TestDigestMembership(t *testing.T) {
 }
 
 func TestMembershipWithServerFailure(t *testing.T) {
-	tearDown := setup()
+	serverURL, tearDown := setupServer(nil)
 	defer tearDown()
+	client := setupClient([]string{serverURL})
 
 	event := "Hello world!"
-	mux.HandleFunc("/proofs/membership", serverErrorHandler())
 
 	_, err := client.Membership([]byte(event), 0)
 	assert.Error(t, err)
-
 }
 
 func TestIncremental(t *testing.T) {
-	tearDown := setup()
-	defer tearDown()
 
 	start := uint64(2)
 	end := uint64(8)
 	fakeResult := &protocol.IncrementalResponse{
-		start,
-		end,
-		visitor.AuditPath{"0|0": []uint8{0x0}},
+		Start:     start,
+		End:       end,
+		AuditPath: visitor.AuditPath{"0|0": []uint8{0x0}},
 	}
 
-	resultJSON, _ := json.Marshal(fakeResult)
-	mux.HandleFunc("/proofs/incremental", okHandler(resultJSON))
+	inputJSON, _ := json.Marshal(fakeResult)
+
+	serverURL, tearDown := setupServer(inputJSON)
+	defer tearDown()
+	client := setupClient([]string{serverURL})
 
 	result, err := client.Incremental(start, end)
 	assert.NoError(t, err)
-	assert.Equal(t, fakeResult, result, "The results should match")
+	assert.Equal(t, fakeResult, result, "The inputs should match")
 }
 
 func TestIncrementalWithServerFailure(t *testing.T) {
-	tearDown := setup()
+	serverURL, tearDown := setupServer(nil)
 	defer tearDown()
-
-	mux.HandleFunc("/proofs/incremental", serverErrorHandler())
+	client := setupClient([]string{serverURL})
 
 	_, err := client.Incremental(uint64(2), uint64(8))
 	assert.Error(t, err)
-
 }
 
 // TODO implement a test to verify proofs using fake hash function
 
-func okHandler(result []byte) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func defaultHandler(input []byte) func(http.ResponseWriter, *http.Request) {
+	statusOK := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		out := new(bytes.Buffer)
-		json.Compact(out, result)
-		w.Write(out.Bytes())
+		_ = json.Compact(out, input)
+		_, _ = w.Write(out.Bytes())
+	}
+
+	statusInternalServerError := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	if input == nil {
+		return statusInternalServerError
+	} else {
+		return statusOK
 	}
 }
 
-func serverErrorHandler() func(http.ResponseWriter, *http.Request) {
+func infoHandler(serverURL string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusOK)
+
+		var md = make(map[string]interface{})
+		md["nodeID"] = "node01"
+		md["leaderID"] = "node01"
+		md["URIScheme"] = "http://"
+		md["meta"] = map[string]map[string]string{
+			"node01": map[string]string{
+				"HTTPAddr": strings.Trim(serverURL, "http://"),
+			},
+		}
+
+		out, _ := json.Marshal(md)
+		_, _ = w.Write(out)
 	}
 }

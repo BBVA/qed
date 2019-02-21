@@ -23,12 +23,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // HealthCheckResponse contains the response from HealthCheckHandler.
@@ -316,12 +316,14 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //	/events -> Add
 //	/proofs/membership -> Membership
 func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
+
 	api := http.NewServeMux()
 	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
 	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
+	api.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(balloon)))
 
 	return api
 }
@@ -358,5 +360,34 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 		if writer.status >= 400 {
 			log.Infof("Bad Request: %d %+v", latency, request)
 		}
+	}
+}
+
+func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		var scheme string
+		if r.TLS != nil {
+			scheme = "https://"
+		} else {
+			scheme = "http://"
+		}
+
+		info := balloon.Info()
+		info["URIScheme"] = scheme
+
+		out, err := json.Marshal(info)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(out)
 	}
 }

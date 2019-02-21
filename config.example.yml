@@ -53,7 +53,8 @@ server:
 # Cient Configuration (cli commands `add` `incremental` and `verify`)
 ###############################################################################
 client:
-  endpoint: "127.0.0.1:8800"  # Endpoint for REST requests on (host:port)
+  endpoints:   # Endpoints for REST requests on [host:port, ...]
+    - "127.0.0.1:8800"
   insecure: false  # Allow self signed certificates
   timeout:
     connection: 10  # time in seconds to cut the ongoing connection

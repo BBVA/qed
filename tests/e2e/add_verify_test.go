@@ -31,13 +31,13 @@ func TestAddVerify(t *testing.T) {
 	before, after := setupServer(0, "", false, t)
 	scenario, let := scope.Scope(t, before, after)
 
-	client := getClient(0)
-
 	event := rand.RandomString(10)
 
 	scenario("Add one event and get its membership proof", func() {
 		var snapshot *protocol.Snapshot
 		var err error
+
+		client := getClient(0)
 
 		let("Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
@@ -76,6 +76,8 @@ func TestAddVerify(t *testing.T) {
 		var err error
 		var first, last *protocol.Snapshot
 
+		client := getClient(0)
+
 		first, err = client.Add("Test event 1")
 		assert.NoError(t, err)
 		last, err = client.Add("Test event 2")
@@ -102,6 +104,8 @@ func TestAddVerify(t *testing.T) {
 		const size int = 10
 
 		var s [size]*protocol.Snapshot
+
+		client := getClient(0)
 
 		for i := 0; i < size; i++ {
 			s[i], _ = client.Add(fmt.Sprintf("Test Event %d", i))
