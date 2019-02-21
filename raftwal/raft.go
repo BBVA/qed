@@ -56,7 +56,8 @@ type RaftBalloonApi interface {
 	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
 	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
-	Join(nodeID, addr string) error
+	Join(nodeID, addr string, metadata map[string]string) error
+	Info() map[string]interface{}
 }
 
 // RaftBalloon is a replicated verifiable key-value store, where changes are made via Raft consensus.
@@ -132,7 +133,7 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, agentsQue
 
 // Open opens the Balloon. If no joinAddr is provided, then there are no existing peers,
 // then this node becomes the first node, and therefore, leader of the cluster.
-func (b *RaftBalloon) Open(bootstrap bool) error {
+func (b *RaftBalloon) Open(bootstrap bool, metadata map[string]string) error {
 	b.Lock()
 	defer b.Unlock()
 
@@ -172,8 +173,10 @@ func (b *RaftBalloon) Open(bootstrap bool) error {
 		return fmt.Errorf("new raft: %s", err)
 	}
 
+	// If master node...
 	if bootstrap {
 		log.Info("bootstrap needed")
+
 		b.raft.nodes = &raft.Configuration{
 			Servers: []raft.Server{
 				{
@@ -183,53 +186,16 @@ func (b *RaftBalloon) Open(bootstrap bool) error {
 			},
 		}
 		b.raft.api.BootstrapCluster(*b.raft.nodes)
+
+		// Metadata
+		if err := b.SetMetadata(b.id, metadata); err != nil {
+			return err
+		}
+
 	} else {
 		log.Info("no bootstrap needed")
 	}
 
-	return nil
-}
-
-// Join joins a node, identified by id and located at addr, to this store.
-// The node must be ready to respond to Raft communications at that address.
-// This must be called from the Leader or it will fail.
-func (b *RaftBalloon) Join(nodeID, addr string) error {
-
-	log.Infof("received join request for remote node %s at %s", nodeID, addr)
-
-	configFuture := b.raft.api.GetConfiguration()
-	if err := configFuture.Error(); err != nil {
-		log.Errorf("failed to get raft servers configuration: %v", err)
-		return err
-	}
-
-	for _, srv := range configFuture.Configuration().Servers {
-		// If a node already exists with either the joining node's ID or address,
-		// that node may need to be removed from the config first.
-		if srv.ID == raft.ServerID(nodeID) || srv.Address == raft.ServerAddress(addr) {
-			// However if *both* the ID and the address are the same, then nothing -- not even
-			// a join operation -- is needed.
-			if srv.Address == raft.ServerAddress(addr) && srv.ID == raft.ServerID(nodeID) {
-				log.Infof("node %s at %s already member of cluster, ignoring join request", nodeID, addr)
-				return nil
-			}
-
-			future := b.raft.api.RemoveServer(srv.ID, 0, 0)
-			if err := future.Error(); err != nil {
-				return fmt.Errorf("error removing existing node %s at %s: %s", nodeID, addr, err)
-			}
-		}
-	}
-
-	f := b.raft.api.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(addr), 0, 0)
-	if e := f.(raft.Future); e.Error() != nil {
-		if e.Error() == raft.ErrNotLeader {
-			return ErrNotLeader
-		}
-		return e.Error()
-	}
-
-	log.Infof("node %s at %s joined successfully", nodeID, addr)
 	return nil
 }
 
@@ -344,7 +310,6 @@ func (b *RaftBalloon) Nodes() ([]raft.Server, error) {
 	}
 
 	return f.Configuration().Servers, nil
-
 }
 
 // Remove removes a node from the store, specified by ID.
@@ -415,4 +380,78 @@ func (b *RaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.Me
 
 func (b *RaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	return b.fsm.QueryConsistency(start, end)
+}
+
+// Join joins a node, identified by id and located at addr, to this store.
+// The node must be ready to respond to Raft communications at that address.
+// This must be called from the Leader or it will fail.
+func (b *RaftBalloon) Join(nodeID, addr string, metadata map[string]string) error {
+
+	log.Infof("received join request for remote node %s at %s", nodeID, addr)
+
+	configFuture := b.raft.api.GetConfiguration()
+	if err := configFuture.Error(); err != nil {
+		log.Errorf("failed to get raft servers configuration: %v", err)
+		return err
+	}
+
+	for _, srv := range configFuture.Configuration().Servers {
+		// If a node already exists with either the joining node's ID or address,
+		// that node may need to be removed from the config first.
+		if srv.ID == raft.ServerID(nodeID) || srv.Address == raft.ServerAddress(addr) {
+			// However if *both* the ID and the address are the same, then nothing -- not even
+			// a join operation -- is needed.
+			if srv.Address == raft.ServerAddress(addr) && srv.ID == raft.ServerID(nodeID) {
+				log.Infof("node %s at %s already member of cluster, ignoring join request", nodeID, addr)
+				return nil
+			}
+
+			future := b.raft.api.RemoveServer(srv.ID, 0, 0)
+			if err := future.Error(); err != nil {
+				return fmt.Errorf("error removing existing node %s at %s: %s", nodeID, addr, err)
+			}
+		}
+	}
+
+	f := b.raft.api.AddVoter(raft.ServerID(nodeID), raft.ServerAddress(addr), 0, 0)
+	if e := f.(raft.Future); e.Error() != nil {
+		if e.Error() == raft.ErrNotLeader {
+			return ErrNotLeader
+		}
+		return e.Error()
+	}
+
+	// Metadata
+	if err := b.SetMetadata(nodeID, metadata); err != nil {
+		return err
+	}
+
+	log.Infof("node %s at %s joined successfully", nodeID, addr)
+	return nil
+}
+
+// SetMetadata adds the metadata md to any existing metadata for
+// this node.
+func (b *RaftBalloon) SetMetadata(nodeInvolved string, md map[string]string) error {
+	cmd := b.fsm.setMetadata(nodeInvolved, md)
+	_, err := b.WaitForLeader(5 * time.Second)
+	if err != nil {
+		return err
+	}
+
+	resp, err := b.raftApply(commands.MetadataSetCommandType, cmd)
+	if err != nil {
+		return err
+	}
+
+	return resp.(*fsmGenericResponse).error
+}
+
+// TODO Improve info structure.
+func (b *RaftBalloon) Info() map[string]interface{} {
+	m := make(map[string]interface{})
+	m["nodeID"] = b.ID()
+	m["leaderID"], _ = b.LeaderID()
+	m["meta"] = b.fsm.meta
+	return m
 }
