@@ -19,7 +19,7 @@ package pruning
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/hyper2/navigation"
+	"github.com/bbva/qed/balloon/hyper/navigation"
 )
 
 func PruneToVerify(index, value []byte, auditPathHeight uint16) *OperationsStack {

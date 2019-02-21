@@ -17,7 +17,7 @@
 package pruning
 
 import (
-	"github.com/bbva/qed/balloon/hyper2/navigation"
+	"github.com/bbva/qed/balloon/hyper/navigation"
 )
 
 func pos(index byte, height uint16) navigation.Position {
