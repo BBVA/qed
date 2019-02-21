@@ -46,7 +46,7 @@ type Agent struct {
 }
 
 func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
-	fmt.Printf("New agent %s\n", conf.NodeName)
+	log.Infof("New agent %s\n", conf.NodeName)
 	agent = &Agent{
 		config:     conf,
 		Topology:   NewTopology(),
@@ -231,7 +231,7 @@ func (a *Agent) Leave() error {
 //
 // It is safe to call this method multiple times.
 func (a *Agent) Shutdown() error {
-	fmt.Printf("\nShutting down agent %s", a.config.NodeName)
+	log.Info("\nShutting down agent %s", a.config.NodeName)
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
 
