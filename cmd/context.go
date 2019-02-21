@@ -23,8 +23,9 @@ import (
 )
 
 type cmdContext struct {
-	apiKey, logLevel, configFile, path string
-	disableConfig                      bool
+	apiKey, configFile, path string
+	logLevel                 log.Level
+	disableConfig            bool
 }
 
 type clientContext struct {
