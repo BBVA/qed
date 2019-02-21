@@ -70,7 +70,7 @@ func (p *InsertPruner) traverse(pos navigator.Position, leaves storage.KVRange) 
 	// if we are over the cache level, we need to do a range query to get the leaves
 	var atLastLevel bool
 	if atLastLevel = p.cacheResolver.ShouldCache(pos); atLastLevel {
-		//fmt.Println(pos.Height())
+		//log.Info(pos.Height())
 		first := p.navigator.DescendToFirst(pos)
 		last := p.navigator.DescendToLast(pos)
 

@@ -201,6 +201,7 @@ func (t MembershipTask) Do() {
 		t.sendAlert(fmt.Sprintf("Unable to verify snapshot %v", t.s.Snapshot))
 		log.Infof("Unable to verify snapshot %v", t.s.Snapshot)
 	}
+
 	log.Infof("MembershipTask.Do(): Snapshot %v has been verified by QED", t.s.Snapshot)
 }
 
