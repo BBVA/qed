@@ -22,8 +22,8 @@ import (
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/history"
+	historynav "github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
@@ -49,7 +49,7 @@ type Balloon struct {
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// create caches
-	hyperCache := cache.NewFastCache(hyper.CacheSize)
+	hyperCache := cache.NewFreeCache(hyper.CacheSize)
 
 	// create trees
 	historyTree := history.NewHistoryTree(hasherF, store, 300)
@@ -79,13 +79,17 @@ type Snapshot struct {
 	Version       uint64
 }
 
+type Verifiable interface {
+	Verify(key []byte, expectedDigest hashing.Digest) bool
+}
+
 // MembershipProof is the struct that is required to make a Exisitance Proof.
 // It has both Hyper and History AuditPaths, if it exists in first place and
-// Current, Actual and Query Versions.
+// burrent balloon version, event actual version and query version.
 type MembershipProof struct {
 	Exists         bool
-	HyperProof     visitor.Verifiable
-	HistoryProof   visitor.Verifiable
+	HyperProof     *hyper.QueryProof
+	HistoryProof   *history.MembershipProof
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64 //required for consistency proof
@@ -95,7 +99,8 @@ type MembershipProof struct {
 
 func NewMembershipProof(
 	exists bool,
-	hyperProof, historyProof visitor.Verifiable,
+	hyperProof *hyper.QueryProof,
+	historyProof *history.MembershipProof,
 	currentVersion, queryVersion, actualVersion uint64,
 	keyDigest hashing.Digest,
 	Hasher hashing.Hasher) *MembershipProof {
@@ -141,13 +146,13 @@ func (p MembershipProof) Verify(event []byte, snapshot *Snapshot) bool {
 
 type IncrementalProof struct {
 	Start, End uint64
-	AuditPath  visitor.AuditPath
+	AuditPath  historynav.AuditPath
 	Hasher     hashing.Hasher
 }
 
 func NewIncrementalProof(
 	start, end uint64,
-	auditPath visitor.AuditPath,
+	auditPath historynav.AuditPath,
 	hasher hashing.Hasher,
 ) *IncrementalProof {
 	return &IncrementalProof{
@@ -245,6 +250,7 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 
 	stats := metrics.Balloon
 	stats.AddFloat("QueryMembership", 1)
+
 	var proof MembershipProof
 	var wg sync.WaitGroup
 	var hyperErr, historyErr error

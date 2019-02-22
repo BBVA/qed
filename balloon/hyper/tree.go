@@ -29,6 +29,10 @@ import (
 	"github.com/bbva/qed/util"
 )
 
+const (
+	CacheSize int = (1118481) * ((31 * 33) + 34) // (2^0+2^4 + 2^8 + 2^12 + 2^16 + 2^20) batches * batchSize (31 nodes * 33 bytes + 34 bytes from key)
+)
+
 type HyperTree struct {
 	store   storage.Store
 	cache   cache.ModifiableCache
@@ -75,8 +79,7 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 
 	//log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
 
-	versionAsBytes := util.Uint64AsPaddedBytes(version, len(eventDigest))
-	versionAsBytes = versionAsBytes[len(versionAsBytes)-len(eventDigest):]
+	versionAsBytes := util.Uint64AsBytes(version)
 
 	// build a stack of operations and then interpret it to generate the root hash
 	ops := pruning.PruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)

@@ -277,7 +277,7 @@ func TestProveMembership(t *testing.T) {
 	for _, c := range testCases {
 		mp, err := tree.ProveMembership(c.index, c.version)
 		require.NoError(t, err)
-		assert.Equalf(t, c.expectedAuditPath, mp.AuditPath(), "Incorrect audit path for test case with index %d and version %d", c.index, c.version)
+		assert.Equalf(t, c.expectedAuditPath, mp.AuditPath, "Incorrect audit path for test case with index %d and version %d", c.index, c.version)
 		assert.Equal(t, c.index, mp.Index, "The index should math")
 		assert.Equal(t, c.version, mp.Version, "The version should match")
 	}
