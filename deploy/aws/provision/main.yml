@@ -13,7 +13,6 @@
 #  limitations under the License.
 ---
 - hosts: localhost
-  gather_facts: false
   connection: local
   vars_files:
     - vars.yml
@@ -28,11 +27,13 @@
 - hosts: all
   remote_user: ec2-user
   become: true
+  tasks:
+    - name: Gather facts
+      setup:
 
 - hosts: type_aws_instance
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
@@ -42,7 +43,6 @@
 - hosts: qed-server
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
@@ -51,7 +51,6 @@
 - hosts: riot
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
@@ -60,7 +59,6 @@
 - hosts: inmemory-storage
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
@@ -69,7 +67,6 @@
 - hosts: prometheus
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
@@ -78,7 +75,6 @@
 - hosts: role_qed
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
@@ -94,7 +90,6 @@
 - hosts: role_auditor, role_monitor, role_publisher
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
@@ -110,7 +105,6 @@
 - hosts: inmemory-storage
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
@@ -126,7 +120,6 @@
 - hosts: prometheus
   remote_user: ec2-user
   become: true
-  gather_facts: false
   vars_files:
     - vars.yml
   tasks:
