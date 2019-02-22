@@ -102,9 +102,14 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if au != nil {
 			au.Shutdown()
-			_ = agent.Shutdown()
-		} else {
-			t.Fatalf("Unable to shutdown the auditor!")
+		}
+		err := agent.Leave()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the auditor: %v", err)
+		}
+		err = agent.Shutdown()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the auditor: %v", err)
 		}
 	}
 	return before, after
@@ -133,9 +138,14 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if mn != nil {
 			mn.Shutdown()
-			_ = agent.Shutdown()
-		} else {
-			t.Fatalf("Unable to shutdown the monitor!")
+		}
+		err := agent.Leave()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the monitor: %v", err)
+		}
+		err = agent.Shutdown()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the monitor: %v", err)
 		}
 	}
 	return before, after
@@ -162,9 +172,14 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if pu != nil {
 			pu.Shutdown()
-			_ = agent.Shutdown()
-		} else {
-			t.Fatalf("Unable to shutdown the publisher!")
+		}
+		err := agent.Leave()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the publisher: %v", err)
+		}
+		err = agent.Shutdown()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the publisher: %v", err)
 		}
 	}
 	return before, after
