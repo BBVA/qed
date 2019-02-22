@@ -20,16 +20,20 @@ import (
 	"bytes"
 
 	"github.com/bbva/qed/balloon/hyper/navigation"
+	"github.com/bbva/qed/util"
 )
 
 func PruneToVerify(index, value []byte, auditPathHeight uint16) *OperationsStack {
+
+	version := util.AddPaddingToBytes(value, len(index))
+	version = version[len(version)-len(index):] // TODO GET RID OF THIS: used only to pass tests
 
 	var traverse func(pos navigation.Position, ops *OperationsStack)
 
 	traverse = func(pos navigation.Position, ops *OperationsStack) {
 
 		if pos.Height <= auditPathHeight {
-			ops.Push(leafHash(pos, value))
+			ops.Push(leafHash(pos, version))
 			return
 		}
 

@@ -152,8 +152,7 @@ func TestAddAndVerify(t *testing.T) {
 		tree := NewHyperTree(c.hasherF, store, simpleCache)
 
 		key := hasher.Do(hashing.Digest("a test event"))
-		valueBytes := util.Uint64AsPaddedBytes(value, int(hasher.Len()/8))
-		valueBytes = valueBytes[len(valueBytes)-len(key):] // adjust lenght to hasher len
+		valueBytes := util.Uint64AsBytes(value)
 
 		rootHash, mutations, err := tree.Add(key, value)
 		require.NoErrorf(t, err, "Add operation should not fail for index %d", i)

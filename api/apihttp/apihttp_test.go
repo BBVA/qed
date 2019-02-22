@@ -27,7 +27,10 @@ import (
 	"time"
 
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/balloon/visitor"
+	"github.com/bbva/qed/balloon/history"
+	historynav "github.com/bbva/qed/balloon/history/navigation"
+	"github.com/bbva/qed/balloon/hyper"
+	hypernav "github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
@@ -54,8 +57,8 @@ func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) e
 func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
 	return &balloon.MembershipProof{
 		Exists:         true,
-		HyperProof:     visitor.NewFakeVerifiable(true),
-		HistoryProof:   visitor.NewFakeVerifiable(true),
+		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hypernav.AuditPath{}, nil),
+		HistoryProof:   history.NewMembershipProof(0, 0, historynav.AuditPath{}, nil),
 		CurrentVersion: 1,
 		QueryVersion:   1,
 		ActualVersion:  2,
@@ -68,8 +71,8 @@ func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon
 	hasher := hashing.NewFakeXorHasher()
 	return &balloon.MembershipProof{
 		Exists:         true,
-		HyperProof:     visitor.NewFakeVerifiable(true),
-		HistoryProof:   visitor.NewFakeVerifiable(true),
+		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hypernav.AuditPath{}, nil),
+		HistoryProof:   history.NewMembershipProof(0, 0, historynav.AuditPath{}, nil),
 		CurrentVersion: 1,
 		QueryVersion:   1,
 		ActualVersion:  2,
@@ -79,10 +82,11 @@ func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon
 }
 
 func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
+	var pathKey [10]byte
 	ip := balloon.IncrementalProof{
 		Start:     2,
 		End:       8,
-		AuditPath: visitor.AuditPath{"0|0": hashing.Digest{0x00}},
+		AuditPath: historynav.AuditPath{pathKey: hashing.Digest{0x00}},
 		Hasher:    hashing.NewFakeXorHasher(),
 	}
 	return &ip, nil
@@ -182,8 +186,8 @@ func TestMembership(t *testing.T) {
 	handler := Membership(fakeRaftBalloon{})
 	expectedResult := &protocol.MembershipResult{
 		Exists:         true,
-		Hyper:          visitor.AuditPath{},
-		History:        visitor.AuditPath{},
+		Hyper:          map[string]hashing.Digest{},
+		History:        map[string]hashing.Digest{},
 		CurrentVersion: 0x1,
 		QueryVersion:   0x1,
 		ActualVersion:  0x2,
@@ -230,8 +234,8 @@ func TestDigestMembership(t *testing.T) {
 	handler := DigestMembership(fakeRaftBalloon{})
 	expectedResult := &protocol.MembershipResult{
 		Exists:         true,
-		Hyper:          visitor.AuditPath{},
-		History:        visitor.AuditPath{},
+		Hyper:          map[string]hashing.Digest{},
+		History:        map[string]hashing.Digest{},
 		CurrentVersion: 0x1,
 		QueryVersion:   0x1,
 		ActualVersion:  0x2,
@@ -274,7 +278,7 @@ func TestIncremental(t *testing.T) {
 	expectedResult := &protocol.IncrementalResponse{
 		start,
 		end,
-		visitor.AuditPath{"0|0": []uint8{0x0}},
+		map[string]hashing.Digest{"0|0": []uint8{0x0}},
 	}
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method

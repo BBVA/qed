@@ -24,7 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bbva/qed/balloon/visitor"
+	"github.com/bbva/qed/hashing"
+
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/stretchr/testify/assert"
@@ -94,8 +95,8 @@ func TestMembership(t *testing.T) {
 		Key:            []byte(event),
 		KeyDigest:      []byte("digest"),
 		Exists:         true,
-		Hyper:          make(visitor.AuditPath),
-		History:        make(visitor.AuditPath),
+		Hyper:          make(map[string]hashing.Digest),
+		History:        make(map[string]hashing.Digest),
 		CurrentVersion: version,
 		QueryVersion:   version,
 		ActualVersion:  version,
@@ -119,8 +120,8 @@ func TestDigestMembership(t *testing.T) {
 		Key:            []byte(event),
 		KeyDigest:      []byte("digest"),
 		Exists:         true,
-		Hyper:          make(visitor.AuditPath),
-		History:        make(visitor.AuditPath),
+		Hyper:          make(map[string]hashing.Digest),
+		History:        make(map[string]hashing.Digest),
 		CurrentVersion: version,
 		QueryVersion:   version,
 		ActualVersion:  version,
@@ -154,7 +155,7 @@ func TestIncremental(t *testing.T) {
 	fakeResult := &protocol.IncrementalResponse{
 		Start:     start,
 		End:       end,
-		AuditPath: visitor.AuditPath{"0|0": []uint8{0x0}},
+		AuditPath: map[string]hashing.Digest{"0|0": []uint8{0x0}},
 	}
 
 	inputJSON, _ := json.Marshal(fakeResult)
