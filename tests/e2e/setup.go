@@ -36,12 +36,10 @@ import (
 const (
 	QEDUrl       = "http://127.0.0.1:8800"
 	QEDTLS       = "https://localhost:8800"
-	QEDGossip    = "127.0.0.1:9010"
-	QEDTamperURL = "http://127.0.0.1:7700/tamper"
+	QEDGossip    = "127.0.0.1:8400"
+	QEDTamperURL = "http://127.0.0.1:18800/tamper"
 	StoreURL     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
-	cacheSize    = 50000
-	storageType  = "badger"
 )
 
 // merge function is a helper function that execute all the variadic parameters
@@ -224,7 +222,7 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 		conf.EnableTampering = true
 		conf.EnableTLS = tls
 
-		fmt.Printf("Server config: %+v\n", conf)
+		//fmt.Printf("Server config: %+v\n", conf)
 
 		srv, err = server.NewServer(conf)
 		if err != nil {

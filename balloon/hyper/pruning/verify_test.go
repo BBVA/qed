@@ -19,7 +19,7 @@ package pruning
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/hyper2/navigation"
+	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

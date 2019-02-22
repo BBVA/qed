@@ -63,10 +63,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 		Status:  "ok",
 	}
 
-	resultJson, err := json.Marshal(result)
-	if err != nil {
-		panic(err)
-	}
+	resultJson, _ := json.Marshal(result)
 
 	// A very simple health check.
 	w.WriteHeader(http.StatusOK)

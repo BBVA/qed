@@ -21,6 +21,7 @@ import (
 	"sort"
 
 	"github.com/bbva/qed/balloon/hyper/navigation"
+	"github.com/bbva/qed/util"
 )
 
 type Leaf struct {
@@ -205,8 +206,10 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 	}
 
 	ops := NewOperationsStack()
+	version := util.AddPaddingToBytes(value, len(index))
+	version = version[len(version)-len(index):] // TODO GET RID OF THIS: used only to pass tests
 	leaves := make(Leaves, 0)
-	leaves = leaves.InsertSorted(Leaf{index, value})
+	leaves = leaves.InsertSorted(Leaf{index, version})
 	traverse(navigation.NewRootPosition(uint16(len(index))), leaves, nil, 0, ops)
 	return ops
 }

@@ -26,22 +26,18 @@ import (
 )
 
 type MembershipProof struct {
-	auditPath      navigation.AuditPath
+	AuditPath      navigation.AuditPath
 	Index, Version uint64
 	hasher         hashing.Hasher // TODO should we remove this and pass as an argument when verifying?
 }
 
 func NewMembershipProof(index, version uint64, auditPath navigation.AuditPath, hasher hashing.Hasher) *MembershipProof {
 	return &MembershipProof{
-		auditPath: auditPath,
+		AuditPath: auditPath,
 		Index:     index,
 		Version:   version,
 		hasher:    hasher,
 	}
-}
-
-func (p MembershipProof) AuditPath() navigation.AuditPath {
-	return p.auditPath
 }
 
 // Verify verifies a membership proof
@@ -50,7 +46,7 @@ func (p MembershipProof) Verify(eventDigest []byte, expectedRootHash hashing.Dig
 	log.Debugf("Verifying membership proof for index %d and version %d", p.Index, p.Version)
 
 	// build a visitable pruned tree and then visit it to recompute root hash
-	visitor := pruning.NewComputeHashVisitor(p.hasher, p.auditPath)
+	visitor := pruning.NewComputeHashVisitor(p.hasher, p.AuditPath)
 	recomputed := pruning.PruneToVerify(p.Index, p.Version, eventDigest).Accept(visitor)
 
 	return bytes.Equal(recomputed, expectedRootHash)
