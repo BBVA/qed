@@ -25,13 +25,12 @@ import (
 	"time"
 
 	"github.com/bbva/qed/testutils/scope"
-
-	assert "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Client_To_Single_Server(t *testing.T) {
 	before, after := setupServer(0, "", true, t)
-	scenario, let := scope.Scope(t, before, merge(after))
+	scenario, let := scope.Scope(t, before, merge(after, delay(2*time.Second)))
 
 	scenario("Add one event through cli and verify it", func() {
 
@@ -51,7 +50,7 @@ func Test_Client_To_Single_Server(t *testing.T) {
 
 			_, err := cmd.CombinedOutput()
 
-			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
 		})
 
 		let("Verify event with eventDigest", func(t *testing.T) {
@@ -62,7 +61,7 @@ func Test_Client_To_Single_Server(t *testing.T) {
 				"client",
 				fmt.Sprintf("--endpoints=%s", QEDTLS),
 				"membership",
-				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
+				"--hyperDigest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
 				"--version=0",
 				"--eventDigest=8694718de4363adf07ec3b4aff4c76589f60fe89a7715bee7c8b250e06493922",
@@ -73,11 +72,11 @@ func Test_Client_To_Single_Server(t *testing.T) {
 
 			stdoutStderr, err := cmd.CombinedOutput()
 
-			assert.NoError(t, err, "Subprocess must not exit with status 1")
-			assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+			require.NoError(t, err, "Subprocess must not exit with status 1")
+			require.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 		})
 
-		let("Verify event with eventDigest", func(t *testing.T) {
+		let("Verify event with event", func(t *testing.T) {
 
 			cmd := exec.Command("go",
 				"run",
@@ -86,7 +85,7 @@ func Test_Client_To_Single_Server(t *testing.T) {
 				"client",
 				fmt.Sprintf("--endpoints=%s", QEDTLS),
 				"membership",
-				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
+				"--hyperDigest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
 				"--version=0",
 				"--key='test event'",
@@ -97,8 +96,8 @@ func Test_Client_To_Single_Server(t *testing.T) {
 
 			stdoutStderr, err := cmd.CombinedOutput()
 
-			assert.NoError(t, err, "Subprocess must not exit with status 1")
-			assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+			require.NoError(t, err, "Subprocess must not exit with status 1")
+			require.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 		})
 
 	})
@@ -111,7 +110,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 	serversHttpAddr := "http://127.0.0.1:8800"
 
-	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after1, after2))
+	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after1, after2, delay(2*time.Second)))
 
 	scenario("Add one event through cli and verify it", func() {
 		let("Add event", func(t *testing.T) {
@@ -129,7 +128,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 			_, err := cmd.CombinedOutput()
 
-			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
 		})
 
 		let("Verify event with eventDigest", func(t *testing.T) {
@@ -140,7 +139,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 				"client",
 				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
 				"membership",
-				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
+				"--hyperDigest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
 				"--version=0",
 				"--eventDigest=8694718de4363adf07ec3b4aff4c76589f60fe89a7715bee7c8b250e06493922",
@@ -150,11 +149,11 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 			stdoutStderr, err := cmd.CombinedOutput()
 
-			assert.NoError(t, err, "Subprocess must not exit with status 1")
-			assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+			require.NoError(t, err, "Subprocess must not exit with status 1")
+			require.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 		})
 
-		let("Verify event with eventDigest", func(t *testing.T) {
+		let("Verify event with event", func(t *testing.T) {
 
 			cmd := exec.Command("go",
 				"run",
@@ -163,7 +162,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 				"client",
 				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
 				"membership",
-				"--hyperDigest=81ae2d8f6ecec9c5837d12a09e3b42a1c880b6c77f81ff1f85aef36dac4fdf6a",
+				"--hyperDigest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
 				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
 				"--version=0",
 				"--key='test event'",
@@ -173,8 +172,8 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 			stdoutStderr, err := cmd.CombinedOutput()
 
-			assert.NoError(t, err, "Subprocess must not exit with status 1")
-			assert.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+			require.NoError(t, err, "Subprocess must not exit with status 1")
+			require.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 
 		})
 
@@ -201,7 +200,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 			_, err := cmd.CombinedOutput()
 
-			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
 		})
 
 	})
@@ -213,7 +212,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 
 	serversHttpAddr := "badendpoint,http://127.0.0.1:8800"
 
-	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1))
+	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1, delay(2*time.Second)))
 
 	scenario("Success by extracting topology from right endpoint", func() {
 		let("Add event", func(t *testing.T) {
@@ -231,7 +230,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 
 			_, err := cmd.CombinedOutput()
 
-			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
 		})
 	})
 
@@ -252,7 +251,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 
 			_, err := cmd.CombinedOutput()
 
-			assert.Errorf(t, err, "Subprocess must exit with status 1: %v", *cmd)
+			require.Errorf(t, err, "Subprocess must exit with status 1: %v", *cmd)
 		})
 
 	})
@@ -265,7 +264,7 @@ func Test_Client_To_Cluster_Continuous_Load_Node_Fails(t *testing.T) {
 
 	serversHttpAddr := "http://127.0.0.1:8800,http://127.0.0.1:8801"
 
-	scenario, let := scope.Scope(t, merge(before0, before1), merge(after1))
+	scenario, let := scope.Scope(t, merge(before0, before1), merge(after1, delay(2*time.Second)))
 
 	scenario("Success by extracting topology from right endpoint", func() {
 		let("Add event", func(t *testing.T) {
@@ -283,7 +282,7 @@ func Test_Client_To_Cluster_Continuous_Load_Node_Fails(t *testing.T) {
 
 			_, err := cmd.CombinedOutput()
 
-			assert.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
 		})
 
 		let("Kill server 0", func(t *testing.T) {

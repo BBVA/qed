@@ -34,7 +34,11 @@ func OpenBPlusTreeStore() (*bp.BPlusTreeStore, func()) {
 }
 
 func OpenBadgerStore(t require.TestingT, path string) (*bd.BadgerStore, func()) {
-	store, err := bd.NewBadgerStore(path)
+	opts := &bd.Options{
+		Path:       path,
+		ValueLogGC: true,
+	}
+	store, err := bd.NewBadgerStoreOpts(opts)
 	if err != nil {
 		t.Errorf("Error opening badger store: %v", err)
 		t.FailNow()

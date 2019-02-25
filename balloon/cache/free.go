@@ -20,8 +20,6 @@ import (
 	"bytes"
 	"runtime/debug"
 
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/coocood/freecache"
 )
@@ -36,16 +34,16 @@ func NewFreeCache(initialSize int) *FreeCache {
 	return &FreeCache{cached: cache}
 }
 
-func (c FreeCache) Get(pos navigator.Position) (hashing.Digest, bool) {
-	value, err := c.cached.Get(pos.Bytes())
+func (c FreeCache) Get(key []byte) ([]byte, bool) {
+	value, err := c.cached.Get(key)
 	if err != nil {
 		return nil, false
 	}
 	return value, true
 }
 
-func (c *FreeCache) Put(pos navigator.Position, value hashing.Digest) {
-	c.cached.Set(pos.Bytes(), value, 0)
+func (c *FreeCache) Put(key []byte, value []byte) {
+	c.cached.Set(key, value, 0)
 }
 
 func (c *FreeCache) Fill(r storage.KVPairReader) (err error) {

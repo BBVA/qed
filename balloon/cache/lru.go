@@ -3,8 +3,6 @@ package cache
 import (
 	"container/list"
 
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 )
 
@@ -12,7 +10,7 @@ const lruKeySize = 10
 
 type entry struct {
 	key   [lruKeySize]byte
-	value hashing.Digest
+	value []byte
 }
 
 type LruReadThroughCache struct {
@@ -33,12 +31,12 @@ func NewLruReadThroughCache(prefix byte, store storage.Store, cacheSize uint16) 
 	}
 }
 
-func (c LruReadThroughCache) Get(pos navigator.Position) (hashing.Digest, bool) {
-	var key [lruKeySize]byte
-	copy(key[:], pos.Bytes())
-	e, ok := c.items[key]
+func (c LruReadThroughCache) Get(key []byte) ([]byte, bool) {
+	var k [lruKeySize]byte
+	copy(k[:], key)
+	e, ok := c.items[k]
 	if !ok {
-		pair, err := c.store.Get(c.prefix, pos.Bytes())
+		pair, err := c.store.Get(c.prefix, key)
 		if err != nil {
 			return nil, false
 		}
@@ -48,11 +46,11 @@ func (c LruReadThroughCache) Get(pos navigator.Position) (hashing.Digest, bool) 
 	return e.Value.(*entry).value, ok
 }
 
-func (c *LruReadThroughCache) Put(pos navigator.Position, value hashing.Digest) {
-	var key [lruKeySize]byte
-	copy(key[:], pos.Bytes())
+func (c *LruReadThroughCache) Put(key []byte, value []byte) {
+	var k [lruKeySize]byte
+	copy(k[:], key)
 	// check for existing item
-	if e, ok := c.items[key]; ok {
+	if e, ok := c.items[k]; ok {
 		// update value for specified key
 		c.evictList.MoveToFront(e)
 		e.Value.(*entry).value = value
@@ -60,9 +58,9 @@ func (c *LruReadThroughCache) Put(pos navigator.Position, value hashing.Digest) 
 	}
 
 	// Add new item
-	e := &entry{key, value}
+	e := &entry{k, value}
 	entry := c.evictList.PushFront(e)
-	c.items[key] = entry
+	c.items[k] = entry
 
 	// Verify if eviction is needed
 	if c.evictList.Len() > c.size {
