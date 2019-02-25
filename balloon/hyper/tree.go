@@ -151,6 +151,9 @@ func (t *HyperTree) RebuildCache() {
 }
 
 func (t *HyperTree) Close() {
+	t.Lock()
+	defer t.Unlock()
+
 	t.cache = nil
 	t.hasher = nil
 	t.defaultHashes = nil
