@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -72,13 +71,13 @@ func TestProveMembership(t *testing.T) {
 
 	testCases := []struct {
 		addedKeys         map[uint64]hashing.Digest
-		expectedAuditPath navigation.AuditPath
+		expectedAuditPath AuditPath
 	}{
 		{
 			addedKeys: map[uint64]hashing.Digest{
 				uint64(0): {0x0},
 			},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				"0x80|7": hashing.Digest{0x0},
 				"0x40|6": hashing.Digest{0x0},
 				"0x20|5": hashing.Digest{0x0},
@@ -91,7 +90,7 @@ func TestProveMembership(t *testing.T) {
 				uint64(1): {0x1},
 				uint64(2): {0x2},
 			},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				"0x80|7": hashing.Digest{0x0},
 				"0x40|6": hashing.Digest{0x0},
 				"0x20|5": hashing.Digest{0x0},

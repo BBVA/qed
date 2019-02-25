@@ -19,19 +19,28 @@ package hyper
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/hyper/navigation"
-	"github.com/bbva/qed/balloon/hyper/pruning"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 )
 
+type AuditPath map[string]hashing.Digest
+
+func (p AuditPath) Get(pos position) (hashing.Digest, bool) {
+	digest, ok := p[pos.StringId()]
+	return digest, ok
+}
+
+func NewAuditPath() AuditPath {
+	return make(AuditPath, 0)
+}
+
 type QueryProof struct {
-	AuditPath  navigation.AuditPath
+	AuditPath  AuditPath
 	Key, Value []byte
 	hasher     hashing.Hasher
 }
 
-func NewQueryProof(key, value []byte, auditPath navigation.AuditPath, hasher hashing.Hasher) *QueryProof {
+func NewQueryProof(key, value []byte, auditPath AuditPath, hasher hashing.Hasher) *QueryProof {
 	return &QueryProof{
 		Key:       key,
 		Value:     value,
@@ -53,8 +62,8 @@ func (p QueryProof) Verify(key []byte, expectedRootHash hashing.Digest) (valid b
 	}
 
 	// build a stack of operations and then interpret it to recompute the root hash
-	ops := pruning.PruneToVerify(key, p.Value, p.hasher.Len()-uint16(len(p.AuditPath)))
-	ctx := &pruning.Context{
+	ops := pruneToVerify(key, p.Value, p.hasher.Len()-uint16(len(p.AuditPath)))
+	ctx := &pruningContext{
 		Hasher:    p.hasher,
 		AuditPath: p.AuditPath,
 	}
