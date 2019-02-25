@@ -18,7 +18,6 @@ package history
 
 import (
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/history/pruning"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
@@ -52,8 +51,8 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
 
 	// build a visitable pruned tree and then visit it to generate the root hash
-	visitor := pruning.NewInsertVisitor(t.hasher, t.writeCache, storage.HistoryCachePrefix)
-	rh := pruning.PruneToInsert(version, eventDigest).Accept(visitor)
+	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryCachePrefix)
+	rh := pruneToInsert(version, eventDigest).Accept(visitor)
 
 	return rh, visitor.Result(), nil
 }
@@ -63,11 +62,11 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	log.Debugf("Proving membership for index %d with version %d", index, version)
 
 	// build a visitable pruned tree and then visit it to collect the audit path
-	visitor := pruning.NewAuditPathVisitor(t.hasherF(), t.readCache)
+	visitor := newAuditPathVisitor(t.hasherF(), t.readCache)
 	if index == version {
-		pruning.PruneToFind(index).Accept(visitor) // faster pruning
+		pruneToFind(index).Accept(visitor) // faster pruning
 	} else {
-		pruning.PruneToFindConsistent(index, version).Accept(visitor)
+		pruneToFindConsistent(index, version).Accept(visitor)
 	}
 
 	proof := NewMembershipProof(index, version, visitor.Result(), t.hasherF())
@@ -79,8 +78,8 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 	log.Debugf("Proving consistency between versions %d and %d", start, end)
 
 	// build a visitable pruned tree and then visit it to collect the audit path
-	visitor := pruning.NewAuditPathVisitor(t.hasherF(), t.readCache)
-	pruning.PruneToCheckConsistency(start, end).Accept(visitor)
+	visitor := newAuditPathVisitor(t.hasherF(), t.readCache)
+	pruneToCheckConsistency(start, end).Accept(visitor)
 
 	proof := NewIncrementalProof(start, end, visitor.Result(), t.hasherF())
 
