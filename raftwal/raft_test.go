@@ -42,7 +42,7 @@ func init() {
 }
 
 func raftAddr(id int) string {
-	return fmt.Sprintf(":830%d", id)
+	return fmt.Sprintf(":1830%d", id)
 }
 
 func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
