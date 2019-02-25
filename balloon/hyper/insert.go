@@ -90,19 +90,19 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 		// at the end of a batch tree
 		if iBatch > 0 && pos.Height%4 == 0 {
 			traverse(pos, leaves, nil, 0, ops)
-			ops.Push(updatebatchNode(pos, iBatch, batch))
+			ops.Push(updateBatchNode(pos, iBatch, batch))
 			return
 		}
 
 		// on an internal node with more than one leaf
 
 		rightPos := pos.Right()
-		leftleaves, rightleaves := leaves.Split(rightPos.Index)
+		leftLeaves, rightLeaves := leaves.Split(rightPos.Index)
 
-		traverseThroughCache(pos.Left(), leftleaves, batch, 2*iBatch+1, ops)
-		traverseThroughCache(rightPos, rightleaves, batch, 2*iBatch+2, ops)
+		traverseThroughCache(pos.Left(), leftLeaves, batch, 2*iBatch+1, ops)
+		traverseThroughCache(rightPos, rightLeaves, batch, 2*iBatch+2, ops)
 
-		ops.PushAll(innerHash(pos), updatebatchNode(pos, iBatch, batch))
+		ops.PushAll(innerHash(pos), updateBatchNode(pos, iBatch, batch))
 		if iBatch == 0 { // it's the root of the batch tree
 			ops.Push(putInCache(pos, batch))
 		}
@@ -132,7 +132,7 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 				leafHash(pos, leaves[0].Value),
 				updateBatchShortcut(pos, 0, newBatch, leaves[0].Index, leaves[0].Value),
 				mutateBatch(pos, newBatch),
-				updatebatchNode(pos, iBatch, batch),
+				updateBatchNode(pos, iBatch, batch),
 			)
 			return
 		}
@@ -142,13 +142,13 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 			if len(leaves) > 1 {
 				// with more than one leaf to insert -> it's impossible to be a shortcut leaf
 				traverse(pos, leaves, nil, 0, ops)
-				ops.Push(updatebatchNode(pos, iBatch, batch))
+				ops.Push(updateBatchNode(pos, iBatch, batch))
 				return
 			}
 			// with only one leaf to insert -> continue traversing
 			if batch.HasElementAt(iBatch) {
 				traverse(pos, leaves, nil, 0, ops)
-				ops.Push(updatebatchNode(pos, iBatch, batch))
+				ops.Push(updateBatchNode(pos, iBatch, batch))
 				return
 			}
 			// nil value (no previous node stored) so create a new shortcut batch
@@ -157,7 +157,7 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 				leafHash(pos, leaves[0].Value),
 				updateBatchShortcut(pos, 0, newBatch, leaves[0].Index, leaves[0].Value),
 				mutateBatch(pos, newBatch),
-				updatebatchNode(pos, iBatch, batch),
+				updateBatchNode(pos, iBatch, batch),
 			)
 			return
 		}
@@ -192,12 +192,12 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 
 		// on an internal node with more than one leaf
 		rightPos := pos.Right()
-		leftleaves, rightleaves := leaves.Split(rightPos.Index)
+		leftLeaves, rightLeaves := leaves.Split(rightPos.Index)
 
-		traverseAfterCache(pos.Left(), leftleaves, batch, 2*iBatch+1, ops)
-		traverseAfterCache(rightPos, rightleaves, batch, 2*iBatch+2, ops)
+		traverseAfterCache(pos.Left(), leftLeaves, batch, 2*iBatch+1, ops)
+		traverseAfterCache(rightPos, rightLeaves, batch, 2*iBatch+2, ops)
 
-		ops.PushAll(innerHash(pos), updatebatchNode(pos, iBatch, batch))
+		ops.PushAll(innerHash(pos), updateBatchNode(pos, iBatch, batch))
 		if iBatch == 0 { // at root node -> mutate batch
 			ops.Push(mutateBatch(pos, batch))
 		}
