@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -123,17 +122,10 @@ func TestAgents(t *testing.T) {
 		})
 
 		let("Tamper 1st event", func(t *testing.T) {
-			cmd := exec.Command("curl",
-				"-sS",
-				"-XDELETE",
-				"-H", fmt.Sprintf("Api-Key:%s", APIKey),
-				"-H", "Content-type: application/json",
-				QEDTamperURL,
-				"-d", fmt.Sprintf(`{"Digest": "%X"}`, hashing.NewSha256Hasher().Do(hashing.Digest(event))),
-			)
-
-			_, err := cmd.CombinedOutput()
-			assert.NoError(t, err, "Subprocess must not exit with status 1")
+			buff := strings.NewReader(fmt.Sprintf(`{"Digest": "%X"}`, hashing.NewSha256Hasher().Do(hashing.Digest(event))))
+			resp, err := doReq("DELETE", QEDTamperURL, APIKey, buff)
+			assert.NoError(t, err)
+			assert.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
 
 		let("Check Auditor alerts", func(t *testing.T) {
@@ -165,21 +157,10 @@ func TestAgents(t *testing.T) {
 		})
 
 		let("Tamper 1st event", func(t *testing.T) {
-			cmd := exec.Command("curl",
-				"-sS",
-				"-XPATCH",
-				"-H", fmt.Sprintf("Api-Key: %s", APIKey),
-				"-H", "Content-type: application/json",
-				QEDTamperURL,
-				"-d", fmt.Sprintf(`{"Digest": "%X","Value": "%X"}`,
-					hasher.Do(hashing.Digest(event)),
-					hasher.Do(hashing.Digest(tampered)),
-				),
-			)
-
-			_, err := cmd.CombinedOutput()
-
-			assert.NoError(t, err, "Subprocess must not exit with status 1")
+			buff := strings.NewReader(fmt.Sprintf(`{"Digest": "%X","Value": "%X"}`, hasher.Do(hashing.Digest(event)), hasher.Do(hashing.Digest(tampered))))
+			resp, err := doReq("PATCH", QEDTamperURL, APIKey, buff)
+			assert.NoError(t, err)
+			assert.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
 
 		let("Add 2nd event", func(t *testing.T) {
