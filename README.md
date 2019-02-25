@@ -1,9 +1,6 @@
 
 
 [![Build Status](https://gdiazlo.visualstudio.com/qed/_apis/build/status/BBVA.qed?branchName=master)](https://gdiazlo.visualstudio.com/qed/_build/latest?definitionId=1&branchName=master)
-
-
-[![Build Status](https://travis-ci.org/BBVA/qed.svg?branch=master)](https://travis-ci.org/BBVA/qed)
 [![Coverage](https://codecov.io/gh/BBVA/qed/branch/master/graph/badge.svg)](https://codecov.io/gh/BBVA/qed)
 [![GoReport](https://goreportcard.com/badge/github.com/bbva/qed)](https://goreportcard.com/report/github.com/bbva/qed)
 [![GoDoc](https://godoc.org/github.com/bbva/qed?status.svg)](https://godoc.org/github.com/bbva/qed)
