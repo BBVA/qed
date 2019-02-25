@@ -30,7 +30,7 @@ import (
 
 func Test_Client_To_Single_Server(t *testing.T) {
 	before, after := setupServer(0, "", true, t)
-	scenario, let := scope.Scope(t, before, merge(after))
+	scenario, let := scope.Scope(t, before, merge(after, delay(2*time.Second)))
 
 	scenario("Add one event through cli and verify it", func() {
 
@@ -110,7 +110,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 	serversHttpAddr := "http://127.0.0.1:8800"
 
-	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after1, after2))
+	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after1, after2, delay(2*time.Second)))
 
 	scenario("Add one event through cli and verify it", func() {
 		let("Add event", func(t *testing.T) {
@@ -212,7 +212,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 
 	serversHttpAddr := "badendpoint,http://127.0.0.1:8800"
 
-	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1))
+	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1, delay(2*time.Second)))
 
 	scenario("Success by extracting topology from right endpoint", func() {
 		let("Add event", func(t *testing.T) {
@@ -264,7 +264,7 @@ func Test_Client_To_Cluster_Continuous_Load_Node_Fails(t *testing.T) {
 
 	serversHttpAddr := "http://127.0.0.1:8800,http://127.0.0.1:8801"
 
-	scenario, let := scope.Scope(t, merge(before0, before1), merge(after1))
+	scenario, let := scope.Scope(t, merge(before0, before1), merge(after1, delay(2*time.Second)))
 
 	scenario("Success by extracting topology from right endpoint", func() {
 		let("Add event", func(t *testing.T) {
