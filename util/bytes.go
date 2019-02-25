@@ -16,12 +16,18 @@
 
 package util
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 func Uint64AsBytes(i uint64) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, i)
 	return b
+}
+
+func Uint64AsPaddedBytes(i uint64, n int) []byte {
+	return AddPaddingToBytes(Uint64AsBytes(i), n)
 }
 
 func Uint16AsBytes(i uint16) []byte {
@@ -30,6 +36,23 @@ func Uint16AsBytes(i uint16) []byte {
 	return b
 }
 
+func Uint16AsPaddedBytes(i uint16, n int) []byte {
+	return AddPaddingToBytes(Uint16AsBytes(i), n)
+}
+
+func AddPaddingToBytes(b []byte, n int) []byte {
+	if len(b)/8 >= n {
+		return b
+	}
+	tmp := make([]byte, n, n)
+	copy(tmp[n-len(b):], b)
+	return tmp
+}
+
 func BytesAsUint64(b []byte) uint64 {
 	return binary.BigEndian.Uint64(b)
+}
+
+func BytesAsUint16(b []byte) uint16 {
+	return binary.BigEndian.Uint16(b)
 }

@@ -17,30 +17,62 @@
 package cache
 
 import (
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
+	"bytes"
+	"fmt"
+
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/util"
 )
 
 type FakeCache struct {
-	FixedDigest hashing.Digest
+	FixedValue []byte
+	cached     map[[keySize]byte][]byte
 }
 
-func NewFakeCache(fixedDigest hashing.Digest) *FakeCache {
-	return &FakeCache{fixedDigest}
+func NewFakeCache(fixedValue []byte) *FakeCache {
+	return &FakeCache{
+		FixedValue: fixedValue,
+		cached:     make(map[[keySize]byte][]byte),
+	}
 }
 
-func (c FakeCache) Get(navigator.Position) (hashing.Digest, bool) {
-	return hashing.Digest{0x0}, true
+func (c FakeCache) Get(key []byte) ([]byte, bool) {
+	var k [keySize]byte
+	copy(k[:], key)
+	value, ok := c.cached[k]
+	if !ok {
+		return []byte{0x0}, true
+	}
+	return value, ok
 }
 
-func (c *FakeCache) Put(pos navigator.Position, value hashing.Digest) {}
+func (c *FakeCache) Put(key []byte, value []byte) {
+	var k [keySize]byte
+	copy(k[:], key)
+	c.cached[k] = value
+}
 
-func (c *FakeCache) Fill(r storage.KVPairReader) error { return nil }
+func (c *FakeCache) Fill(r storage.KVPairReader) error {
+	return fmt.Errorf("Operation not supported")
+}
 
-func (c FakeCache) Size() int { return 1 }
+func (c FakeCache) Size() int {
+	return len(c.cached)
+}
+
+func (c FakeCache) Equal(o *FakeCache) bool {
+	for k, v1 := range c.cached {
+		v2, ok := o.cached[k]
+		if !ok {
+			return false
+		}
+		if !bytes.Equal(v1, v2) {
+			return false
+		}
+	}
+	return true
+}
 
 type FakeKVPairReader struct {
 	Remaining uint64
@@ -53,8 +85,7 @@ func NewFakeKVPairReader(numElems uint64) *FakeKVPairReader {
 
 func (r *FakeKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
 	for n = 0; r.Remaining > 0 && n < len(buffer); n++ {
-		pos := &navigator.FakePosition{util.Uint64AsBytes(r.index), 0}
-		buffer[n] = &storage.KVPair{pos.Bytes(), rand.Bytes(8)}
+		buffer[n] = &storage.KVPair{util.Uint64AsBytes(r.index), rand.Bytes(8)}
 		r.Remaining--
 		r.index++
 	}

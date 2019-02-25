@@ -65,7 +65,6 @@ func getAlert() ([]byte, error) {
 }
 
 func TestAgents(t *testing.T) {
-	t.Skip("FIXME")
 	bStore, aStore := setupStore(t)
 	bServer, aServer := setupServer(0, "", false, t)
 	bAuditor, aAuditor := setupAuditor(0, t)
@@ -74,7 +73,7 @@ func TestAgents(t *testing.T) {
 
 	scenario, let := scope.Scope(t,
 		merge(bServer, bStore, bPublisher, bAuditor, bMonitor),
-		merge(aServer, aPublisher, aAuditor, aMonitor, aStore),
+		merge(aServer, aPublisher, aAuditor, aMonitor, aStore, delay(2*time.Second)),
 	)
 
 	event := rand.RandomString(10)

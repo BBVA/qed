@@ -36,12 +36,10 @@ import (
 const (
 	QEDUrl       = "http://127.0.0.1:8800"
 	QEDTLS       = "https://localhost:8800"
-	QEDGossip    = "127.0.0.1:9010"
-	QEDTamperURL = "http://127.0.0.1:7700/tamper"
+	QEDGossip    = "127.0.0.1:8400"
+	QEDTamperURL = "http://127.0.0.1:18800/tamper"
 	StoreURL     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
-	cacheSize    = 50000
-	storageType  = "badger"
 )
 
 // merge function is a helper function that execute all the variadic parameters
@@ -51,7 +49,12 @@ func merge(list ...scope.TestF) scope.TestF {
 		for _, elem := range list {
 			elem(t)
 		}
-		// time.Sleep(2 * time.Second)
+	}
+}
+
+func delay(duration time.Duration) scope.TestF {
+	return func(t *testing.T) {
+		time.Sleep(duration)
 	}
 }
 
@@ -88,7 +91,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		auditorConf := auditor.DefaultConfig()
-		auditorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:810%d", id)
+		auditorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:710%d", id)
 		auditorConf.QEDUrls = []string{QEDUrl}
 		auditorConf.PubUrls = []string{StoreURL}
 		auditorConf.APIKey = APIKey
@@ -104,9 +107,14 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if au != nil {
 			au.Shutdown()
-			_ = agent.Shutdown()
-		} else {
-			t.Fatalf("Unable to shutdown the auditor!")
+		}
+		err := agent.Leave()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the auditor: %v", err)
+		}
+		err = agent.Shutdown()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the auditor: %v", err)
 		}
 	}
 	return before, after
@@ -119,7 +127,7 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		monitorConf := monitor.DefaultConfig()
-		monitorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:820%d", id)
+		monitorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:720%d", id)
 		monitorConf.QEDUrls = []string{QEDUrl}
 		monitorConf.PubUrls = []string{StoreURL}
 		monitorConf.APIKey = APIKey
@@ -135,9 +143,14 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if mn != nil {
 			mn.Shutdown()
-			_ = agent.Shutdown()
-		} else {
-			t.Fatalf("Unable to shutdown the monitor!")
+		}
+		err := agent.Leave()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the monitor: %v", err)
+		}
+		err = agent.Shutdown()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the monitor: %v", err)
 		}
 	}
 	return before, after
@@ -150,7 +163,7 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 
 	before := func(t *testing.T) {
 		conf := publisher.DefaultConfig()
-		conf.MetricsAddr = fmt.Sprintf("127.0.0.1:830%d", id)
+		conf.MetricsAddr = fmt.Sprintf("127.0.0.1:730%d", id)
 		conf.PubUrls = []string{StoreURL}
 
 		pu, err = publisher.NewPublisher(*conf)
@@ -164,9 +177,14 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	after := func(t *testing.T) {
 		if pu != nil {
 			pu.Shutdown()
-			_ = agent.Shutdown()
-		} else {
-			t.Fatalf("Unable to shutdown the publisher!")
+		}
+		err := agent.Leave()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the publisher: %v", err)
+		}
+		err = agent.Shutdown()
+		if err != nil {
+			t.Fatalf("Unable to shutdown the publisher: %v", err)
 		}
 	}
 	return before, after
@@ -224,7 +242,7 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 		conf.EnableTampering = true
 		conf.EnableTLS = tls
 
-		fmt.Printf("Server config: %+v\n", conf)
+		//fmt.Printf("Server config: %+v\n", conf)
 
 		srv, err = server.NewServer(conf)
 		if err != nil {

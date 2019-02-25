@@ -19,6 +19,7 @@ package e2e
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
@@ -29,7 +30,7 @@ import (
 
 func TestAddVerify(t *testing.T) {
 	before, after := setupServer(0, "", false, t)
-	scenario, let := scope.Scope(t, before, after)
+	scenario, let := scope.Scope(t, before, merge(after, delay(2*time.Second)))
 
 	event := rand.RandomString(10)
 
@@ -72,7 +73,7 @@ func TestAddVerify(t *testing.T) {
 	})
 
 	scenario("Add two events, verify the first one", func() {
-		var result_first, result_last *protocol.MembershipResult
+		var resultFirst, resultLast *protocol.MembershipResult
 		var err error
 		var first, last *protocol.Snapshot
 
@@ -83,17 +84,17 @@ func TestAddVerify(t *testing.T) {
 		last, err = client.Add("Test event 2")
 		assert.NoError(t, err)
 
-		let("Get membership proof for first inserted event", func(t *testing.T) {
-			result_first, err = client.MembershipDigest(first.EventDigest, first.Version)
+		let("Get membership proof for inserted events", func(t *testing.T) {
+			resultFirst, err = client.MembershipDigest(first.EventDigest, first.Version)
 			assert.NoError(t, err)
-			result_last, err = client.MembershipDigest(last.EventDigest, last.Version)
+			resultLast, err = client.MembershipDigest(last.EventDigest, last.Version)
 			assert.NoError(t, err)
 		})
 
-		let("Verify first event", func(t *testing.T) {
+		let("Verify events", func(t *testing.T) {
 			first.HyperDigest = last.HyperDigest
-			assert.True(t, client.DigestVerify(result_first, first, hashing.NewSha256Hasher), "The first proof should be valid")
-			assert.True(t, client.DigestVerify(result_last, last, hashing.NewSha256Hasher), "The last proof should be valid")
+			assert.True(t, client.DigestVerify(resultFirst, first, hashing.NewSha256Hasher), "The first proof should be valid")
+			assert.True(t, client.DigestVerify(resultLast, last, hashing.NewSha256Hasher), "The last proof should be valid")
 		})
 
 	})

@@ -19,37 +19,60 @@ package hyper
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/bbva/qed/balloon/hyper/navigation"
 )
 
-func TestQueryProofVerify(t *testing.T) {
+func TestProofVerify(t *testing.T) {
+
 	testCases := []struct {
-		key, value     []byte
-		auditPath      visitor.AuditPath
-		expectedDigest hashing.Digest
+		key, value   []byte
+		auditPath    navigation.AuditPath
+		rootHash     hashing.Digest
+		verifyResult bool
 	}{
 		{
+			// verify key=0 with empty audit path
+			key:          []byte{0},
+			value:        []byte{0},
+			auditPath:    navigation.AuditPath{},
+			rootHash:     hashing.Digest{0x0},
+			verifyResult: false,
+		},
+		{
+			// verify key=0 with empty audit path
 			key:   []byte{0},
 			value: []byte{0},
-			auditPath: visitor.AuditPath{
-				"01|0": hashing.Digest{0x0},
-				"02|1": hashing.Digest{0x0},
-				"04|2": hashing.Digest{0x0},
-				"08|3": hashing.Digest{0x0},
-				"10|4": hashing.Digest{0x0},
-				"20|5": hashing.Digest{0x0},
-				"40|6": hashing.Digest{0x0},
-				"80|7": hashing.Digest{0x0},
+			auditPath: navigation.AuditPath{
+				"0x80|7": hashing.Digest{0x0},
+				"0x40|6": hashing.Digest{0x0},
+				"0x20|5": hashing.Digest{0x0},
+				"0x10|4": hashing.Digest{0x0},
 			},
-			expectedDigest: hashing.Digest{0},
+			rootHash:     hashing.Digest{0x0},
+			verifyResult: true,
+		},
+		{
+			// verify key=0 with empty audit path
+			key:   []byte{0},
+			value: []byte{0},
+			auditPath: navigation.AuditPath{
+				"0x80|7": hashing.Digest{0x0},
+				"0x40|6": hashing.Digest{0x0},
+				"0x20|5": hashing.Digest{0x0},
+				"0x10|4": hashing.Digest{0x0},
+			},
+			rootHash:     hashing.Digest{0x1},
+			verifyResult: false,
 		},
 	}
 
 	for i, c := range testCases {
 		proof := NewQueryProof(c.key, c.value, c.auditPath, hashing.NewFakeXorHasher())
-		correct := proof.Verify(c.key, c.expectedDigest)
-		assert.Truef(t, correct, "Event should be a member for test case %d", i)
+		correct := proof.Verify(c.key, c.rootHash)
+		assert.Equalf(t, c.verifyResult, correct, "The verification result should match for test case %d", i)
 	}
+
 }

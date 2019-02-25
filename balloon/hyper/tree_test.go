@@ -17,19 +17,19 @@
 package hyper
 
 import (
+	"encoding/binary"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/visitor"
+	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAdd(t *testing.T) {
@@ -54,16 +54,15 @@ func TestAdd(t *testing.T) {
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
-	simpleCache := cache.NewSimpleCache(10)
-	tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
+
+	tree := NewHyperTree(hashing.NewFakeXorHasher, store, cache.NewSimpleCache(10))
 
 	for i, c := range testCases {
-		index := uint64(i)
-		snapshot, mutations, err := tree.Add(c.eventDigest, index)
+		version := uint64(i)
+		rootHash, mutations, err := tree.Add(c.eventDigest, version)
+		require.NoErrorf(t, err, "This should not fail for version %d", i)
 		tree.store.Mutate(mutations)
-		require.NoErrorf(t, err, "This should not fail for index %d", i)
-		assert.Equalf(t, c.expectedRootHash, snapshot, "Incorrect root hash for index %d", i)
-
+		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for index %d", i)
 	}
 }
 
@@ -71,46 +70,42 @@ func TestProveMembership(t *testing.T) {
 
 	log.SetLogger("TestProveMembership", log.SILENT)
 
-	hasher := hashing.NewFakeXorHasher()
-	digest := hasher.Do(hashing.Digest{0x0})
-
 	testCases := []struct {
-		addOps            map[uint64]hashing.Digest
-		expectedAuditPath visitor.AuditPath
+		addedKeys         map[uint64]hashing.Digest
+		expectedAuditPath navigation.AuditPath
 	}{
 		{
-			addOps: map[uint64]hashing.Digest{
-				uint64(0): {0},
+			addedKeys: map[uint64]hashing.Digest{
+				uint64(0): {0x0},
 			},
-			expectedAuditPath: visitor.AuditPath{
-				"10|4": hashing.Digest{0x0},
-				"04|2": hashing.Digest{0x0},
-				"80|7": hashing.Digest{0x0},
-				"40|6": hashing.Digest{0x0},
-				"20|5": hashing.Digest{0x0},
-				"08|3": hashing.Digest{0x0},
-				"02|1": hashing.Digest{0x0},
-				"01|0": hashing.Digest{0x0},
+			expectedAuditPath: navigation.AuditPath{
+				"0x80|7": hashing.Digest{0x0},
+				"0x40|6": hashing.Digest{0x0},
+				"0x20|5": hashing.Digest{0x0},
+				"0x10|4": hashing.Digest{0x0},
 			},
 		},
 		{
-			addOps: map[uint64]hashing.Digest{
-				uint64(0): {0},
-				uint64(1): {1},
-				uint64(2): {2},
+			addedKeys: map[uint64]hashing.Digest{
+				uint64(0): {0x0},
+				uint64(1): {0x1},
+				uint64(2): {0x2},
 			},
-			expectedAuditPath: visitor.AuditPath{
-				"10|4": hashing.Digest{0x0},
-				"04|2": hashing.Digest{0x0},
-				"80|7": hashing.Digest{0x0},
-				"40|6": hashing.Digest{0x0},
-				"20|5": hashing.Digest{0x0},
-				"08|3": hashing.Digest{0x0},
-				"02|1": hashing.Digest{0x2},
-				"01|0": hashing.Digest{0x1},
+			expectedAuditPath: navigation.AuditPath{
+				"0x80|7": hashing.Digest{0x0},
+				"0x40|6": hashing.Digest{0x0},
+				"0x20|5": hashing.Digest{0x0},
+				"0x10|4": hashing.Digest{0x0},
+				"0x08|3": hashing.Digest{0x0},
+				"0x04|2": hashing.Digest{0x0},
+				"0x02|1": hashing.Digest{0x2},
+				"0x01|0": hashing.Digest{0x1},
 			},
 		},
 	}
+
+	hasher := hashing.NewFakeXorHasher()
+	searchedDigest := hasher.Do(hashing.Digest{0x0})
 
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
@@ -118,18 +113,20 @@ func TestProveMembership(t *testing.T) {
 		simpleCache := cache.NewSimpleCache(10)
 		tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
 
-		for index, digest := range c.addOps {
+		for index, digest := range c.addedKeys {
 			_, mutations, err := tree.Add(digest, index)
 			tree.store.Mutate(mutations)
 			require.NoErrorf(t, err, "This should not fail for index %d", i)
 		}
-		leaf, err := store.Get(storage.IndexPrefix, digest)
+
+		leaf, err := store.Get(storage.IndexPrefix, searchedDigest)
 		require.NoErrorf(t, err, "No leaf with digest %v", err)
 
-		pf, err := tree.QueryMembership(leaf.Key, leaf.Value)
+		proof, err := tree.QueryMembership(leaf.Key, leaf.Value)
 		require.NoErrorf(t, err, "Error adding to the tree: %v for index %d", err, i)
-		assert.Equalf(t, c.expectedAuditPath, pf.AuditPath(), "Incorrect audit path for index %d", i)
+		assert.Equalf(t, c.expectedAuditPath, proof.AuditPath, "Incorrect audit path for index %d", i)
 	}
+
 }
 
 func TestAddAndVerify(t *testing.T) {
@@ -147,6 +144,7 @@ func TestAddAndVerify(t *testing.T) {
 	}
 
 	for i, c := range testCases {
+
 		hasher := c.hasherF()
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
@@ -154,20 +152,23 @@ func TestAddAndVerify(t *testing.T) {
 		tree := NewHyperTree(c.hasherF, store, simpleCache)
 
 		key := hasher.Do(hashing.Digest("a test event"))
-		snapshot, mutations, err := tree.Add(key, value)
+		valueBytes := util.Uint64AsBytes(value)
+
+		rootHash, mutations, err := tree.Add(key, value)
+		require.NoErrorf(t, err, "Add operation should not fail for index %d", i)
 		tree.store.Mutate(mutations)
-		require.NoErrorf(t, err, "This should not fail for index %d", i)
 
 		leaf, err := store.Get(storage.IndexPrefix, key)
-		require.NoErrorf(t, err, "No leaf with digest %v", err)
+		require.NoErrorf(t, err, "No leaf with key %d: %v", key, err)
 
 		proof, err := tree.QueryMembership(leaf.Key, leaf.Value)
-		require.Nilf(t, err, "Error must be nil for index %d", i)
-		assert.Equalf(t, util.Uint64AsBytes(value), proof.Value, "Incorrect actual value for index %d", i)
+		require.Nilf(t, err, "The membership query should not fail for index %d", i)
+		assert.Equalf(t, valueBytes, proof.Value, "Incorrect actual value for index %d", i)
 
-		correct := tree.VerifyMembership(proof, value, key, snapshot)
+		correct := proof.Verify(key, rootHash)
 		assert.Truef(t, correct, "Key %x should be a member for index %d", key, i)
 	}
+
 }
 
 func TestDeterministicAdd(t *testing.T) {
@@ -249,6 +250,7 @@ func TestDeterministicAdd(t *testing.T) {
 
 	// check cache equality
 	require.True(t, cache1.Equal(cache2), "Both caches should be equal")
+
 }
 
 func TestRebuildCache(t *testing.T) {
@@ -289,15 +291,20 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 
 	hasher := hashing.NewSha256Hasher()
-	fastCache := cache.NewFastCache(CacheSize)
-	tree := NewHyperTree(hashing.NewSha256Hasher, store, fastCache)
+	freeCache := cache.NewFreeCache(2000 * (1 << 20))
+
+	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
 	b.ResetTimer()
 	b.N = 100000
 	for i := 0; i < b.N; i++ {
-		key := hasher.Do(rand.Bytes(32))
-		_, mutations, _ := tree.Add(key, uint64(i))
+		index := make([]byte, 8)
+		binary.LittleEndian.PutUint64(index, uint64(i))
+		elem := append(rand.Bytes(32), index...)
+		_, mutations, err := tree.Add(hasher.Do(elem), uint64(i))
+		if err != nil {
+			b.Fatal(err)
+		}
 		store.Mutate(mutations)
 	}
-
 }

@@ -17,8 +17,6 @@
 package cache
 
 import (
-	"github.com/bbva/qed/balloon/navigator"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 )
 
@@ -28,11 +26,14 @@ type PassThroughCache struct {
 }
 
 func NewPassThroughCache(prefix byte, store storage.Store) *PassThroughCache {
-	return &PassThroughCache{prefix, store}
+	return &PassThroughCache{
+		prefix: prefix,
+		store:  store,
+	}
 }
 
-func (c PassThroughCache) Get(pos navigator.Position) (hashing.Digest, bool) {
-	pair, err := c.store.Get(c.prefix, pos.Bytes())
+func (c PassThroughCache) Get(key []byte) ([]byte, bool) {
+	pair, err := c.store.Get(c.prefix, key)
 	if err != nil {
 		return nil, false
 	}

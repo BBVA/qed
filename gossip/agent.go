@@ -169,7 +169,6 @@ func (a *Agent) route(src *member.Peer) []*memberlist.Node {
 
 // Join asks the Agent instance to join.
 func (a *Agent) Join(addrs []string) (int, error) {
-
 	if a.State() != member.Alive {
 		return 0, fmt.Errorf("Agent can't join after Leave or Shutdown")
 	}
@@ -177,6 +176,7 @@ func (a *Agent) Join(addrs []string) (int, error) {
 	if len(addrs) > 0 {
 		return a.memberlist.Join(addrs)
 	}
+
 	return 0, nil
 }
 
