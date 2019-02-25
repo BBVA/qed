@@ -14,59 +14,58 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"github.com/bbva/qed/log"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/storage"
 )
 
-type BatchLoader interface {
-	Load(pos navigation.Position) *BatchNode
+type batchLoader interface {
+	Load(pos position) *batchNode
 }
 
 // TODO maybe use a function
-type DefaultBatchLoader struct {
+type defaultBatchLoader struct {
 	cacheHeightLimit uint16
 	cache            cache.Cache
 	store            storage.Store
 }
 
-func NewDefaultBatchLoader(store storage.Store, cache cache.Cache, cacheHeightLimit uint16) *DefaultBatchLoader {
-	return &DefaultBatchLoader{
+func NewDefaultBatchLoader(store storage.Store, cache cache.Cache, cacheHeightLimit uint16) *defaultBatchLoader {
+	return &defaultBatchLoader{
 		cacheHeightLimit: cacheHeightLimit,
 		cache:            cache,
 		store:            store,
 	}
 }
 
-func (l DefaultBatchLoader) Load(pos navigation.Position) *BatchNode {
+func (l defaultBatchLoader) Load(pos position) *batchNode {
 	if pos.Height > l.cacheHeightLimit {
 		return l.loadBatchFromCache(pos)
 	}
 	return l.loadBatchFromStore(pos)
 }
 
-func (l DefaultBatchLoader) loadBatchFromCache(pos navigation.Position) *BatchNode {
+func (l defaultBatchLoader) loadBatchFromCache(pos position) *batchNode {
 	value, ok := l.cache.Get(pos.Bytes())
 	if !ok {
-		return NewEmptyBatchNode(len(pos.Index))
+		return newEmptyBatchNode(len(pos.Index))
 	}
-	batch := ParseBatchNode(len(pos.Index), value)
+	batch := parseBatchNode(len(pos.Index), value)
 	return batch
 }
 
-func (l DefaultBatchLoader) loadBatchFromStore(pos navigation.Position) *BatchNode {
+func (l defaultBatchLoader) loadBatchFromStore(pos position) *batchNode {
 	kv, err := l.store.Get(storage.HyperCachePrefix, pos.Bytes())
 	if err != nil {
 		if err == storage.ErrKeyNotFound {
-			return NewEmptyBatchNode(len(pos.Index))
+			return newEmptyBatchNode(len(pos.Index))
 		}
 		log.Fatalf("Oops, something went wrong. Unable to load batch: %v", err)
 	}
-	batch := ParseBatchNode(len(pos.Index), kv.Value)
+	batch := parseBatchNode(len(pos.Index), kv.Value)
 	return batch
 }
