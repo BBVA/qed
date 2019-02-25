@@ -16,6 +16,7 @@
 
 echo "export CLUSTER_SIZE=N [2|4] env variable to execute the benchmark in replica mode. N number of folowers"
 echo "export PROFILING=true env variable to enable go profiling"
+echo "export TLS=true to allow https"
 
 tdir=$(mktemp -d /var/tmp/demo.XXX)
 certs="/var/tmp/certs"
