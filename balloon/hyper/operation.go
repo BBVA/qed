@@ -78,7 +78,7 @@ func innerHash(pos position) *operation {
 	}
 }
 
-func updatebatchNode(pos position, idx int8, batch *batchNode) *operation {
+func updateBatchNode(pos position, idx int8, batch *batchNode) *operation {
 	return &operation{
 		Code: updateBatchNodeCode,
 		Pos:  pos,
