@@ -1,10 +1,25 @@
-package pruning
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+package history
 
 import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/require"
 )
@@ -12,19 +27,19 @@ import (
 func TestAuditPathVisitor(t *testing.T) {
 
 	testCases := []struct {
-		op                Operation
-		expectedAuditPath navigation.AuditPath
+		op                operation
+		expectedAuditPath AuditPath
 	}{
 		{
 			op:                leafnil(pos(0, 0)),
-			expectedAuditPath: navigation.AuditPath{},
+			expectedAuditPath: AuditPath{},
 		},
 		{
 			op: inner(pos(0, 1),
 				collect(getCache(pos(0, 0))),
 				leafnil(pos(1, 0)),
 			),
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x0},
 			},
 		},
@@ -35,7 +50,7 @@ func TestAuditPathVisitor(t *testing.T) {
 					leafnil(pos(2, 0)),
 				),
 			),
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x0},
 			},
 		},
@@ -47,7 +62,7 @@ func TestAuditPathVisitor(t *testing.T) {
 					leafnil(pos(3, 0)),
 				),
 			),
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x0},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x0},
 			},
@@ -61,7 +76,7 @@ func TestAuditPathVisitor(t *testing.T) {
 					),
 				),
 			),
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 			},
 		},
@@ -75,7 +90,7 @@ func TestAuditPathVisitor(t *testing.T) {
 					),
 				),
 			),
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 0).FixedBytes(): hashing.Digest{0x0},
 			},
@@ -83,7 +98,7 @@ func TestAuditPathVisitor(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		visitor := NewAuditPathVisitor(hashing.NewFakeXorHasher(), cache.NewFakeCache([]byte{0x0}))
+		visitor := newAuditPathVisitor(hashing.NewFakeXorHasher(), cache.NewFakeCache([]byte{0x0}))
 		c.op.Accept(visitor)
 		auditPath := visitor.Result()
 		require.Equalf(t, c.expectedAuditPath, auditPath, "The audit path %v should be equal to the expected %v in test case %d", auditPath, c.expectedAuditPath, i)

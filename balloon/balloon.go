@@ -22,7 +22,6 @@ import (
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/history"
-	historynav "github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/metrics"
@@ -146,13 +145,13 @@ func (p MembershipProof) Verify(event []byte, snapshot *Snapshot) bool {
 
 type IncrementalProof struct {
 	Start, End uint64
-	AuditPath  historynav.AuditPath
+	AuditPath  history.AuditPath
 	Hasher     hashing.Hasher
 }
 
 func NewIncrementalProof(
 	start, end uint64,
-	auditPath historynav.AuditPath,
+	auditPath history.AuditPath,
 	hasher hashing.Hasher,
 ) *IncrementalProof {
 	return &IncrementalProof{

@@ -18,7 +18,6 @@ package balloon
 
 import (
 	"github.com/bbva/qed/balloon/history"
-	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/hashing"
 )
@@ -32,7 +31,7 @@ func NewFakeQueryProof(shouldVerify bool, value []byte, hasher hashing.Hasher) *
 
 func NewFakeMembershipProof(shouldVerify bool, hasher hashing.Hasher) *history.MembershipProof {
 	if shouldVerify {
-		return history.NewMembershipProof(0, 0, navigation.AuditPath{}, hasher)
+		return history.NewMembershipProof(0, 0, history.AuditPath{}, hasher)
 	}
-	return history.NewMembershipProof(1, 1, navigation.AuditPath{}, hasher)
+	return history.NewMembershipProof(1, 1, history.AuditPath{}, hasher)
 }
