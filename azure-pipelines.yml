@@ -1,0 +1,46 @@
+# Go
+# Build your Go project.
+# Add steps that test, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/go
+
+trigger:
+- master
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+variables:
+  GOBIN:  '$(GOPATH)/bin' # Go binaries path
+  GOROOT: '/usr/local/go1.11' # Go installation path
+  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+  GO111MODULE: on
+
+steps:
+- script: |
+    mkdir -p '$(GOBIN)'
+    mkdir -p '$(GOPATH)/pkg'
+    mkdir -p '$(modulePath)'
+    shopt -s extglob
+    shopt -s dotglob
+    mv !(gopath) '$(modulePath)'
+    echo '##vso[task.prependpath]$(GOBIN)'
+    echo '##vso[task.prependpath]$(GOROOT)/bin'
+    sudo apt install bzr
+  displayName: 'Set up the Go workspace'
+
+- script: |
+    ssh-keygen -t ed25519 -f $HOME/.ssh/id_ed25519 -P ''
+    openssl req -newkey rsa:2048 -nodes -days 3650 -x509 -keyout $HOME/.ssh/ca.key -out $HOME/.ssh/ca.crt -subj "/CN=*"
+    openssl req -newkey rsa:2048 -nodes -keyout $HOME/.ssh/server.key -out $HOME/.ssh/server.csr -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*"
+    openssl x509 -req -days 365 -sha256 -in $HOME/.ssh/server.csr -CA $HOME/.ssh/ca.crt -CAkey $HOME/.ssh/ca.key -CAcreateserial -out $HOME/.ssh/server.crt -extfile <(echo subjectAltName = IP:127.0.0.1)
+  displayName: 'Generate certificates'
+
+- script: |
+    go version
+    go mod download
+    go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+    go vet -composites=false ./...
+  workingDirectory: '$(modulePath)'
+  displayName: 'Get dependencies, then build'
+
