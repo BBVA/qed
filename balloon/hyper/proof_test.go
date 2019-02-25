@@ -21,15 +21,13 @@ import (
 
 	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/bbva/qed/balloon/hyper/navigation"
 )
 
 func TestProofVerify(t *testing.T) {
 
 	testCases := []struct {
 		key, value   []byte
-		auditPath    navigation.AuditPath
+		auditPath    AuditPath
 		rootHash     hashing.Digest
 		verifyResult bool
 	}{
@@ -37,7 +35,7 @@ func TestProofVerify(t *testing.T) {
 			// verify key=0 with empty audit path
 			key:          []byte{0},
 			value:        []byte{0},
-			auditPath:    navigation.AuditPath{},
+			auditPath:    AuditPath{},
 			rootHash:     hashing.Digest{0x0},
 			verifyResult: false,
 		},
@@ -45,7 +43,7 @@ func TestProofVerify(t *testing.T) {
 			// verify key=0 with empty audit path
 			key:   []byte{0},
 			value: []byte{0},
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				"0x80|7": hashing.Digest{0x0},
 				"0x40|6": hashing.Digest{0x0},
 				"0x20|5": hashing.Digest{0x0},
@@ -58,7 +56,7 @@ func TestProofVerify(t *testing.T) {
 			// verify key=0 with empty audit path
 			key:   []byte{0},
 			value: []byte{0},
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				"0x80|7": hashing.Digest{0x0},
 				"0x40|6": hashing.Digest{0x0},
 				"0x20|5": hashing.Digest{0x0},

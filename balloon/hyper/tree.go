@@ -19,11 +19,9 @@ package hyper
 import (
 	"sync"
 
-	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/log"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/hyper/pruning"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
@@ -41,7 +39,7 @@ type HyperTree struct {
 	hasher           hashing.Hasher
 	cacheHeightLimit uint16
 	defaultHashes    []hashing.Digest
-	batchLoader      pruning.BatchLoader
+	batchLoader      batchLoader
 
 	sync.RWMutex
 }
@@ -59,7 +57,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 		hasher:           hasher,
 		cacheHeightLimit: cacheHeightLimit,
 		defaultHashes:    make([]hashing.Digest, numBits),
-		batchLoader:      pruning.NewDefaultBatchLoader(store, cache, cacheHeightLimit),
+		batchLoader:      NewDefaultBatchLoader(store, cache, cacheHeightLimit),
 	}
 
 	tree.defaultHashes[0] = tree.hasher.Do([]byte{0x0}, []byte{0x0})
@@ -82,8 +80,8 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	versionAsBytes := util.Uint64AsBytes(version)
 
 	// build a stack of operations and then interpret it to generate the root hash
-	ops := pruning.PruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)
-	ctx := &pruning.Context{
+	ops := pruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)
+	ctx := &pruningContext{
 		Hasher:        t.hasher,
 		Cache:         t.cache,
 		DefaultHashes: t.defaultHashes,
@@ -108,12 +106,12 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) 
 	//log.Debugf("Proving membership for index %d with version %d", eventDigest, version)
 
 	// build a stack of operations and then interpret it to generate the audit path
-	ops := pruning.PruneToFind(eventDigest, t.batchLoader)
-	ctx := &pruning.Context{
+	ops := pruneToFind(eventDigest, t.batchLoader)
+	ctx := &pruningContext{
 		Hasher:        t.hasher,
 		Cache:         t.cache,
 		DefaultHashes: t.defaultHashes,
-		AuditPath:     make(navigation.AuditPath, 0),
+		AuditPath:     make(AuditPath, 0),
 	}
 
 	ops.Pop().Interpret(ops, ctx)
@@ -140,8 +138,8 @@ func (t *HyperTree) RebuildCache() {
 
 	// insert every node into cache
 	for _, node := range nodes {
-		ops := pruning.PruneToRebuild(node.Key[2:], node.Value, t.cacheHeightLimit, t.batchLoader)
-		ctx := &pruning.Context{
+		ops := pruneToRebuild(node.Key[2:], node.Value, t.cacheHeightLimit, t.batchLoader)
+		ctx := &pruningContext{
 			Hasher:        t.hasher,
 			Cache:         t.cache,
 			DefaultHashes: t.defaultHashes,

@@ -14,23 +14,22 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"bytes"
 	"sort"
 
-	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/util"
 )
 
-type Leaf struct {
+type leaf struct {
 	Index, Value []byte
 }
 
-type Leaves []Leaf
+type leaves []leaf
 
-func (l Leaves) InsertSorted(leaf Leaf) Leaves {
+func (l leaves) InsertSorted(leaf leaf) leaves {
 
 	if len(l) == 0 {
 		l = append(l, leaf)
@@ -52,7 +51,7 @@ func (l Leaves) InsertSorted(leaf Leaf) Leaves {
 
 }
 
-func (l Leaves) Split(index []byte) (left, right Leaves) {
+func (l leaves) Split(index []byte) (left, right leaves) {
 	// the smallest index i where l[i].Index >= index
 	splitIndex := sort.Search(len(l), func(i int) bool {
 		return bytes.Compare(l[i].Index, index) >= 0
@@ -60,13 +59,13 @@ func (l Leaves) Split(index []byte) (left, right Leaves) {
 	return l[:splitIndex], l[splitIndex:]
 }
 
-type TraverseBatch func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack)
+type traverseBatch func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack)
 
-func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches BatchLoader) *OperationsStack {
+func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
 
-	var traverse, traverseThroughCache, traverseAfterCache TraverseBatch
+	var traverse, traverseThroughCache, traverseAfterCache traverseBatch
 
-	traverse = func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	traverse = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
 		if batch == nil {
 			batch = batches.Load(pos)
 		}
@@ -77,7 +76,7 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 		}
 	}
 
-	traverseThroughCache = func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	traverseThroughCache = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		if len(leaves) == 0 { // discarded branch
 			if batch.HasElementAt(iBatch) {
@@ -110,7 +109,7 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 
 	}
 
-	traverseAfterCache = func(pos navigation.Position, leaves Leaves, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	traverseAfterCache = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		if len(leaves) == 0 { // discarded branch
 			if batch.HasElementAt(iBatch) {
@@ -128,7 +127,7 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 				panic("Oops, something went wrong. We cannot have more than one leaf at the end of the main tree")
 			}
 			// create or update the leaf with a new shortcut
-			newBatch := NewEmptyBatchNode(len(pos.Index))
+			newBatch := newEmptyBatchNode(len(pos.Index))
 			ops.PushAll(
 				leafHash(pos, leaves[0].Value),
 				updateBatchShortcut(pos, 0, newBatch, leaves[0].Index, leaves[0].Value),
@@ -153,7 +152,7 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 				return
 			}
 			// nil value (no previous node stored) so create a new shortcut batch
-			newBatch := NewEmptyBatchNode(len(pos.Index))
+			newBatch := newEmptyBatchNode(len(pos.Index))
 			ops.PushAll(
 				leafHash(pos, leaves[0].Value),
 				updateBatchShortcut(pos, 0, newBatch, leaves[0].Index, leaves[0].Value),
@@ -182,7 +181,7 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 			if batch.HasLeafAt(iBatch) {
 				// push down leaf
 				key, value := batch.GetLeafKVAt(iBatch)
-				leaves = leaves.InsertSorted(Leaf{key, value})
+				leaves = leaves.InsertSorted(leaf{key, value})
 				batch.ResetElementAt(iBatch)
 				batch.ResetElementAt(2*iBatch + 1)
 				batch.ResetElementAt(2*iBatch + 2)
@@ -205,11 +204,11 @@ func PruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 
 	}
 
-	ops := NewOperationsStack()
+	ops := newOperationsStack()
 	version := util.AddPaddingToBytes(value, len(index))
 	version = version[len(version)-len(index):] // TODO GET RID OF THIS: used only to pass tests
-	leaves := make(Leaves, 0)
-	leaves = leaves.InsertSorted(Leaf{index, version})
-	traverse(navigation.NewRootPosition(uint16(len(index))), leaves, nil, 0, ops)
+	leaves := make(leaves, 0)
+	leaves = leaves.InsertSorted(leaf{index, version})
+	traverse(newRootPosition(uint16(len(index))), leaves, nil, 0, ops)
 	return ops
 }

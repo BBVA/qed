@@ -14,12 +14,11 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,44 +28,44 @@ func TestPruneToVerify(t *testing.T) {
 
 	testCases := []struct {
 		index, value []byte
-		auditPath    navigation.AuditPath
+		auditPath    AuditPath
 		expectedOps  []op
 	}{
 		{
 			// verify index=0 with empty audit path
 			index:     []byte{0},
 			value:     []byte{0},
-			auditPath: navigation.AuditPath{},
+			auditPath: AuditPath{},
 			expectedOps: []op{
-				{LeafHashCode, pos(0, 8)},
+				{leafHashCode, pos(0, 8)},
 			},
 		},
 		{
 			// verify index=0
 			index: []byte{0},
 			value: []byte{0},
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(128, 7).StringId(): []byte{0x0},
 				pos(64, 6).StringId():  []byte{0x0},
 				pos(32, 5).StringId():  []byte{0x0},
 				pos(16, 4).StringId():  []byte{0x0},
 			},
 			expectedOps: []op{
-				{InnerHashCode, pos(0, 8)},
-				{GetFromPathCode, pos(128, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{GetFromPathCode, pos(64, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{GetFromPathCode, pos(32, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{GetFromPathCode, pos(16, 4)},
-				{LeafHashCode, pos(0, 4)},
+				{innerHashCode, pos(0, 8)},
+				{getFromPathCode, pos(128, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getFromPathCode, pos(64, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getFromPathCode, pos(32, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getFromPathCode, pos(16, 4)},
+				{leafHashCode, pos(0, 4)},
 			},
 		},
 	}
 
 	for i, c := range testCases {
-		prunedOps := PruneToVerify(c.index, c.value, uint16(8-len(c.auditPath))).List()
+		prunedOps := pruneToVerify(c.index, c.value, uint16(8-len(c.auditPath))).List()
 		require.Truef(t, len(c.expectedOps) == len(prunedOps), "The size of the pruned ops should match the expected for test case %d", i)
 		for j := 0; j < len(prunedOps); j++ {
 			assert.Equalf(t, c.expectedOps[j].Code, prunedOps[j].Code, "The pruned operation's code should match for test case %d", i)
@@ -79,21 +78,21 @@ func TestVerifyInterpretation(t *testing.T) {
 
 	testCases := []struct {
 		index, value     []byte
-		auditPath        navigation.AuditPath
+		auditPath        AuditPath
 		expectedRootHash hashing.Digest
 	}{
 		{
 			// verify index=0 with empty audit path
 			index:            []byte{0},
 			value:            []byte{0},
-			auditPath:        navigation.AuditPath{},
+			auditPath:        AuditPath{},
 			expectedRootHash: []byte{0},
 		},
 		{
 			// verify index=0
 			index: []byte{0},
 			value: []byte{0},
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(128, 7).StringId(): []byte{0x0},
 				pos(64, 6).StringId():  []byte{0x1},
 				pos(32, 5).StringId():  []byte{0x2},
@@ -105,8 +104,8 @@ func TestVerifyInterpretation(t *testing.T) {
 
 	for i, c := range testCases {
 
-		ops := PruneToVerify(c.index, c.value, uint16(8-len(c.auditPath)))
-		ctx := &Context{
+		ops := pruneToVerify(c.index, c.value, uint16(8-len(c.auditPath)))
+		ctx := &pruningContext{
 			Hasher:        hashing.NewFakeXorHasher(),
 			Cache:         nil,
 			DefaultHashes: nil,
