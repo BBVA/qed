@@ -14,13 +14,12 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +39,7 @@ func TestPruneToFind(t *testing.T) {
 			cachedBatches: map[string][]byte{},
 			storedBatches: map[string][]byte{},
 			expectedOps: []op{
-				{NoOpCode, pos(0, 8)}, // empty audit path
+				{noOpCode, pos(0, 8)}, // empty audit path
 			},
 		},
 		{
@@ -65,19 +64,19 @@ func TestPruneToFind(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{InnerHashCode, pos(0, 8)},
-				{CollectHashCode, pos(128, 7)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{CollectHashCode, pos(64, 6)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{CollectHashCode, pos(32, 5)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{CollectHashCode, pos(16, 4)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{GetProvidedHashCode, pos(0, 4)}, // we stop traversing at the shortcut (index=0)
+				{innerHashCode, pos(0, 8)},
+				{collectHashCode, pos(128, 7)},
+				{getDefaultHashCode, pos(128, 7)},
+				{innerHashCode, pos(0, 7)},
+				{collectHashCode, pos(64, 6)},
+				{getDefaultHashCode, pos(64, 6)},
+				{innerHashCode, pos(0, 6)},
+				{collectHashCode, pos(32, 5)},
+				{getDefaultHashCode, pos(32, 5)},
+				{innerHashCode, pos(0, 5)},
+				{collectHashCode, pos(16, 4)},
+				{getDefaultHashCode, pos(16, 4)},
+				{getProvidedHashCode, pos(0, 4)}, // we stop traversing at the shortcut (index=0)
 			},
 		},
 		{
@@ -103,19 +102,19 @@ func TestPruneToFind(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{InnerHashCode, pos(0, 8)},
-				{CollectHashCode, pos(128, 7)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{CollectHashCode, pos(64, 6)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{CollectHashCode, pos(32, 5)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{CollectHashCode, pos(16, 4)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{GetProvidedHashCode, pos(0, 4)}, // stop at the position of the shorcut (index=0)
+				{innerHashCode, pos(0, 8)},
+				{collectHashCode, pos(128, 7)},
+				{getDefaultHashCode, pos(128, 7)},
+				{innerHashCode, pos(0, 7)},
+				{collectHashCode, pos(64, 6)},
+				{getDefaultHashCode, pos(64, 6)},
+				{innerHashCode, pos(0, 6)},
+				{collectHashCode, pos(32, 5)},
+				{getDefaultHashCode, pos(32, 5)},
+				{innerHashCode, pos(0, 5)},
+				{collectHashCode, pos(16, 4)},
+				{getDefaultHashCode, pos(16, 4)},
+				{getProvidedHashCode, pos(0, 4)}, // stop at the position of the shorcut (index=0)
 			},
 		},
 		{
@@ -156,31 +155,31 @@ func TestPruneToFind(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{InnerHashCode, pos(0, 8)},
-				{CollectHashCode, pos(128, 7)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{CollectHashCode, pos(64, 6)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{CollectHashCode, pos(32, 5)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{CollectHashCode, pos(16, 4)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{InnerHashCode, pos(0, 4)},
-				{CollectHashCode, pos(8, 3)},
-				{GetDefaultHashCode, pos(8, 3)},
-				{InnerHashCode, pos(0, 3)},
-				{CollectHashCode, pos(4, 2)},
-				{GetDefaultHashCode, pos(4, 2)},
-				{InnerHashCode, pos(0, 2)},
-				{CollectHashCode, pos(2, 1)},
-				{GetDefaultHashCode, pos(2, 1)},
-				{InnerHashCode, pos(0, 1)},
-				{GetProvidedHashCode, pos(1, 0)}, // shortcut found but not collected
-				{CollectHashCode, pos(0, 0)},
-				{GetProvidedHashCode, pos(0, 0)}, // we take the hash of the index=0 position from the batch
+				{innerHashCode, pos(0, 8)},
+				{collectHashCode, pos(128, 7)},
+				{getDefaultHashCode, pos(128, 7)},
+				{innerHashCode, pos(0, 7)},
+				{collectHashCode, pos(64, 6)},
+				{getDefaultHashCode, pos(64, 6)},
+				{innerHashCode, pos(0, 6)},
+				{collectHashCode, pos(32, 5)},
+				{getDefaultHashCode, pos(32, 5)},
+				{innerHashCode, pos(0, 5)},
+				{collectHashCode, pos(16, 4)},
+				{getDefaultHashCode, pos(16, 4)},
+				{innerHashCode, pos(0, 4)},
+				{collectHashCode, pos(8, 3)},
+				{getDefaultHashCode, pos(8, 3)},
+				{innerHashCode, pos(0, 3)},
+				{collectHashCode, pos(4, 2)},
+				{getDefaultHashCode, pos(4, 2)},
+				{innerHashCode, pos(0, 2)},
+				{collectHashCode, pos(2, 1)},
+				{getDefaultHashCode, pos(2, 1)},
+				{innerHashCode, pos(0, 1)},
+				{getProvidedHashCode, pos(1, 0)}, // shortcut found but not collected
+				{collectHashCode, pos(0, 0)},
+				{getProvidedHashCode, pos(0, 0)}, // we take the hash of the index=0 position from the batch
 			},
 		},
 		{
@@ -206,19 +205,19 @@ func TestPruneToFind(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{InnerHashCode, pos(0, 8)},
-				{CollectHashCode, pos(128, 7)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{CollectHashCode, pos(64, 6)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{CollectHashCode, pos(32, 5)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{CollectHashCode, pos(16, 4)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{GetProvidedHashCode, pos(0, 4)}, // stop at the position of the shorcut (index=0)
+				{innerHashCode, pos(0, 8)},
+				{collectHashCode, pos(128, 7)},
+				{getDefaultHashCode, pos(128, 7)},
+				{innerHashCode, pos(0, 7)},
+				{collectHashCode, pos(64, 6)},
+				{getDefaultHashCode, pos(64, 6)},
+				{innerHashCode, pos(0, 6)},
+				{collectHashCode, pos(32, 5)},
+				{getDefaultHashCode, pos(32, 5)},
+				{innerHashCode, pos(0, 5)},
+				{collectHashCode, pos(16, 4)},
+				{getDefaultHashCode, pos(16, 4)},
+				{getProvidedHashCode, pos(0, 4)}, // stop at the position of the shorcut (index=0)
 			},
 		},
 		{
@@ -251,25 +250,25 @@ func TestPruneToFind(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{InnerHashCode, pos(0, 8)},
-				{CollectHashCode, pos(128, 7)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{CollectHashCode, pos(64, 6)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{CollectHashCode, pos(32, 5)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{CollectHashCode, pos(16, 4)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{InnerHashCode, pos(0, 4)},
-				{InnerHashCode, pos(8, 3)},
-				{GetProvidedHashCode, pos(12, 2)}, // found shortcut index=12
-				{CollectHashCode, pos(8, 2)},
-				{GetProvidedHashCode, pos(8, 2)}, // shortcut index=8
-				{CollectHashCode, pos(0, 3)},
-				{GetProvidedHashCode, pos(0, 3)}, // shortcut index=0
+				{innerHashCode, pos(0, 8)},
+				{collectHashCode, pos(128, 7)},
+				{getDefaultHashCode, pos(128, 7)},
+				{innerHashCode, pos(0, 7)},
+				{collectHashCode, pos(64, 6)},
+				{getDefaultHashCode, pos(64, 6)},
+				{innerHashCode, pos(0, 6)},
+				{collectHashCode, pos(32, 5)},
+				{getDefaultHashCode, pos(32, 5)},
+				{innerHashCode, pos(0, 5)},
+				{collectHashCode, pos(16, 4)},
+				{getDefaultHashCode, pos(16, 4)},
+				{innerHashCode, pos(0, 4)},
+				{innerHashCode, pos(8, 3)},
+				{getProvidedHashCode, pos(12, 2)}, // found shortcut index=12
+				{collectHashCode, pos(8, 2)},
+				{getProvidedHashCode, pos(8, 2)}, // shortcut index=8
+				{collectHashCode, pos(0, 3)},
+				{getProvidedHashCode, pos(0, 3)}, // shortcut index=0
 			},
 		},
 		{
@@ -294,10 +293,10 @@ func TestPruneToFind(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{InnerHashCode, pos(0, 8)},
-				{NoOpCode, pos(128, 7)}, // not found
-				{CollectHashCode, pos(0, 7)},
-				{GetProvidedHashCode, pos(0, 7)}, // we discard the previous path updated by the previous insertion
+				{innerHashCode, pos(0, 8)},
+				{noOpCode, pos(128, 7)}, // not found
+				{collectHashCode, pos(0, 7)},
+				{getProvidedHashCode, pos(0, 7)}, // we discard the previous path updated by the previous insertion
 			},
 		},
 	}
@@ -306,8 +305,8 @@ func TestPruneToFind(t *testing.T) {
 	cacheHeightLimit := batchLevels * 4
 
 	for i, c := range testCases {
-		loader := NewFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
-		prunedOps := PruneToFind(c.index, loader).List()
+		loader := newFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
+		prunedOps := pruneToFind(c.index, loader).List()
 		require.Truef(t, len(c.expectedOps) == len(prunedOps), "The size of the pruned ops should match the expected for test case %d", i)
 		for j := 0; j < len(prunedOps); j++ {
 			assert.Equalf(t, c.expectedOps[j].Code, prunedOps[j].Code, "The pruned operation's code should match for test case %d", i)
@@ -322,14 +321,14 @@ func TestSearchInterpretation(t *testing.T) {
 		index             []byte
 		cachedBatches     map[string][]byte
 		storedBatches     map[string][]byte
-		expectedAuditPath navigation.AuditPath
+		expectedAuditPath AuditPath
 	}{
 		{
 			// search for index=0 on empty tree
 			index:             []byte{0},
 			cachedBatches:     map[string][]byte{},
 			storedBatches:     map[string][]byte{},
-			expectedAuditPath: navigation.AuditPath{},
+			expectedAuditPath: AuditPath{},
 		},
 		{
 			// search for index=0 on tree with only one leaf
@@ -352,7 +351,7 @@ func TestSearchInterpretation(t *testing.T) {
 					0x00, 0x02, // iBatch 2 -> value=0x00
 				},
 			},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(128, 7).StringId(): []byte{0x0},
 				pos(64, 6).StringId():  []byte{0x0},
 				pos(32, 5).StringId():  []byte{0x0},
@@ -381,7 +380,7 @@ func TestSearchInterpretation(t *testing.T) {
 					0x00, 0x02, // iBatch 2 -> value=0x00
 				},
 			},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(128, 7).StringId(): []byte{0x0},
 				pos(64, 6).StringId():  []byte{0x0},
 				pos(32, 5).StringId():  []byte{0x0},
@@ -425,7 +424,7 @@ func TestSearchInterpretation(t *testing.T) {
 					0x01, 0x00, // iBatch 16 -> hash=0x01
 				},
 			},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(128, 7).StringId(): []byte{0x0},
 				pos(64, 6).StringId():  []byte{0x0},
 				pos(32, 5).StringId():  []byte{0x0},
@@ -458,7 +457,7 @@ func TestSearchInterpretation(t *testing.T) {
 					0x00, 0x02, // iBatch 2 -> value=0x00
 				},
 			},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(128, 7).StringId(): []byte{0x0},
 				pos(64, 6).StringId():  []byte{0x0},
 				pos(32, 5).StringId():  []byte{0x0},
@@ -494,7 +493,7 @@ func TestSearchInterpretation(t *testing.T) {
 					0x0c, 0x02, // iBatch 14 -> value=0x0c
 				},
 			},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(128, 7).StringId(): []byte{0x0},
 				pos(64, 6).StringId():  []byte{0x0},
 				pos(32, 5).StringId():  []byte{0x0},
@@ -524,7 +523,7 @@ func TestSearchInterpretation(t *testing.T) {
 					0x00, 0x02, // iBatch 2 -> value=0x00
 				},
 			},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 7).StringId(): []byte{0x0},
 			},
 		},
@@ -536,14 +535,14 @@ func TestSearchInterpretation(t *testing.T) {
 
 	for i, c := range testCases {
 		cache := cache.NewFakeCache([]byte{0x0})
-		batches := NewFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
+		batches := newFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
 
-		ops := PruneToFind(c.index, batches)
-		ctx := &Context{
+		ops := pruneToFind(c.index, batches)
+		ctx := &pruningContext{
 			Hasher:        hashing.NewFakeXorHasher(),
 			Cache:         cache,
 			DefaultHashes: defaultHashes,
-			AuditPath:     navigation.NewAuditPath(),
+			AuditPath:     NewAuditPath(),
 		}
 
 		ops.Pop().Interpret(ops, ctx)

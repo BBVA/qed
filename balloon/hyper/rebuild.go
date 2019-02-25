@@ -14,21 +14,19 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"bytes"
-
-	"github.com/bbva/qed/balloon/hyper/navigation"
 )
 
-func PruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batches BatchLoader) *OperationsStack {
+func pruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
 
-	persistedBatch := ParseBatchNode(len(index), serializedBatch)
+	persistedBatch := parseBatchNode(len(index), serializedBatch)
 
-	var traverse, discardBranch func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack)
+	var traverse, discardBranch func(pos position, batch *batchNode, iBatch int8, ops *operationsStack)
 
-	discardBranch = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	discardBranch = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		if batch.HasElementAt(iBatch) {
 			ops.Push(getProvidedHash(pos, iBatch, batch))
@@ -37,12 +35,12 @@ func PruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batc
 		}
 	}
 
-	traverse = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	traverse = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		// we don't need to check the length of the leaves because we
 		// always have to descend to the cache height limit
 		if pos.Height == cacheHeightLimit {
-			ops.PushAll(useHash(pos, persistedBatch.GetElementAt(0)), updateBatchNode(pos, iBatch, batch))
+			ops.PushAll(useHash(pos, persistedBatch.GetElementAt(0)), updatebatchNode(pos, iBatch, batch))
 			return
 		}
 
@@ -53,7 +51,7 @@ func PruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batc
 		// at the end of a batch tree
 		if iBatch > 0 && pos.Height%4 == 0 {
 			traverse(pos, nil, 0, ops)
-			ops.Push(updateBatchNode(pos, iBatch, batch))
+			ops.Push(updatebatchNode(pos, iBatch, batch))
 			return
 		}
 
@@ -67,15 +65,15 @@ func PruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batc
 			traverse(rightPos, batch, 2*iBatch+2, ops)
 		}
 
-		ops.PushAll(innerHash(pos), updateBatchNode(pos, iBatch, batch))
+		ops.PushAll(innerHash(pos), updatebatchNode(pos, iBatch, batch))
 		if iBatch == 0 { // it's the root of the batch tree
 			ops.Push(putInCache(pos, batch))
 		}
 
 	}
 
-	ops := NewOperationsStack()
-	traverse(navigation.NewRootPosition(uint16(len(index))), nil, 0, ops)
+	ops := newOperationsStack()
+	traverse(newRootPosition(uint16(len(index))), nil, 0, ops)
 	return ops
 
 }

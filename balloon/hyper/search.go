@@ -14,26 +14,24 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"bytes"
-
-	"github.com/bbva/qed/balloon/hyper/navigation"
 )
 
-func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
+func pruneToFind(index []byte, batches batchLoader) *operationsStack {
 
-	var traverse, traverseBatch, discardBranch func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack)
+	var traverse, traverseBatch, discardBranch func(pos position, batch *batchNode, iBatch int8, ops *operationsStack)
 
-	traverse = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	traverse = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
 		if batch == nil {
 			batch = batches.Load(pos)
 		}
 		traverseBatch(pos, batch, iBatch, ops)
 	}
 
-	discardBranch = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	discardBranch = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
 		if batch.HasElementAt(iBatch) {
 			ops.PushAll(getProvidedHash(pos, iBatch, batch), collectHash(pos))
 		} else {
@@ -41,7 +39,7 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 		}
 	}
 
-	traverseBatch = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	traverseBatch = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		// We found a nil value. That means there is no previous node stored on the current
 		// path so we stop traversing because the index does no exist in the tree.
@@ -79,8 +77,8 @@ func PruneToFind(index []byte, batches BatchLoader) *OperationsStack {
 		ops.Push(innerHash(pos))
 	}
 
-	ops := NewOperationsStack()
-	root := navigation.NewRootPosition(uint16(len(index)))
+	ops := newOperationsStack()
+	root := newRootPosition(uint16(len(index)))
 	traverse(root, nil, 0, ops)
 	if ops.Len() == 0 {
 		ops.Push(noOp(root))

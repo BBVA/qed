@@ -14,8 +14,10 @@
    limitations under the License.
 */
 
-package navigation
+package hyper
 
-func pos(index uint8, height uint16) Position {
-	return NewPosition([]byte{byte(index)}, height)
+import "testing"
+
+func TestPruneToRebuild(t *testing.T) {
+
 }
