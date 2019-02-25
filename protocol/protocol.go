@@ -22,8 +22,8 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
+	historynav "github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/balloon/visitor"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/util"
@@ -103,8 +103,8 @@ func (b *BatchSnapshots) Decode(msg []byte) error {
 
 type MembershipResult struct {
 	Exists         bool
-	Hyper          visitor.AuditPath
-	History        visitor.AuditPath
+	Hyper          map[string]hashing.Digest
+	History        map[string]hashing.Digest
 	CurrentVersion uint64
 	QueryVersion   uint64
 	ActualVersion  uint64
@@ -120,7 +120,7 @@ type IncrementalRequest struct {
 type IncrementalResponse struct {
 	Start     uint64
 	End       uint64
-	AuditPath visitor.AuditPath
+	AuditPath map[string]hashing.Digest
 }
 
 // ToMembershipProof translates internal api balloon.MembershipProof to the
@@ -128,8 +128,8 @@ type IncrementalResponse struct {
 func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResult {
 	return &MembershipResult{
 		mp.Exists,
-		mp.HyperProof.AuditPath(),
-		mp.HistoryProof.AuditPath(),
+		mp.HyperProof.AuditPath,
+		mp.HistoryProof.AuditPath.Serialize(),
 		mp.CurrentVersion,
 		mp.QueryVersion,
 		mp.ActualVersion,
@@ -145,15 +145,16 @@ func ToBalloonProof(mr *MembershipResult, hasherF func() hashing.Hasher) *balloo
 	historyProof := history.NewMembershipProof(
 		mr.ActualVersion,
 		mr.QueryVersion,
-		mr.History,
+		historynav.ParseAuditPath(mr.History),
 		hasherF(),
 	)
 
+	hasher := hasherF()
 	hyperProof := hyper.NewQueryProof(
 		mr.KeyDigest,
-		util.Uint64AsBytes(mr.ActualVersion),
+		util.Uint64AsPaddedBytes(mr.ActualVersion, int(hasher.Len())),
 		mr.Hyper,
-		hasherF(),
+		hasher,
 	)
 
 	return balloon.NewMembershipProof(
@@ -161,8 +162,8 @@ func ToBalloonProof(mr *MembershipResult, hasherF func() hashing.Hasher) *balloo
 		hyperProof,
 		historyProof,
 		mr.CurrentVersion,
-		mr.ActualVersion,
 		mr.QueryVersion,
+		mr.ActualVersion,
 		mr.KeyDigest,
 		hasherF(),
 	)
@@ -173,10 +174,10 @@ func ToIncrementalResponse(proof *balloon.IncrementalProof) *IncrementalResponse
 	return &IncrementalResponse{
 		proof.Start,
 		proof.End,
-		proof.AuditPath,
+		proof.AuditPath.Serialize(),
 	}
 }
 
 func ToIncrementalProof(ir *IncrementalResponse, hasher hashing.Hasher) *balloon.IncrementalProof {
-	return balloon.NewIncrementalProof(ir.Start, ir.End, ir.AuditPath, hasher)
+	return balloon.NewIncrementalProof(ir.Start, ir.End, historynav.ParseAuditPath(ir.AuditPath), hasher)
 }
