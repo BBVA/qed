@@ -63,7 +63,7 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	log.Debugf("Proving membership for index %d with version %d", index, version)
 
 	// build a visitable pruned tree and then visit it to collect the audit path
-	visitor := pruning.NewAuditPathVisitor(t.hasher, t.readCache)
+	visitor := pruning.NewAuditPathVisitor(t.hasherF(), t.readCache)
 	if index == version {
 		pruning.PruneToFind(index).Accept(visitor) // faster pruning
 	} else {
@@ -79,7 +79,7 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 	log.Debugf("Proving consistency between versions %d and %d", start, end)
 
 	// build a visitable pruned tree and then visit it to collect the audit path
-	visitor := pruning.NewAuditPathVisitor(t.hasher, t.readCache)
+	visitor := pruning.NewAuditPathVisitor(t.hasherF(), t.readCache)
 	pruning.PruneToCheckConsistency(start, end).Accept(visitor)
 
 	proof := NewIncrementalProof(start, end, visitor.Result(), t.hasherF())
