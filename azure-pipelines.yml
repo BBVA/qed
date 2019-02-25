@@ -26,10 +26,7 @@ steps:
     mv !(gopath) '$(modulePath)'
     echo '##vso[task.prependpath]$(GOBIN)'
     echo '##vso[task.prependpath]$(GOROOT)/bin'
-<<<<<<< HEAD
     sudo apt install bzr
-=======
->>>>>>> QED Azure pipeline
   displayName: 'Set up the Go workspace'
 
 - script: |
@@ -46,7 +43,4 @@ steps:
     go vet -composites=false ./...
   workingDirectory: '$(modulePath)'
   displayName: 'Get dependencies, then build'
-<<<<<<< HEAD
 
-=======
->>>>>>> QED Azure pipeline
