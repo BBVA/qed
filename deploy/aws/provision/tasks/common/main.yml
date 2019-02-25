@@ -64,6 +64,11 @@
     - server.key
     - id_ed25519
 
+- name: Copy CA cert to remote
+  copy:
+      src: config_files/ca.crt
+      dest: /etc/pki/tls/certs/qed-ca.crt
+
 - name: Create Node Exporter start script
   template:
     dest: /var/qed/exporter-{{ item }} 
