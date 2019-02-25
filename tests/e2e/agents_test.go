@@ -70,13 +70,10 @@ func TestAgents(t *testing.T) {
 	bAuditor, aAuditor := setupAuditor(0, t)
 	bMonitor, aMonitor := setupMonitor(0, t)
 	bPublisher, aPublisher := setupPublisher(0, t)
-	delay := func(t *testing.T) {
-		time.Sleep(2 * time.Second)
-	}
 
 	scenario, let := scope.Scope(t,
 		merge(bServer, bStore, bPublisher, bAuditor, bMonitor),
-		merge(aServer, aPublisher, aAuditor, aMonitor, aStore, delay),
+		merge(aServer, aPublisher, aAuditor, aMonitor, aStore, delay(2*time.Second)),
 	)
 
 	event := rand.RandomString(10)

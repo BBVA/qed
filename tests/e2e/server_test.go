@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/testutils/scope"
 	assert "github.com/stretchr/testify/require"
@@ -37,7 +38,7 @@ func TestStart(t *testing.T) {
 
 	scenario, let := scope.Scope(t,
 		merge(bServer),
-		merge(aServer),
+		merge(aServer, delay(2*time.Second)),
 	)
 
 	scenario("Test availability of profiling server", func() {

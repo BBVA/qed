@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
@@ -29,7 +30,7 @@ import (
 
 func TestIncrementalConsistency(t *testing.T) {
 	before, after := setupServer(0, "", false, t)
-	scenario, let := scope.Scope(t, before, after)
+	scenario, let := scope.Scope(t, before, merge(after, delay(2*time.Second)))
 
 	scenario("Add multiple events and verify consistency between two of them", func() {
 

@@ -52,6 +52,12 @@ func merge(list ...scope.TestF) scope.TestF {
 	}
 }
 
+func delay(duration time.Duration) scope.TestF {
+	return func(t *testing.T) {
+		time.Sleep(duration)
+	}
+}
+
 func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) *gossip.Agent {
 	agentConf := gossip.DefaultConfig()
 	agentConf.NodeName = fmt.Sprintf("%s%d", name, id)
