@@ -28,9 +28,8 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
-	historynav "github.com/bbva/qed/balloon/history/navigation"
+	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/balloon/hyper"
-	hypernav "github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
@@ -57,8 +56,8 @@ func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) e
 func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
 	return &balloon.MembershipProof{
 		Exists:         true,
-		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hypernav.AuditPath{}, nil),
-		HistoryProof:   history.NewMembershipProof(0, 0, historynav.AuditPath{}, nil),
+		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hyper.AuditPath{}, nil),
+		HistoryProof:   history.NewMembershipProof(0, 0, navigation.AuditPath{}, nil),
 		CurrentVersion: 1,
 		QueryVersion:   1,
 		ActualVersion:  2,
@@ -71,8 +70,8 @@ func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon
 	hasher := hashing.NewFakeXorHasher()
 	return &balloon.MembershipProof{
 		Exists:         true,
-		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hypernav.AuditPath{}, nil),
-		HistoryProof:   history.NewMembershipProof(0, 0, historynav.AuditPath{}, nil),
+		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hyper.AuditPath{}, nil),
+		HistoryProof:   history.NewMembershipProof(0, 0, navigation.AuditPath{}, nil),
 		CurrentVersion: 1,
 		QueryVersion:   1,
 		ActualVersion:  2,
@@ -86,7 +85,7 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 	ip := balloon.IncrementalProof{
 		Start:     2,
 		End:       8,
-		AuditPath: historynav.AuditPath{pathKey: hashing.Digest{0x00}},
+		AuditPath: navigation.AuditPath{pathKey: hashing.Digest{0x00}},
 		Hasher:    hashing.NewFakeXorHasher(),
 	}
 	return &ip, nil

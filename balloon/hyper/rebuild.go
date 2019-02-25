@@ -14,21 +14,19 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"bytes"
-
-	"github.com/bbva/qed/balloon/hyper/navigation"
 )
 
-func PruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batches BatchLoader) *OperationsStack {
+func pruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
 
-	persistedBatch := ParseBatchNode(len(index), serializedBatch)
+	persistedBatch := parseBatchNode(len(index), serializedBatch)
 
-	var traverse, discardBranch func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack)
+	var traverse, discardBranch func(pos position, batch *batchNode, iBatch int8, ops *operationsStack)
 
-	discardBranch = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	discardBranch = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		if batch.HasElementAt(iBatch) {
 			ops.Push(getProvidedHash(pos, iBatch, batch))
@@ -37,7 +35,7 @@ func PruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batc
 		}
 	}
 
-	traverse = func(pos navigation.Position, batch *BatchNode, iBatch int8, ops *OperationsStack) {
+	traverse = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		// we don't need to check the length of the leaves because we
 		// always have to descend to the cache height limit
@@ -74,8 +72,8 @@ func PruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batc
 
 	}
 
-	ops := NewOperationsStack()
-	traverse(navigation.NewRootPosition(uint16(len(index))), nil, 0, ops)
+	ops := newOperationsStack()
+	traverse(newRootPosition(uint16(len(index))), nil, 0, ops)
 	return ops
 
 }

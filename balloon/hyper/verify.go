@@ -14,23 +14,22 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"bytes"
 
-	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/util"
 )
 
-func PruneToVerify(index, value []byte, auditPathHeight uint16) *OperationsStack {
+func pruneToVerify(index, value []byte, auditPathHeight uint16) *operationsStack {
 
 	version := util.AddPaddingToBytes(value, len(index))
 	version = version[len(version)-len(index):] // TODO GET RID OF THIS: used only to pass tests
 
-	var traverse func(pos navigation.Position, ops *OperationsStack)
+	var traverse func(pos position, ops *operationsStack)
 
-	traverse = func(pos navigation.Position, ops *OperationsStack) {
+	traverse = func(pos position, ops *operationsStack) {
 
 		if pos.Height <= auditPathHeight {
 			ops.Push(leafHash(pos, version))
@@ -50,8 +49,8 @@ func PruneToVerify(index, value []byte, auditPathHeight uint16) *OperationsStack
 
 	}
 
-	ops := NewOperationsStack()
-	traverse(navigation.NewRootPosition(uint16(len(index))), ops)
+	ops := newOperationsStack()
+	traverse(newRootPosition(uint16(len(index))), ops)
 	return ops
 
 }
