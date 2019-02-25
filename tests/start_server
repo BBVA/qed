@@ -21,8 +21,7 @@ echo "export TLS=true to allow https"
 tdir=$(mktemp -d /var/tmp/demo.XXX)
 certs="/var/tmp/certs"
 
-if [ ! -z "$PROFILING" ]
-then
+if [ ! -z "$PROFILING" ]; then
     echo "PROFILING=enabled"
     mkdir -p results
     PROFILING=--profiling
@@ -30,8 +29,7 @@ else
     echo PROFILING=disabled
 fi
 
-if [ ! -z "$TLS" ]
-then
+if [ ! -z "$TLS" ]; then
     TLS="--certificate ${certs}/server.crt \ --certificate-key ${certs}/server.key"
 else
     echo "TLS=disabled" 
