@@ -40,7 +40,7 @@ func pruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batc
 		// we don't need to check the length of the leaves because we
 		// always have to descend to the cache height limit
 		if pos.Height == cacheHeightLimit {
-			ops.PushAll(useHash(pos, persistedBatch.GetElementAt(0)), updatebatchNode(pos, iBatch, batch))
+			ops.PushAll(useHash(pos, persistedBatch.GetElementAt(0)), updateBatchNode(pos, iBatch, batch))
 			return
 		}
 
@@ -51,7 +51,7 @@ func pruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batc
 		// at the end of a batch tree
 		if iBatch > 0 && pos.Height%4 == 0 {
 			traverse(pos, nil, 0, ops)
-			ops.Push(updatebatchNode(pos, iBatch, batch))
+			ops.Push(updateBatchNode(pos, iBatch, batch))
 			return
 		}
 
@@ -65,7 +65,7 @@ func pruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batc
 			traverse(rightPos, batch, 2*iBatch+2, ops)
 		}
 
-		ops.PushAll(innerHash(pos), updatebatchNode(pos, iBatch, batch))
+		ops.PushAll(innerHash(pos), updateBatchNode(pos, iBatch, batch))
 		if iBatch == 0 { // it's the root of the batch tree
 			ops.Push(putInCache(pos, batch))
 		}
