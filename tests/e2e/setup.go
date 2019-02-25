@@ -18,8 +18,10 @@ package e2e
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/user"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,6 +58,28 @@ func delay(duration time.Duration) scope.TestF {
 	return func(t *testing.T) {
 		time.Sleep(duration)
 	}
+}
+
+func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Response, error) {
+	var err error
+	if payload == nil {
+		payload = strings.NewReader("")
+	}
+	req, err := http.NewRequest(method, url, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Api-Key", apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return resp, err
 }
 
 func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) *gossip.Agent {
