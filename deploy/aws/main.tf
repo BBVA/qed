@@ -84,7 +84,7 @@ module "agent-monitor" {
   source = "./modules/qed"
 
   name = "agent-monitor"
-  count = 2
+  count = 1
   instance_type = "t3.small"
   iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size = "20"
