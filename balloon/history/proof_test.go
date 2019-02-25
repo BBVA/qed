@@ -19,11 +19,88 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestAuditPathSerialization(t *testing.T) {
+
+	testCases := []struct {
+		path     AuditPath
+		expected map[string]hashing.Digest
+	}{
+		{
+			AuditPath{},
+			map[string]hashing.Digest{},
+		},
+		{
+			AuditPath{
+				newPosition(0, 0).FixedBytes(): []byte{0x0},
+			},
+			map[string]hashing.Digest{
+				"0|0": []byte{0x0},
+			},
+		},
+		{
+			AuditPath{
+				newPosition(0, 0).FixedBytes(): []byte{0x0},
+				newPosition(2, 1).FixedBytes(): []byte{0x1},
+				newPosition(4, 2).FixedBytes(): []byte{0x2},
+			},
+			map[string]hashing.Digest{
+				"0|0": []byte{0x0},
+				"2|1": []byte{0x1},
+				"4|2": []byte{0x2},
+			},
+		},
+	}
+
+	for i, c := range testCases {
+		serialized := c.path.Serialize()
+		assert.Equalf(t, c.expected, serialized, "The serialized paths should match for test case %d", i)
+	}
+
+}
+
+func TestParseAuditPath(t *testing.T) {
+
+	testCases := []struct {
+		path     map[string]hashing.Digest
+		expected AuditPath
+	}{
+		{
+			map[string]hashing.Digest{},
+			AuditPath{},
+		},
+		{
+			map[string]hashing.Digest{
+				"0|0": []byte{0x0},
+			},
+			AuditPath{
+				newPosition(0, 0).FixedBytes(): []byte{0x0},
+			},
+		},
+		{
+			map[string]hashing.Digest{
+				"0|0": []byte{0x0},
+				"2|1": []byte{0x1},
+				"4|2": []byte{0x2},
+			},
+			AuditPath{
+				newPosition(0, 0).FixedBytes(): []byte{0x0},
+				newPosition(2, 1).FixedBytes(): []byte{0x1},
+				newPosition(4, 2).FixedBytes(): []byte{0x2},
+			},
+		},
+	}
+
+	for i, c := range testCases {
+		parsed := ParseAuditPath(c.path)
+		assert.Equalf(t, c.expected, parsed, "The parsed paths should match for test case %d", i)
+	}
+
+}
 
 func TestVerifyMembershipProof(t *testing.T) {
 
@@ -31,7 +108,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 
 	testCases := []struct {
 		index, version uint64
-		auditPath      navigation.AuditPath
+		auditPath      AuditPath
 		eventDigest    hashing.Digest
 		expectedDigest hashing.Digest
 		verifies       bool
@@ -39,7 +116,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:          0,
 			version:        0,
-			auditPath:      navigation.AuditPath{},
+			auditPath:      AuditPath{},
 			eventDigest:    hashing.Digest{0x0},
 			expectedDigest: hashing.Digest{0x0},
 			verifies:       true,
@@ -47,7 +124,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   1,
 			version: 1,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x0},
 			},
 			eventDigest:    hashing.Digest{0x1},
@@ -57,7 +134,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   1,
 			version: 1,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x1},
 			},
 			eventDigest:    hashing.Digest{0x1},
@@ -67,7 +144,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   2,
 			version: 2,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 			},
 			eventDigest:    hashing.Digest{0x2},
@@ -77,7 +154,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   3,
 			version: 3,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 			},
@@ -88,7 +165,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   4,
 			version: 4,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 			},
 			eventDigest:    hashing.Digest{0x4},
@@ -98,7 +175,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   5,
 			version: 5,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 0).FixedBytes(): hashing.Digest{0x4},
 			},
@@ -109,7 +186,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   6,
 			version: 6,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 1).FixedBytes(): hashing.Digest{0x1},
 			},
@@ -120,7 +197,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   7,
 			version: 7,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(6, 0).FixedBytes(): hashing.Digest{0x6},
@@ -132,7 +209,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   8,
 			version: 8,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 3).FixedBytes(): hashing.Digest{0x0},
 			},
 			eventDigest:    hashing.Digest{0x8},
@@ -142,7 +219,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   9,
 			version: 9,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 3).FixedBytes(): hashing.Digest{0x0},
 				pos(8, 0).FixedBytes(): hashing.Digest{0x8},
 			},
@@ -153,7 +230,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   0,
 			version: 1,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 			},
 			eventDigest:    hashing.Digest{0x0},
@@ -163,7 +240,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   0,
 			version: 1,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 			},
 			eventDigest:    hashing.Digest{0x0},
@@ -173,7 +250,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   0,
 			version: 2,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x2},
 			},
@@ -184,7 +261,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   0,
 			version: 3,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 			},
@@ -195,7 +272,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   0,
 			version: 4,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(4, 2).FixedBytes(): hashing.Digest{0x4},
@@ -207,7 +284,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   0,
 			version: 5,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(4, 2).FixedBytes(): hashing.Digest{0x1},
@@ -219,7 +296,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   0,
 			version: 6,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(4, 2).FixedBytes(): hashing.Digest{0x7},
@@ -231,7 +308,7 @@ func TestVerifyMembershipProof(t *testing.T) {
 		{
 			index:   0,
 			version: 7,
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(4, 2).FixedBytes(): hashing.Digest{0x0},
@@ -255,7 +332,7 @@ func TestVerifyIncrementalProof(t *testing.T) {
 	log.SetLogger("TestVerifyIncrementalProof", log.INFO)
 
 	testCases := []struct {
-		auditPath           navigation.AuditPath
+		auditPath           AuditPath
 		start               uint64
 		end                 uint64
 		expectedStartDigest hashing.Digest
@@ -263,7 +340,7 @@ func TestVerifyIncrementalProof(t *testing.T) {
 		verifies            bool
 	}{
 		{
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 				pos(3, 0).FixedBytes(): hashing.Digest{0x3},
@@ -277,7 +354,7 @@ func TestVerifyIncrementalProof(t *testing.T) {
 			verifies:            true,
 		},
 		{
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 				pos(3, 0).FixedBytes(): hashing.Digest{0x3},
@@ -292,7 +369,7 @@ func TestVerifyIncrementalProof(t *testing.T) {
 			verifies:            true,
 		},
 		{
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 0).FixedBytes(): hashing.Digest{0x4},
 				pos(5, 0).FixedBytes(): hashing.Digest{0x5},
@@ -305,7 +382,7 @@ func TestVerifyIncrementalProof(t *testing.T) {
 			verifies:            true,
 		},
 		{
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 0).FixedBytes(): hashing.Digest{0x4},
 				pos(5, 0).FixedBytes(): hashing.Digest{0x5},
@@ -319,7 +396,7 @@ func TestVerifyIncrementalProof(t *testing.T) {
 			verifies:            true,
 		},
 		{
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 				pos(3, 0).FixedBytes(): hashing.Digest{0x3},
@@ -332,7 +409,7 @@ func TestVerifyIncrementalProof(t *testing.T) {
 			verifies:            true,
 		},
 		{
-			auditPath: navigation.AuditPath{
+			auditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(6, 0).FixedBytes(): hashing.Digest{0x6},

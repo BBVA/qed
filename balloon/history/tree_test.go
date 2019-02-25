@@ -19,7 +19,6 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/bplus"
@@ -111,19 +110,19 @@ func TestProveMembership(t *testing.T) {
 	testCases := []struct {
 		index, version    uint64
 		eventDigest       hashing.Digest
-		expectedAuditPath navigation.AuditPath
+		expectedAuditPath AuditPath
 	}{
 		{
 			index:             0,
 			version:           0,
 			eventDigest:       hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{},
+			expectedAuditPath: AuditPath{},
 		},
 		{
 			index:       1,
 			version:     1,
 			eventDigest: hashing.Digest{0x1},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x0},
 			},
 		},
@@ -131,7 +130,7 @@ func TestProveMembership(t *testing.T) {
 			index:       2,
 			version:     2,
 			eventDigest: hashing.Digest{0x2},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 			},
 		},
@@ -139,7 +138,7 @@ func TestProveMembership(t *testing.T) {
 			index:       3,
 			version:     3,
 			eventDigest: hashing.Digest{0x3},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 			},
@@ -148,7 +147,7 @@ func TestProveMembership(t *testing.T) {
 			index:       4,
 			version:     4,
 			eventDigest: hashing.Digest{0x4},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 			},
 		},
@@ -156,7 +155,7 @@ func TestProveMembership(t *testing.T) {
 			index:       5,
 			version:     5,
 			eventDigest: hashing.Digest{0x5},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 0).FixedBytes(): hashing.Digest{0x4},
 			},
@@ -165,7 +164,7 @@ func TestProveMembership(t *testing.T) {
 			index:       6,
 			version:     6,
 			eventDigest: hashing.Digest{0x6},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 1).FixedBytes(): hashing.Digest{0x1},
 			},
@@ -174,7 +173,7 @@ func TestProveMembership(t *testing.T) {
 			index:       7,
 			version:     7,
 			eventDigest: hashing.Digest{0x7},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(6, 0).FixedBytes(): hashing.Digest{0x6},
@@ -184,7 +183,7 @@ func TestProveMembership(t *testing.T) {
 			index:       8,
 			version:     8,
 			eventDigest: hashing.Digest{0x8},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 3).FixedBytes(): hashing.Digest{0x0},
 			},
 		},
@@ -192,7 +191,7 @@ func TestProveMembership(t *testing.T) {
 			index:       9,
 			version:     9,
 			eventDigest: hashing.Digest{0x9},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 3).FixedBytes(): hashing.Digest{0x0},
 				pos(8, 0).FixedBytes(): hashing.Digest{0x8},
 			},
@@ -201,7 +200,7 @@ func TestProveMembership(t *testing.T) {
 			index:       0,
 			version:     1,
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 			},
 		},
@@ -209,7 +208,7 @@ func TestProveMembership(t *testing.T) {
 			index:       0,
 			version:     2,
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x2},
 			},
@@ -218,7 +217,7 @@ func TestProveMembership(t *testing.T) {
 			index:       0,
 			version:     3,
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 			},
@@ -227,7 +226,7 @@ func TestProveMembership(t *testing.T) {
 			index:       0,
 			version:     4,
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(4, 2).FixedBytes(): hashing.Digest{0x4},
@@ -237,7 +236,7 @@ func TestProveMembership(t *testing.T) {
 			index:       0,
 			version:     5,
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(4, 2).FixedBytes(): hashing.Digest{0x1},
@@ -247,7 +246,7 @@ func TestProveMembership(t *testing.T) {
 			index:       0,
 			version:     6,
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(4, 2).FixedBytes(): hashing.Digest{0x7},
@@ -257,7 +256,7 @@ func TestProveMembership(t *testing.T) {
 			index:       0,
 			version:     7,
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(4, 2).FixedBytes(): hashing.Digest{0x0},
@@ -290,24 +289,24 @@ func TestProveConsistency(t *testing.T) {
 
 	testCases := []struct {
 		eventDigest       hashing.Digest
-		expectedAuditPath navigation.AuditPath
+		expectedAuditPath AuditPath
 	}{
 		{
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x0},
 			},
 		},
 		{
 			eventDigest: hashing.Digest{0x1},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x0},
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 			},
 		},
 		{
 			eventDigest: hashing.Digest{0x2},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x0},
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
@@ -315,7 +314,7 @@ func TestProveConsistency(t *testing.T) {
 		},
 		{
 			eventDigest: hashing.Digest{0x3},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 				pos(3, 0).FixedBytes(): hashing.Digest{0x3},
@@ -323,7 +322,7 @@ func TestProveConsistency(t *testing.T) {
 		},
 		{
 			eventDigest: hashing.Digest{0x4},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 				pos(3, 0).FixedBytes(): hashing.Digest{0x3},
@@ -332,7 +331,7 @@ func TestProveConsistency(t *testing.T) {
 		},
 		{
 			eventDigest: hashing.Digest{0x5},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 0).FixedBytes(): hashing.Digest{0x4},
 				pos(5, 0).FixedBytes(): hashing.Digest{0x5},
@@ -340,7 +339,7 @@ func TestProveConsistency(t *testing.T) {
 		},
 		{
 			eventDigest: hashing.Digest{0x6},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 0).FixedBytes(): hashing.Digest{0x4},
 				pos(5, 0).FixedBytes(): hashing.Digest{0x5},
@@ -349,7 +348,7 @@ func TestProveConsistency(t *testing.T) {
 		},
 		{
 			eventDigest: hashing.Digest{0x7},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(6, 0).FixedBytes(): hashing.Digest{0x6},
@@ -358,7 +357,7 @@ func TestProveConsistency(t *testing.T) {
 		},
 		{
 			eventDigest: hashing.Digest{0x8},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(6, 0).FixedBytes(): hashing.Digest{0x6},
@@ -368,7 +367,7 @@ func TestProveConsistency(t *testing.T) {
 		},
 		{
 			eventDigest: hashing.Digest{0x9},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 3).FixedBytes(): hashing.Digest{0x0},
 				pos(8, 0).FixedBytes(): hashing.Digest{0x8},
 				pos(9, 0).FixedBytes(): hashing.Digest{0x9},
@@ -403,19 +402,19 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	testCases := []struct {
 		index             uint64
 		eventDigest       hashing.Digest
-		expectedAuditPath navigation.AuditPath
+		expectedAuditPath AuditPath
 	}{
 		{
 			index:       0,
 			eventDigest: hashing.Digest{0x0},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x0},
 			},
 		},
 		{
 			index:       1,
 			eventDigest: hashing.Digest{0x1},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 0).FixedBytes(): hashing.Digest{0x0},
 				pos(1, 0).FixedBytes(): hashing.Digest{0x1},
 			},
@@ -423,7 +422,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 		{
 			index:       2,
 			eventDigest: hashing.Digest{0x2},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 			},
@@ -431,7 +430,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 		{
 			index:       3,
 			eventDigest: hashing.Digest{0x3},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 1).FixedBytes(): hashing.Digest{0x1},
 				pos(2, 0).FixedBytes(): hashing.Digest{0x2},
 				pos(3, 0).FixedBytes(): hashing.Digest{0x3},
@@ -440,7 +439,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 		{
 			index:       4,
 			eventDigest: hashing.Digest{0x4},
-			expectedAuditPath: navigation.AuditPath{
+			expectedAuditPath: AuditPath{
 				pos(0, 2).FixedBytes(): hashing.Digest{0x0},
 				pos(4, 0).FixedBytes(): hashing.Digest{0x4},
 			},

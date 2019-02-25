@@ -1,4 +1,20 @@
-package pruning
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+package history
 
 import (
 	"testing"
@@ -14,7 +30,7 @@ func TestPruneToVerify(t *testing.T) {
 	testCases := []struct {
 		index, version uint64
 		eventDigest    hashing.Digest
-		expectedOp     Operation
+		expectedOp     operation
 	}{
 		{
 			index:       0,
@@ -75,7 +91,7 @@ func TestPruneToVerify(t *testing.T) {
 	}
 
 	for _, c := range testCases {
-		prunedOp := PruneToVerify(c.index, c.version, c.eventDigest)
+		prunedOp := pruneToVerify(c.index, c.version, c.eventDigest)
 		assert.Equalf(t, c.expectedOp, prunedOp, "The pruned operation should match for test case with index %d and version %d", c.index, c.version)
 	}
 
@@ -85,7 +101,7 @@ func TestPruneToVerifyIncrementalEnd(t *testing.T) {
 
 	testCases := []struct {
 		index, version uint64
-		expectedOp     Operation
+		expectedOp     operation
 	}{
 		{
 			index:      0,
@@ -197,7 +213,7 @@ func TestPruneToVerifyIncrementalEnd(t *testing.T) {
 	}
 
 	for _, c := range testCases {
-		prunedOp := PruneToVerifyIncrementalEnd(c.index, c.version)
+		prunedOp := pruneToVerifyIncrementalEnd(c.index, c.version)
 		assert.Equalf(t, c.expectedOp, prunedOp, "The pruned operation should match for test case with index %d and version %d", c.index, c.version)
 	}
 
@@ -209,7 +225,7 @@ func BenchmarkPruneToVerify(b *testing.B) {
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
-		pruned := PruneToVerify(0, i, rand.Bytes(32))
+		pruned := pruneToVerify(0, i, rand.Bytes(32))
 		assert.NotNil(b, pruned)
 	}
 
@@ -221,7 +237,7 @@ func BenchmarkPruneToVerifyConsistent(b *testing.B) {
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
-		pruned := PruneToVerify(i, i, rand.Bytes(32))
+		pruned := pruneToVerify(i, i, rand.Bytes(32))
 		assert.NotNil(b, pruned)
 	}
 
@@ -233,7 +249,7 @@ func BenchmarkPruneToVerifyIncrementalEnd(b *testing.B) {
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
-		pruned := PruneToVerifyIncrementalEnd(0, i)
+		pruned := pruneToVerifyIncrementalEnd(0, i)
 		assert.NotNil(b, pruned)
 	}
 
@@ -245,7 +261,7 @@ func BenchmarkPruneToVerifyIncrementalStart(b *testing.B) {
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
-		pruned := PruneToVerifyIncrementalStart(i)
+		pruned := pruneToVerifyIncrementalStart(i)
 		assert.NotNil(b, pruned)
 	}
 

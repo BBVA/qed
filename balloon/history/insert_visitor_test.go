@@ -1,10 +1,24 @@
-package pruning
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+package history
 
 import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/stretchr/testify/assert"
@@ -13,7 +27,7 @@ import (
 func TestInsertVisitor(t *testing.T) {
 
 	testCases := []struct {
-		op                Operation
+		op                operation
 		expectedMutations []*storage.Mutation
 		expectedElements  []*cachedElement
 	}{
@@ -61,7 +75,7 @@ func TestInsertVisitor(t *testing.T) {
 
 	for i, c := range testCases {
 		cache := cache.NewFakeCache([]byte{0x0})
-		visitor := NewInsertVisitor(hashing.NewFakeXorHasher(), cache, storage.HistoryCachePrefix)
+		visitor := newInsertVisitor(hashing.NewFakeXorHasher(), cache, storage.HistoryCachePrefix)
 
 		c.op.Accept(visitor)
 
@@ -75,10 +89,10 @@ func TestInsertVisitor(t *testing.T) {
 }
 
 type cachedElement struct {
-	Pos    *navigation.Position
+	Pos    *position
 	Digest []byte
 }
 
-func newCachedElement(pos *navigation.Position, digest []byte) *cachedElement {
+func newCachedElement(pos *position, digest []byte) *cachedElement {
 	return &cachedElement{pos, digest}
 }
