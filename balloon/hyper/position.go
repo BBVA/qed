@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package navigation
+package hyper
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ import (
 	"github.com/bbva/qed/util"
 )
 
-type Position struct {
+type position struct {
 	Index  []byte
 	Height uint16
 
@@ -30,10 +30,10 @@ type Position struct {
 	numBits    uint16
 }
 
-func NewPosition(index []byte, height uint16) Position {
+func newPosition(index []byte, height uint16) position {
 	// Size of the index plus 2 bytes for the height
 	b := append(util.Uint16AsBytes(height), index[:len(index)]...)
-	return Position{
+	return position{
 		Index:      index,
 		Height:     height,
 		serialized: b, // memoized
@@ -41,48 +41,48 @@ func NewPosition(index []byte, height uint16) Position {
 	}
 }
 
-func NewRootPosition(indexNumBytes uint16) Position {
-	return NewPosition(make([]byte, indexNumBytes), indexNumBytes*8)
+func newRootPosition(indexNumBytes uint16) position {
+	return newPosition(make([]byte, indexNumBytes), indexNumBytes*8)
 }
 
-func (p Position) Bytes() []byte {
+func (p position) Bytes() []byte {
 	return p.serialized
 }
 
-func (p Position) String() string {
+func (p position) String() string {
 	return fmt.Sprintf("Pos(%d, %d)", p.Index, p.Height)
 }
 
-func (p Position) StringId() string {
+func (p position) StringId() string {
 	return fmt.Sprintf("%#x|%d", p.Index, p.Height)
 }
 
-func (p Position) Left() Position {
+func (p position) Left() position {
 	if p.IsLeaf() {
 		return p
 	}
-	return NewPosition(p.Index, p.Height-1)
+	return newPosition(p.Index, p.Height-1)
 }
 
-func (p Position) Right() Position {
+func (p position) Right() position {
 	if p.IsLeaf() {
 		return p
 	}
-	return NewPosition(p.splitBase(), p.Height-1)
+	return newPosition(p.splitBase(), p.Height-1)
 }
 
-func (p Position) IsLeaf() bool {
+func (p position) IsLeaf() bool {
 	return p.Height == 0
 }
 
-func (p Position) FirstDescendant() Position {
+func (p position) FirstDescendant() position {
 	if p.IsLeaf() {
 		return p
 	}
-	return NewPosition(p.Index, 0)
+	return newPosition(p.Index, 0)
 }
 
-func (p Position) LastDescendant() Position {
+func (p position) LastDescendant() position {
 	if p.IsLeaf() {
 		return p
 	}
@@ -91,10 +91,10 @@ func (p Position) LastDescendant() Position {
 	for bit := p.numBits - p.Height; bit < p.numBits; bit++ {
 		bitSet(index, bit)
 	}
-	return NewPosition(index, 0)
+	return newPosition(index, 0)
 }
 
-func (p Position) splitBase() []byte {
+func (p position) splitBase() []byte {
 	splitBit := p.numBits - p.Height
 	split := make([]byte, p.numBits/8)
 	copy(split, p.Index)

@@ -14,53 +14,49 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
-import (
-	"github.com/bbva/qed/balloon/hyper/navigation"
-)
-
-func pos(index byte, height uint16) navigation.Position {
-	return navigation.NewPosition([]byte{index}, height)
+func pos(index byte, height uint16) position {
+	return newPosition([]byte{index}, height)
 }
 
 type op struct {
-	Code OperationCode
-	Pos  navigation.Position
+	Code operationCode
+	Pos  position
 }
 
-type FakeBatchLoader struct {
+type fakeBatchLoader struct {
 	cacheHeightLimit uint16
-	cached           map[string]*BatchNode
-	stored           map[string]*BatchNode
+	cached           map[string]*batchNode
+	stored           map[string]*batchNode
 }
 
-func NewFakeBatchLoader(cached map[string][]byte, stored map[string][]byte, cacheHeightLimit uint16) *FakeBatchLoader {
-	loader := &FakeBatchLoader{
+func newFakeBatchLoader(cached map[string][]byte, stored map[string][]byte, cacheHeightLimit uint16) *fakeBatchLoader {
+	loader := &fakeBatchLoader{
 		cacheHeightLimit: cacheHeightLimit,
-		cached:           make(map[string]*BatchNode, 0),
-		stored:           make(map[string]*BatchNode, 0),
+		cached:           make(map[string]*batchNode, 0),
+		stored:           make(map[string]*batchNode, 0),
 	}
 	for k, v := range cached {
-		loader.cached[k] = ParseBatchNode(1, v)
+		loader.cached[k] = parseBatchNode(1, v)
 	}
 	for k, v := range stored {
-		loader.stored[k] = ParseBatchNode(1, v)
+		loader.stored[k] = parseBatchNode(1, v)
 	}
 	return loader
 }
 
-func (l *FakeBatchLoader) Load(pos navigation.Position) *BatchNode {
+func (l *fakeBatchLoader) Load(pos position) *batchNode {
 	if pos.Height > l.cacheHeightLimit {
 		batch, ok := l.cached[pos.StringId()]
 		if !ok {
-			return NewEmptyBatchNode(len(pos.Index))
+			return newEmptyBatchNode(len(pos.Index))
 		}
 		return batch
 	}
 	batch, ok := l.stored[pos.StringId()]
 	if !ok {
-		return NewEmptyBatchNode(len(pos.Index))
+		return newEmptyBatchNode(len(pos.Index))
 	}
 	return batch
 }

@@ -14,13 +14,12 @@
    limitations under the License.
 */
 
-package pruning
+package hyper
 
 import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/balloon/hyper/navigation"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/stretchr/testify/assert"
@@ -42,23 +41,23 @@ func TestPruneToInsert(t *testing.T) {
 			cachedBatches: map[string][]byte{},
 			storedBatches: map[string][]byte{},
 			expectedOps: []op{
-				{PutInCacheCode, pos(0, 8)},
-				{UpdateBatchNodeCode, pos(0, 8)},
-				{InnerHashCode, pos(0, 8)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{UpdateBatchNodeCode, pos(0, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{UpdateBatchNodeCode, pos(0, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{UpdateBatchNodeCode, pos(0, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{UpdateBatchNodeCode, pos(0, 4)},
-				{MutateBatchCode, pos(0, 4)},
-				{UpdateBatchShortcutCode, pos(0, 4)},
-				{LeafHashCode, pos(0, 4)},
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{mutateBatchCode, pos(0, 4)},
+				{updateBatchShortcutCode, pos(0, 4)},
+				{leafHashCode, pos(0, 4)},
 			},
 		},
 		{
@@ -84,23 +83,23 @@ func TestPruneToInsert(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{PutInCacheCode, pos(0, 8)},
-				{UpdateBatchNodeCode, pos(0, 8)},
-				{InnerHashCode, pos(0, 8)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{UpdateBatchNodeCode, pos(0, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{UpdateBatchNodeCode, pos(0, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{UpdateBatchNodeCode, pos(0, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{UpdateBatchNodeCode, pos(0, 4)},
-				{MutateBatchCode, pos(0, 4)},
-				{UpdateBatchShortcutCode, pos(0, 4)},
-				{LeafHashCode, pos(0, 4)},
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{mutateBatchCode, pos(0, 4)},
+				{updateBatchShortcutCode, pos(0, 4)},
+				{leafHashCode, pos(0, 4)},
 			},
 		},
 		{
@@ -127,40 +126,40 @@ func TestPruneToInsert(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{PutInCacheCode, pos(0, 8)},
-				{UpdateBatchNodeCode, pos(0, 8)},
-				{InnerHashCode, pos(0, 8)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{UpdateBatchNodeCode, pos(0, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{UpdateBatchNodeCode, pos(0, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{UpdateBatchNodeCode, pos(0, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{UpdateBatchNodeCode, pos(0, 4)},
-				{MutateBatchCode, pos(0, 4)}, // reset previous shortcut
-				{UpdateBatchNodeCode, pos(0, 4)},
-				{InnerHashCode, pos(0, 4)},
-				{GetDefaultHashCode, pos(8, 3)},
-				{UpdateBatchNodeCode, pos(0, 3)},
-				{InnerHashCode, pos(0, 3)},
-				{GetDefaultHashCode, pos(4, 2)},
-				{UpdateBatchNodeCode, pos(0, 2)},
-				{InnerHashCode, pos(0, 2)},
-				{GetDefaultHashCode, pos(2, 1)},
-				{UpdateBatchNodeCode, pos(0, 1)},
-				{InnerHashCode, pos(0, 1)},
-				{UpdateBatchNodeCode, pos(1, 0)},
-				{MutateBatchCode, pos(1, 0)}, // new batch
-				{UpdateBatchShortcutCode, pos(1, 0)},
-				{LeafHashCode, pos(1, 0)},
-				{UpdateBatchNodeCode, pos(0, 0)},
-				{MutateBatchCode, pos(0, 0)}, // new batch
-				{UpdateBatchShortcutCode, pos(0, 0)},
-				{LeafHashCode, pos(0, 0)},
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{mutateBatchCode, pos(0, 4)}, // reset previous shortcut
+				{updateBatchNodeCode, pos(0, 4)},
+				{innerHashCode, pos(0, 4)},
+				{getDefaultHashCode, pos(8, 3)},
+				{updateBatchNodeCode, pos(0, 3)},
+				{innerHashCode, pos(0, 3)},
+				{getDefaultHashCode, pos(4, 2)},
+				{updateBatchNodeCode, pos(0, 2)},
+				{innerHashCode, pos(0, 2)},
+				{getDefaultHashCode, pos(2, 1)},
+				{updateBatchNodeCode, pos(0, 1)},
+				{innerHashCode, pos(0, 1)},
+				{updateBatchNodeCode, pos(1, 0)},
+				{mutateBatchCode, pos(1, 0)}, // new batch
+				{updateBatchShortcutCode, pos(1, 0)},
+				{leafHashCode, pos(1, 0)},
+				{updateBatchNodeCode, pos(0, 0)},
+				{mutateBatchCode, pos(0, 0)}, // new batch
+				{updateBatchShortcutCode, pos(0, 0)},
+				{leafHashCode, pos(0, 0)},
 			},
 		},
 		{
@@ -187,27 +186,27 @@ func TestPruneToInsert(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{PutInCacheCode, pos(0, 8)},
-				{UpdateBatchNodeCode, pos(0, 8)},
-				{InnerHashCode, pos(0, 8)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{UpdateBatchNodeCode, pos(0, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{UpdateBatchNodeCode, pos(0, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{UpdateBatchNodeCode, pos(0, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{UpdateBatchNodeCode, pos(0, 4)},
-				{MutateBatchCode, pos(0, 4)}, // reset previous shortcut
-				{UpdateBatchNodeCode, pos(0, 4)},
-				{InnerHashCode, pos(0, 4)},
-				{UpdateBatchShortcutCode, pos(8, 3)},
-				{LeafHashCode, pos(8, 3)},
-				{UpdateBatchShortcutCode, pos(0, 3)},
-				{LeafHashCode, pos(0, 3)},
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{mutateBatchCode, pos(0, 4)}, // reset previous shortcut
+				{updateBatchNodeCode, pos(0, 4)},
+				{innerHashCode, pos(0, 4)},
+				{updateBatchShortcutCode, pos(8, 3)},
+				{leafHashCode, pos(8, 3)},
+				{updateBatchShortcutCode, pos(0, 3)},
+				{leafHashCode, pos(0, 3)},
 			},
 		},
 		{
@@ -239,30 +238,30 @@ func TestPruneToInsert(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{PutInCacheCode, pos(0, 8)},
-				{UpdateBatchNodeCode, pos(0, 8)},
-				{InnerHashCode, pos(0, 8)},
-				{GetDefaultHashCode, pos(128, 7)},
-				{UpdateBatchNodeCode, pos(0, 7)},
-				{InnerHashCode, pos(0, 7)},
-				{GetDefaultHashCode, pos(64, 6)},
-				{UpdateBatchNodeCode, pos(0, 6)},
-				{InnerHashCode, pos(0, 6)},
-				{GetDefaultHashCode, pos(32, 5)},
-				{UpdateBatchNodeCode, pos(0, 5)},
-				{InnerHashCode, pos(0, 5)},
-				{GetDefaultHashCode, pos(16, 4)},
-				{UpdateBatchNodeCode, pos(0, 4)},
-				{MutateBatchCode, pos(0, 4)},
-				{UpdateBatchNodeCode, pos(0, 4)},
-				{InnerHashCode, pos(0, 4)},
-				{UpdateBatchNodeCode, pos(8, 3)},
-				{InnerHashCode, pos(8, 3)},
-				{UpdateBatchShortcutCode, pos(12, 2)},
-				{LeafHashCode, pos(12, 2)},
-				{UpdateBatchShortcutCode, pos(8, 2)},
-				{LeafHashCode, pos(8, 2)},
-				{GetProvidedHashCode, pos(0, 3)},
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{mutateBatchCode, pos(0, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{innerHashCode, pos(0, 4)},
+				{updateBatchNodeCode, pos(8, 3)},
+				{innerHashCode, pos(8, 3)},
+				{updateBatchShortcutCode, pos(12, 2)},
+				{leafHashCode, pos(12, 2)},
+				{updateBatchShortcutCode, pos(8, 2)},
+				{leafHashCode, pos(8, 2)},
+				{getProvidedHashCode, pos(0, 3)},
 			},
 		},
 		{
@@ -288,23 +287,23 @@ func TestPruneToInsert(t *testing.T) {
 				},
 			},
 			expectedOps: []op{
-				{PutInCacheCode, pos(0, 8)},
-				{UpdateBatchNodeCode, pos(0, 8)},
-				{InnerHashCode, pos(0, 8)},
-				{UpdateBatchNodeCode, pos(128, 7)},
-				{InnerHashCode, pos(128, 7)},
-				{GetDefaultHashCode, pos(192, 6)},
-				{UpdateBatchNodeCode, pos(128, 6)},
-				{InnerHashCode, pos(128, 6)},
-				{GetDefaultHashCode, pos(160, 5)},
-				{UpdateBatchNodeCode, pos(128, 5)},
-				{InnerHashCode, pos(128, 5)},
-				{GetDefaultHashCode, pos(144, 4)},
-				{UpdateBatchNodeCode, pos(128, 4)},
-				{MutateBatchCode, pos(128, 4)},
-				{UpdateBatchShortcutCode, pos(128, 4)},
-				{LeafHashCode, pos(128, 4)},
-				{GetProvidedHashCode, pos(0, 7)},
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(128, 7)},
+				{innerHashCode, pos(128, 7)},
+				{getDefaultHashCode, pos(192, 6)},
+				{updateBatchNodeCode, pos(128, 6)},
+				{innerHashCode, pos(128, 6)},
+				{getDefaultHashCode, pos(160, 5)},
+				{updateBatchNodeCode, pos(128, 5)},
+				{innerHashCode, pos(128, 5)},
+				{getDefaultHashCode, pos(144, 4)},
+				{updateBatchNodeCode, pos(128, 4)},
+				{mutateBatchCode, pos(128, 4)},
+				{updateBatchShortcutCode, pos(128, 4)},
+				{leafHashCode, pos(128, 4)},
+				{getProvidedHashCode, pos(0, 7)},
 			},
 		},
 	}
@@ -313,8 +312,8 @@ func TestPruneToInsert(t *testing.T) {
 	cacheHeightLimit := batchLevels * 4
 
 	for i, c := range testCases {
-		loader := NewFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
-		prunedOps := PruneToInsert(c.index, c.value, cacheHeightLimit, loader).List()
+		loader := newFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
+		prunedOps := pruneToInsert(c.index, c.value, cacheHeightLimit, loader).List()
 		require.Truef(t, len(c.expectedOps) == len(prunedOps), "The size of the pruned ops should match the expected for test case %d", i)
 		for j := 0; j < len(prunedOps); j++ {
 			assert.Equalf(t, c.expectedOps[j].Code, prunedOps[j].Code, "The pruned operation's code should match for test case %d", i)
@@ -659,10 +658,10 @@ func TestInsertInterpretation(t *testing.T) {
 
 	for i, c := range testCases {
 		cache := cache.NewFakeCache([]byte{0x0})
-		batches := NewFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
+		batches := newFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
 
-		ops := PruneToInsert(c.index, c.value, cacheHeightLimit, batches)
-		ctx := &Context{
+		ops := pruneToInsert(c.index, c.value, cacheHeightLimit, batches)
+		ctx := &pruningContext{
 			Hasher:        hashing.NewFakeXorHasher(),
 			Cache:         cache,
 			DefaultHashes: defaultHashes,
@@ -681,6 +680,6 @@ func TestInsertInterpretation(t *testing.T) {
 }
 
 type cachedElement struct {
-	Pos   navigation.Position
+	Pos   position
 	Value []byte
 }
