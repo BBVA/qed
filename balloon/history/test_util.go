@@ -16,8 +16,38 @@
 
 package history
 
-import "github.com/bbva/qed/balloon/history/navigation"
+func pos(index uint64, height uint16) *position {
+	return newPosition(index, height)
+}
 
-func pos(index uint64, height uint16) *navigation.Position {
-	return navigation.NewPosition(index, height)
+func inner(pos *position, left, right operation) *innerHashOp {
+	return newInnerHashOp(pos, left, right)
+}
+
+func partial(pos *position, left operation) *partialInnerHashOp {
+	return newPartialInnerHashOp(pos, left)
+}
+
+func leaf(pos *position, value byte) *leafHashOp {
+	return newLeafHashOp(pos, []byte{value})
+}
+
+func leafnil(pos *position) *leafHashOp {
+	return newLeafHashOp(pos, nil)
+}
+
+func getCache(pos *position) *getCacheOp {
+	return newGetCacheOp(pos)
+}
+
+func putCache(op operation) *putCacheOp {
+	return newPutCacheOp(op)
+}
+
+func mutate(op operation) *mutateOp {
+	return newMutateOp(op)
+}
+
+func collect(op operation) *collectOp {
+	return newCollectOp(op)
 }
