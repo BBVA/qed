@@ -239,7 +239,8 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 }
 
 func (fsm *BalloonFSM) Close() error {
-	return fsm.store.Close()
+	fsm.balloon.Close()
+	return nil
 }
 
 func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
