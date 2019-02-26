@@ -44,7 +44,7 @@ agent:
 {% endfor %}
   server_urls:
 {% for host in groups['name_qed-1'] %}
-    - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
+    - "https://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
 {% endfor %}
 {% for host in groups['role_storage'] %}
   alert_urls:
@@ -64,7 +64,7 @@ agent:
 {% endfor %}
   server_urls:
 {% for host in groups['name_qed-1'] %}
-    - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
+    - "https://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
 {% endfor %}
 {% for host in groups['role_storage'] %}
   alert_urls:
