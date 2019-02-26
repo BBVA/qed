@@ -18,20 +18,53 @@ package history
 
 import (
 	"bytes"
+	"fmt"
+	"strconv"
+	"strings"
 
-	"github.com/bbva/qed/balloon/history/navigation"
-	"github.com/bbva/qed/balloon/history/pruning"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/util"
 )
 
+type AuditPath map[[keySize]byte]hashing.Digest
+
+func (p AuditPath) Get(pos []byte) ([]byte, bool) {
+	var buff [keySize]byte
+	copy(buff[:], pos)
+	digest, ok := p[buff]
+	return digest, ok
+}
+
+func (p AuditPath) Serialize() map[string]hashing.Digest {
+	s := make(map[string]hashing.Digest, len(p))
+	for k, v := range p {
+		s[fmt.Sprintf("%d|%d", util.BytesAsUint64(k[:8]), util.BytesAsUint16(k[8:]))] = v
+	}
+	return s
+}
+
+func ParseAuditPath(serialized map[string]hashing.Digest) AuditPath {
+	parsed := make(AuditPath, len(serialized))
+	for k, v := range serialized {
+		tokens := strings.Split(k, "|")
+		index, _ := strconv.Atoi(tokens[0])
+		height, _ := strconv.Atoi(tokens[1])
+		var key [keySize]byte
+		copy(key[:8], util.Uint64AsBytes(uint64(index)))
+		copy(key[8:], util.Uint16AsBytes(uint16(height)))
+		parsed[key] = v
+	}
+	return parsed
+}
+
 type MembershipProof struct {
-	AuditPath      navigation.AuditPath
+	AuditPath      AuditPath
 	Index, Version uint64
 	hasher         hashing.Hasher // TODO should we remove this and pass as an argument when verifying?
 }
 
-func NewMembershipProof(index, version uint64, auditPath navigation.AuditPath, hasher hashing.Hasher) *MembershipProof {
+func NewMembershipProof(index, version uint64, auditPath AuditPath, hasher hashing.Hasher) *MembershipProof {
 	return &MembershipProof{
 		AuditPath: auditPath,
 		Index:     index,
@@ -46,19 +79,19 @@ func (p MembershipProof) Verify(eventDigest []byte, expectedRootHash hashing.Dig
 	log.Debugf("Verifying membership proof for index %d and version %d", p.Index, p.Version)
 
 	// build a visitable pruned tree and then visit it to recompute root hash
-	visitor := pruning.NewComputeHashVisitor(p.hasher, p.AuditPath)
-	recomputed := pruning.PruneToVerify(p.Index, p.Version, eventDigest).Accept(visitor)
+	visitor := newComputeHashVisitor(p.hasher, p.AuditPath)
+	recomputed := pruneToVerify(p.Index, p.Version, eventDigest).Accept(visitor)
 
 	return bytes.Equal(recomputed, expectedRootHash)
 }
 
 type IncrementalProof struct {
-	AuditPath                navigation.AuditPath
+	AuditPath                AuditPath
 	StartVersion, EndVersion uint64
 	hasher                   hashing.Hasher
 }
 
-func NewIncrementalProof(start, end uint64, auditPath navigation.AuditPath, hasher hashing.Hasher) *IncrementalProof {
+func NewIncrementalProof(start, end uint64, auditPath AuditPath, hasher hashing.Hasher) *IncrementalProof {
 	return &IncrementalProof{
 		AuditPath:    auditPath,
 		StartVersion: start,
@@ -72,9 +105,9 @@ func (p IncrementalProof) Verify(startDigest, endDigest hashing.Digest) (correct
 	log.Debugf("Verifying incremental proof between versions %d and %d", p.StartVersion, p.EndVersion)
 
 	// build two visitable pruned trees and then visit them to recompute root hash
-	visitor := pruning.NewComputeHashVisitor(p.hasher, p.AuditPath)
-	startRecomputed := pruning.PruneToVerifyIncrementalStart(p.StartVersion).Accept(visitor)
-	endRecomputed := pruning.PruneToVerifyIncrementalEnd(p.StartVersion, p.EndVersion).Accept(visitor)
+	visitor := newComputeHashVisitor(p.hasher, p.AuditPath)
+	startRecomputed := pruneToVerifyIncrementalStart(p.StartVersion).Accept(visitor)
+	endRecomputed := pruneToVerifyIncrementalEnd(p.StartVersion, p.EndVersion).Accept(visitor)
 
 	return bytes.Equal(startRecomputed, startDigest) && bytes.Equal(endRecomputed, endDigest)
 
