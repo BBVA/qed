@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/user"
@@ -236,17 +237,13 @@ func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
 func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, scope.TestF) {
 	var srv *server.Server
 	var err error
-	path := fmt.Sprintf("/var/tmp/e2e-qed%d/", id)
-
+	path, err := ioutil.TempDir("", "e2e-qed")
+	if err != nil {
+		t.Fatalf("Unable to create a path: %v", err)
+	}
 	usr, _ := user.Current()
 
 	before := func(t *testing.T) {
-		os.RemoveAll(path)
-		err = os.MkdirAll(path, os.FileMode(0755))
-		if err != nil {
-			t.Fatalf("Unable to create a path: %v", err)
-		}
-
 		hostname, _ := os.Hostname()
 		conf := server.DefaultConfig()
 		conf.APIKey = APIKey
@@ -287,6 +284,7 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 
 	after := func(t *testing.T) {
 		debug.FreeOSMemory()
+		os.RemoveAll(path)
 		if srv != nil {
 			err := srv.Stop()
 			if err != nil {
