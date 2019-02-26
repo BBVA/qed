@@ -1,4 +1,20 @@
-package pruning
+/*
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+package history
 
 import (
 	"testing"
@@ -11,7 +27,7 @@ func TestPruneToFindConsistent(t *testing.T) {
 
 	testCases := []struct {
 		index, version uint64
-		expectedOp     Operation
+		expectedOp     operation
 	}{
 		{
 			index:      0,
@@ -128,7 +144,7 @@ func TestPruneToFindConsistent(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		prunedOp := PruneToFindConsistent(c.index, c.version)
+		prunedOp := pruneToFindConsistent(c.index, c.version)
 		assert.Equalf(t, c.expectedOp, prunedOp, "The pruned operation should match for test case %d", i)
 	}
 
@@ -138,7 +154,7 @@ func TestPruneToFindConsistentSameVersion(t *testing.T) {
 
 	testCases := []struct {
 		version    uint64
-		expectedOp Operation
+		expectedOp operation
 	}{
 		{
 			version:    0,
@@ -211,7 +227,7 @@ func TestPruneToFindConsistentSameVersion(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		prunedOp := PruneToFindConsistent(c.version, c.version)
+		prunedOp := pruneToFindConsistent(c.version, c.version)
 		assert.Equalf(t, c.expectedOp, prunedOp, "The pruned operation should match for test case %d", i)
 	}
 }
@@ -220,7 +236,7 @@ func TestPruneToCheckConsistency(t *testing.T) {
 
 	testCases := []struct {
 		start, end uint64
-		expectedOp Operation
+		expectedOp operation
 	}{
 		{
 			start:      0,
@@ -337,7 +353,7 @@ func TestPruneToCheckConsistency(t *testing.T) {
 	}
 
 	for i, c := range testCases {
-		prunedOp := PruneToCheckConsistency(c.start, c.end)
+		prunedOp := pruneToCheckConsistency(c.start, c.end)
 		assert.Equalf(t, c.expectedOp, prunedOp, "The pruned operation should match for test case %d", i)
 	}
 
@@ -349,7 +365,7 @@ func BenchmarkPruneToFindConsistent(b *testing.B) {
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
-		pruned := PruneToFindConsistent(0, i)
+		pruned := pruneToFindConsistent(0, i)
 		assert.NotNil(b, pruned)
 	}
 
@@ -361,7 +377,7 @@ func BenchmarkPruneToCheckConsistency(b *testing.B) {
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
-		pruned := PruneToCheckConsistency(0, i)
+		pruned := pruneToCheckConsistency(0, i)
 		assert.NotNil(b, pruned)
 	}
 
