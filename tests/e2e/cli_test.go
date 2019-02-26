@@ -210,18 +210,17 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 
-	serversHttpAddr := "badendpoint,http://127.0.0.1:8800"
-
 	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1, delay(2*time.Second)))
 
 	scenario("Success by extracting topology from right endpoint", func() {
-		let("Add event", func(t *testing.T) {
+
+		let("Add event with one valid endpoint", func(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
 				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				fmt.Sprintf("--endpoints=badendpoint,http://127.0.0.1:8800"),
 				"add",
 				"--key='test event'",
 				"--value=2",
@@ -232,17 +231,14 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 
 			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
 		})
-	})
 
-	serversHttpAddr = "badendpoint"
-	scenario("Fails if no right endpoint provided", func() {
-		let("Add event", func(t *testing.T) {
+		let("Add event with no valid endpoint and fail", func(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
 				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				fmt.Sprintf("--endpoints=badendpoint"),
 				"add",
 				"--key='test event'",
 				"--value=2",
