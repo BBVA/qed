@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function _readlink() { (
-  # INFO: readlink does not exists on OSX ¯\_(ツ)_/¯
+  # INFO: readlink does not exist on OSX ¯\_(ツ)_/¯
   cd $(dirname $1)
   echo $PWD/$(basename $1)
 ) }
