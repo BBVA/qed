@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -43,6 +44,10 @@ const (
 	StoreURL     = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
 )
+
+func init() {
+	debug.SetGCPercent(10)
+}
 
 // merge function is a helper function that execute all the variadic parameters
 // inside a score.TestF function
@@ -266,8 +271,6 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 		conf.EnableTampering = true
 		conf.EnableTLS = tls
 
-		//fmt.Printf("Server config: %+v\n", conf)
-
 		srv, err = server.NewServer(conf)
 		if err != nil {
 			t.Fatalf("Unable to create a new server: %v", err)
@@ -283,6 +286,7 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 	}
 
 	after := func(t *testing.T) {
+		debug.FreeOSMemory()
 		if srv != nil {
 			err := srv.Stop()
 			if err != nil {
@@ -295,13 +299,9 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 	return before, after
 }
 
-func endPoint(id int) string {
-	return fmt.Sprintf("http://127.0.0.1:880%d", id)
-}
-
 func getClient(id int) *client.HTTPClient {
 	return client.NewHTTPClient(client.Config{
-		Endpoints: []string{endPoint(id)},
+		Endpoints: []string{fmt.Sprintf("http://127.0.0.1:880%d", id)},
 		APIKey:    APIKey,
 		Insecure:  false,
 	})
