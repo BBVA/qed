@@ -18,8 +18,12 @@ package e2e
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/user"
+	"runtime/debug"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,6 +46,10 @@ const (
 	APIKey       = "my-key"
 )
 
+func init() {
+	debug.SetGCPercent(10)
+}
+
 // merge function is a helper function that execute all the variadic parameters
 // inside a score.TestF function
 func merge(list ...scope.TestF) scope.TestF {
@@ -56,6 +64,28 @@ func delay(duration time.Duration) scope.TestF {
 	return func(t *testing.T) {
 		time.Sleep(duration)
 	}
+}
+
+func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Response, error) {
+	var err error
+	if payload == nil {
+		payload = strings.NewReader("")
+	}
+	req, err := http.NewRequest(method, url, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Api-Key", apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return resp, err
 }
 
 func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) *gossip.Agent {
@@ -207,17 +237,13 @@ func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
 func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, scope.TestF) {
 	var srv *server.Server
 	var err error
-	path := fmt.Sprintf("/var/tmp/e2e-qed%d/", id)
-
+	path, err := ioutil.TempDir("", "e2e-qed")
+	if err != nil {
+		t.Fatalf("Unable to create a path: %v", err)
+	}
 	usr, _ := user.Current()
 
 	before := func(t *testing.T) {
-		os.RemoveAll(path)
-		err = os.MkdirAll(path, os.FileMode(0755))
-		if err != nil {
-			t.Fatalf("Unable to create a path: %v", err)
-		}
-
 		hostname, _ := os.Hostname()
 		conf := server.DefaultConfig()
 		conf.APIKey = APIKey
@@ -242,8 +268,6 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 		conf.EnableTampering = true
 		conf.EnableTLS = tls
 
-		//fmt.Printf("Server config: %+v\n", conf)
-
 		srv, err = server.NewServer(conf)
 		if err != nil {
 			t.Fatalf("Unable to create a new server: %v", err)
@@ -259,6 +283,8 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 	}
 
 	after := func(t *testing.T) {
+		debug.FreeOSMemory()
+		os.RemoveAll(path)
 		if srv != nil {
 			err := srv.Stop()
 			if err != nil {
@@ -271,13 +297,9 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 	return before, after
 }
 
-func endPoint(id int) string {
-	return fmt.Sprintf("http://127.0.0.1:880%d", id)
-}
-
 func getClient(id int) *client.HTTPClient {
 	return client.NewHTTPClient(client.Config{
-		Endpoints: []string{endPoint(id)},
+		Endpoints: []string{fmt.Sprintf("http://127.0.0.1:880%d", id)},
 		APIKey:    APIKey,
 		Insecure:  false,
 	})
