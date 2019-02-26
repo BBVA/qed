@@ -28,7 +28,6 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
-	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
@@ -57,7 +56,7 @@ func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version
 	return &balloon.MembershipProof{
 		Exists:         true,
 		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hyper.AuditPath{}, nil),
-		HistoryProof:   history.NewMembershipProof(0, 0, navigation.AuditPath{}, nil),
+		HistoryProof:   history.NewMembershipProof(0, 0, history.AuditPath{}, nil),
 		CurrentVersion: 1,
 		QueryVersion:   1,
 		ActualVersion:  2,
@@ -71,7 +70,7 @@ func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon
 	return &balloon.MembershipProof{
 		Exists:         true,
 		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hyper.AuditPath{}, nil),
-		HistoryProof:   history.NewMembershipProof(0, 0, navigation.AuditPath{}, nil),
+		HistoryProof:   history.NewMembershipProof(0, 0, history.AuditPath{}, nil),
 		CurrentVersion: 1,
 		QueryVersion:   1,
 		ActualVersion:  2,
@@ -85,7 +84,7 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 	ip := balloon.IncrementalProof{
 		Start:     2,
 		End:       8,
-		AuditPath: navigation.AuditPath{pathKey: hashing.Digest{0x00}},
+		AuditPath: history.AuditPath{pathKey: hashing.Digest{0x00}},
 		Hasher:    hashing.NewFakeXorHasher(),
 	}
 	return &ip, nil

@@ -22,7 +22,6 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
-	"github.com/bbva/qed/balloon/history/navigation"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/hashing"
@@ -145,7 +144,7 @@ func ToBalloonProof(mr *MembershipResult, hasherF func() hashing.Hasher) *balloo
 	historyProof := history.NewMembershipProof(
 		mr.ActualVersion,
 		mr.QueryVersion,
-		navigation.ParseAuditPath(mr.History),
+		history.ParseAuditPath(mr.History),
 		hasherF(),
 	)
 
@@ -179,5 +178,5 @@ func ToIncrementalResponse(proof *balloon.IncrementalProof) *IncrementalResponse
 }
 
 func ToIncrementalProof(ir *IncrementalResponse, hasher hashing.Hasher) *balloon.IncrementalProof {
-	return balloon.NewIncrementalProof(ir.Start, ir.End, navigation.ParseAuditPath(ir.AuditPath), hasher)
+	return balloon.NewIncrementalProof(ir.Start, ir.End, history.ParseAuditPath(ir.AuditPath), hasher)
 }
