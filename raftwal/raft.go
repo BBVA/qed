@@ -214,12 +214,6 @@ func (b *RaftBalloon) Close(wait bool) error {
 	close(b.done)
 	b.wg.Wait()
 
-	// close database
-	if err := b.store.db.Close(); err != nil {
-		return err
-	}
-	b.store.db = nil
-
 	// shutdown raft
 	if b.raft.api != nil {
 		f := b.raft.api.Shutdown()
@@ -238,11 +232,18 @@ func (b *RaftBalloon) Close(wait bool) error {
 	if err := b.store.stable.Close(); err != nil {
 		return err
 	}
+
 	b.store.log = nil
 	b.store.stable = nil
 
 	// Close FSM
 	b.fsm.Close()
+
+	// close database
+	if err := b.store.db.Close(); err != nil {
+		return err
+	}
+	b.store.db = nil
 
 	return nil
 }
