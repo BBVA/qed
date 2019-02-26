@@ -241,6 +241,9 @@ func (b *RaftBalloon) Close(wait bool) error {
 	b.store.log = nil
 	b.store.stable = nil
 
+	// Close FSM
+	b.fsm.Close()
+
 	return nil
 }
 
