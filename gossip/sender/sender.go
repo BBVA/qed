@@ -141,12 +141,18 @@ func (s Sender) sender(batch protocol.BatchSnapshots) {
 		dst := peer.Node()
 		log.Infof("Sending batch %+v to node %+v\n", batch, dst.Name)
 		wg.Add(1)
-		// go func() {
-		err := s.Agent.Memberlist().SendReliable(dst, msg)
-		if err != nil {
-			log.Errorf("Failed send message: %v", err)
+
+		for retries := uint(0); retries < 5; retries++ {
+			err := s.Agent.Memberlist().SendReliable(dst, msg)
+			if err != nil {
+				if retries == 5 {
+					log.Errorf("Failed send message: %v", err)
+				}
+				delay := (10 << retries) * time.Millisecond
+				time.Sleep(delay)
+				continue
+			}
 		}
-		// }()
 	}
 	wg.Wait()
 	log.Infof("Sent batch %+v to nodes %+v\n", batch, peers.L)
