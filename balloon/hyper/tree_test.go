@@ -18,15 +18,19 @@ package hyper
 
 import (
 	"encoding/binary"
+	"net/http"
 	"testing"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -294,8 +298,12 @@ func BenchmarkAdd(b *testing.B) {
 
 	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
+	prometheus.MustRegister(metrics.QedHyperAddTotal)
+	http.Handle("/metrics", promhttp.Handler())
+	go http.ListenAndServe(":2112", nil)
+
 	b.ResetTimer()
-	b.N = 100000
+	b.N = 200000000
 	for i := 0; i < b.N; i++ {
 		index := make([]byte, 8)
 		binary.LittleEndian.PutUint64(index, uint64(i))

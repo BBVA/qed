@@ -50,6 +50,7 @@ var (
 		},
 	)
 
+	// BALLOON
 	Qed_balloon_add_duration_seconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_balloon_add_duration_seconds",
@@ -106,7 +107,15 @@ var (
 		},
 	)
 
-	// Sender
+	// HYPER TREE
+	QedHyperAddTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_hyper_add_total",
+			Help: "Number of the events added to the hyper tree.",
+		},
+	)
+
+	// SENDER
 	Qed_sender_instances_count = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_sender_instances_count",
@@ -147,6 +156,8 @@ var (
 	metricsList = []prometheus.Collector{
 		Qed_instances_count,
 		Qed_api_healthcheck_requests_total,
+
+		QedHyperAddTotal,
 
 		Qed_balloon_add_duration_seconds,
 		Qed_balloon_membership_duration_seconds,
