@@ -60,8 +60,8 @@
       dest: /var/qed/{{ item }}
       src: config_files/{{ item }}
   with_items:
-    - server.crt
-    - server.key
+    # - server.crt
+    # - server.key
     - id_ed25519
 
 - name: Copy CA cert to remote
