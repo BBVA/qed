@@ -33,39 +33,39 @@ import (
 
 var (
 	// Prometheus
-	Qed_store_instances_count = prometheus.NewGauge(
+	QedStoreInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_store_instances_count",
-			Help: "Amount of Stores instanciated",
+			Help: "Number of store services running.",
 		},
 	)
 
-	Qed_store_batches_stored_total = prometheus.NewCounter(
+	QedStoreBatchesStoredTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_store_batches_stored_total",
-			Help: "Amount of batches received (POST from publishers).",
+			Help: "Number of batches received (POST from publishers).",
 		},
 	)
 
-	Qed_store_snapshots_retrieved_total = prometheus.NewCounter(
+	QedStoreSnapshotsRetrievedTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_store_snapshots_retrieved_total",
-			Help: "Amount of snapshots retrieved (GET from auditors).",
+			Help: "Number of snapshots retrieved (GET from auditors).",
 		},
 	)
 
-	Qed_store_alerts_generated_total = prometheus.NewCounter(
+	QedStoreAlertsGeneratedTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_store_alerts_generated_total",
-			Help: "Amount of alerts generated.",
+			Help: "Number of alerts generated.",
 		},
 	)
 
 	metricsList = []prometheus.Collector{
-		Qed_store_instances_count,
-		Qed_store_batches_stored_total,
-		Qed_store_snapshots_retrieved_total,
-		Qed_store_alerts_generated_total,
+		QedStoreInstancesCount,
+		QedStoreBatchesStoredTotal,
+		QedStoreSnapshotsRetrievedTotal,
+		QedStoreAlertsGeneratedTotal,
 	}
 )
 
@@ -175,7 +175,7 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 		atomic.AddUint64(&s.stats.count[RPS], 1)
 		atomic.AddUint64(&s.stats.count[SNAP], 1)
 		if r.Method == "POST" {
-			Qed_store_batches_stored_total.Inc()
+			QedStoreBatchesStoredTotal.Inc()
 			// Decode batch to get signed snapshots and batch version.
 			var b protocol.BatchSnapshots
 			buf, err := ioutil.ReadAll(r.Body)
@@ -201,7 +201,7 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 		atomic.AddUint64(&s.stats.count[RPS], 1)
 		atomic.AddUint64(&s.stats.count[SNAP], 1)
 		if r.Method == "GET" {
-			Qed_store_snapshots_retrieved_total.Inc()
+			QedStoreSnapshotsRetrievedTotal.Inc()
 			q := r.URL.Query()
 			version, err := strconv.ParseInt(q.Get("v"), 10, 64)
 			if err != nil {
@@ -244,7 +244,7 @@ func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 			}
 			return
 		} else if r.Method == "POST" {
-			Qed_store_alerts_generated_total.Inc()
+			QedStoreAlertsGeneratedTotal.Inc()
 
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
@@ -294,7 +294,7 @@ func (s *Service) Start(foreground bool) {
 	metricsMux := metricshttp.NewMetricsHTTP(r)
 	s.metricsServer = &http.Server{Addr: ":18888", Handler: metricsMux}
 
-	Qed_store_instances_count.Inc()
+	QedStoreInstancesCount.Inc()
 
 	go func() {
 		log.Debugf("	* Starting metrics HTTP server ")
@@ -344,7 +344,7 @@ func (s *Service) Start(foreground bool) {
 
 func (s *Service) Shutdown() {
 	// Metrics
-	Qed_store_instances_count.Dec()
+	QedStoreInstancesCount.Dec()
 
 	log.Debugf("Metrics enabled: stopping server...")
 	if err := s.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil

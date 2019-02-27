@@ -24,64 +24,65 @@ import (
 
 var (
 	// Prometheus
+
 	// Agents
-	Qed_auditor_instances_count = prometheus.NewGauge(
+	QedAuditorInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_auditor_instances_count",
-			Help: "Amount of Qed_auditor agents instanciated",
+			Help: "Number of auditor agents running.",
 		},
 	)
 
-	Qed_monitor_instances_count = prometheus.NewGauge(
+	QedMonitorInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_monitor_instances_count",
-			Help: "Amount of Qed_monitor agents instanciated",
+			Help: "Number of monitor agents running.",
 		},
 	)
 
-	Qed_publisher_instances_count = prometheus.NewGauge(
+	QedPublisherInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_publisher_instances_count",
-			Help: "Amount of Qed_publisher agents instanciated.",
+			Help: "Number of publisher agents running.",
 		},
 	)
 
-	Qed_auditor_batches_received_total = prometheus.NewCounter(
+	QedAuditorBatchesReceivedTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_auditor_batches_received_total",
-			Help: "Amount of batches received by Auditor.",
+			Help: "Number of batches received by auditors.",
 		},
 	)
 
-	Qed_monitor_batches_received_total = prometheus.NewCounter(
+	QedMonitorBatchesReceivedTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_monitor_batches_received_total",
-			Help: "Amount of batches received by Monitor.",
+			Help: "Number of batches received by monitors.",
 		},
 	)
 
-	Qed_publisher_batches_received_total = prometheus.NewCounter(
+	QedPublisherBatchesReceivedTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_publisher_batches_received_total",
-			Help: "Amount of batches received by Publisher.",
+			Help: "Number of batches received by publishers.",
 		},
 	)
 
-	Qed_auditor_batches_process_seconds = prometheus.NewSummary(
+	QedAuditorBatchesProcessSeconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_auditor_batches_process_seconds",
 			Help: "Duration of Auditor batch processing",
 		},
 	)
 
-	Qed_monitor_batches_process_seconds = prometheus.NewSummary(
+	QedMonitorBatchesProcessSeconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_monitor_batches_process_seconds",
 			Help: "Duration of Monitor batch processing",
 		},
 	)
 
-	Qed_publisher_batches_process_seconds = prometheus.NewSummary(
+	QedPublisherBatchesProcessSeconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_publisher_batches_process_seconds",
 			Help: "Duration of Publisher batch processing",
@@ -89,17 +90,17 @@ var (
 	)
 
 	metricsList = []prometheus.Collector{
-		Qed_auditor_instances_count,
-		Qed_monitor_instances_count,
-		Qed_publisher_instances_count,
+		QedAuditorInstancesCount,
+		QedMonitorInstancesCount,
+		QedPublisherInstancesCount,
 
-		Qed_auditor_batches_received_total,
-		Qed_monitor_batches_received_total,
-		Qed_publisher_batches_received_total,
+		QedAuditorBatchesReceivedTotal,
+		QedMonitorBatchesReceivedTotal,
+		QedPublisherBatchesReceivedTotal,
 
-		Qed_auditor_batches_process_seconds,
-		Qed_monitor_batches_process_seconds,
-		Qed_publisher_batches_process_seconds,
+		QedAuditorBatchesProcessSeconds,
+		QedMonitorBatchesProcessSeconds,
+		QedPublisherBatchesProcessSeconds,
 	}
 )
 

@@ -68,7 +68,7 @@ type Publisher struct {
 }
 
 func NewPublisher(conf Config) (*Publisher, error) {
-	metrics.Qed_publisher_instances_count.Inc()
+	metrics.QedPublisherInstancesCount.Inc()
 	publisher := Publisher{
 		client: &fasthttp.Client{},
 		conf:   conf,
@@ -106,8 +106,8 @@ type PublishTask struct {
 
 func (p *Publisher) Process(b protocol.BatchSnapshots) {
 	// Metrics
-	metrics.Qed_publisher_batches_received_total.Inc()
-	timer := prometheus.NewTimer(metrics.Qed_publisher_batches_process_seconds)
+	metrics.QedPublisherBatchesReceivedTotal.Inc()
+	timer := prometheus.NewTimer(metrics.QedPublisherBatchesProcessSeconds)
 	defer timer.ObserveDuration()
 
 	task := &PublishTask{
@@ -131,7 +131,7 @@ func (p Publisher) runTaskDispatcher() {
 
 func (p *Publisher) Shutdown() {
 	// Metrics
-	metrics.Qed_publisher_instances_count.Dec()
+	metrics.QedPublisherInstancesCount.Dec()
 
 	log.Debugf("Metrics enabled: stopping server...")
 	if err := p.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
