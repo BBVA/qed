@@ -17,7 +17,7 @@
 package rocksdb
 
 // #cgo LDFLAGS: -L../c-deps/rocksdb/
-// #cgo LDFLAGS: -lrocksdb
+// #cgo LDFLAGS: -l:librocksdb.a -l:libstdc++.a -l:libz.a -l:libbz2.a -l:libsnappy.a -l:libzstd.a -lm
 // #include "../c-deps/rocksdb/include/rocksdb/c.h"
 // #include <stdlib.h>
 import "C"
