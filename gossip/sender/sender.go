@@ -56,7 +56,7 @@ func DefaultConfig() *Config {
 }
 
 func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
-	metrics.Qed_sender_instances_count.Inc()
+	metrics.QedSenderInstancesCount.Inc()
 	return &Sender{
 		Agent:  a,
 		Config: c,
@@ -136,7 +136,7 @@ func (s Sender) sender(batch protocol.BatchSnapshots) {
 	peers := s.Agent.Topology.Each(s.Config.EachN, nil)
 	for _, peer := range peers.L {
 		// Metrics
-		metrics.Qed_sender_batches_sent_total.Inc()
+		metrics.QedSenderBatchesSentTotal.Inc()
 
 		dst := peer.Node()
 		log.Infof("Sending batch %+v to node %+v\n", batch, dst.Name)
@@ -153,7 +153,7 @@ func (s Sender) sender(batch protocol.BatchSnapshots) {
 }
 
 func (s Sender) Stop() {
-	metrics.Qed_sender_instances_count.Dec()
+	metrics.QedSenderInstancesCount.Dec()
 
 	for i := 0; i < NumSenders+1; i++ {
 		// INFO: we need NumSenders+1 for the debug ticker in Start function

@@ -20,7 +20,6 @@ import (
 	"sync"
 
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/metrics"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/hashing"
@@ -77,7 +76,7 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	defer t.Unlock()
 
 	// metrics
-	metrics.QedHyperAddTotal.Inc()
+	//metrics.QedHyperAddTotal.Inc()
 
 	//log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
 

@@ -23,8 +23,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
@@ -47,16 +45,7 @@ type HealthCheckResponse struct {
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
-	metrics.Qed_api_healthcheck_requests_total.Inc()
-
-	timer := prometheus.NewTimer(metrics.Qed_exampleHistogram)
-	defer timer.ObserveDuration()
-
-	timer2 := prometheus.NewTimer(prometheus.ObserverFunc(metrics.Qed_exampleGauge.Set))
-	defer timer2.ObserveDuration()
-
-	timer3 := prometheus.NewTimer(metrics.Qed_exampleSummary)
-	defer timer3.ObserveDuration()
+	metrics.QedApiHealthcheckRequestsTotal.Inc()
 
 	result := HealthCheckResponse{
 		Version: 0,

@@ -66,7 +66,7 @@ type Monitor struct {
 
 func NewMonitor(conf Config) (*Monitor, error) {
 	// Metrics
-	metrics.Qed_monitor_instances_count.Inc()
+	metrics.QedMonitorInstancesCount.Inc()
 
 	monitor := Monitor{
 		client: client.NewHTTPClient(client.Config{
@@ -110,8 +110,8 @@ type QueryTask struct {
 
 func (m Monitor) Process(b protocol.BatchSnapshots) {
 	// Metrics
-	metrics.Qed_monitor_batches_received_total.Inc()
-	timer := prometheus.NewTimer(metrics.Qed_monitor_batches_process_seconds)
+	metrics.QedMonitorBatchesReceivedTotal.Inc()
+	timer := prometheus.NewTimer(metrics.QedMonitorBatchesProcessSeconds)
 	defer timer.ObserveDuration()
 
 	first := b.Snapshots[0].Snapshot
@@ -144,7 +144,7 @@ func (m Monitor) runTaskDispatcher() {
 
 func (m *Monitor) Shutdown() {
 	// Metrics
-	metrics.Qed_monitor_instances_count.Dec()
+	metrics.QedMonitorInstancesCount.Dec()
 
 	log.Debugf("Metrics enabled: stopping server...")
 	if err := m.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil

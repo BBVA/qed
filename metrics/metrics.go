@@ -25,25 +25,22 @@ import (
 )
 
 var (
-	// HyperStats has a Map of all the stats relative to our Hyper Tree
-	Hyper *expvar.Map
-	// HistoryStats has a Map of all the stats relative to our History Tree
-	History *expvar.Map
+
 	// BalloonStats has a Map of all the stats relative to Balloon
 	Balloon *expvar.Map
 
 	// Prometheus
 
 	// QED
-	Qed_instances_count = prometheus.NewGauge(
+	QedInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_instances_count",
-			Help: "Amount of Qeds instanciated",
+			Help: "Number of QED servers currently running",
 		},
 	)
 
 	// API
-	Qed_api_healthcheck_requests_total = prometheus.NewCounter(
+	QedApiHealthcheckRequestsTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_api_healthcheck_requests_total",
 			Help: "The total number of healthcheck api requests",
@@ -51,59 +48,52 @@ var (
 	)
 
 	// BALLOON
-	Qed_balloon_add_duration_seconds = prometheus.NewSummary(
+	QedBalloonAddDurationSeconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_balloon_add_duration_seconds",
-			Help: "Duration of the 'Add' Qed_balloon method.",
+			Help: "Duration of the add operation.",
 		},
 	)
-
-	Qed_balloon_membership_duration_seconds = prometheus.NewSummary(
+	QedBalloonMembershipDurationSeconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_balloon_membership_duration_seconds",
-			Help: "Duration of the 'Membership' Qed_balloon method.",
+			Help: "Duration of the membership queries.",
 		},
 	)
-
-	Qed_balloon_digest_membership_duration_seconds = prometheus.NewSummary(
+	QedBalloonDigestMembershipDurationSeconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_balloon_digest_membership_duration_seconds",
-			Help: "Duration of the 'Digest Membership' Qed_balloon method.",
+			Help: "Duration of the membership by digest queries.",
 		},
 	)
-
-	Qed_balloon_incremental_duration_seconds = prometheus.NewSummary(
+	QedBalloonIncrementalDurationSeconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_balloon_incremental_duration_seconds",
-			Help: "Duration of the 'Incremental' Qed_balloon method.",
+			Help: "Duration of the incremental queries.",
 		},
 	)
-
-	Qed_balloon_add_total = prometheus.NewCounter(
+	QedBalloonAddTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_balloon_add_total",
-			Help: "Amount of 'Add' operation API calls.",
+			Help: "Number of add operations",
 		},
 	)
-
-	Qed_balloon_membership_total = prometheus.NewCounter(
+	QedBalloonMembershipTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_balloon_membership_total",
-			Help: "Amount of 'Membership' operation API calls.",
+			Help: "Number of membership queries.",
 		},
 	)
-
-	Qed_balloon_digest_membership_total = prometheus.NewCounter(
-		prometheus.CounterOpts{
+	QedBalloonDigestMembershipTotal = prometheus.NewGauge(
+		prometheus.GaugeOpts{
 			Name: "qed_balloon_digest_membership_total",
-			Help: "Amount of 'Membership by digest' operation API calls.",
+			Help: "Number of membership by digest queries.",
 		},
 	)
-
-	Qed_balloon_incremental_total = prometheus.NewCounter(
+	QedBalloonIncrementalTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_balloon_incremental_total",
-			Help: "Amount of 'Incremental' operation API calls.",
+			Help: "Number of incremental queries.",
 		},
 	)
 
@@ -114,67 +104,63 @@ var (
 			Help: "Number of the events added to the hyper tree.",
 		},
 	)
+	QedHyperMembershipTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_hyper_membership_total",
+			Help: "Number of membership queries",
+		},
+	)
+
+	// HISTORY TREE
+	QedHistoryAddTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_history_add_total",
+			Help: "Number of the events added to the history tree.",
+		},
+	)
+	QedHistoryMembershipTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_history_membership_total",
+			Help: "Number of membership queries",
+		},
+	)
+	QedHistoryConsistencyTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_history_consistency_total",
+			Help: "Number of consistency queries",
+		},
+	)
 
 	// SENDER
-	Qed_sender_instances_count = prometheus.NewGauge(
+	QedSenderInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_sender_instances_count",
-			Help: "Amount of Qed_sender agents instanciated",
+			Help: "Number of sender agents running",
 		},
 	)
-
-	Qed_sender_batches_sent_total = prometheus.NewCounter(
+	QedSenderBatchesSentTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_sender_batches_sent_total",
-			Help: "Amount of batches sent by Sender.",
-		},
-	)
-
-	// Example
-	Qed_exampleGauge = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "example_function_duration_seconds",
-			Help: "Duration of the last call of an example function.",
-		},
-	)
-
-	Qed_exampleSummary = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "example_function_durations_seconds",
-			Help: "example function latency distributions.",
-		},
-	)
-
-	Qed_exampleHistogram = prometheus.NewHistogram(
-		prometheus.HistogramOpts{
-			Name:    "example_request_duration_seconds",
-			Help:    "Histogram for the runtime of a simple example function.",
-			Buckets: prometheus.LinearBuckets(0.01, 0.01, 10),
+			Help: "Number of batches sent by the sender.",
 		},
 	)
 
 	metricsList = []prometheus.Collector{
-		Qed_instances_count,
-		Qed_api_healthcheck_requests_total,
+		QedInstancesCount,
+		QedApiHealthcheckRequestsTotal,
 
-		QedHyperAddTotal,
+		QedBalloonAddDurationSeconds,
+		QedBalloonMembershipDurationSeconds,
+		QedBalloonDigestMembershipDurationSeconds,
+		QedBalloonIncrementalDurationSeconds,
 
-		Qed_balloon_add_duration_seconds,
-		Qed_balloon_membership_duration_seconds,
-		Qed_balloon_digest_membership_duration_seconds,
-		Qed_balloon_incremental_duration_seconds,
+		QedBalloonAddTotal,
+		QedBalloonMembershipTotal,
+		QedBalloonDigestMembershipTotal,
+		QedBalloonIncrementalTotal,
 
-		Qed_balloon_add_total,
-		Qed_balloon_membership_total,
-		Qed_balloon_digest_membership_total,
-		Qed_balloon_incremental_total,
-
-		Qed_sender_instances_count,
-		Qed_sender_batches_sent_total,
-
-		Qed_exampleGauge,
-		Qed_exampleSummary,
-		Qed_exampleHistogram,
+		QedSenderInstancesCount,
+		QedSenderBatchesSentTotal,
 	}
 )
 
@@ -200,7 +186,5 @@ func (v Uint64ToVar) String() string {
 }
 
 func init() {
-	Hyper = expvar.NewMap("hyper_stats")
-	History = expvar.NewMap("history_stats")
 	Balloon = expvar.NewMap("Qed_balloon_stats")
 }
