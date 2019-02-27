@@ -27,8 +27,6 @@ import (
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -184,9 +182,9 @@ func (b *Balloon) RefreshVersion() error {
 func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 
 	// Metrics
-	metrics.Qed_balloon_add_total.Inc()
-	timer := prometheus.NewTimer(metrics.Qed_balloon_add_duration_seconds)
-	defer timer.ObserveDuration()
+	metrics.QedBalloonAddTotal.Inc()
+	//timer := prometheus.NewTimer(metrics.QedBalloonAddDurationSeconds)
+	//defer timer.ObserveDuration()
 
 	// Activate metrics gathering
 	stats := metrics.Balloon
@@ -240,9 +238,9 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 
 func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
 	// Metrics
-	metrics.Qed_balloon_digest_membership_total.Inc()
-	timer := prometheus.NewTimer(metrics.Qed_balloon_digest_membership_duration_seconds)
-	defer timer.ObserveDuration()
+	metrics.QedBalloonDigestMembershipTotal.Inc()
+	//timer := prometheus.NewTimer(metrics.QedBalloonDigestMembershipDurationSeconds)
+	//defer timer.ObserveDuration()
 
 	stats := metrics.Balloon
 	stats.AddFloat("QueryMembership", 1)
@@ -297,9 +295,10 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 	hasher := b.hasherF()
 
 	// Metrics
-	metrics.Qed_balloon_membership_total.Inc()
-	timer := prometheus.NewTimer(metrics.Qed_balloon_membership_duration_seconds)
-	defer timer.ObserveDuration()
+	metrics.QedBalloonMembershipTotal.Inc()
+	metrics.QedBalloonDigestMembershipTotal.Dec()
+	//timer := prometheus.NewTimer(metrics.QedBalloonMembershipDurationSeconds)
+	//defer timer.ObserveDuration()
 
 	return b.QueryDigestMembership(hasher.Do(event), version)
 }
@@ -307,9 +306,9 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
 
 	// Metrics
-	metrics.Qed_balloon_incremental_total.Inc()
-	timer := prometheus.NewTimer(metrics.Qed_balloon_incremental_duration_seconds)
-	defer timer.ObserveDuration()
+	metrics.QedBalloonIncrementalTotal.Inc()
+	//timer := prometheus.NewTimer(metrics.QedBalloonIncrementalDurationSeconds)
+	//defer timer.ObserveDuration()
 
 	stats := metrics.Balloon
 	stats.AddFloat("QueryConsistency", 1)

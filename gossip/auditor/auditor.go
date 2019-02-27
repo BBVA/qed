@@ -65,12 +65,12 @@ type Auditor struct {
 }
 
 func NewAuditor(conf Config) (*Auditor, error) {
-	metrics.Qed_auditor_instances_count.Inc()
+	metrics.QedAuditorInstancesCount.Inc()
 	auditor := Auditor{
 		qed: client.NewHTTPClient(client.Config{
 			Endpoints: conf.QEDUrls,
-			APIKey:   conf.APIKey,
-			Insecure: false,
+			APIKey:    conf.APIKey,
+			Insecure:  false,
 		}),
 		conf:   conf,
 		taskCh: make(chan Task, 100),
@@ -134,8 +134,8 @@ func (a Auditor) dispatchTasks() {
 
 func (a Auditor) Process(b protocol.BatchSnapshots) {
 	// Metrics
-	metrics.Qed_auditor_batches_received_total.Inc()
-	timer := prometheus.NewTimer(metrics.Qed_auditor_batches_process_seconds)
+	metrics.QedAuditorBatchesReceivedTotal.Inc()
+	timer := prometheus.NewTimer(metrics.QedAuditorBatchesProcessSeconds)
 	defer timer.ObserveDuration()
 
 	task := &MembershipTask{
@@ -150,7 +150,7 @@ func (a Auditor) Process(b protocol.BatchSnapshots) {
 
 func (a *Auditor) Shutdown() {
 	// Metrics
-	metrics.Qed_auditor_instances_count.Dec()
+	metrics.QedAuditorInstancesCount.Dec()
 
 	log.Debugf("Metrics enabled: stopping server...")
 	if err := a.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
