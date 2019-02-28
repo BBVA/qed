@@ -19,6 +19,29 @@
   with_items:
     - qed
 
+- name: Register stat on EBS device
+  stat:
+    path: /dev/xvdc
+    get_attributes: no
+    get_checksum: no
+  register: ebs_device
+
+- name: Create xfs filesystem on EBS volume
+  filesystem:
+    force: yes
+    fstype: xfs
+    dev: "{{ ebs_device.stat.path }}"
+  when: ebs_device.stat.exists
+
+- name: Mount xfs filesystem on /var/qed
+  mount:
+    path: /var/qed
+    src: "{{ ebs_device.stat.path }}"
+    fstype: xfs
+    state: mounted
+    opts: noatime
+  when: ebs_device.stat.exists
+
 - name: Install additional packages
   yum:
     name: "{{ packages }}"

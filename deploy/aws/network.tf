@@ -32,102 +32,105 @@ data "aws_subnet_ids" "all" {
 }
 
 module "security_group" {
-  source = "terraform-aws-modules/security-group/aws"
+  source  = "terraform-aws-modules/security-group/aws"
   version = "2.11.0"
 
   name        = "qed"
   description = "Security group for QED usage"
   vpc_id      = "${data.aws_vpc.default.id}"
 
-  egress_rules        = ["all-all"]
+  egress_rules = ["all-all"]
 
   ingress_cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
-  ingress_rules       = ["all-icmp", "ssh-tcp" ]
+  ingress_rules       = ["all-icmp", "ssh-tcp"]
+
   ingress_with_cidr_blocks = [
     {
-      from_port       = 8800
-      to_port         = 8800
-      protocol        = "tcp"
-      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+      from_port   = 8800
+      to_port     = 8800
+      protocol    = "tcp"
+      cidr_blocks = "${chomp(data.http.ip.body)}/32"
     },
     {
-      from_port       = 8888
-      to_port         = 8888
-      protocol        = "tcp"
-      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+      from_port   = 8888
+      to_port     = 8888
+      protocol    = "tcp"
+      cidr_blocks = "${chomp(data.http.ip.body)}/32"
     },
     {
-      from_port       = 8600
-      to_port         = 8600
-      protocol        = "tcp"
-      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+      from_port   = 8600
+      to_port     = 8600
+      protocol    = "tcp"
+      cidr_blocks = "${chomp(data.http.ip.body)}/32"
     },
     {
-      from_port       = 6060
-      to_port         = 6060
-      protocol        = "tcp"
-      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+      from_port   = 6060
+      to_port     = 6060
+      protocol    = "tcp"
+      cidr_blocks = "${chomp(data.http.ip.body)}/32"
     },
     {
-      from_port       = 9100
-      to_port         = 9100
-      protocol        = "tcp"
-      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
-    }
+      from_port   = 9100
+      to_port     = 9100
+      protocol    = "tcp"
+      cidr_blocks = "${chomp(data.http.ip.body)}/32"
+    },
   ]
+
   computed_ingress_with_source_security_group_id = [
     {
-      from_port       = 0
-      to_port         = 65535
-      protocol        = "tcp"
-      source_security_group_id  = "${module.security_group.this_security_group_id}"
+      from_port                = 0
+      to_port                  = 65535
+      protocol                 = "tcp"
+      source_security_group_id = "${module.security_group.this_security_group_id}"
     },
     {
-      from_port       = 0
-      to_port         = 65535
-      protocol        = "tcp"
-      source_security_group_id  = "${module.prometheus_security_group.this_security_group_id}"
-    }
+      from_port                = 0
+      to_port                  = 65535
+      protocol                 = "tcp"
+      source_security_group_id = "${module.prometheus_security_group.this_security_group_id}"
+    },
   ]
 
   number_of_computed_ingress_with_source_security_group_id = 2
-
 }
 
 module "prometheus_security_group" {
-  source = "terraform-aws-modules/security-group/aws"
+  source  = "terraform-aws-modules/security-group/aws"
   version = "2.11.0"
 
   name        = "prometheus"
   description = "Security group for Prometheus/Grafana usage"
   vpc_id      = "${data.aws_vpc.default.id}"
 
-  egress_rules        = ["all-all"]
+  egress_rules = ["all-all"]
 
   ingress_cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
-  ingress_rules       = ["all-icmp", "ssh-tcp" ]
+  ingress_rules       = ["all-icmp", "ssh-tcp"]
+
   ingress_with_cidr_blocks = [
     {
-      from_port       = 9090 # prometheus metrics
-      to_port         = 9090
-      protocol        = "tcp"
-      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+      from_port   = 9090                             # prometheus metrics
+      to_port     = 9090
+      protocol    = "tcp"
+      cidr_blocks = "${chomp(data.http.ip.body)}/32"
     },
     {
-      from_port       = 3000 # graphana
-      to_port         = 3000
-      protocol        = "tcp"
-      cidr_blocks     = "${chomp(data.http.ip.body)}/32"
+      from_port   = 3000                             # graphana
+      to_port     = 3000
+      protocol    = "tcp"
+      cidr_blocks = "${chomp(data.http.ip.body)}/32"
     },
   ]
+
   computed_ingress_with_source_security_group_id = [
     {
-      from_port       = 0
-      to_port         = 65535
-      protocol        = "tcp"
-      source_security_group_id  = "${module.security_group.this_security_group_id}"
-    }
+      from_port                = 0
+      to_port                  = 65535
+      protocol                 = "tcp"
+      source_security_group_id = "${module.security_group.this_security_group_id}"
+    },
   ]
-  number_of_computed_ingress_with_source_security_group_id = 1
 
+  number_of_computed_ingress_with_source_security_group_id = 1
 }
