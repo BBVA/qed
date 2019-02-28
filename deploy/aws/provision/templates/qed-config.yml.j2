@@ -16,7 +16,7 @@
 ---
 api_key: "terraform_qed"
 path: "/var/qed/"
-{%- if 'role_qed' in group_names %}
+{% if 'role_qed' in group_names %}
 server:
   node_id: "{{ ansible_hostname }}"
   addr:
@@ -24,16 +24,16 @@ server:
     mgmt: ":8700"
     raft: "{{ ansible_eth0.ipv4.address }}:8500"
     gossip: "{{ ansible_eth0.ipv4.address }}:8400"
-    {%- if groups.role_qed.index(inventory_hostname) != 0  %}
+    {% if groups.role_qed.index(inventory_hostname) != 0  %}
     raft_join:
-    {%- for host in groups['name_qed-0'] %}
+    {% for host in groups['name_qed-0'] %}
       - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8700"
     gossip_join:
       - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
-    {%- endfor %}
-    {%- endif %}
-{%- endif %}
-{%- if 'role_monitor' in group_names %}
+    {% endfor %}
+    {% endif %}
+{% endif %}
+{% if 'role_monitor' in group_names %}
 agent:
   node: "monitor"
   bind: "{{ ansible_eth0.ipv4.address }}:8200"
