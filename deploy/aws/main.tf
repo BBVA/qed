@@ -66,7 +66,7 @@ module "inmemory-storage" {
 }
 
 module "agent-publisher" {
-  source = "./modules/qed"
+  source = "./modules/agent"
 
   name                   = "agent-publisher"
   instance_type          = "t3.small"
@@ -80,7 +80,7 @@ module "agent-publisher" {
 }
 
 module "agent-monitor" {
-  source = "./modules/qed"
+  source = "./modules/agent"
 
   name                   = "agent-monitor"
   count                  = 1
@@ -95,7 +95,7 @@ module "agent-monitor" {
 }
 
 module "agent-auditor" {
-  source = "./modules/qed"
+  source = "./modules/agent"
 
   name                   = "agent-auditor"
   instance_type          = "t3.small"
