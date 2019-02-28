@@ -40,7 +40,7 @@
     - include: tasks/common/main.yml
 
 
-- hosts: qed-server
+- hosts: qed-server:qed-agent
   remote_user: ec2-user
   become: true
   vars_files:
