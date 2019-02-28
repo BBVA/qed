@@ -28,7 +28,6 @@
         "y": 0
       },
       "id": 34,
-      "panels": [],
       "title": "General",
       "type": "row"
     },
@@ -402,7 +401,6 @@
         "y": 6
       },
       "id": 32,
-      "panels": [],
       "title": "Servers",
       "type": "row"
     },
@@ -760,7 +758,6 @@
         "y": 25
       },
       "id": 30,
-      "panels": [],
       "title": "Agents",
       "type": "row"
     },
@@ -1217,7 +1214,6 @@
         "y": 40
       },
       "id": 28,
-      "panels": [],
       "title": "Store",
       "type": "row"
     },
