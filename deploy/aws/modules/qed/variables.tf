@@ -20,6 +20,10 @@ variable "iam_instance_profile" {}
 
 variable "volume_size" {}
 
+variable "ebs_volume_size" {
+  default = 1000
+}
+
 variable "vpc_security_group_ids" {}
 
 variable "subnet_id" {}
