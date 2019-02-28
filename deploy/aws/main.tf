@@ -24,7 +24,7 @@ data "aws_iam_policy_document" "CloudWatchLogsFullAccess-assume-role-policy" {
 }
 
 resource "aws_iam_role" "CloudWatchLogsFullAccess" {
-  name = "CloudWatchLogsFullAccess"
+  name               = "CloudWatchLogsFullAccess"
   assume_role_policy = "${data.aws_iam_policy_document.CloudWatchLogsFullAccess-assume-role-policy.json}"
 }
 
@@ -41,98 +41,95 @@ resource "aws_iam_instance_profile" "qed-profile" {
 module "qed" {
   source = "./modules/qed"
 
-  name = "qed"
-  count = 3
-  instance_type = "t3.2xlarge"
-  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
-  volume_size = "20"
+  name                   = "qed"
+  count                  = 3
+  instance_type          = "t3.2xlarge"
+  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
+  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name               = "${aws_key_pair.qed.key_name}"
+  key_path               = "${var.keypath}"
 }
 
 module "inmemory-storage" {
   source = "./modules/inmemory_storage"
 
-  name = "inmemory-storage"
-  instance_type = "t3.small"
-  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
-  volume_size = "20"
+  name                   = "inmemory-storage"
+  instance_type          = "t3.small"
+  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
+  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name               = "${aws_key_pair.qed.key_name}"
+  key_path               = "${var.keypath}"
 }
 
 module "agent-publisher" {
   source = "./modules/qed"
 
-  name = "agent-publisher"
-  instance_type = "t3.small"
-  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
-  volume_size = "20"
+  name                   = "agent-publisher"
+  instance_type          = "t3.small"
+  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
-  role = "publisher"
-
+  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name               = "${aws_key_pair.qed.key_name}"
+  key_path               = "${var.keypath}"
+  role                   = "publisher"
 }
 
 module "agent-monitor" {
   source = "./modules/qed"
 
-  name = "agent-monitor"
-  count = 1
-  instance_type = "t3.small"
-  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
-  volume_size = "20"
+  name                   = "agent-monitor"
+  count                  = 1
+  instance_type          = "t3.small"
+  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
-  role = "monitor"
+  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name               = "${aws_key_pair.qed.key_name}"
+  key_path               = "${var.keypath}"
+  role                   = "monitor"
 }
 
 module "agent-auditor" {
   source = "./modules/qed"
 
-  name = "agent-auditor"
-  instance_type = "t3.small"
-  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
-  volume_size = "20"
+  name                   = "agent-auditor"
+  instance_type          = "t3.small"
+  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
-  role = "auditor"
-
+  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name               = "${aws_key_pair.qed.key_name}"
+  key_path               = "${var.keypath}"
+  role                   = "auditor"
 }
 
 module "prometheus" {
   source = "./modules/prometheus"
 
-  instance_type = "t3.medium"
-  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
-  volume_size = "20"
+  instance_type          = "t3.medium"
+  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  volume_size            = "20"
   vpc_security_group_ids = "${module.prometheus_security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
+  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name               = "${aws_key_pair.qed.key_name}"
+  key_path               = "${var.keypath}"
 }
 
 module "riot" {
   source = "./modules/riot"
 
-  instance_type = "t3.medium"
-  iam_instance_profile = "${aws_iam_instance_profile.qed-profile.name}"
-  volume_size = "20"
+  instance_type          = "t3.medium"
+  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id = "${element(data.aws_subnet_ids.all.ids, 0)}"
-  key_name = "${aws_key_pair.qed.key_name}"
-  key_path = "${var.keypath}"
-  endpoint =  "${module.qed.private_ip[0]}"
-  num_requests = 10000000
-
+  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  key_name               = "${aws_key_pair.qed.key_name}"
+  key_path               = "${var.keypath}"
+  endpoint               = "${module.qed.private_ip[0]}"
+  num_requests           = 10000000
 }

@@ -1,4 +1,3 @@
-
 output "qed" {
   value = "${module.qed.public_ip}"
 }
@@ -6,6 +5,7 @@ output "qed" {
 output "prometheus" {
   value = "${module.prometheus.public_ip}"
 }
+
 output "riot" {
   value = "${module.riot.public_ip}"
 }
@@ -25,5 +25,3 @@ output "agent-monitor" {
 output "agent-auditor" {
   value = "${module.agent-auditor.public_ip}"
 }
-
-
