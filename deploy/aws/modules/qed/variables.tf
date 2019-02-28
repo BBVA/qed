@@ -39,10 +39,9 @@ variable "path" {
 }
 
 variable "count" {
-  default = 1 
+  default = 1
 }
 
 variable "command" {
   default = "start"
 }
-
