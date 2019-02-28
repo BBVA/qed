@@ -42,6 +42,13 @@ resource "aws_instance" "qed-server" {
     volume_size = "${var.volume_size}"
   }]
 
+  ebs_block_device = {
+    device_name           = "/dev/xvdc"
+    volume_type           = "gp2"
+    volume_size           = "${var.ebs_volume_size}"
+    delete_on_termination = "true"
+  }
+
   tags {
     Name = "${format("${var.name}-%01d", count.index)}"
     Role = "${var.role}"
