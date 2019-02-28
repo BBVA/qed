@@ -27,9 +27,11 @@ variable "subnet_id" {}
 variable "key_name" {}
 
 variable "key_path" {}
+
 variable "role" {
   default = "prometheus"
 }
+
 variable "path" {
   default = "/home/ec2-user/prometheus"
 }
