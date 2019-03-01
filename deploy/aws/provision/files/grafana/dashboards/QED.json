@@ -294,7 +294,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(qed_balloon_membership_total) + sum(qed_balloon_digest_membership_total)",
+          "expr": "sum(qed_balloon_digest_membership_total)",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -526,18 +526,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_balloon_membership_total[$interval])) by (job)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{job}}-memb",
-          "refId": "A"
-        },
-        {
           "expr": "sum(rate(qed_balloon_digest_membership_total[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}-digest_memb",
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "thresholds": [],

@@ -294,12 +294,6 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
 	hasher := b.hasherF()
 
-	// Metrics
-	metrics.QedBalloonMembershipTotal.Inc()
-	metrics.QedBalloonDigestMembershipTotal.Dec()
-	//timer := prometheus.NewTimer(metrics.QedBalloonMembershipDurationSeconds)
-	//defer timer.ObserveDuration()
-
 	return b.QueryDigestMembership(hasher.Do(event), version)
 }
 
