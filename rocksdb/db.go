@@ -16,15 +16,15 @@
 
 package rocksdb
 
-// #cgo LDFLAGS: -L../c-deps/rocksdb/
-// #cgo LDFLAGS: -l:librocksdb.a -l:libstdc++.a -l:libz.a -l:libbz2.a -l:libsnappy.a -l:libzstd.a -lm
-// #include "../c-deps/rocksdb/include/rocksdb/c.h"
+// #include <rocksdb/c.h>
 // #include <stdlib.h>
 import "C"
 import (
 	"errors"
 	"unsafe"
 )
+
+// -llz4 -lz -lbz2  -lzstd
 
 // DB is a reusable handler to a RocksDB database on disk, created by Open.
 type DB struct {
