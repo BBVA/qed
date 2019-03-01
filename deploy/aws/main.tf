@@ -56,7 +56,7 @@ module "inmemory-storage" {
   source = "./modules/inmemory_storage"
 
   name                   = "inmemory-storage"
-  instance_type          = "t3.small"
+  instance_type          = "t3.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -69,7 +69,7 @@ module "agent-publisher" {
   source = "./modules/agent"
 
   name                   = "agent-publisher"
-  instance_type          = "t3.small"
+  instance_type          = "t3.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -84,7 +84,7 @@ module "agent-monitor" {
 
   name                   = "agent-monitor"
   count                  = 1
-  instance_type          = "t3.small"
+  instance_type          = "t3.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -98,7 +98,7 @@ module "agent-auditor" {
   source = "./modules/agent"
 
   name                   = "agent-auditor"
-  instance_type          = "t3.small"
+  instance_type          = "t3.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
