@@ -96,10 +96,11 @@
   vars_files:
     - vars.yml
   tasks:
-    - name: Start all services
+    - name: Restart all services
       shell: >
         {{ item }}
       with_items:
+        - /var/qed/qed-stop.sh
         - /var/qed/qed-start.sh
         - /var/qed/exporter-start.sh
     - name: wait for raised api port
@@ -124,10 +125,11 @@
   vars_files:
     - vars.yml
   tasks:
-    - name: Start all services
+    - name: Restart all services
       shell: >
         {{ item }}
       with_items:
+        - /var/qed/qed-stop.sh
         - /var/qed/qed-start.sh
         - /var/qed/exporter-start.sh
   tags:
