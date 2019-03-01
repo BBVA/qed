@@ -112,9 +112,6 @@
     - name: wait for raised metrics port
       wait_for:
         port: 8600
-    - name: wait for raised raft port
-      wait_for:
-        port: 8500
 
   tags:
     - start-qed
