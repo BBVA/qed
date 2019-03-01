@@ -30,5 +30,5 @@ then
     ansible-playbook --inventory-file=$(which terraform-inventory) --private-key ~/.ssh/id_rsa_free main.yml -f 10
 else
     echo "Using custom Ansible Playbook command."
-    ansible-playbook "$@"
+    ansible-playbook "$@" --inventory-file=$(which terraform-inventory) --private-key ~/.ssh/id_rsa_free main.yml -f 10
 fi
