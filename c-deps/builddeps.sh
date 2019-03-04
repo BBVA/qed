@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e 
+
 BASE=$(pwd)
 LIBS="$BASE/libs"
 
@@ -8,10 +10,10 @@ if [ ! -f $LIBS/libjemalloc.so.2 ]; then
 	cd jemalloc
 	bash autogen.sh
 	make -j8
-	cp lib/libjemalloc.so.2 ../libs/
+#	cp lib/libjemalloc.so.2 ../libs/
 	cp lib/libjemalloc.a ../libs
 	cd ../libs
-	ln -s ibjemalloc.so.2 libjemalloc.so
+#	ln -s ibjemalloc.so.2 libjemalloc.so
 fi
 
 cd $BASE
@@ -46,17 +48,17 @@ cd $BASE
 # build snappy shared lib
 if [ ! -f $LIBS/libsnappy.so.1.1.7 ]; then 
 	cd snappy
-	mkdir build
+	mkdir -p build
 	cd build
 	cmake ../
-	sed -i.bak  s/BUILD_SHARED_LIBS:BOOL=OFF/BUILD_SHARED_LIBS:BOOL=ON/g CMakeCache.txt
+	# sed -i.bak  s/BUILD_SHARED_LIBS:BOOL=OFF/BUILD_SHARED_LIBS:BOOL=ON/g CMakeCache.txt
 	make -j8
-	cp libsnappy.so.1.1.7 ../../libs/
+#	cp libsnappy.so.1.1.7 ../../libs/
 	cp libsnappy.a ../../libs/
-	cp snappy-stub-public.h ../
+	cp snappy-stubs-public.h ../
 	cd ../../libs/
-	ln -s libsnappy.so.1.1.7 libsnappy.so.1
-	ln -s libsnappy.so.1.1.7 libsnappy.so
+#	ln -s libsnappy.so.1.1.7 libsnappy.so.1
+#	ln -s libsnappy.so.1.1.7 libsnappy.so
 fi
 
 cd $BASE
@@ -106,4 +108,4 @@ cmake -DWITH_GFLAGS=OFF  -DPORTABLE=ON \
 	-DCMAKE_BUILD_TYPE=Release -DUSE_RTTI=1 ../
 make -j8 rocksdb
 
-cp librocksdb.a* ../libs
+cp librocksdb.a ../../libs
