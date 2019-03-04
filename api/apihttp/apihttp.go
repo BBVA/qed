@@ -45,7 +45,7 @@ type HealthCheckResponse struct {
 //	 {"version": "0", "status":"ok"}
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
-	metrics.QedApiHealthcheckRequestsTotal.Inc()
+	metrics.QedAPIHealthcheckRequestsTotal.Inc()
 
 	result := HealthCheckResponse{
 		Version: 0,
