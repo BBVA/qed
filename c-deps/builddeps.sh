@@ -4,6 +4,7 @@ set -e
 
 BASE=$(pwd)
 LIBS="$BASE/libs"
+mkdir -p $LIBS
 
 # build jemalloc
 if [ ! -f $LIBS/libjemalloc.so.2 ]; then 
