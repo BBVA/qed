@@ -24,15 +24,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
+
 	// Prometheus
+
 	QedStoreInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_store_instances_count",
@@ -67,9 +69,9 @@ var (
 		QedStoreSnapshotsRetrievedTotal,
 		QedStoreAlertsGeneratedTotal,
 	}
-)
 
-var registerMetrics sync.Once
+	registerMetrics sync.Once
+)
 
 // Register all metrics.
 func Register(r *prometheus.Registry) {
