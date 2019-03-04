@@ -24,4 +24,4 @@
  
 [submodule "github.com/jemalloc/jemalloc"]
 	path = c-deps/jemalloc
-	url = https://github.com/jemalloc/jemalloc
+	url = https://github.com/jemalloc/jemalloc.git
