@@ -6,22 +6,6 @@
 	path = c-deps/snappy
 	url = https://github.com/google/snappy.git
 
-[submodule "github.com/lz4/lz4"]
-	path = c-deps/lz4
-	url = https://github.com/lz4/lz4.git
-
-[submodule "github.com/enthought/bzip2-1.0.6"]
-	path = c-deps/bzip2
-	url = https://github.com/enthought/bzip2-1.0.6.git
-
-[submodule "github.com/facebook/zstd"]
-	path = c-deps/zstd
-	url = https://github.com/facebook/zstd.git
-
-[submodule "github.com/madler/zlib"]
-	path = c-deps/zlib
-	url = https://github.com/madler/zlib.git
- 
 [submodule "github.com/jemalloc/jemalloc"]
 	path = c-deps/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
