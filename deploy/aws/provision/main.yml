@@ -47,6 +47,8 @@
   tasks:
     - name: Gather facts
       setup:
+  tags:
+    - prometheus
 
 - hosts: type_aws_instance
   remote_user: ec2-user
@@ -88,6 +90,8 @@
     - vars.yml
   tasks:
     - include: tasks/prometheus/main.yml
+  tags:
+    - prometheus
 
 - hosts: role_qed
   remote_user: ec2-user
@@ -161,4 +165,4 @@
         - /var/qed/exporter-start.sh
   tags:
     - start-prometheus
-
+    - prometheus
