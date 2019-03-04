@@ -104,23 +104,19 @@ func (a *alertStore) GetAll() []string {
 }
 
 type snapStore struct {
-	sync.Mutex
-	d map[uint64]*protocol.SignedSnapshot
+	d *sync.Map
 }
 
 func (s *snapStore) Put(b *protocol.BatchSnapshots) {
-	s.Lock()
-	defer s.Unlock()
-
 	for _, snap := range b.Snapshots {
-		s.d[snap.Snapshot.Version] = snap
+		s.d.Store(snap.Snapshot.Version, snap)
 	}
 }
 
 func (s *snapStore) Get(version uint64) (v *protocol.SignedSnapshot, ok bool) {
-	s.Lock()
-	defer s.Unlock()
-	v, ok = s.d[version]
+	var tmpV interface{}
+	tmpV, ok = s.d.Load(version)
+	v = tmpV.(*protocol.SignedSnapshot)
 	return v, ok
 }
 
@@ -276,7 +272,7 @@ func NewService() *Service {
 	var snaps snapStore
 	var alerts alertStore
 	var stats statStore
-	snaps.d = make(map[uint64]*protocol.SignedSnapshot)
+	snaps.d = &sync.Map{}
 	stats.batch = make(map[string][]int)
 	alerts.d = make([]string, 0)
 
