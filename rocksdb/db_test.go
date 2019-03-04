@@ -28,6 +28,44 @@ func TestOpenDB(t *testing.T) {
 	defer db.Close()
 }
 
+func TestDBCRUD(t *testing.T) {
+
+	db := newTestDB(t, "TestDBCRUD", nil)
+	defer db.Close()
+
+	var (
+		key    = []byte("key1")
+		value1 = []byte("value1")
+		value2 = []byte("value2")
+		wo     = NewDefaultWriteOptions()
+		ro     = NewDefaultReadOptions()
+	)
+
+	// put
+	require.NoError(t, db.Put(wo, key, value1))
+
+	// retrieve
+	slice1, err := db.Get(ro, key)
+	defer slice1.Free()
+	require.NoError(t, err)
+	require.Equal(t, slice1.Data(), value1)
+
+	// update
+	require.NoError(t, db.Put(wo, key, value2))
+	slice2, err := db.Get(ro, key)
+	defer slice2.Free()
+	require.NoError(t, err)
+	require.Equal(t, slice2.Data(), value2)
+
+	// delete
+	require.NoError(t, db.Delete(wo, key))
+	slice3, err := db.Get(ro, key)
+	defer slice3.Free()
+	require.NoError(t, err)
+	require.Nil(t, slice3.Data())
+
+}
+
 func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
 	dir, err := ioutil.TempDir("", "rocksdb-"+name)
 	require.NoError(t, err)
@@ -38,7 +76,7 @@ func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
 		applyOpts(opts)
 	}
 
-	db, err := Open(dir, opts)
+	db, err := OpenDB(dir, opts)
 	require.NoError(t, err)
 
 	return db

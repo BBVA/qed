@@ -24,15 +24,14 @@ import (
 	"unsafe"
 )
 
-// -llz4 -lz -lbz2  -lzstd
-
-// DB is a reusable handler to a RocksDB database on disk, created by Open.
+// DB is a reusable handler to a RocksDB database on disk, created by OpenDB.
 type DB struct {
 	db   *C.rocksdb_t
 	opts *Options
 }
 
-func Open(path string, opts *Options) (*DB, error) {
+// OpenDB opens a database with the specified options.
+func OpenDB(path string, opts *Options) (*DB, error) {
 	var cErr *C.char
 	var cPath = C.CString(path)
 	defer C.free(unsafe.Pointer(cPath))
@@ -49,6 +48,7 @@ func Open(path string, opts *Options) (*DB, error) {
 	}, nil
 }
 
+// Close closes the database.
 func (db *DB) Close() error {
 	if db.db != nil {
 		C.rocksdb_close(db.db)
@@ -56,4 +56,77 @@ func (db *DB) Close() error {
 	}
 	db.opts.Destroy()
 	return nil
+}
+
+// Put writes data associated with a key to the database.
+func (db *DB) Put(opts *WriteOptions, key, value []byte) error {
+	cKey := bytesToChar(key)
+	cValue := bytesToChar(value)
+	var cErr *C.char
+	C.rocksdb_put(db.db, opts.opts, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// Get returns the data associated with the key from the database.
+func (db *DB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
+	var cErr *C.char
+	var cValueLen C.size_t
+	cKey := bytesToChar(key)
+	cValue := C.rocksdb_get(db.db, opts.opts, cKey, C.size_t(len(key)), &cValueLen, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewSlice(cValue, cValueLen), nil
+}
+
+// GetBytes is like Get but returns a copy of the data instead of a Slice.
+func (db *DB) GetBytes(opts *ReadOptions, key []byte) ([]byte, error) {
+	var cErr *C.char
+	var cValueLen C.size_t
+	cKey := bytesToChar(key)
+	cValue := C.rocksdb_get(db.db, opts.opts, cKey, C.size_t(len(key)), &cValueLen, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	if cValue == nil {
+		return nil, nil
+	}
+	defer C.free(unsafe.Pointer(cValue))
+	return C.GoBytes(unsafe.Pointer(cValue), C.int(cValueLen)), nil
+}
+
+// Delete removes the data associated with the key from the database.
+func (db *DB) Delete(opts *WriteOptions, key []byte) error {
+	var cErr *C.char
+	cKey := bytesToChar(key)
+	C.rocksdb_delete(db.db, opts.opts, cKey, C.size_t(len(key)), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// Write writes a WriteBatch to the database
+func (db *DB) Write(opts *WriteOptions, batch *WriteBatch) error {
+	var cErr *C.char
+	C.rocksdb_write(db.db, opts.opts, batch.batch, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// NewIterator returns an Iterator over the the database that uses the
+// ReadOptions given.
+func (db *DB) NewIterator(opts *ReadOptions) *Iterator {
+	cIter := C.rocksdb_create_iterator(db.db, opts.opts)
+	return NewNativeIterator(unsafe.Pointer(cIter))
 }
