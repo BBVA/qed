@@ -26,12 +26,13 @@ import (
 
 var (
 
-	// BalloonStats has a Map of all the stats relative to Balloon
+	// Balloon has a Map of all the stats relative to Balloon
 	Balloon *expvar.Map
 
 	// Prometheus
 
-	// QED
+	// SERVER
+
 	QedInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_instances_count",
@@ -49,6 +50,7 @@ var (
 	)
 
 	// BALLOON
+
 	QedBalloonAddDurationSeconds = prometheus.NewSummary(
 		prometheus.SummaryOpts{
 			Name: "qed_balloon_add_duration_seconds",
@@ -99,6 +101,7 @@ var (
 	)
 
 	// HYPER TREE
+
 	QedHyperAddTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_hyper_add_total",
@@ -113,6 +116,7 @@ var (
 	)
 
 	// HISTORY TREE
+
 	QedHistoryAddTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_history_add_total",
@@ -133,6 +137,7 @@ var (
 	)
 
 	// SENDER
+
 	QedSenderInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_sender_instances_count",
@@ -145,6 +150,29 @@ var (
 			Help: "Number of batches sent by the sender.",
 		},
 	)
+
+	// Client
+
+	ClientEventAdd = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "client_event_add",
+			Help: "Number of events added into the cluster.",
+		},
+	)
+	ClientQueryMembership = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "client_query_membership",
+			Help: "Number of single events directly verified into the cluster.",
+		},
+	)
+	ClientQueryIncremental = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "client_query_incremental",
+			Help: "Number of range of verified events queried into the cluster.",
+		},
+	)
+
+	// PROMETHEUS
 
 	metricsList = []prometheus.Collector{
 		QedInstancesCount,
@@ -162,10 +190,14 @@ var (
 
 		QedSenderInstancesCount,
 		QedSenderBatchesSentTotal,
-	}
-)
 
-var registerMetrics sync.Once
+		ClientEventAdd,
+		ClientQueryMembership,
+		ClientQueryIncremental,
+	}
+
+	registerMetrics sync.Once
+)
 
 // Register all metrics.
 func Register(r *prometheus.Registry) {
