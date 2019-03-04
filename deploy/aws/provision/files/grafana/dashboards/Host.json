@@ -17,7 +17,7 @@
   "gnetId": 179,
   "graphTooltip": 1,
   "id": 2,
-  "iteration": 1550157092295,
+  "iteration": 1551713243950,
   "links": [],
   "panels": [
     {
@@ -437,7 +437,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(node_filesystem_size_bytes{job=~\"Qed0-HostMetrics\"})",
+          "expr": "sum(node_filesystem_size_bytes{job=~\"Qed.*\"})/sum(qed_instances_count)",
           "format": "time_series",
           "hide": false,
           "interval": "2m",
@@ -542,13 +542,20 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(node_memory_MemTotal_bytes{job=~\"Qed0-HostMetrics\"})",
+          "expr": "sum(node_memory_MemTotal_bytes{job=~\"Qed.*\"})/sum(qed_instances_count)",
           "format": "time_series",
           "hide": false,
           "interval": "2m",
           "intervalFactor": 2,
-          "legendFormat": "Total",
+          "legendFormat": "Max-QED",
           "refId": "A"
+        },
+        {
+          "expr": "sum(node_memory_MemTotal_bytes{job=~\"Agent.*\"})/(sum(qed_auditor_instances_count)+sum(qed_monitor_instances_count)+sum(qed_publisher_instances_count))",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Max-Agent",
+          "refId": "C"
         },
         {
           "expr": "sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) by (job)",
@@ -564,7 +571,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Node Mermory",
+      "title": "Node Memory",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -813,5 +820,5 @@
   "timezone": "browser",
   "title": "Hosts Monitoring",
   "uid": "64nrElFmk",
-  "version": 250
+  "version": 1
 }
