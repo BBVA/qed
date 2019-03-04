@@ -33,6 +33,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 )
 
@@ -211,6 +212,7 @@ func (c HTTPClient) Ping() error {
 // Add will do a request to the server with a post data to store a new event.
 func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
+	metrics.ClientEventAdd.Inc()
 	data, _ := json.Marshal(&protocol.Event{Event: []byte(event)})
 
 	body, err := c.doReq("POST", "/events", data)
@@ -227,6 +229,8 @@ func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
 // Membership will ask for a Proof to the server.
 func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
+
+	metrics.ClientQueryMembership.Inc()
 
 	query, _ := json.Marshal(&protocol.MembershipQuery{
 		Key:     key,
@@ -248,6 +252,8 @@ func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.Membershi
 // Membership will ask for a Proof to the server.
 func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
 
+	metrics.ClientQueryMembership.Inc()
+
 	query, _ := json.Marshal(&protocol.MembershipDigest{
 		KeyDigest: keyDigest,
 		Version:   version,
@@ -267,6 +273,8 @@ func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) 
 
 // Incremental will ask for an IncrementalProof to the server.
 func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
+
+	metrics.ClientQueryIncremental.Inc()
 
 	query, _ := json.Marshal(&protocol.IncrementalRequest{
 		Start: start,
