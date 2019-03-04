@@ -16,12 +16,14 @@
 
 package rocksdb
 
-// #cgo CFLAGS: -I${SRCDIR}/../c-deps/rocksdb/include/
+// #cgo CFLAGS: -I${SRCDIR}/../c-deps/rocksdb/include
 // #cgo LDFLAGS: -L${SRCDIR}/../c-deps/libs
-// #cgo LDFLAGS: ${SRCDIR}/../c-deps/libs/librocksdb.a
-// #cgo LDFLAGS: ${SRCDIR}/../c-deps/libs/libjemalloc.a
-// #cgo LDFLAGS: ${SRCDIR}/../c-deps/libs/libsnappy.a
+// #cgo LDFLAGS: -lrocksdb
+// #cgo LDFLAGS: -ljemalloc
+// #cgo LDFLAGS: -lsnappy
 // #cgo LDFLAGS: -lstdc++
 // #cgo LDFLAGS: -ldl
 // #cgo LDFLAGS: -lm
+// #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup
+// #cgo !darwin LDFLAGS: -Wl,-unresolved_symbols=ignore-all -lrt
 import "C"
