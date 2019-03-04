@@ -69,7 +69,7 @@ func TestLeave(t *testing.T) {
 	conf := DefaultConfig()
 	conf.NodeName = "testNode"
 	conf.Role = member.Auditor
-	conf.BindAddr = "0.0.0.0:12346"
+	conf.BindAddr = "127.0.0.1:12346"
 	a, _ := NewAgent(conf, []Processor{FakeProcessor{}})
 
 	testCases := []struct {
@@ -117,7 +117,7 @@ func TestShutdown(t *testing.T) {
 	conf := DefaultConfig()
 	conf.NodeName = "testNode"
 	conf.Role = member.Auditor
-	conf.BindAddr = "0.0.0.0:12347"
+	conf.BindAddr = "127.0.0.1:12347"
 	a, _ := NewAgent(conf, []Processor{FakeProcessor{}})
 
 	testCases := []struct {

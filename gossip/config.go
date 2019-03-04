@@ -29,7 +29,7 @@ const DefaultBindPort int = 7946
 // DefaultConfig contains the defaults for configurations.
 func DefaultConfig() *Config {
 	return &Config{
-		BindAddr:            "0.0.0.0:12345",
+		BindAddr:            "127.0.0.1:12345",
 		AdvertiseAddr:       "",
 		LeaveOnTerm:         true,
 		EnableCompression:   false,
