@@ -16,34 +16,21 @@
 
 package rocksdb
 
-// #include <stdlib.h>
+// #include <rocksdb/c.h>
 import "C"
-import (
-	"reflect"
-	"unsafe"
-)
 
-// boolToUchar converts a bool value to C.uchar.
-func boolToUchar(b bool) C.uchar {
-	if b {
-		return C.uchar(1)
-	}
-	return C.uchar(0)
+// WriteOptions represent all options available when writing to a database.
+type WriteOptions struct {
+	opts *C.rocksdb_writeoptions_t
 }
 
-// bytesToChar converts a byte slice to *C.char.
-func bytesToChar(b []byte) *C.char {
-	var c *C.char
-	if len(b) > 0 {
-		c = (*C.char)(unsafe.Pointer(&b[0]))
-	}
-	return c
+// NewDefaultWriteOptions creates a default WriteOptions object.
+func NewDefaultWriteOptions() *WriteOptions {
+	return &WriteOptions{C.rocksdb_writeoptions_create()}
 }
 
-// charToBytes converts a *C.char to a byte slice.
-func charToBytes(data *C.char, len C.size_t) []byte {
-	var value []byte
-	header := (*reflect.SliceHeader)(unsafe.Pointer(&value))
-	header.Cap, header.Len, header.Data = int(len), int(len), uintptr(unsafe.Pointer(data))
-	return value
+// Destroy deallocates the WriteOptions object.
+func (o *WriteOptions) Destroy() {
+	C.rocksdb_writeoptions_destroy(o.opts)
+	o.opts = nil
 }
