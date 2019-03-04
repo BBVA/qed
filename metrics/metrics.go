@@ -40,7 +40,8 @@ var (
 	)
 
 	// API
-	QedApiHealthcheckRequestsTotal = prometheus.NewCounter(
+
+	QedAPIHealthcheckRequestsTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_api_healthcheck_requests_total",
 			Help: "The total number of healthcheck api requests",
@@ -147,7 +148,7 @@ var (
 
 	metricsList = []prometheus.Collector{
 		QedInstancesCount,
-		QedApiHealthcheckRequestsTotal,
+		QedAPIHealthcheckRequestsTotal,
 
 		QedBalloonAddDurationSeconds,
 		QedBalloonMembershipDurationSeconds,
