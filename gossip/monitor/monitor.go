@@ -59,7 +59,7 @@ type Monitor struct {
 	metricsServer      *http.Server
 	prometheusRegistry *prometheus.Registry
 
-	taskCh          chan QueryTask
+	taskCh          chan Task
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
@@ -75,7 +75,7 @@ func NewMonitor(conf Config) (*Monitor, error) {
 			Insecure:  false,
 		}),
 		conf:   conf,
-		taskCh: make(chan QueryTask, 100),
+		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
 	}
 
@@ -103,9 +103,8 @@ func NewMonitor(conf Config) (*Monitor, error) {
 	return &monitor, nil
 }
 
-type QueryTask struct {
-	Start, End                 uint64
-	StartSnapshot, EndSnapshot protocol.Snapshot
+type Task interface {
+	Do()
 }
 
 func (m Monitor) Process(b protocol.BatchSnapshots) {
@@ -120,6 +119,8 @@ func (m Monitor) Process(b protocol.BatchSnapshots) {
 	log.Debugf("Processing batch from versions %d to %d", first.Version, last.Version)
 
 	task := QueryTask{
+		client:        m.client,
+		pubUrl:        m.conf.PubUrls[0],
 		Start:         first.Version,
 		End:           last.Version,
 		StartSnapshot: *first,
@@ -147,7 +148,8 @@ func (m *Monitor) Shutdown() {
 	metrics.QedMonitorInstancesCount.Dec()
 
 	log.Debugf("Metrics enabled: stopping server...")
-	if err := m.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
+	// TODO include timeout instead nil
+	if err := m.metricsServer.Shutdown(context.Background()); err != nil {
 		log.Error(err)
 	}
 	log.Debugf("Done.\n")
@@ -160,7 +162,7 @@ func (m *Monitor) Shutdown() {
 
 func (m Monitor) dispatchTasks() {
 	count := 0
-	var task QueryTask
+	var task Task
 	var ok bool
 	defer log.Debugf("%d tasks dispatched", count)
 	for {
@@ -169,7 +171,7 @@ func (m Monitor) dispatchTasks() {
 			if !ok {
 				return
 			}
-			go m.executeTask(task)
+			go task.Do()
 			count++
 		default:
 			return
@@ -180,11 +182,19 @@ func (m Monitor) dispatchTasks() {
 	}
 }
 
-func (m Monitor) sendAlert(msg string) {
-	resp, err := http.Post(fmt.Sprintf("%s/alert", m.conf.PubUrls[0]), "application/json",
-		bytes.NewBufferString(msg))
+type QueryTask struct {
+	client                     *client.HTTPClient
+	pubUrl                     string
+	taskCh                     chan Task
+	Start, End                 uint64
+	StartSnapshot, EndSnapshot protocol.Snapshot
+}
+
+func (q QueryTask) sendAlert(msg string) {
+	resp, err := http.Post(fmt.Sprintf("%s/alert", q.pubUrl), "application/json", bytes.NewBufferString(msg))
 	if err != nil {
-		log.Infof("Error saving batch in alertStore: %v", err)
+		log.Infof("Error saving batch in alertStore (task re-enqueued): %v", err)
+		q.taskCh <- q
 		return
 	}
 	defer resp.Body.Close()
@@ -194,21 +204,18 @@ func (m Monitor) sendAlert(msg string) {
 	}
 }
 
-func (m Monitor) executeTask(task QueryTask) {
-	log.Debug("Executing task: %+v", task)
-	resp, err := m.client.Incremental(task.Start, task.End)
+func (q QueryTask) Do() {
+	log.Debug("Executing task: %+v", q)
+	resp, err := q.client.Incremental(q.Start, q.End)
 	if err != nil {
-		// TODO: retry
 		metrics.QedMonitorGetIncrementalProofErrTotal.Inc()
-		log.Infof("Unable to get incremental proof from QED server: %s", err.Error())
+		log.Infof("Unable to verify incremental proof from %d to %d", q.Start, q.End)
 		return
 	}
-	ok := m.client.VerifyIncremental(resp, &task.StartSnapshot, &task.EndSnapshot, hashing.NewSha256Hasher())
+	ok := q.client.VerifyIncremental(resp, &q.StartSnapshot, &q.EndSnapshot, hashing.NewSha256Hasher())
 	if !ok {
-		m.sendAlert(fmt.Sprintf("Unable to verify incremental proof from %d to %d",
-			task.StartSnapshot.Version, task.EndSnapshot.Version))
-		log.Infof("Unable to verify incremental proof from %d to %d",
-			task.StartSnapshot.Version, task.EndSnapshot.Version)
+		q.sendAlert(fmt.Sprintf("Unable to verify incremental proof from %d to %d", q.StartSnapshot.Version, q.EndSnapshot.Version))
+		log.Infof("Unable to verify incremental proof from %d to %d", q.StartSnapshot.Version, q.EndSnapshot.Version)
 	}
-	log.Debugf("Consistency between versions %d and %d: %v\n", task.Start, task.End, ok)
+	log.Debugf("Consistency between versions %d and %d: %v\n", q.Start, q.End, ok)
 }

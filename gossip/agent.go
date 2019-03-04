@@ -51,8 +51,8 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 		config:     conf,
 		Topology:   NewTopology(),
 		processors: p,
-		In:         make(chan *protocol.BatchSnapshots, 1000),
-		Out:        make(chan *protocol.BatchSnapshots, 1000),
+		In:         make(chan *protocol.BatchSnapshots, 1<<16),
+		Out:        make(chan *protocol.BatchSnapshots, 1<<16),
 		quit:       make(chan bool),
 	}
 
