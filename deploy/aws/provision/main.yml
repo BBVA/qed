@@ -40,6 +40,7 @@
         connect_timeout: 300
         search_regex: OpenSSH
       delegate_to: localhost
+      retries: 2
 
 - hosts: all
   remote_user: ec2-user
