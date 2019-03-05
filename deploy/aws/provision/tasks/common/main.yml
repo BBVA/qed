@@ -28,7 +28,6 @@
 
 - name: Create xfs filesystem on EBS volume
   filesystem:
-    force: yes
     fstype: xfs
     dev: "{{ ebs_device.stat.path }}"
   when: ebs_device.stat.exists
