@@ -85,7 +85,8 @@ func NewBadgerStoreOpts(opts *Options) (*BadgerStore, error) {
 	bOpts.Dir = opts.Path
 	bOpts.ValueDir = opts.Path
 	bOpts.SyncWrites = false
-	bOpts.ValueThreshold = 1 << 11 // LSM mode
+	bOpts.ValueThreshold = 1 << 11    // LSM mode
+	bOpts.ValueLogFileSize = 64 << 20 // Allow easy space reclamation.
 
 	db, err := b.Open(bOpts)
 	if err != nil {
