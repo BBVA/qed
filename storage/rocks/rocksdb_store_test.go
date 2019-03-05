@@ -16,6 +16,7 @@
 package rocks
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,7 +31,7 @@ import (
 )
 
 func TestMutate(t *testing.T) {
-	store, closeF := openRockdsDBStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 	prefix := byte(0x0)
 
@@ -53,7 +54,7 @@ func TestMutate(t *testing.T) {
 }
 func TestGetExistentKey(t *testing.T) {
 
-	store, closeF := openRockdsDBStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	testCases := []struct {
@@ -89,7 +90,7 @@ func TestGetExistentKey(t *testing.T) {
 }
 
 func TestGetRange(t *testing.T) {
-	store, closeF := openRockdsDBStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	var testCases = []struct {
@@ -133,7 +134,7 @@ func TestGetAll(t *testing.T) {
 		{17, 59, 14},
 	}
 
-	store, closeF := openRockdsDBStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	// insert
@@ -165,7 +166,7 @@ func TestGetAll(t *testing.T) {
 }
 
 func TestGetLast(t *testing.T) {
-	store, closeF := openRockdsDBStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	// insert
@@ -187,8 +188,54 @@ func TestGetLast(t *testing.T) {
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
 }
 
+func TestBackupLoad(t *testing.T) {
+
+	store, closeF := openRocksDBStore(t)
+	defer closeF()
+
+	// insert
+	numElems := uint64(20)
+	prefixes := [][]byte{{storage.IndexPrefix}, {storage.HistoryCachePrefix}, {storage.HyperCachePrefix}}
+	for _, prefix := range prefixes {
+		for i := uint64(0); i < numElems; i++ {
+			key := util.Uint64AsBytes(i)
+			store.Mutate([]*storage.Mutation{
+				{Prefix: prefix[0], Key: key, Value: key},
+			})
+		}
+	}
+
+	// create backup
+	ioBuf := bytes.NewBufferString("")
+	require.NoError(t, store.Backup(ioBuf, 0))
+
+	// restore backup
+	restore, recloseF := openRocksDBStore(t)
+	defer recloseF()
+	require.NoError(t, restore.Load(ioBuf))
+
+	// check elements
+	for _, prefix := range prefixes {
+		reader := store.GetAll(prefix[0])
+		for {
+			entries := make([]*storage.KVPair, 1000)
+			n, _ := reader.Read(entries)
+			if n == 0 {
+				break
+			}
+			for i := 0; i < n; i++ {
+				kv, err := restore.Get(prefix[0], entries[i].Key)
+				require.NoError(t, err)
+				require.Equal(t, entries[i].Value, kv.Value, "The values should match")
+			}
+		}
+		reader.Close()
+	}
+
+}
+
 func BenchmarkMutate(b *testing.B) {
-	store, closeF := openRockdsDBStore(b)
+	store, closeF := openRocksDBStore(b)
 	defer closeF()
 	prefix := byte(0x0)
 	b.N = 100000
@@ -202,7 +249,7 @@ func BenchmarkMutate(b *testing.B) {
 
 }
 
-func openRockdsDBStore(t require.TestingT) (*RocksDBStore, func()) {
+func openRocksDBStore(t require.TestingT) (*RocksDBStore, func()) {
 	path := mustTempDir()
 	store, err := NewRocksDBStore(filepath.Join(path, "rockdsdb_store_test.db"))
 	if err != nil {

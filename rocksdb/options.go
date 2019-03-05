@@ -16,8 +16,10 @@
 
 package rocksdb
 
+// #include <stdlib.h>
 // #include <rocksdb/c.h>
 import "C"
+import "unsafe"
 
 // CompressionType specifies the block compression.
 // DB contents are stored in a set of blocks, each of which holds a
@@ -90,6 +92,31 @@ func (o *Options) SetMinWriteBufferNumberToMerge(value int) {
 func (o *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
 	o.bbto = value
 	C.rocksdb_options_set_block_based_table_factory(o.opts, value.opts)
+}
+
+// SetDBLogDir specifies the absolute info LOG dir.
+//
+// If it is empty, the log files will be in the same dir as data.
+// If it is non empty, the log files will be in the specified dir,
+// and the db data dir's absolute path will be used as the log file
+// name's prefix.
+// Default: empty
+func (o *Options) SetDBLogDir(value string) {
+	cValue := C.CString(value)
+	defer C.free(unsafe.Pointer(cValue))
+	C.rocksdb_options_set_db_log_dir(o.opts, cValue)
+}
+
+// SetWalDir specifies the absolute dir path for write-ahead logs (WAL).
+//
+// If it is empty, the log files will be in the same dir as data.
+// If it is non empty, the log files will be in the specified dir,
+// When destroying the db, all log files and the dir itopts is deleted.
+// Default: empty
+func (o *Options) SetWalDir(value string) {
+	cValue := C.CString(value)
+	defer C.free(unsafe.Pointer(cValue))
+	C.rocksdb_options_set_wal_dir(o.opts, cValue)
 }
 
 // Destroy deallocates the Options object.
