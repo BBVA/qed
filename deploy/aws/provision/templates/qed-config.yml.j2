@@ -21,8 +21,8 @@ path: "/var/qed/"
 server:
   node_id: "{{ ansible_hostname }}"
   addr:
-    http: ":8800"
-    mgmt: ":8700"
+    http: "{{ ansible_eth0.ipv4.address }}:8800"
+    mgmt: "{{ ansible_eth0.ipv4.address }}:8700"
     raft: "{{ ansible_eth0.ipv4.address }}:8500"
     gossip: "{{ ansible_eth0.ipv4.address }}:8400"
 {% if groups.role_qed.index(inventory_hostname) != 0  %}
