@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": 179,
   "graphTooltip": 1,
-  "id": 2,
-  "iteration": 1551713243950,
+  "id": 1,
+  "iteration": 1551774642303,
   "links": [],
   "panels": [
     {
@@ -691,7 +691,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
