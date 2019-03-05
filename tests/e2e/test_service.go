@@ -1,9 +1,12 @@
 /*
    Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
+
        http://www.apache.org/licenses/LICENSE-2.0
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -105,26 +108,40 @@ func (a *alertStore) GetAll() []string {
 	return n
 }
 
+const segmentSize uint64 = 1 << 20
+
+type Segment [segmentSize]*protocol.SignedSnapshot
+
 type snapStore struct {
-	d *sync.Map
+	segments []Segment
+	sync.Mutex
 }
 
 func newSnapStore() *snapStore {
-	return &snapStore{d: &sync.Map{}}
+	return &snapStore{segments: make([]Segment, 0)}
 }
 
 func (s *snapStore) Put(b *protocol.BatchSnapshots) {
+	s.Lock()
+	defer s.Unlock()
+	lastVersion := b.Snapshots[len(b.Snapshots)-1].Snapshot.Version
+	maxSegment := lastVersion / segmentSize
+	for i := uint64(len(s.segments)); i <= maxSegment; i++ {
+		s.segments = append(s.segments, Segment{})
+	}
 	for _, snap := range b.Snapshots {
-		s.d.Store(snap.Snapshot.Version, snap)
+		targetSegment := snap.Snapshot.Version / segmentSize
+		targetIndex := snap.Snapshot.Version - (targetSegment * segmentSize)
+		s.segments[targetSegment][targetIndex] = snap
 	}
 }
 
-func (s *snapStore) Get(version uint64) (v *protocol.SignedSnapshot, ok bool) {
-	tmpV, ok := s.d.Load(version)
-	if !ok {
-		return nil, ok
-	}
-	return tmpV.(*protocol.SignedSnapshot), ok
+func (s *snapStore) Get(version uint64) *protocol.SignedSnapshot {
+	s.Lock()
+	defer s.Unlock()
+	targetSegment := version / segmentSize
+	targetIndex := version - (targetSegment * segmentSize)
+	return s.segments[targetSegment][targetIndex]
 }
 
 type Service struct {
@@ -246,8 +263,8 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			b, ok := s.snaps.Get(uint64(version))
-			if !ok {
+			b := s.snaps.Get(uint64(version))
+			if b == nil {
 				http.Error(w, fmt.Sprintf("Version not found: %v", version), http.StatusUnprocessableEntity)
 				return
 			}
