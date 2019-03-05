@@ -33,10 +33,28 @@ type DB struct {
 // OpenDB opens a database with the specified options.
 func OpenDB(path string, opts *Options) (*DB, error) {
 	var cErr *C.char
-	var cPath = C.CString(path)
+	cPath := C.CString(path)
 	defer C.free(unsafe.Pointer(cPath))
 
 	db := C.rocksdb_open(opts.opts, cPath, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	return &DB{
+		db:   db,
+		opts: opts,
+	}, nil
+}
+
+// OpenDBForReadOnly opens a database with the specified options for readonly usage.
+func OpenDBForReadOnly(path string, opts *Options, errorIfLogFileExist bool) (*DB, error) {
+	var cErr *C.char
+	cPath := C.CString(path)
+	defer C.free(unsafe.Pointer(cPath))
+
+	db := C.rocksdb_open_for_read_only(opts.opts, cPath, boolToUchar(errorIfLogFileExist), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
@@ -56,6 +74,17 @@ func (db *DB) Close() error {
 	}
 	db.opts.Destroy()
 	return nil
+}
+
+// NewCheckpoint creates a new Checkpoint for this db.
+func (db *DB) NewCheckpoint() (*Checkpoint, error) {
+	var cErr *C.char
+	cCheckpoint := C.rocksdb_checkpoint_object_create(db.db, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativeCheckpoint(cCheckpoint), nil
 }
 
 // Put writes data associated with a key to the database.
@@ -129,4 +158,15 @@ func (db *DB) Write(opts *WriteOptions, batch *WriteBatch) error {
 func (db *DB) NewIterator(opts *ReadOptions) *Iterator {
 	cIter := C.rocksdb_create_iterator(db.db, opts.opts)
 	return NewNativeIterator(unsafe.Pointer(cIter))
+}
+
+// Flush triggers a manuel flush for the database.
+func (db *DB) Flush(opts *FlushOptions) error {
+	var cErr *C.char
+	C.rocksdb_flush(db.db, opts.opts, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
 }

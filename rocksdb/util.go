@@ -23,6 +23,14 @@ import (
 	"unsafe"
 )
 
+// btoi converts a bool value to int.
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 // boolToUchar converts a bool value to C.uchar.
 func boolToUchar(b bool) C.uchar {
 	if b {
