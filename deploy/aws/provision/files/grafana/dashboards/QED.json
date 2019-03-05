@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "id": 8,
-  "iteration": 1550483779652,
+  "id": 3,
+  "iteration": 1551789062746,
   "links": [],
   "panels": [
     {
@@ -1027,7 +1027,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_monitor_batches_received_total{job=~\"Monitor.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_monitor_batches_received_total{job=~\"Agent-Monitor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1035,7 +1035,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(qed_auditor_batches_received_total{job=~\"Auditor.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_auditor_batches_received_total{job=~\"Agent-Auditor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1043,7 +1043,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(rate(qed_publisher_batches_received_total{job=~\"Publisher.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_publisher_batches_received_total{job=~\"Agent-Publisher.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1051,7 +1051,7 @@
           "refId": "C"
         },
         {
-          "expr": "qed_monitor_batches_received_total{job=~\"Monitor.*\"}",
+          "expr": "qed_monitor_batches_received_total{job=~\"Agent-Monitor.*\"}",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -1136,21 +1136,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_monitor_batches_process_seconds{job=~\"Monitor.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_monitor_batches_process_seconds{job=~\"Agent-Monitor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(qed_auditor_batches_process_seconds{job=~\"Auditor.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_auditor_batches_process_seconds{job=~\"Agent-Auditor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(qed_publisher_batches_process_seconds{job=~\"Publisher.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_publisher_batches_process_seconds{job=~\"Agent-Publisher.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
@@ -1539,5 +1539,5 @@
   "timezone": "",
   "title": "QED",
   "uid": "rjPFfGuik",
-  "version": 2
+  "version": 1
 }
