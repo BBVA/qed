@@ -179,8 +179,8 @@ func (t MembershipTask) Do() {
 	proof, err := t.qed.MembershipDigest(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
 		// retry
-		t.sendAlert(fmt.Sprintf("Unable to verify snapshot %v", t.s.Snapshot))
-		log.Infof("Error executing membership query: %v", err)
+		metrics.QedAuditorGetMembershipProofErrTotal.Inc()
+		log.Infof("Unable to get membership proof from QED server: %s", err.Error())
 		return
 	}
 
