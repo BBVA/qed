@@ -89,6 +89,13 @@ var (
 		},
 	)
 
+	QedAuditorGetMembershipProofErrTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_auditor_get_membership_proof_err_total",
+			Help: "Number of errors trying to get membership proofs by auditors.",
+		},
+	)
+
 	metricsList = []prometheus.Collector{
 		QedAuditorInstancesCount,
 		QedMonitorInstancesCount,
@@ -101,6 +108,8 @@ var (
 		QedAuditorBatchesProcessSeconds,
 		QedMonitorBatchesProcessSeconds,
 		QedPublisherBatchesProcessSeconds,
+
+		QedAuditorGetMembershipProofErrTotal,
 	}
 )
 
