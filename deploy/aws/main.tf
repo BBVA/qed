@@ -43,7 +43,7 @@ module "qed" {
 
   name                   = "qed"
   count                  = 3
-  instance_type          = "t3.2xlarge"
+  instance_type          = "m5.2xlarge"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -56,7 +56,7 @@ module "inmemory-storage" {
   source = "./modules/inmemory_storage"
 
   name                   = "inmemory-storage"
-  instance_type          = "t3.large"
+  instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -69,7 +69,7 @@ module "agent-publisher" {
   source = "./modules/agent"
 
   name                   = "agent-publisher"
-  instance_type          = "t3.large"
+  instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -84,7 +84,7 @@ module "agent-monitor" {
 
   name                   = "agent-monitor"
   count                  = 1
-  instance_type          = "t3.large"
+  instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -98,7 +98,7 @@ module "agent-auditor" {
   source = "./modules/agent"
 
   name                   = "agent-auditor"
-  instance_type          = "t3.large"
+  instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -111,7 +111,7 @@ module "agent-auditor" {
 module "prometheus" {
   source = "./modules/prometheus"
 
-  instance_type          = "t3.medium"
+  instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.prometheus_security_group.this_security_group_id}"
@@ -123,7 +123,7 @@ module "prometheus" {
 module "riot" {
   source = "./modules/riot"
 
-  instance_type          = "t3.medium"
+  instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
