@@ -29,6 +29,14 @@ func NewDefaultWriteOptions() *WriteOptions {
 	return &WriteOptions{C.rocksdb_writeoptions_create()}
 }
 
+// SetDisableWAL sets whether WAL should be active or not.
+// If true, writes will not first go to the write ahead log,
+// and the write may got lost after a crash.
+// Default: false
+func (o *WriteOptions) SetDisableWAL(value bool) {
+	C.rocksdb_writeoptions_disable_WAL(o.opts, C.int(btoi(value)))
+}
+
 // Destroy deallocates the WriteOptions object.
 func (o *WriteOptions) Destroy() {
 	C.rocksdb_writeoptions_destroy(o.opts)

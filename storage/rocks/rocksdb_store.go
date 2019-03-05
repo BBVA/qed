@@ -16,10 +16,16 @@
 package rocks
 
 import (
+	"bufio"
 	"bytes"
+	"encoding/binary"
+	"io"
+	"io/ioutil"
+	"os"
 
 	"github.com/bbva/qed/rocksdb"
 	"github.com/bbva/qed/storage"
+	"github.com/bbva/qed/storage/pb"
 )
 
 type RocksDBStore struct {
@@ -159,4 +165,125 @@ func (s RocksDBStore) GetAll(prefix byte) storage.KVPairReader {
 func (s RocksDBStore) Close() error {
 	s.db.Close()
 	return nil
+}
+
+func (s RocksDBStore) Delete(prefix byte, key []byte) error {
+	k := append([]byte{prefix}, key...)
+	return s.db.Delete(rocksdb.NewDefaultWriteOptions(), k)
+}
+
+// Backup dumps a protobuf-encoded list of all entries in the database into the
+// given writer, that are newer than the specified version.
+func (s *RocksDBStore) Backup(w io.Writer, until uint64) error {
+
+	// create temp directory
+	checkDir, err := ioutil.TempDir("", "rocksdb-checkpoint")
+	if err != nil {
+		return err
+	}
+	os.RemoveAll(checkDir)
+
+	// create checkpoint
+	checkpoint, err := s.db.NewCheckpoint()
+	if err != nil {
+		return err
+	}
+	defer checkpoint.Destroy()
+
+	checkpoint.CreateCheckpoint(checkDir, 0)
+	defer os.RemoveAll(checkDir)
+
+	// open db for read-only
+	opts := rocksdb.NewDefaultOptions()
+	checkDB, err := rocksdb.OpenDBForReadOnly(checkDir, opts, true)
+	if err != nil {
+		return err
+	}
+
+	// open a new iterator and dump every key
+	ro := rocksdb.NewDefaultReadOptions()
+	ro.SetFillCache(false)
+	it := checkDB.NewIterator(ro)
+	defer it.Close()
+
+	for it.SeekToFirst(); it.Valid(); it.Next() {
+		keySlice := it.Key().Data()
+		valueSlice := it.Value().Data()
+		key := append(keySlice[:0:0], keySlice...) // See https://github.com/go101/go101/wiki
+		value := append(valueSlice[:0:0], valueSlice...)
+
+		entry := &pb.KVPair{
+			Key:   key,
+			Value: value,
+		}
+
+		// write entries to disk
+		if err := writeTo(entry, w); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Load reads a protobuf-encoded list of all entries from a reader and writes
+// them to the database. This can be used to restore the database from a backup
+// made by calling DB.Backup().
+//
+// DB.Load() should be called on a database that is not running any other
+// concurrent transactions while it is running.
+func (s *RocksDBStore) Load(r io.Reader) error {
+
+	br := bufio.NewReaderSize(r, 16<<10)
+	unmarshalBuf := make([]byte, 1<<10)
+	batch := rocksdb.NewWriteBatch()
+	wo := rocksdb.NewDefaultWriteOptions()
+	wo.SetDisableWAL(true)
+
+	for {
+		var data uint64
+		err := binary.Read(br, binary.LittleEndian, &data)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		if cap(unmarshalBuf) < int(data) {
+			unmarshalBuf = make([]byte, data)
+		}
+
+		kv := &pb.KVPair{}
+		if _, err = io.ReadFull(br, unmarshalBuf[:data]); err != nil {
+			return err
+		}
+		if err = kv.Unmarshal(unmarshalBuf[:data]); err != nil {
+			return err
+		}
+		batch.Put(kv.Key, kv.Value)
+
+		if batch.Count() == 1000 {
+			s.db.Write(wo, batch)
+			batch.Clear()
+			continue
+		}
+	}
+
+	if batch.Count() > 0 {
+		return s.db.Write(wo, batch)
+	}
+
+	return nil
+}
+
+func writeTo(entry *pb.KVPair, w io.Writer) error {
+	if err := binary.Write(w, binary.LittleEndian, uint64(entry.Size())); err != nil {
+		return err
+	}
+	buf, err := entry.Marshal()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(buf)
+	return err
 }

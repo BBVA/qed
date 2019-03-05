@@ -17,7 +17,6 @@
 package rocksdb
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -64,20 +63,4 @@ func TestDBCRUD(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, slice3.Data())
 
-}
-
-func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
-	dir, err := ioutil.TempDir("", "rocksdb-"+name)
-	require.NoError(t, err)
-
-	opts := NewDefaultOptions()
-	opts.SetCreateIfMissing(true)
-	if applyOpts != nil {
-		applyOpts(opts)
-	}
-
-	db, err := OpenDB(dir, opts)
-	require.NoError(t, err)
-
-	return db
 }
