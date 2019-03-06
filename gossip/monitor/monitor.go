@@ -134,7 +134,6 @@ func (m Monitor) runTaskDispatcher() {
 	for {
 		select {
 		case <-m.executionTicker.C:
-			log.Debug("Dispatching tasks...")
 			go m.dispatchTasks()
 		case <-m.quitCh:
 			m.executionTicker.Stop()
@@ -164,7 +163,7 @@ func (m Monitor) dispatchTasks() {
 	count := 0
 	var task Task
 	var ok bool
-	defer log.Debugf("%d tasks dispatched", count)
+
 	for {
 		select {
 		case task, ok = <-m.taskCh:
