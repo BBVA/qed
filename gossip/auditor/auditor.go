@@ -105,7 +105,6 @@ func (a Auditor) runTaskDispatcher() {
 	for {
 		select {
 		case <-a.executionTicker.C:
-			log.Debug("Dispatching tasks...")
 			go a.dispatchTasks()
 		case <-a.quitCh:
 			a.executionTicker.Stop()
@@ -117,7 +116,7 @@ func (a Auditor) runTaskDispatcher() {
 func (a Auditor) dispatchTasks() {
 	count := 0
 	var task Task
-	defer log.Debugf("%d tasks dispatched", count)
+
 	for {
 		select {
 		case task = <-a.taskCh:
@@ -139,10 +138,11 @@ func (a Auditor) Process(b protocol.BatchSnapshots) {
 	defer timer.ObserveDuration()
 
 	task := &MembershipTask{
-		qed:    a.qed,
-		pubUrl: a.conf.PubUrls[0],
-		taskCh: a.taskCh,
-		s:      *b.Snapshots[0],
+		qed:     a.qed,
+		pubUrl:  a.conf.PubUrls[0],
+		taskCh:  a.taskCh,
+		retries: 2,
+		s:       *b.Snapshots[0],
 	}
 
 	a.taskCh <- task
@@ -169,13 +169,15 @@ type Task interface {
 }
 
 type MembershipTask struct {
-	qed    *client.HTTPClient
-	pubUrl string
-	taskCh chan Task
-	s      protocol.SignedSnapshot
+	qed     *client.HTTPClient
+	pubUrl  string
+	taskCh  chan Task
+	retries int
+	s       protocol.SignedSnapshot
 }
 
-func (t MembershipTask) Do() {
+func (t *MembershipTask) Do() {
+
 	proof, err := t.qed.MembershipDigest(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
 		// TODO: retry
@@ -193,16 +195,22 @@ func (t MembershipTask) Do() {
 
 	snap, err := t.getSnapshot(proof.CurrentVersion)
 	if err != nil {
-		log.Infof("Unable to get snapshot from storage, try later: %v", err)
-		t.taskCh <- t
+		log.Infof("Unable to get snapshot from storage: %v", err)
+		if t.retries > 0 {
+			log.Infof("Enqueue another try to grt snapshot from storage")
+			t.retries -= 1
+			t.taskCh <- t
+		}
 		return
 	}
+
 	checkSnap := &protocol.Snapshot{
 		HistoryDigest: t.s.Snapshot.HistoryDigest,
 		HyperDigest:   snap.Snapshot.HyperDigest,
 		Version:       t.s.Snapshot.Version,
 		EventDigest:   t.s.Snapshot.EventDigest,
 	}
+
 	ok := t.qed.DigestVerify(proof, checkSnap, hashing.NewSha256Hasher)
 	if !ok {
 		t.sendAlert(fmt.Sprintf("Unable to verify snapshot %v", t.s.Snapshot))
