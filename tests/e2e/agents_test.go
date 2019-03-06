@@ -132,7 +132,7 @@ func TestAgents(t *testing.T) {
 			time.Sleep(1 * time.Second)
 			alerts, err := getAlert()
 			assert.NoError(t, err)
-			assert.True(t, strings.Contains(string(alerts), "Unable to verify snapshot"), "Must exist auditor alerts")
+			assert.True(t, strings.Contains(string(alerts), "Unable to get membership proof"), "Must exist auditor alerts")
 		})
 
 		let("Check Monitor does not create any alert", func(t *testing.T) {

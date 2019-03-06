@@ -178,9 +178,16 @@ type MembershipTask struct {
 func (t MembershipTask) Do() {
 	proof, err := t.qed.MembershipDigest(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
-		// retry
-		metrics.QedAuditorGetMembershipProofErrTotal.Inc()
+		// TODO: retry
 		log.Infof("Unable to get membership proof from QED server: %s", err.Error())
+
+		switch fmt.Sprintf("%T", err) {
+		case "*errors.errorString":
+			t.sendAlert(fmt.Sprintf("Unable to get membership proof from QED server: %s", err.Error()))
+		default:
+			metrics.QedAuditorGetMembershipProofErrTotal.Inc()
+		}
+
 		return
 	}
 
