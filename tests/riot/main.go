@@ -26,7 +26,6 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	chart "github.com/wcharczuk/go-chart"
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
@@ -45,7 +44,6 @@ type Config struct {
 
 	// stress conf
 	Offload          bool
-	Charts           bool
 	Profiling        bool
 	IncrementalDelta uint
 	Offset           uint
@@ -112,7 +110,6 @@ func newRiotCommand() *cobra.Command {
 	f.BoolVarP(&config.Membership, "membership", "m", false, "Benchmark MembershipProof")
 	f.BoolVar(&config.Incremental, "incremental", false, "Execute Incremental benchmark")
 	f.BoolVar(&config.Offload, "offload", false, "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)")
-	f.BoolVar(&config.Charts, "charts", false, "Create charts while executing the benchmarks. Output: graph-$testname.png")
 	f.BoolVar(&config.Profiling, "profiling", false, "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 ")
 	f.UintVarP(&config.IncrementalDelta, "delta", "d", 1000, "Specify delta for the IncrementalProof")
 	f.UintVar(&config.NumRequests, "n", 10e4, "Number of requests for the attack")
@@ -323,32 +320,16 @@ func (a *Attack) CreateFanOut() {
 	}
 }
 
-func chartsData(a *axis, elapsed, reqs float64) *axis {
-	a.x = append(a.x, elapsed)
-	a.y = append(a.y, reqs)
-
-	return a
-}
-
 func setupMetrics(conf Config) {
 	graph := &axis{}
 	ticker := time.NewTicker(1 * time.Second)
 	start := time.Now()
 	defer ticker.Stop()
 
-	if conf.Charts {
-		if err := os.Mkdir("results", 0755); err != nil {
-			log.Error("Unable to create `results` folder")
-		}
-	}
-
 	go func() {
 		for {
 			<-ticker.C
 			elapsed := time.Since(start).Seconds()
-			if conf.Charts {
-				go drawChart(conf, chartsData(graph, elapsed, conf.counter/elapsed))
-			}
 			summaryPerDuration(conf, elapsed)
 		}
 	}()
@@ -367,36 +348,4 @@ func summaryPerDuration(conf Config, elapsed float64) {
 
 type axis struct {
 	x, y []float64
-}
-
-func drawChart(conf Config, a *axis) {
-	graph := chart.Chart{
-		XAxis: chart.XAxis{
-			Name:      "Time",
-			NameStyle: chart.StyleShow(),
-			Style:     chart.StyleShow(),
-		},
-		YAxis: chart.YAxis{
-			Name:      "Reqests",
-			NameStyle: chart.StyleShow(),
-			Style:     chart.StyleShow(),
-		},
-		Series: []chart.Series{
-			chart.ContinuousSeries{
-				Style: chart.Style{
-					Show:        true,
-					StrokeColor: chart.GetDefaultColor(0).WithAlpha(64),
-					FillColor:   chart.GetDefaultColor(0).WithAlpha(64),
-				},
-
-				XValues: a.x,
-				YValues: a.y,
-			},
-		},
-	}
-
-	req := fmt.Sprint(conf.NumRequests)
-	file, _ := os.Create("results/graph-" + req + ".png")
-	defer file.Close()
-	_ = graph.Render(chart.PNG, file)
 }
