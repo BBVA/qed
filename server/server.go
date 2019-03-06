@@ -237,6 +237,7 @@ func (s *Server) Start() error {
 	}
 
 	if s.tamperingServer != nil {
+		log.Info(">>>>>>>>>>>>>>>>>>> FIXME: Tampering is enabled!  Do not run this in production!")
 		go func() {
 			log.Debug("	* Starting tampering HTTP server in addr: localhost:8081")
 			if err := s.tamperingServer.ListenAndServe(); err != http.ErrServerClosed {
