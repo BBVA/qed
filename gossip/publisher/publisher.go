@@ -110,14 +110,13 @@ func (p *Publisher) Process(b protocol.BatchSnapshots) {
 		taskCh: p.taskCh,
 		batch:  b,
 	}
-	p.taskCh <- *task
+	p.taskCh <- task
 }
 
 func (p Publisher) runTaskDispatcher() {
 	for {
 		select {
 		case <-p.executionTicker.C:
-			log.Debug("Dispatching tasks...")
 			go p.dispatchTasks()
 		case <-p.quitCh:
 			p.executionTicker.Stop()
@@ -145,7 +144,7 @@ func (p *Publisher) Shutdown() {
 func (p Publisher) dispatchTasks() {
 	count := 0
 	var task Task
-	defer log.Debugf("%d tasks dispatched", count)
+
 	for {
 		select {
 		case task = <-p.taskCh:
