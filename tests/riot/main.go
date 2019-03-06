@@ -321,7 +321,6 @@ func (a *Attack) CreateFanOut() {
 }
 
 func setupMetrics(conf Config) {
-	graph := &axis{}
 	ticker := time.NewTicker(1 * time.Second)
 	start := time.Now()
 	defer ticker.Stop()
