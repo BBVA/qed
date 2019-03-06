@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "id": 3,
-  "iteration": 1551866840373,
+  "iteration": 1551884899590,
   "links": [],
   "panels": [
     {
@@ -530,7 +529,7 @@
           "expr": "sum(rate(qed_balloon_digest_membership_total[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{job}}-digest_memb",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ],
@@ -1700,5 +1699,5 @@
   "timezone": "",
   "title": "QED",
   "uid": "rjPFfGuik",
-  "version": 1
+  "version": 2
 }
