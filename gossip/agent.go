@@ -106,6 +106,17 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 
 	return agent, nil
 }
+func chTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshots) {
+	for {
+		select {
+		case <-time.After(200 * time.Millisecond):
+			log.Infof("Timed out sending out batch ")
+			return
+		case ch <- batch:
+			return
+		}
+	}
+}
 
 func (a *Agent) start() {
 	outTicker := time.NewTicker(2 * time.Second)
@@ -115,7 +126,7 @@ func (a *Agent) start() {
 			for _, p := range a.processors {
 				go p.Process(*batch)
 			}
-			a.Out <- batch
+			chTimedSend(batch, a.Out)
 		case <-outTicker.C:
 			go a.sendOutQueue()
 		case <-a.quit:
@@ -141,7 +152,7 @@ func (a *Agent) sendOutQueue() {
 			continue
 		}
 
-		batch.TTL--
+		batch.TTL -= 1
 		from := batch.From
 		batch.From = a.Self
 		msg, _ := batch.Encode()
