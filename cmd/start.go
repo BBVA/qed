@@ -98,7 +98,8 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	f.StringSliceVar(&conf.GossipJoinAddr, "gossip-join-addr", []string{}, "Gossip: Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 
 	// INFO: testing purposes
-	f.BoolVar(&conf.EnableTampering, "tampering", false, "Allow tampering api for proof demostrations")
+	// FIXME: return to false in the next milestone
+	f.BoolVar(&conf.EnableTampering, "tampering", true, "Allow tampering api for proof demostrations")
 	_ = f.MarkHidden("tampering")
 
 	// Lookups
