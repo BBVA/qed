@@ -96,6 +96,13 @@ var (
 		},
 	)
 
+	QedMonitorGetIncrementalProofErrTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_monitor_get_incremental_proof_err_total",
+			Help: "Number of errors trying to get incremental proofs by monitors.",
+		},
+	)
+
 	metricsList = []prometheus.Collector{
 		QedAuditorInstancesCount,
 		QedMonitorInstancesCount,
@@ -110,6 +117,7 @@ var (
 		QedPublisherBatchesProcessSeconds,
 
 		QedAuditorGetMembershipProofErrTotal,
+		QedMonitorGetIncrementalProofErrTotal,
 	}
 )
 
