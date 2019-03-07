@@ -110,7 +110,7 @@ func chTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshot
 	for {
 		select {
 		case <-time.After(200 * time.Millisecond):
-			log.Infof("Timed out sending out batch ")
+			log.Infof("Agent timed out enqueueing batch in out channel")
 			return
 		case ch <- batch:
 			return
