@@ -36,7 +36,7 @@ server:
 {% endif %}
 {% if 'role_monitor' in group_names %}
 agent:
-  node: "monitor"
+  node: "monitor-{{ ansible_hostname }}"
   bind: "{{ ansible_eth0.ipv4.address }}:8200"
   advertise: ""
   join:
@@ -56,7 +56,7 @@ agent:
 {% endif %}
 {% if 'role_auditor' in group_names %}
 agent:
-  node: "auditor"
+  node: "auditor-{{ ansible_hostname }}"
   bind: "{{ ansible_eth0.ipv4.address }}:8100"
   advertise: ""
   join:
@@ -76,7 +76,7 @@ agent:
 {% endif %}
 {% if 'role_publisher' in group_names %}
 agent:
-  node: "publisher"
+  node: "publisher-{{ ansible_hostname }}"
   bind: "{{ ansible_eth0.ipv4.address }}:8300"
   advertise: ""
   join:
