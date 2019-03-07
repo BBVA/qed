@@ -87,7 +87,7 @@ func (d *agentDelegate) NotifyMsg(msg []byte) {
 		return
 	}
 
-	log.Infof("Notifying batch  %+v\n", batchId(&batch))
+	log.Debugf("Notifying batch  %+v\n", batchId(&batch))
 	d.agent.In <- &batch
 }
 
