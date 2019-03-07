@@ -127,6 +127,7 @@ func NewServer(conf *Config) (*Server, error) {
 	config := gossip.DefaultConfig()
 	config.BindAddr = conf.GossipAddr
 	config.Role = member.Server
+	config.NodeName = conf.NodeID
 	server.agent, err = gossip.NewAgent(config, nil)
 	if err != nil {
 		return nil, err
@@ -140,7 +141,7 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// TODO: add queue size to config
-	server.agentsQueue = make(chan *protocol.Snapshot, 100000)
+	server.agentsQueue = make(chan *protocol.Snapshot, 2<<16)
 
 	// Create sender
 	server.sender = sender.NewSender(server.agent, sender.DefaultConfig(), server.signer)

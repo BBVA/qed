@@ -23,32 +23,31 @@ if [ ! -f "$keyFile" ]; then
 	echo -e 'y\n' | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
 fi
 
-$QED start \
-    -k key \
-    -l silent \
-    --node-id server0 \
-    --gossip-addr $qedGossipEndpoint \
-    --raft-addr 127.0.0.1:8500 \
-    --keypath $keyFile &
-
+xterm -hold -e "$QED start  -k key  -l debug  -p $(mktemp -d)  --node-id server0  --raft-addr 127.0.0.1:8500 --gossip-addr 127.0.0.1:8400 --mgmt-addr 127.0.0.1:8700 --metrics-addr 127.0.0.1:8600 --http-addr 127.0.0.1:8800 --keypath $keyFile" &
 pids[0]=$!
+
+sleep 3s
+
+xterm -hold -e "$QED start -k key -l debug -p $(mktemp -d) --node-id server1 --gossip-addr 127.0.0.2:8401 --raft-addr 127.0.0.2:8501 --keypath $keyFile --join-addr 127.0.0.1:8700 --gossip-join-addr 127.0.0.1:8400 --http-addr 127.0.0.2:8801 --mgmt-addr 127.0.0.2:8701 --metrics-addr 127.0.0.2:8601" &
+pids+=($!)
+
 sleep 2s
 
 for i in `seq 1 $1`;
 do
-	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint auditor -k key -l info --bind 127.0.0.1:810$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node auditor$i" &
+	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint auditor -k key -l debug --bind 127.0.0.1:810$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node auditor$i" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $2`;
 do
-	xterm  -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint monitor -k key -l info --bind 127.0.0.1:820$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node monitor$i" &
+	xterm  -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint monitor -k key -l debug --bind 127.0.0.1:820$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node monitor$i" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $3`;
 do
-	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint publisher -k key -l info --bind 127.0.0.1:830$i --join $qedGossipEndpoint --pubUrls $snapshotStoreEndpoint --node publisher$i" &
+	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint publisher -k key -l debug --bind 127.0.0.1:830$i --join $qedGossipEndpoint --pubUrls $snapshotStoreEndpoint --node publisher$i" &
 	pids+=($!)
 done 
 
