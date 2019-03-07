@@ -144,8 +144,7 @@ func (s Sender) sender(batch protocol.BatchSnapshots) {
 			err := s.Agent.Memberlist().SendReliable(dst, msg)
 			if err == nil {
 				break
-			}
-			if err != nil {
+			} else {
 				if retries == 0 {
 					log.Infof("Failed send message: %v", err)
 					break
