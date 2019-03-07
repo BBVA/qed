@@ -27,7 +27,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	_ "net/http/pprof" // this will enable the default profiling capabilities
 	"os"
 	"strconv"
 
@@ -59,7 +58,6 @@ type Server struct {
 	mgmtServer         *http.Server
 	raftBalloon        *raftwal.RaftBalloon
 	tamperingServer    *http.Server
-	profilingServer    *http.Server
 	metricsServer      *http.Server
 	prometheusRegistry *prometheus.Registry
 	signer             sign.Signer
@@ -173,9 +171,6 @@ func NewServer(conf *Config) (*Server, error) {
 		tamperMux := tampering.NewTamperingApi(store, hashing.NewSha256Hasher())
 		server.tamperingServer = newHTTPServer(fmt.Sprintf("localhost:1880%d", id), tamperMux)
 	}
-	if conf.EnableProfiling {
-		server.profilingServer = newHTTPServer(fmt.Sprintf("localhost:606%d", id), nil)
-	}
 
 	r := prometheus.NewRegistry()
 	metrics.Register(r)
@@ -226,15 +221,6 @@ func (s *Server) Start() error {
 			log.Errorf("Can't start metrics HTTP server: %s", err)
 		}
 	}()
-
-	if s.profilingServer != nil {
-		go func() {
-			log.Debugf("	* Starting profiling HTTP server in addr: localhost:6060")
-			if err := s.profilingServer.ListenAndServe(); err != http.ErrServerClosed {
-				log.Errorf("Can't start profiling HTTP server: %s", err)
-			}
-		}()
-	}
 
 	if s.tamperingServer != nil {
 		log.Info(">>>>>>>>>>>>>>>>>>> FIXME: Tampering is enabled!  Do not run this in production!")
@@ -312,15 +298,6 @@ func (s *Server) Stop() error {
 	if s.tamperingServer != nil {
 		log.Debugf("Tampering enabled: stopping server...")
 		if err := s.tamperingServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-			log.Error(err)
-			return err
-		}
-		log.Debugf("Done.\n")
-	}
-
-	if s.profilingServer != nil {
-		log.Debugf("Profiling enabled: stopping server...")
-		if err := s.profilingServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
 			log.Error(err)
 			return err
 		}

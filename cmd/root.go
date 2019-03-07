@@ -18,6 +18,9 @@
 package cmd
 
 import (
+	"net/http"
+	_ "net/http/pprof" // this will enable the default profiling capabilities
+
 	"github.com/bbva/qed/log"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -33,7 +36,14 @@ func NewRootCommand(args []string) *cobra.Command {
 		Short: "QED is a client for the verifiable log server",
 		// TraverseChildren: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if ctx.profiling {
+				go func() {
+					if err := http.ListenAndServe("127.0.0.1:6060", nil); err != http.ErrServerClosed {
+						log.Errorf("Can't start profiling HTTP server: %s", err)
+					}
+				}()
 
+			}
 			if ctx.configFile != "" {
 				v.SetConfigFile(ctx.configFile)
 			} else {
@@ -74,11 +84,13 @@ func NewRootCommand(args []string) *cobra.Command {
 	f.StringVarP(&ctx.logLevel, "log", "l", "error", "Choose between log levels: silent, error, info and debug")
 	f.StringVarP(&ctx.apiKey, "apikey", "k", "", "Server api key")
 	f.StringVarP(&ctx.path, "path", "p", "/var/tmp/qed", "Qed root path for storage configuration and credentials")
+	f.BoolVarP(&ctx.profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 
 	// Lookups
 	v.BindPFlag("log", f.Lookup("log"))
 	v.BindPFlag("api_key", f.Lookup("apikey"))
 	v.BindPFlag("path", f.Lookup("path"))
+	v.BindPFlag("profiling", f.Lookup("profiling"))
 
 	cmd.AddCommand(
 		newStartCommand(ctx),
