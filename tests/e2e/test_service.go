@@ -118,7 +118,7 @@ type snapStore struct {
 }
 
 func newSnapStore() *snapStore {
-	return &snapStore{segments: make([]Segment, 0)}
+	return &snapStore{segments: append([]Segment{}, Segment{})}
 }
 
 func (s *snapStore) Put(b *protocol.BatchSnapshots) {

@@ -34,19 +34,17 @@ import (
 	"sync"
 	"time"
 
-	chart "github.com/wcharczuk/go-chart"
-
 	"github.com/bbva/qed/protocol"
 )
 
 var (
-	endpoint         string
-	apiKey           string
-	wantAdd          bool
-	wantIncremental  bool
-	wantMembership   bool
-	offload          bool
-	charts           bool
+	endpoint        string
+	apiKey          string
+	wantAdd         bool
+	wantIncremental bool
+	wantMembership  bool
+	offload         bool
+
 	profiling        bool
 	incrementalDelta int
 	offset           int
@@ -71,7 +69,6 @@ func init() {
 
 	flag.BoolVar(&wantIncremental, "incremental", false, "Execute Incremental benchmark")
 	flag.BoolVar(&offload, "offload", false, "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)")
-	flag.BoolVar(&charts, "charts", false, "Create charts while executing the benchmarks. Output: graph-$testname.png")
 	flag.BoolVar(&profiling, "profiling", false, "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 ")
 
 	usageDelta := "Specify delta for the IncrementalProof"
@@ -248,46 +245,6 @@ type axis struct {
 	x, y []float64
 }
 
-func drawChart(m string, a *axis) {
-	graph := chart.Chart{
-		XAxis: chart.XAxis{
-			Name:      "Time",
-			NameStyle: chart.StyleShow(),
-			Style:     chart.StyleShow(),
-		},
-		YAxis: chart.YAxis{
-			Name:      "Reqests",
-			NameStyle: chart.StyleShow(),
-			Style:     chart.StyleShow(),
-		},
-		Series: []chart.Series{
-			chart.ContinuousSeries{
-				Style: chart.Style{
-					Show:        true,
-					StrokeColor: chart.GetDefaultColor(0).WithAlpha(64),
-					FillColor:   chart.GetDefaultColor(0).WithAlpha(64),
-				},
-
-				XValues: a.x,
-				YValues: a.y,
-			},
-		},
-	}
-
-	req := fmt.Sprint(numRequests)
-	file, _ := os.Create("results/graph-" + m + "-" + req + ".png")
-	defer file.Close()
-	_ = graph.Render(chart.PNG, file)
-
-}
-
-func chartsData(a *axis, elapsed, reqs float64) *axis {
-	a.x = append(a.x, elapsed)
-	a.y = append(a.y, reqs)
-
-	return a
-}
-
 func summary(message string, numRequestsf, elapsed float64, c *Config) {
 
 	fmt.Printf(
@@ -312,7 +269,6 @@ func summaryPerDuration(message string, numRequestsf, elapsed float64, c *Config
 }
 
 func stats(c *Config, t Task, message string) {
-	graph := &axis{}
 	ticker := time.NewTicker(1 * time.Second)
 	numRequestsf := float64(c.numRequests)
 	start := time.Now()
@@ -332,10 +288,6 @@ func stats(c *Config, t Task, message string) {
 		case t := <-ticker.C:
 			_ = t
 			elapsed := time.Now().Sub(start).Seconds()
-			if charts {
-				os.Mkdir("results", 0755)
-				go drawChart(message, chartsData(graph, elapsed, c.counter/elapsed))
-			}
 			summaryPerDuration(message, numRequestsf, elapsed, c)
 		}
 	}
