@@ -42,7 +42,6 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 			// Bindings
 			conf.APIKey = ctx.apiKey
 			conf.NodeID = v.GetString("server.node-id")
-			conf.EnableProfiling = v.GetBool("server.profiling")
 			conf.PrivateKeyPath, _ = homedir.Expand(v.GetString("server.key"))
 			conf.SSLCertificate, _ = homedir.Expand(v.GetString("server.tls.certificate"))
 			conf.SSLCertificateKey, _ = homedir.Expand(v.GetString("server.tls.certificate_key"))
@@ -84,7 +83,6 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 	f := cmd.Flags()
 	hostname, _ := os.Hostname()
 	f.StringVar(&conf.NodeID, "node-id", hostname, "Unique name for node. If not set, fallback to hostname")
-	f.BoolVarP(&conf.EnableProfiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
 	f.StringVar(&conf.PrivateKeyPath, "keypath", fmt.Sprintf("%s/%s", ctx.path, "id_ed25519"), "Server Singning private key file path")
 	f.StringVar(&conf.SSLCertificate, "certificate", fmt.Sprintf("%s/%s", ctx.path, "server.crt"), "Server crt file")
 	f.StringVar(&conf.SSLCertificateKey, "certificate-key", fmt.Sprintf("%s/%s", ctx.path, "server.key"), "Server key file")
@@ -104,7 +102,6 @@ func newStartCommand(ctx *cmdContext) *cobra.Command {
 
 	// Lookups
 	v.BindPFlag("server.node-id", f.Lookup("node-id"))
-	v.BindPFlag("server.profiling", f.Lookup("profiling"))
 	v.BindPFlag("server.key", f.Lookup("keypath"))
 	v.BindPFlag("server.tls.certificate", f.Lookup("certificate"))
 	v.BindPFlag("server.tls.certificate_key", f.Lookup("certificate-key"))

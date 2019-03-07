@@ -62,9 +62,6 @@ type Config struct {
 	// Path to the private key file used to sign snapshots.
 	PrivateKeyPath string
 
-	// Enables profiling endpoint.
-	EnableProfiling bool
-
 	// Enables tampering endpoint.
 	EnableTampering bool
 
@@ -94,7 +91,6 @@ func DefaultConfig() *Config {
 		GossipJoinAddr:    []string{},
 		DBPath:            currentDir + "/db",
 		RaftPath:          currentDir + "/wal",
-		EnableProfiling:   false,
 		EnableTampering:   false,
 		EnableTLS:         false,
 		SSLCertificate:    "",
