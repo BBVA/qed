@@ -19,7 +19,6 @@ package publisher
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -30,7 +29,6 @@ import (
 	"github.com/bbva/qed/gossip/metrics"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
-	"github.com/valyala/fasthttp"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -56,13 +54,13 @@ func NewConfig(PubUrls []string) *Config {
 }
 
 type Publisher struct {
-	client *fasthttp.Client
-	conf   Config
+	store *http.Client
+	conf  Config
 
 	metricsServer      *http.Server
 	prometheusRegistry *prometheus.Registry
 
-	taskCh          chan PublishTask
+	taskCh          chan Task
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
@@ -70,9 +68,9 @@ type Publisher struct {
 func NewPublisher(conf Config) (*Publisher, error) {
 	metrics.QedPublisherInstancesCount.Inc()
 	publisher := Publisher{
-		client: &fasthttp.Client{},
+		store:  &http.Client{},
 		conf:   conf,
-		taskCh: make(chan PublishTask, 100),
+		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
 	}
 
@@ -100,10 +98,6 @@ func NewPublisher(conf Config) (*Publisher, error) {
 	return &publisher, nil
 }
 
-type PublishTask struct {
-	Batch protocol.BatchSnapshots
-}
-
 func (p *Publisher) Process(b protocol.BatchSnapshots) {
 	// Metrics
 	metrics.QedPublisherBatchesReceivedTotal.Inc()
@@ -111,16 +105,18 @@ func (p *Publisher) Process(b protocol.BatchSnapshots) {
 	defer timer.ObserveDuration()
 
 	task := &PublishTask{
-		Batch: b,
+		store:  p.store,
+		pubUrl: p.conf.PubUrls[0],
+		taskCh: p.taskCh,
+		batch:  b,
 	}
-	p.taskCh <- *task
+	p.taskCh <- task
 }
 
 func (p Publisher) runTaskDispatcher() {
 	for {
 		select {
 		case <-p.executionTicker.C:
-			log.Debug("Dispatching tasks...")
 			go p.dispatchTasks()
 		case <-p.quitCh:
 			p.executionTicker.Stop()
@@ -147,12 +143,12 @@ func (p *Publisher) Shutdown() {
 
 func (p Publisher) dispatchTasks() {
 	count := 0
-	var task PublishTask
-	defer log.Debugf("%d tasks dispatched", count)
+	var task Task
+
 	for {
 		select {
 		case task = <-p.taskCh:
-			go p.executeTask(task)
+			go task.Do()
 			count++
 		default:
 			return
@@ -163,17 +159,28 @@ func (p Publisher) dispatchTasks() {
 	}
 }
 
-func (p Publisher) executeTask(task PublishTask) {
-	log.Debugf("Executing task: %+v", task)
-	buf, err := task.Batch.Encode()
+type Task interface {
+	Do()
+}
+
+type PublishTask struct {
+	store  *http.Client
+	pubUrl string
+	batch  protocol.BatchSnapshots
+	taskCh chan Task
+}
+
+func (t PublishTask) Do() {
+	log.Debugf("Executing task: %+v", t)
+	buf, err := t.batch.Encode()
 	if err != nil {
 		log.Debug("Publisher: Error marshalling: %s\n", err.Error())
 		return
 	}
-	resp, err := http.Post(fmt.Sprintf("%s/batch", p.conf.PubUrls[0]),
-		"application/json", bytes.NewBuffer(buf))
+	resp, err := t.store.Post(t.pubUrl+"/batch", "application/json", bytes.NewBuffer(buf))
 	if err != nil {
 		log.Infof("Error saving batch in snapStore: %v\n", err)
+		t.taskCh <- t
 		return
 	}
 	defer resp.Body.Close()
