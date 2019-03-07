@@ -29,6 +29,7 @@ func TestJoin(t *testing.T) {
 	conf := DefaultConfig()
 	conf.NodeName = "testNode"
 	conf.Role = member.Auditor
+	conf.BindAddr = "127.0.0.1:12345"
 	a, _ := NewAgent(conf, []Processor{FakeProcessor{}})
 
 	testCases := []struct {
