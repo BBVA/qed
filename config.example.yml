@@ -22,13 +22,13 @@
 log: error # Choose between log levels: silent, error, info and debug.
 api_key: "my-key" # The application namespace used in all the nodes. 
 path: "/var/tmp/qed/" # Set root path used for dbpath, raftpath, private key and certificates.
+profiling: false  # Allow a pprof url (localhost:6060) for profiling purposes.
 
 ###############################################################################
 # Server Configuration (where it collect and processes events).
 ###############################################################################
 server:
   node_id: "hostname"  # Unique name for node. If not set, fallback to hostname.
-  profiling: false  # Allow a pprof url (localhost:6060) for profiling purposes.
   metrics: false # Allow metrics 
   key: "/var/tmp/qed/id_ed25519"  # Path to the ed25519 key file.
   tls:
