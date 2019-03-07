@@ -25,13 +25,6 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-const (
-	QEDProfilingURL = "http://localhost:6060/debug/pprof"
-	QEDMetricsURL   = "http://localhost:8600/metrics"
-)
-
-// FIXME: This function should also include testing for the other servers, not
-// just the profiling one
 func TestStart(t *testing.T) {
 	bServer, aServer := setupServer(0, "", false, t)
 
@@ -40,15 +33,15 @@ func TestStart(t *testing.T) {
 		merge(aServer, delay(2*time.Second)),
 	)
 
-	scenario("Test availability of profiling server", func() {
-		let("Query to expected context", func(t *testing.T) {
-			resp, err := doReq("GET", QEDProfilingURL, APIKey, nil)
-			assert.NoError(t, err)
+	scenario("Test availability of qed server", func() {
+		let("Query metrics endpoint", func(t *testing.T) {
+			resp, err := doReq("GET", "http://localhost:8800/info", APIKey, nil)
+			assert.NoError(t, err, "Subprocess must not exit with non-zero status")
 			assert.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
 
 		let("Query to unexpected context", func(t *testing.T) {
-			resp, err := doReq("GET", QEDProfilingURL+"/xD", APIKey, nil)
+			resp, err := doReq("GET", "http://localhost:8800/xD", APIKey, nil)
 			assert.NoError(t, err)
 			assert.Equal(t, resp.StatusCode, http.StatusNotFound, "Server should respond with http status code 404")
 
@@ -57,7 +50,7 @@ func TestStart(t *testing.T) {
 
 	scenario("Test availability of metrics server", func() {
 		let("Query metrics endpoint", func(t *testing.T) {
-			resp, err := doReq("GET", QEDMetricsURL, APIKey, nil)
+			resp, err := doReq("GET", "http://localhost:8600/metrics", APIKey, nil)
 			assert.NoError(t, err, "Subprocess must not exit with non-zero status")
 			assert.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
