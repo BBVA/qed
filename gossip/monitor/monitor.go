@@ -208,7 +208,7 @@ func (q QueryTask) Do() {
 	resp, err := q.client.Incremental(q.Start, q.End)
 	if err != nil {
 		metrics.QedMonitorGetIncrementalProofErrTotal.Inc()
-		log.Infof("Unable to verify incremental proof from %d to %d", q.Start, q.End)
+		log.Infof("Unable to get incremental proof from QED server: %s", err.Error())
 		return
 	}
 	ok := q.client.VerifyIncremental(resp, &q.StartSnapshot, &q.EndSnapshot, hashing.NewSha256Hasher())
