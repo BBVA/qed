@@ -34,10 +34,10 @@ type tamperEvent struct {
 	Value  string
 }
 
-// NewTamperingApi will return a mux server with the endpoint required to
+// NewTamperingAPI will return a mux server with the endpoint required to
 // tamper the server. it's a internal debug implementation. Running a server
 // with this enabled will run useless the qed server.
-func NewTamperingApi(store storage.DeletableStore, hasher hashing.Hasher) *http.ServeMux {
+func NewTamperingAPI(store storage.DeletableStore, hasher hashing.Hasher) *http.ServeMux {
 	api := http.NewServeMux()
 	api.HandleFunc("/tamper", apihttp.AuthHandlerMiddleware(http.HandlerFunc(tamperFunc(store, hasher))))
 	return api
