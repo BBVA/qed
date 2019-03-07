@@ -269,7 +269,6 @@ func summaryPerDuration(message string, numRequestsf, elapsed float64, c *Config
 }
 
 func stats(c *Config, t Task, message string) {
-	graph := &axis{}
 	ticker := time.NewTicker(1 * time.Second)
 	numRequestsf := float64(c.numRequests)
 	start := time.Now()
