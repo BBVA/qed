@@ -18,7 +18,6 @@ package sender
 
 import (
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/bbva/qed/gossip"
@@ -40,10 +39,11 @@ type Sender struct {
 }
 
 type Config struct {
-	BatchSize     uint
+	BatchSize     int
 	BatchInterval time.Duration
 	TTL           int
 	EachN         int
+	SendTimer     time.Duration
 }
 
 func DefaultConfig() *Config {
@@ -52,6 +52,7 @@ func DefaultConfig() *Config {
 		BatchInterval: 1 * time.Second,
 		TTL:           2,
 		EachN:         1,
+		SendTimer:     500 * time.Millisecond,
 	}
 }
 
@@ -66,7 +67,6 @@ func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
 }
 
 func (s Sender) Start(ch chan *protocol.Snapshot) {
-	ticker := time.NewTicker(1000 * time.Millisecond)
 
 	for i := 0; i < NumSenders; i++ {
 		go s.batcherSender(i, ch, s.quit)
@@ -74,7 +74,7 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-time.After(s.Config.BatchInterval * 60):
 			log.Debug("Messages in sender queue: ", len(ch))
 		case <-s.quit:
 			return
@@ -90,9 +90,7 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 		Snapshots: make([]*protocol.SignedSnapshot, 0),
 	}
 
-	ticker := time.NewTicker(500 * time.Millisecond)
-
-	resetBatches := func() {
+	nextBatch := func() {
 		batches = append(batches, batch)
 		batch = &protocol.BatchSnapshots{
 			TTL:       s.Config.TTL,
@@ -101,12 +99,13 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 		}
 	}
 
+	ticker := time.NewTicker(s.Config.SendTimer)
+
 	for {
 		select {
 		case snap := <-ch:
-			// TODO: batchSize 100 must be configurable
-			if len(batch.Snapshots) == 100 {
-				resetBatches()
+			if len(batch.Snapshots) == s.Config.BatchSize {
+				nextBatch()
 			}
 			ss, err := s.doSign(snap)
 			if err != nil {
@@ -116,7 +115,7 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 
 		case <-ticker.C:
 			if len(batch.Snapshots) > 0 {
-				resetBatches()
+				nextBatch()
 			}
 			for _, b := range batches {
 				go s.sender(*b)
@@ -130,7 +129,6 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 }
 
 func (s Sender) sender(batch protocol.BatchSnapshots) {
-	var wg sync.WaitGroup
 	msg, _ := batch.Encode()
 
 	peers := s.Agent.Topology.Each(s.Config.EachN, nil)
@@ -139,23 +137,26 @@ func (s Sender) sender(batch protocol.BatchSnapshots) {
 		metrics.QedSenderBatchesSentTotal.Inc()
 
 		dst := peer.Node()
-		log.Infof("Sending batch %+v to node %+v\n", batch, dst.Name)
-		wg.Add(1)
+		log.Debugf("Sending batch %+v to node %+v\n", batch, dst.Name)
 
-		for retries := uint(0); retries < 5; retries++ {
+		retries := uint(5)
+		for {
 			err := s.Agent.Memberlist().SendReliable(dst, msg)
+			if err == nil {
+				break
+			}
 			if err != nil {
-				if retries == 5 {
-					log.Errorf("Failed send message: %v", err)
+				if retries == 0 {
+					log.Infof("Failed send message: %v", err)
+					break
 				}
 				delay := (10 << retries) * time.Millisecond
 				time.Sleep(delay)
+				retries -= 1
 				continue
 			}
 		}
 	}
-	wg.Wait()
-	log.Infof("Sent batch %+v to nodes %+v\n", batch, peers.L)
 }
 
 func (s Sender) Stop() {
