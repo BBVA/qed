@@ -108,15 +108,18 @@
         - /var/qed/qed-stop.sh
         - /var/qed/qed-start.sh
         - /var/qed/exporter-start.sh
-    # - name: wait for raised api port
-    #   wait_for:
-    #     port: 8800
-    # - name: wait for raised mgmt port
-    #   wait_for:
-    #     port: 8700
-    # - name: wait for raised metrics port
-    #   wait_for:
-    #     port: 8600
+    - name: wait for raised api port
+      wait_for:
+        port: 8800
+        host: "{{ansible_hostname}}"
+    - name: wait for raised mgmt port
+      wait_for:
+        port: 8700
+        host: "{{ansible_hostname}}"
+    - name: wait for raised metrics port
+      wait_for:
+        port: 8600
+        host: "{{ansible_hostname}}"
 
   tags:
     - start-qed
