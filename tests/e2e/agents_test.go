@@ -63,7 +63,7 @@ func getAlert() ([]byte, error) {
 	return alerts, nil
 }
 
-func TestAgents(t *testing.T) {
+func TestAgentsWithoutTampering(t *testing.T) {
 	bStore, aStore := setupStore(t)
 	bServer, aServer := setupServer(0, "", false, t)
 	bAuditor, aAuditor := setupAuditor(0, t)
@@ -110,6 +110,22 @@ func TestAgents(t *testing.T) {
 
 	})
 
+}
+
+func TestAgentsDeleteTampering(t *testing.T) {
+	bStore, aStore := setupStore(t)
+	bServer, aServer := setupServer(0, "", false, t)
+	bAuditor, aAuditor := setupAuditor(0, t)
+	bMonitor, aMonitor := setupMonitor(0, t)
+	bPublisher, aPublisher := setupPublisher(0, t)
+
+	scenario, let := scope.Scope(t,
+		merge(bServer, bStore, bPublisher, bAuditor, bMonitor),
+		merge(aServer, aPublisher, aAuditor, aMonitor, aStore, delay(2*time.Second)),
+	)
+
+	event := rand.RandomString(10)
+
 	scenario("Add 1st event. Tamper it. Check auditor alerts correctly", func() {
 		var err error
 
@@ -142,6 +158,21 @@ func TestAgents(t *testing.T) {
 			assert.False(t, strings.Contains(string(alerts), "Unable to verify incremental"), "Must not exist monitor alert")
 		})
 	})
+}
+
+func TestAgentsPatchTampering(t *testing.T) {
+	bStore, aStore := setupStore(t)
+	bServer, aServer := setupServer(0, "", false, t)
+	bAuditor, aAuditor := setupAuditor(0, t)
+	bMonitor, aMonitor := setupMonitor(0, t)
+	bPublisher, aPublisher := setupPublisher(0, t)
+
+	scenario, let := scope.Scope(t,
+		merge(bServer, bStore, bPublisher, bAuditor, bMonitor),
+		merge(aServer, aPublisher, aAuditor, aMonitor, aStore, delay(2*time.Second)),
+	)
+
+	event := rand.RandomString(10)
 
 	scenario("Add 1st event. Tamper it. Add 2nd event. Check monitor alerts correctly", func() {
 		hasher := hashing.NewSha256Hasher()
