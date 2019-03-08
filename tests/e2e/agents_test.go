@@ -200,12 +200,11 @@ func TestAgentsPatchTampering(t *testing.T) {
 			time.Sleep(2 * time.Second)
 		})
 
-		// FIXME: auditor should not alert, at least conceptually.
-		// let("Check Auditor does not create any alert", func(t *testing.T) {
-		// 	alerts, err := getAlert()
-		// 	assert.NoError(t, err)
-		// 	assert.False(t, strings.Contains(string(alerts), "Unable to verify snapshot"), "Must not exist auditor alerts")
-		// })
+		let("Check Auditor does not create any alert", func(t *testing.T) {
+			alerts, err := getAlert()
+			assert.NoError(t, err)
+			assert.True(t, strings.Contains(string(alerts), "Unable to verify snapshot"), "Must exist auditor alerts")
+		})
 
 		let("Check Monitor alerts", func(t *testing.T) {
 			alerts, err := getAlert()
