@@ -95,10 +95,9 @@ source of ordered events like logs, ledgers, etc...
         main.go \
         --apikey my-key \
         client \
-        --endpoint http://localhost:8800 \
+        --endpoints http://localhost:8800 \
         add \
         --key 'test event' \
-        --value 2 \
         --log info
     ```
 
@@ -109,7 +108,7 @@ source of ordered events like logs, ledgers, etc...
         main.go \
         --apikey my-key \
         client \
-        --endpoint http://localhost:8800 \
+        --endpoints http://localhost:8800 \
         membership \
         --hyperDigest 3ec11c37f0a53ff5c4cfc3cf2573c33a9721cd25d8e670a3b2be0fda5724bb5c \
         --historyDigest 776b33eab8ed829ecffab3d579bf7ccbcc126b94bac1aaca7d5d8b0a2687bdec \
