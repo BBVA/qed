@@ -140,6 +140,9 @@ func (s *snapStore) Get(version uint64) *protocol.SignedSnapshot {
 	s.Lock()
 	defer s.Unlock()
 	targetSegment := version / segmentSize
+	if targetSegment > uint64(len(s.segments)) {
+		return nil
+	}
 	targetIndex := version - (targetSegment * segmentSize)
 	return s.segments[targetSegment][targetIndex]
 }
