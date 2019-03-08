@@ -71,7 +71,7 @@ module "agent-publisher" {
 
   role                   = "publisher"
   name                   = "agent-publisher"
-  instance_type          = "m5.large"
+  instance_type          = "r5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
