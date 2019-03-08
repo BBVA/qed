@@ -97,7 +97,7 @@ func (b fakeRaftBalloon) Info() map[string]interface{} {
 func TestHealthCheckHandler(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll
 	// pass 'nil' as the third parameter.
-	req, err := http.NewRequest("GET", "/health-check", nil)
+	req, err := http.NewRequest("HEAD", "/healthcheck", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,16 +111,15 @@ func TestHealthCheckHandler(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status := rr.Code; status != http.StatusNoContent {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+			status, http.StatusNoContent)
 	}
 
 	// Check the response body is what we expect.
-	expected := `{"version":0,"status":"ok"}`
-	if rr.Body.String() != expected {
+	if rr.Body.String() != "" {
 		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+			rr.Body.String(), "")
 	}
 }
 
