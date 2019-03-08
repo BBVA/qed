@@ -16,5 +16,5 @@
 #!/bin/bash
 
 export STORAGE_HOME=/var/qed
-nohup $STORAGE_HOME/storage &
+nohup $STORAGE_HOME/storage start >> $STORAGE_HOME/qed.log 2>&1 &
 
