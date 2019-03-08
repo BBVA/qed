@@ -43,7 +43,6 @@ func Test_Client_To_Single_Server(t *testing.T) {
 				fmt.Sprintf("--endpoints=%s", QEDTLS),
 				"add",
 				"--key='test event'",
-				"--value=2",
 				"--log=info",
 				"--insecure",
 			)
@@ -122,7 +121,6 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
 				"add",
 				"--key='test event'",
-				"--value=2",
 				"--log=info",
 			)
 
@@ -194,7 +192,6 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
 				"add",
 				"--key='test event 2'",
-				"--value=2",
 				"--log=info",
 			)
 
@@ -223,7 +220,6 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 				fmt.Sprintf("--endpoints=badendpoint,http://127.0.0.1:8800"),
 				"add",
 				"--key='test event'",
-				"--value=2",
 				"--log=info",
 			)
 
@@ -241,7 +237,6 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 				fmt.Sprintf("--endpoints=badendpoint"),
 				"add",
 				"--key='test event'",
-				"--value=2",
 				"--log=info",
 			)
 
@@ -272,7 +267,6 @@ func Test_Client_To_Cluster_Continuous_Load_Node_Fails(t *testing.T) {
 				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
 				"add",
 				"--key='test event'",
-				"--value=2",
 				"--log=info",
 			)
 
