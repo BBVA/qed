@@ -14,20 +14,18 @@
    limitations under the License.
 */
 
-// Package client implements the command line interface to interact with
-// the REST API
+// Package client implements the client to interact with QED servers.
 package client
 
 import (
-	"bytes"
-	"crypto/tls"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
-	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/bbva/qed/balloon"
@@ -36,175 +34,385 @@ import (
 	"github.com/bbva/qed/protocol"
 )
 
-// HTTPClient ist the stuct that has the required information for the cli.
+// HTTPClient is an HTTP QED client.
 type HTTPClient struct {
-	conf *Config
-	*http.Client
-	topology Topology
+	httpClient         *http.Client
+	retrier            RequestRetrier
+	topology           *topology
+	apiKey             string
+	readPreference     ReadPref
+	maxRetries         int
+	healthcheckEnabled bool
+	healthcheckTimeout time.Duration
+	discoveryEnabled   bool
+	discoveryTimeout   time.Duration
+
+	mu                sync.RWMutex // guards the next block
+	running           bool
+	healthcheckStopCh chan bool // notify healthchecker to stop, and notify back
+	discoveryStopCh   chan bool // notify sniffer to stop, and notify back
 }
 
-// NewHTTPClient will return a new instance of HTTPClient.
-func NewHTTPClient(conf Config) *HTTPClient {
-	var tlsConf *tls.Config
+// NewSimpleHTTPClient creates a new short-lived client thath can be
+// used in use cases where you need one client per request.
+//
+// All checks are disabled, including timeouts and periodic checks.
+// The number of retries is set to 0.
+func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, error) {
 
-	if conf.Insecure {
-		tlsConf = &tls.Config{InsecureSkipVerify: true}
-	} else {
-		tlsConf = &tls.Config{}
+	// defaultTransport := http.DefaultTransport.(*http.Transport)
+	// // Create new Transport that ignores self-signed SSL
+	// transportWithSelfSignedTLS := &http.Transport{
+	// 	Proxy:                 defaultTransport.Proxy,
+	// 	DialContext:           defaultTransport.DialContext,
+	// 	MaxIdleConns:          defaultTransport.MaxIdleConns,
+	// 	IdleConnTimeout:       defaultTransport.IdleConnTimeout,
+	// 	ExpectContinueTimeout: defaultTransport.ExpectContinueTimeout,
+	// 	TLSHandshakeTimeout:   defaultTransport.TLSHandshakeTimeout,
+	// 	TLSClientConfig:       &tls.Config{InsecureSkipVerify: insecure},
+	// }
+
+	// httpClient := &http.Client{
+	// 	Timeout:   DefaultTimeout,
+	// 	Transport: transportWithSelfSignedTLS,
+	// }
+
+	if len(urls) == 0 {
+		return nil, errors.New("Invalid urls")
+	}
+
+	if httpClient == nil {
+		httpClient = http.DefaultClient
 	}
 
 	client := &HTTPClient{
-		&conf,
-		&http.Client{
-			Timeout: time.Second * 10,
-			Transport: &http.Transport{
-				Dial: (&net.Dialer{
-					Timeout: 5 * time.Second,
-				}).Dial,
-				TLSClientConfig:     tlsConf,
-				TLSHandshakeTimeout: 5 * time.Second,
-			},
-		},
-		Topology{},
+		httpClient:         httpClient,
+		topology:           newTopology(false),
+		healthcheckEnabled: false,
+		healthcheckTimeout: off,
+		discoveryEnabled:   false,
+		discoveryTimeout:   off,
+		readPreference:     Primary,
+		maxRetries:         0,
+		retrier:            NewNoRequestRetrier(httpClient),
 	}
+
+	client.topology.Update(urls[0], urls[1:]...)
+
+	return client, nil
+}
+
+// NewHTTPClientFromConfig initializes a client from a configuration.
+func NewHTTPClientFromConfig(conf *Config) (*HTTPClient, error) {
+	options, err := configToOptions(conf)
+	if err != nil {
+		return nil, err
+	}
+	return NewHTTPClient(options...)
+}
+
+// NewHTTPClient creates a new HTTP client to work with QED.
+//
+// The client, by default, is meant to be long-lived and shared across
+// your application. If you need a short-lived client, e.g. for request-scope,
+// consider using NewSimpleHttpClient instead.
+//
+func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
+
+	client := &HTTPClient{
+		httpClient:         http.DefaultClient,
+		topology:           newTopology(false),
+		healthcheckEnabled: DefaultHealthCheckEnabled,
+		healthcheckTimeout: DefaultHealthCheckTimeout,
+		discoveryEnabled:   DefaultTopologyDiscoveryEnabled,
+		discoveryTimeout:   DefaultTopologyDiscoveryTimeout,
+		readPreference:     Primary,
+		maxRetries:         DefaultMaxRetries,
+	}
+
+	// Run the options on the client
+	for _, option := range options {
+		if err := option(client); err != nil {
+			return nil, err
+		}
+	}
+
+	// configure retrier
+	client.setRetrier(client.maxRetries)
 
 	// Initial topology assignment
-	client.topology.Leader = conf.Endpoints[0]
-	client.topology.Endpoints = conf.Endpoints
+	if client.discoveryEnabled {
+		// try to discover the cluster topology initially
+		if err := client.discover(); err != nil {
+			return nil, err
+		}
+	}
 
-	var info map[string]interface{}
+	if client.healthcheckEnabled {
+		// perform an initial healthcheck
+		client.healthCheck(client.healthcheckTimeout)
+	}
+
+	// Ensure thath we have at least one endpoint, the primary, available
+	if !client.topology.HasActivePrimary() {
+		return nil, ErrNoPrimary
+	}
+
+	// if t.discoveryEnabled {
+	// 	go t.startDiscoverer() // periodically update cluster information
+	// }
+	// if t.healthcheckEnabled {
+	// 	go c.startHealthChecker() // periodically ping all nodes of the cluster
+	// }
+
+	client.running = true
+	return client, nil
+}
+
+// Close stops the background processes that the client is running,
+// i.e. sniffing the cluster periodically and running health checks
+// on the nodes.
+//
+// If the background processes are not running, this is a no-op.
+func (c *HTTPClient) Close() {
+	c.mu.RLock()
+	if !c.running {
+		c.mu.RUnlock()
+		return
+	}
+	c.mu.RUnlock()
+
+	log.Info("Closing QED client...")
+
+	if c.healthcheckEnabled {
+		c.healthcheckStopCh <- true
+		<-c.healthcheckStopCh
+	}
+
+	if c.discoveryEnabled {
+		c.discoveryStopCh <- true
+		<-c.discoveryStopCh
+	}
+
+	c.mu.Lock()
+	if c.topology != nil {
+		c.topology = nil
+	}
+	c.running = false
+	c.mu.Unlock()
+
+	log.Info("QED client closed")
+
+}
+
+func (c *HTTPClient) setRetrier(maxRetries int) error {
+	if maxRetries < 0 {
+		return errors.New("MaxRetries must be greater than or equal to 0")
+	}
+	if maxRetries == 0 {
+		c.retrier = NewNoRequestRetrier(c.httpClient)
+	} else {
+		// Create a Retrier that will wait for 100ms between requests.
+		ticks := make([]int, maxRetries)
+		for i := 0; i < len(ticks); i++ {
+			ticks[i] = 100
+		}
+		backoff := NewSimpleBackoff(ticks...)
+		c.retrier = NewBackoffRequestRetrier(c.httpClient, c.maxRetries, backoff)
+	}
+	return nil
+}
+
+// startDiscoverer periodically runs discover.
+func (c *HTTPClient) startDiscoverer() {
+	c.mu.RLock()
+
+}
+
+func (c *HTTPClient) callPrimary(method, path string, data []byte) ([]byte, error) {
+
+	var endpoint *endpoint
 	var err error
-
-	info, err = client.getClusterInfo()
-	if err != nil {
-		log.Errorf("Failed to get raft cluster info. Error: %v", err)
-		return nil
-	}
-
-	client.updateTopology(info)
-
-	return client
-}
-
-func (c *HTTPClient) exponentialBackoff(req *http.Request) (*http.Response, error) {
-
-	var retries uint
-
+	var retried bool
 	for {
-		resp, err := c.Do(req)
+		// we always send POST requests to the primary endpoint
+		endpoint, err = c.topology.Primary()
 		if err != nil {
-			if retries == 5 {
-				return nil, err
+			if !retried && c.discoveryEnabled {
+				c.discover()
+				retried = true
+				continue
 			}
-			retries = retries + 1
-			delay := time.Duration(10 << retries * time.Millisecond)
-			time.Sleep(delay)
-			continue
-		}
-		return resp, err
-	}
-}
-
-func (c HTTPClient) getClusterInfo() (map[string]interface{}, error) {
-	var retries uint
-	info := make(map[string]interface{})
-
-	for {
-		body, err := c.doReq("GET", "/info/shards", []byte{})
-
-		if err != nil {
-			log.Debugf("Failed to get raft cluster info through server %s. Error: %v",
-				c.topology.Leader, err)
-			if retries == 5 {
-				return nil, err
-			}
-			c.topology.Leader = c.topology.Endpoints[rand.Intn(len(c.topology.Endpoints))]
-			retries = retries + 1
-			delay := time.Duration(10 << retries * time.Millisecond)
-			time.Sleep(delay)
-			continue
-		}
-
-		err = json.Unmarshal(body, &info)
-		if err != nil {
 			return nil, err
 		}
 
-		return info, err
-	}
-}
-
-func (c *HTTPClient) updateTopology(info map[string]interface{}) {
-
-	clusterMeta := info["meta"].(map[string]interface{})
-	leaderID := info["leaderID"].(string)
-	scheme := info["URIScheme"].(string)
-
-	var leaderAddr string
-	var endpoints []string
-
-	leaderMeta := clusterMeta[leaderID].(map[string]interface{})
-	for k, addr := range leaderMeta {
-		if k == "HTTPAddr" {
-			leaderAddr = scheme + addr.(string)
-		}
-	}
-	c.topology.Leader = leaderAddr
-
-	for _, nodeMeta := range clusterMeta {
-		for k, address := range nodeMeta.(map[string]interface{}) {
-			if k == "HTTPAddr" {
-				url := scheme + address.(string)
-				endpoints = append(endpoints, url)
+		if !retried && endpoint.IsDead() {
+			if c.healthcheckEnabled {
+				c.healthCheck(c.healthcheckTimeout)
 			}
+			retried = true
+			continue
 		}
+		break
 	}
-	c.topology.Endpoints = endpoints
+	return c.doReq(method, endpoint, path, data)
 }
 
-func (c *HTTPClient) doReq(method, path string, data []byte) ([]byte, error) {
+func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 
-	url, err := url.Parse(c.topology.Leader + path)
-	if err != nil {
-		return nil, err //panic(err)
+	var endpoint *endpoint
+	var retried bool
+	var err error
+	var result []byte
+	for {
+		// check every endpoint available in a round-robin manner
+		endpoint, err = c.topology.NextReadEndpoint(c.readPreference)
+		if err != nil {
+			if !retried && c.discoveryEnabled {
+				c.discover()
+				retried = true
+				continue
+			}
+			return nil, err
+		}
+		result, err = c.doReq(method, endpoint, path, data)
+		if err == nil {
+			break
+		}
+		endpoint.MarkAsDead()
 	}
+	return result, err
+}
 
-	req, err := http.NewRequest(method, fmt.Sprintf("%s", url), bytes.NewBuffer(data))
-	if err != nil {
-		return nil, err //panic(err)
-	}
+func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data []byte) ([]byte, error) {
 
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Api-Key", c.conf.APIKey)
-
-	resp, err := c.exponentialBackoff(req)
+	url, err := url.Parse(endpoint.URL() + path)
 	if err != nil {
 		return nil, err
-		// NetworkTransport error. Check topology info
 	}
-	defer resp.Body.Close()
 
+	// Build request
+	req, err := NewRetriableRequest(method, url.String(), data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Api-Key", c.apiKey)
+
+	// Get response
+	resp, err := c.retrier.DoReq(req)
+	if err != nil {
+		log.Infof("%s is dead", endpoint)
+		endpoint.MarkAsDead()
+		return nil, err
+	}
+
+	if resp.Body != nil {
+		defer resp.Body.Close()
+	}
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode >= 500 {
-		return nil, fmt.Errorf("Server error: %v", string(bodyBytes))
-		// Non Leader error. Check topology info.
-	}
 
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		return nil, fmt.Errorf("Invalid request %v", string(bodyBytes))
 	}
 
+	// we successfully made a request to this endpoint
+	endpoint.MarkAsHealthy()
+
 	return bodyBytes, nil
 }
 
-// Ping will do a request to the server
-func (c HTTPClient) Ping() error {
-	_, err := c.doReq("GET", "/health-check", nil)
+// healthCheck does a health check on all nodes in the cluster.
+// Depending on the node state, it marks connections as dead, alive etc.
+// The timeout specifies how long to wait for a response from QED.
+func (c *HTTPClient) healthCheck(timeout time.Duration) {
+
+	for _, e := range c.topology.Endpoints() {
+
+		endpoint := e
+		// the goroutines execute the health-check HTTP request and sets status
+		go func(endpointURL string) {
+
+			fmt.Printf("start healthcheck goroutine: %s\n", endpoint.URL())
+			// Run a GET request against QED with a timeout
+			// TODO it should be a HEAD instead of a GET
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
+			req, err := http.NewRequest("HEAD", endpointURL+"/healthcheck", nil)
+			if err != nil {
+				return
+			}
+			req.Header.Set("Api-Key", c.apiKey)
+
+			resp, err := c.httpClient.Do(req.WithContext(ctx))
+			if err != nil {
+				log.Infof("%s is dead", endpoint.URL())
+				endpoint.MarkAsDead()
+			}
+			if resp != nil {
+				status := resp.StatusCode
+				if resp.Body != nil {
+					resp.Body.Close()
+				}
+				if status >= 200 && status < 300 {
+					endpoint.MarkAsAlive()
+				} else {
+					log.Infof("%s is dead [status=%d]", endpoint.URL(), status)
+					endpoint.MarkAsDead()
+				}
+			}
+		}(endpoint.URL())
+
+	}
+
+}
+
+// discover uses the shards info API to return the list of nodes in the cluster.
+// It uses the list of URLs passed on startup plus the list of URLs found
+// by the preceding discovery process (if discovery is enabled).
+func (c *HTTPClient) discover() error {
+
+	if !c.discoveryEnabled {
+		return nil
+	}
+
+	body, err := c.callAny("GET", "/info/shards", nil)
+	info := make(map[string]interface{})
+	err = json.Unmarshal(body, &info)
 	if err != nil {
 		return err
 	}
 
+	clusterMeta := info["meta"].(map[string]interface{})
+	primaryID := info["leaderID"].(string)
+	scheme := info["URIScheme"].(string)
+
+	var prim string
+	secondaries := make([]string, 0)
+	for id, nodeMeta := range clusterMeta {
+		for k, address := range nodeMeta.(map[string]interface{}) {
+			if k == "HTTPAddr" {
+				if id == primaryID {
+					prim = scheme + address.(string)
+				} else {
+					secondaries = append(secondaries, scheme+address.(string))
+				}
+			}
+		}
+	}
+	c.topology.Update(prim, secondaries...)
+	return nil
+}
+
+// Ping will do a healthcheck request to the primary node
+func (c *HTTPClient) Ping() error {
+	_, err := c.callPrimary("GET", "/health-check", nil)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -212,14 +420,16 @@ func (c HTTPClient) Ping() error {
 func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
 	data, _ := json.Marshal(&protocol.Event{Event: []byte(event)})
-
-	body, err := c.doReq("POST", "/events", data)
+	body, err := c.callPrimary("POST", "/events", data)
 	if err != nil {
 		return nil, err
 	}
 
 	var snapshot protocol.Snapshot
-	_ = json.Unmarshal(body, &snapshot)
+	err = json.Unmarshal(body, &snapshot)
+	if err != nil {
+		return nil, err
+	}
 
 	return &snapshot, nil
 
@@ -233,7 +443,7 @@ func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.Membershi
 		Version: version,
 	})
 
-	body, err := c.doReq("POST", "/proofs/membership", query)
+	body, err := c.callAny("POST", "/proofs/membership", query)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +463,7 @@ func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) 
 		Version:   version,
 	})
 
-	body, err := c.doReq("POST", "/proofs/digest-membership", query)
+	body, err := c.callAny("POST", "/proofs/digest-membership", query)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +483,7 @@ func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalRespon
 		End:   end,
 	})
 
-	body, err := c.doReq("POST", "/proofs/incremental", query)
+	body, err := c.callAny("POST", "/proofs/incremental", query)
 	if err != nil {
 		return nil, err
 	}
