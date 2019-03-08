@@ -255,9 +255,11 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 	proof.KeyDigest = keyDigest
 	proof.QueryVersion = version
 	proof.CurrentVersion = b.version - 1
-	if version > b.version {
-		version = b.version
+
+	if version > proof.CurrentVersion {
+		version = proof.CurrentVersion
 	}
+
 	leaf, err := b.store.Get(storage.IndexPrefix, proof.KeyDigest)
 	if err != nil {
 		return nil, fmt.Errorf("No leaf with digest %v", proof.KeyDigest)
@@ -295,7 +297,6 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 
 func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
 	hasher := b.hasherF()
-
 	return b.QueryDigestMembership(hasher.Do(event), version)
 }
 
