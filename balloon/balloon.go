@@ -122,7 +122,7 @@ func (p MembershipProof) DigestVerify(digest hashing.Digest, snapshot *Snapshot)
 	hyperCorrect := p.HyperProof.Verify(digest, snapshot.HyperDigest)
 
 	if p.Exists {
-		if p.QueryVersion <= p.ActualVersion {
+		if p.ActualVersion <= p.QueryVersion {
 			historyCorrect := p.HistoryProof.Verify(digest, snapshot.HistoryDigest)
 			return hyperCorrect && historyCorrect
 		}
