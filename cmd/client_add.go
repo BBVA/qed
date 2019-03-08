@@ -24,7 +24,7 @@ import (
 
 func newAddCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []string)) *cobra.Command {
 
-	var key, value string
+	var key string
 
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -36,7 +36,7 @@ func newAddCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []strin
 			clientPreRun(cmd, args)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Infof("Adding key [ %s ] with value [ %s ]\n", key, value)
+			log.Infof("Adding key [ %s ]\n", key)
 			// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
 			cmd.SilenceUsage = true
 			snapshot, err := ctx.client.Add(key)
@@ -61,9 +61,7 @@ Received snapshot with values:
 	}
 
 	cmd.Flags().StringVar(&key, "key", "", "Key to add")
-	cmd.Flags().StringVar(&value, "value", "", "Value to add")
 	cmd.MarkFlagRequired("key")
-	cmd.MarkFlagRequired("value")
 
 	return cmd
 }

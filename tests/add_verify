@@ -20,12 +20,11 @@ QED="go run ../main.go -l info -k path"
 
 add_event(){
 	local event="$1"; shift
-	local value="$1"; shift
-	$QED client add --key "${event}" --value "${value}"
+	$QED client add --key "${event}"
 }
 
 
-#Adding key [ test event ] with value [ 2 ]
+#Adding key [ test event ]
 #test event
 #Received snapshot with values: 
 #	Event: test event
