@@ -10,7 +10,7 @@
 
 ```
 $ export GO111MODULE=on
-$ terraform init -backend-config "$aws-profile=name"
+$ terraform init -backend-config "profile=${your_aws_profile}"
 
 ```
 
