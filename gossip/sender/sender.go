@@ -50,7 +50,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		BatchSize:     100,
 		BatchInterval: 1 * time.Second,
-		TTL:           2,
+		TTL:           1,
 		EachN:         1,
 		SendTimer:     500 * time.Millisecond,
 	}
