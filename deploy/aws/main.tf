@@ -40,9 +40,9 @@ resource "aws_iam_instance_profile" "qed-profile" {
 
 module "qed" {
   source = "./modules/qed"
+  count  = 3
 
   name                   = "qed"
-  count                  = 3
   instance_type          = "m5.2xlarge"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
@@ -67,7 +67,9 @@ module "inmemory-storage" {
 
 module "agent-publisher" {
   source = "./modules/agent"
+  count  = 2
 
+  role                   = "publisher"
   name                   = "agent-publisher"
   instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
@@ -76,14 +78,14 @@ module "agent-publisher" {
   subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
-  role                   = "publisher"
 }
 
 module "agent-monitor" {
   source = "./modules/agent"
+  count  = 2
 
+  role                   = "monitor"
   name                   = "agent-monitor"
-  count                  = 1
   instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
@@ -91,12 +93,13 @@ module "agent-monitor" {
   subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
-  role                   = "monitor"
 }
 
 module "agent-auditor" {
   source = "./modules/agent"
+  count  = 2
 
+  role                   = "auditor"
   name                   = "agent-auditor"
   instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
@@ -105,7 +108,6 @@ module "agent-auditor" {
   subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
-  role                   = "auditor"
 }
 
 module "prometheus" {

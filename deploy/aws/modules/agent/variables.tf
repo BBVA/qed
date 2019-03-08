@@ -30,9 +30,7 @@ variable "key_path" {}
 
 variable "name" {}
 
-variable "role" {
-  default = "agent"
-}
+variable "role" {}
 
 variable "path" {
   default = "/var/tmp/qed"
