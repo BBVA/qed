@@ -82,8 +82,7 @@ func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, 
 	CurrentVersion: %d
 	QueryVersion: %d
 	ActualVersion: %d
-	KeyDigest: %x
-	Key: %s`,
+	KeyDigest: %x`,
 				membershipResult.Exists,
 				// membershipResult.Hyper,
 				// membershipResult.History,
@@ -91,7 +90,6 @@ func newMembershipCommand(ctx *clientContext, clientPreRun func(*cobra.Command, 
 				membershipResult.QueryVersion,
 				membershipResult.ActualVersion,
 				membershipResult.KeyDigest,
-				membershipResult.Key,
 			)
 
 			if verify {
