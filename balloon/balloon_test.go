@@ -301,14 +301,16 @@ func TestDeleteAndVerify(t *testing.T) {
 	memProof, err := b.QueryMembership(event, snapshot.Version)
 	assert.NoError(t, err)
 	assert.True(t, memProof.Verify(event, snapshot), "The proof should verify correctly")
-	assert.NoError(t, store.Delete(storage.IndexPrefix, eventDigest), "store delete returned non nil value")
+
+	err = store.Delete(storage.IndexPrefix, eventDigest)
+	assert.NoError(t, err, "store delete returned non nil value")
 
 	tampered, _ := store.Get(storage.IndexPrefix, eventDigest)
 	assert.Nil(t, tampered)
 
 	proof, err := b.QueryMembership(event, snapshot.Version)
-	assert.Nil(t, proof)
-	assert.Error(t, err, "ballon should not return a proof")
+	assert.False(t, proof.Exists, "Member must not exist on qed after its deletion")
+	assert.NoErrorf(t, err, "Ballon must return a proof for a non-existen event: %v", err)
 }
 
 func TestGenIncrementalAndVerify(t *testing.T) {

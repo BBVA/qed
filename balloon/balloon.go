@@ -250,6 +250,8 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 	var hyperErr, historyErr error
 	var hyperProof *hyper.QueryProof
 	var historyProof *history.MembershipProof
+	var leaf *storage.KVPair
+	var err error
 
 	proof.Hasher = b.hasherF()
 	proof.KeyDigest = keyDigest
@@ -260,13 +262,18 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 		version = proof.CurrentVersion
 	}
 
-	leaf, err := b.store.Get(storage.IndexPrefix, proof.KeyDigest)
-	if err != nil {
-		return nil, fmt.Errorf("No leaf with digest %v", proof.KeyDigest)
+	leaf, err = b.store.Get(storage.IndexPrefix, proof.KeyDigest)
+	switch {
+	case err != nil && err != storage.ErrKeyNotFound:
+		return nil, fmt.Errorf("Error reading leaf %v data: %v", proof.KeyDigest, err)
+	case err != nil && err == storage.ErrKeyNotFound:
+		proof.Exists = false
+		proof.ActualVersion = version
+		leaf = &storage.KVPair{keyDigest, util.Uint64AsBytes(version)}
+	case err == nil:
+		proof.Exists = true
+		proof.ActualVersion = util.BytesAsUint64(leaf.Value)
 	}
-
-	proof.Exists = true
-	proof.ActualVersion = util.BytesAsUint64(leaf.Value)
 
 	if proof.ActualVersion <= version {
 		wg.Add(1)
@@ -291,7 +298,6 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 
 	proof.HyperProof = hyperProof
 	proof.HistoryProof = historyProof
-	proof.Exists = true
 	return &proof, nil
 }
 
