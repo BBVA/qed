@@ -29,6 +29,7 @@ import (
 )
 
 func Test_Client_To_Single_Server(t *testing.T) {
+	t.Skip()
 	before, after := setupServer(0, "", true, t)
 	scenario, let := scope.Scope(t, before, merge(after, delay(2*time.Second)))
 
@@ -103,6 +104,7 @@ func Test_Client_To_Single_Server(t *testing.T) {
 }
 
 func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
+	t.Skip()
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 	before2, after2 := setupServer(2, "", false, t)
@@ -204,6 +206,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 }
 
 func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
+	t.Skip()
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 
@@ -250,6 +253,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 }
 
 func Test_Client_To_Cluster_Continuous_Load_Node_Fails(t *testing.T) {
+	t.Skip()
 	before0, after0 := setupServer(0, "", false, t)
 	before1, after1 := setupServer(1, "", false, t)
 

@@ -17,9 +17,9 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
+	"fmt"
 
-	"github.com/bbva/qed/log"
+	"github.com/spf13/cobra"
 )
 
 func newAddCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []string)) *cobra.Command {
@@ -36,7 +36,7 @@ func newAddCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []strin
 			clientPreRun(cmd, args)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Infof("Adding key [ %s ]\n", key)
+			fmt.Printf("\nAdding key [ %s ]\n", key)
 			// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
 			cmd.SilenceUsage = true
 			snapshot, err := ctx.client.Add(key)
@@ -44,17 +44,11 @@ func newAddCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []strin
 				return err
 			}
 
-			log.Infof(`
-Received snapshot with values:
-	EventDigest: %x
-	HyperDigest: %x
-	HistoryDigest: %x
-	Version: %d
-`,
-				snapshot.EventDigest,
-				snapshot.HyperDigest,
-				snapshot.HistoryDigest,
-				snapshot.Version)
+			fmt.Printf("\nReceived snapshot with values:\n\n")
+			fmt.Printf(" EventDigest: %x\n", snapshot.EventDigest)
+			fmt.Printf(" HyperDigest: %x\n", snapshot.HyperDigest)
+			fmt.Printf(" HistoryDigest: %x\n", snapshot.HistoryDigest)
+			fmt.Printf(" Version: %d\n\n", snapshot.Version)
 
 			return nil
 		},
