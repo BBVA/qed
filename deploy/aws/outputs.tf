@@ -2,6 +2,9 @@ output "qed" {
   value = "${module.qed.public_ip}"
 }
 
+output "qed-private" {
+  value = "${module.qed.private_ip}"
+}
 output "prometheus" {
   value = "${module.prometheus.public_ip}"
 }
