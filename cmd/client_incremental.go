@@ -18,20 +18,18 @@ package cmd
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 
 	"github.com/spf13/cobra"
-
-	"github.com/bbva/qed/log"
 )
 
 func newIncrementalCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []string)) *cobra.Command {
 
 	var start, end uint64
 	var verify bool
-	var startDigest, endDigest string
 
 	cmd := &cobra.Command{
 		Use:   "incremental",
@@ -42,19 +40,11 @@ func newIncrementalCommand(ctx *clientContext, clientPreRun func(*cobra.Command,
 			// WARN: PersitentPreRun can't be nested and we're using it in
 			// cmd/root so inbetween preRuns must be curried.
 			clientPreRun(cmd, args)
-
-			if verify {
-				if startDigest == "" {
-					log.Errorf("Error: trying to verify proof without start digest")
-				}
-				if endDigest == "" {
-					log.Errorf("Error: trying to verify proof without end digest")
-				}
-			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Infof("Querying incremental between versions [ %d ] and [ %d ]\n", start, end)
+
+			fmt.Printf("\nQuerying incremental between versions [ %d ] and [ %d ]\n", start, end)
 			// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
 			cmd.SilenceUsage = true
 			proof, err := ctx.client.Incremental(start, end)
@@ -62,20 +52,40 @@ func newIncrementalCommand(ctx *clientContext, clientPreRun func(*cobra.Command,
 				return err
 			}
 
-			log.Infof("Received proof: %+v\n", proof)
+			fmt.Printf("\nReceived incremental proof: \n\n")
+			fmt.Printf(" Start version: %d\n", proof.Start)
+			fmt.Printf(" End version: %d\n", proof.End)
+			fmt.Printf(" Incremental audit path: <TRUNCATED>\n\n")
 
 			if verify {
+
+				var startDigest, endDigest string
+				for {
+					startDigest = readLine(fmt.Sprintf("Please, provide the starting historyDigest for version [ %d ]: ", start))
+					if startDigest != "" {
+						break
+					}
+				}
+				for {
+					endDigest = readLine(fmt.Sprintf("Please, provide the ending historyDigest for version [ %d ] : ", end))
+					if endDigest != "" {
+						break
+					}
+				}
+
 				sdBytes, _ := hex.DecodeString(startDigest)
 				edBytes, _ := hex.DecodeString(endDigest)
 				startSnapshot := &protocol.Snapshot{sdBytes, nil, start, nil}
 				endSnapshot := &protocol.Snapshot{edBytes, nil, end, nil}
 
-				log.Infof("Verifying with snapshots: \n\tStartDigest: %s\n\tEndDigest: %s\n",
-					startDigest, endDigest)
+				fmt.Printf("\nVerifying with snapshots: \n")
+				fmt.Printf(" HistoryDigest for start version [ %d ]: %s\n", start, startDigest)
+				fmt.Printf(" HistoryDigest for end version [ %d ]: %s\n", end, endDigest)
+
 				if ctx.client.VerifyIncremental(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
-					log.Info("Verify: OK")
+					fmt.Printf("\nVerify: OK\n\n")
 				} else {
-					log.Info("Verify: KO")
+					fmt.Printf("\nVerify: KO\n\n")
 				}
 			}
 
@@ -86,8 +96,6 @@ func newIncrementalCommand(ctx *clientContext, clientPreRun func(*cobra.Command,
 	cmd.Flags().Uint64Var(&start, "start", 0, "Start version to query")
 	cmd.Flags().Uint64Var(&end, "end", 0, "End version to query")
 	cmd.Flags().BoolVar(&verify, "verify", false, "Do verify received proof")
-	cmd.Flags().StringVar(&startDigest, "startDigest", "", "Start digest of the history tree")
-	cmd.Flags().StringVar(&endDigest, "endDigest", "", "End digest of the history tree")
 	cmd.MarkFlagRequired("start")
 	cmd.MarkFlagRequired("end")
 
