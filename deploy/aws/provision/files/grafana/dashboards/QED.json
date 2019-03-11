@@ -522,7 +522,7 @@
       "renderer": "flot",
       "seriesOverrides": [],
       "spaceLength": 10,
-      "stack": true,
+      "stack": false,
       "steppedLine": false,
       "targets": [
         {
@@ -1699,5 +1699,5 @@
   "timezone": "",
   "title": "QED",
   "uid": "rjPFfGuik",
-  "version": 2
+  "version": 1
 }
