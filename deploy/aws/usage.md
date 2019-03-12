@@ -14,6 +14,12 @@ $ terraform init -backend-config "profile=${your_aws_profile}"
 
 ```
 
+## Bandaid
+If terraform misbehaves, give it a gentle nudge like this:
+```
+$ terraform init -backend-config "profile=${your_aws_profile} -reconfigure"
+```
+
 ## Deploy
 ```
 $ terraform apply -auto-approve 
