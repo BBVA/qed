@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/imdario/mergo"
 	"github.com/spf13/cobra"
@@ -50,9 +49,6 @@ type Config struct {
 	NumRequests      uint
 	MaxGoRoutines    uint
 	ClusterSize      uint
-
-	// metrics
-	counter float64
 }
 
 func main() {
@@ -109,8 +105,7 @@ func newRiotCommand() *cobra.Command {
 	f.BoolVar(&config.Add, "add", false, "Execute add benchmark")
 	f.BoolVarP(&config.Membership, "membership", "m", false, "Benchmark MembershipProof")
 	f.BoolVar(&config.Incremental, "incremental", false, "Execute Incremental benchmark")
-	f.BoolVar(&config.Offload, "offload", false, "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)")
-	f.BoolVar(&config.Profiling, "profiling", false, "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 ")
+	f.BoolVar(&config.Profiling, "profiling", false, "Enable Go profiling $ go tool pprof -http : http://localhost:6061 ")
 	f.UintVarP(&config.IncrementalDelta, "delta", "d", 1000, "Specify delta for the IncrementalProof")
 	f.UintVar(&config.NumRequests, "n", 10e4, "Number of requests for the attack")
 	f.UintVar(&config.MaxGoRoutines, "r", 10, "Set the concurrency value")
@@ -124,13 +119,10 @@ func newRiotCommand() *cobra.Command {
 }
 
 func Run(paramsConf Config) {
-	setupMetrics(paramsConf)
 	newAttack(paramsConf)
 }
 
 func Serve(paramsConf Config) {
-
-	setupMetrics(paramsConf)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
@@ -276,7 +268,6 @@ func (a *Attack) CreateFanIn() {
 						end:   uint64(id + a.config.IncrementalDelta),
 					}
 				}
-				a.config.counter++
 			}
 		}(rID)
 	}
@@ -314,37 +305,7 @@ func (a *Attack) CreateFanOut() {
 				case incremental:
 					_, _ = a.client.Incremental(task.start, task.end)
 				}
-				a.config.counter++
 			}
 		}(rID)
 	}
-}
-
-func setupMetrics(conf Config) {
-	ticker := time.NewTicker(1 * time.Second)
-	start := time.Now()
-	defer ticker.Stop()
-
-	go func() {
-		for {
-			<-ticker.C
-			elapsed := time.Since(start).Seconds()
-			summaryPerDuration(conf, elapsed)
-		}
-	}()
-
-}
-
-func summaryPerDuration(conf Config, elapsed float64) {
-
-	log.Infof(
-		"Throughput: %.0f req/s | Concurrency: %d | Elapsed time: %.3f seconds\n",
-		conf.counter/elapsed,
-		conf.MaxGoRoutines,
-		elapsed,
-	)
-}
-
-type axis struct {
-	x, y []float64
 }
