@@ -43,17 +43,17 @@ func newAgentMonitorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 			// Bindings
 			monitorConfig.MetricsAddr = config.BindAddr // TODO: make MetricsAddr configurable
 			monitorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
-			monitorConfig.PubUrls = v.GetStringSlice("agent.alert_urls")
+			monitorConfig.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
 
 			markSliceStringRequired(monitorConfig.QEDUrls, "qedUrls")
-			markSliceStringRequired(monitorConfig.PubUrls, "pubUrls")
+			markSliceStringRequired(monitorConfig.AlertsUrls, "alertsUrls")
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
 			config.Role = member.Monitor
 			monitorConfig.APIKey = ctx.apiKey
 
-			monitor, err := monitor.NewMonitor(*monitorConfig)
+			monitor, err := monitor.NewMonitor(monitorConfig)
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
@@ -77,7 +77,7 @@ func newAgentMonitorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 
 	f := cmd.Flags()
 	f.StringSliceVarP(&monitorConfig.QEDUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which a monitor can make queries")
-	f.StringSliceVarP(&monitorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an monitor can publish alerts")
+	f.StringSliceVarP(&monitorConfig.AlertsUrls, "alertsUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an monitor can publish alerts")
 
 	// Lookups
 	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
