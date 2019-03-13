@@ -187,7 +187,7 @@ func TestConsistencyProofVerify(t *testing.T) {
 func TestAddQueryAndVerify(t *testing.T) {
 	log.SetLogger("TestCacheWarmingUp", log.SILENT)
 
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.1")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.1")
 	defer closeF()
 
 	// start balloon
@@ -212,7 +212,7 @@ func TestCacheWarmingUp(t *testing.T) {
 
 	log.SetLogger("TestCacheWarmingUp", log.SILENT)
 
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/ballon_test.db")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/ballon_test.db")
 	defer closeF()
 
 	// start balloon
@@ -248,7 +248,7 @@ func TestCacheWarmingUp(t *testing.T) {
 func TestTamperAndVerify(t *testing.T) {
 	log.SetLogger("TestTamperAndVerify", log.SILENT)
 
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.2")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.2")
 	defer closeF()
 
 	b, err := NewBalloon(store, hashing.NewSha256Hasher)
@@ -286,7 +286,7 @@ func TestTamperAndVerify(t *testing.T) {
 func TestDeleteAndVerify(t *testing.T) {
 	log.SetLogger("TestDeleteAndVerify", log.SILENT)
 
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.3")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.3")
 	defer closeF()
 
 	b, err := NewBalloon(store, hashing.NewSha256Hasher)
@@ -316,7 +316,7 @@ func TestDeleteAndVerify(t *testing.T) {
 func TestGenIncrementalAndVerify(t *testing.T) {
 	log.SetLogger("TestDeleteAndVerify", log.SILENT)
 
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.3")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.3")
 	defer closeF()
 
 	b, err := NewBalloon(store, hashing.NewSha256Hasher)
@@ -365,6 +365,50 @@ func BenchmarkQueryBadger(b *testing.B) {
 	log.SetLogger("BenchmarkAddBadger", log.SILENT)
 
 	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/ballon_bench.db")
+	defer closeF()
+
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(b, err)
+
+	b.N = 100000
+	for i := 0; i < b.N; i++ {
+		event := rand.Bytes(128)
+		events = append(events, event)
+		_, mutations, _ := balloon.Add(event)
+		store.Mutate(mutations)
+	}
+
+	b.ResetTimer()
+	for i, e := range events {
+		balloon.QueryMembership(e, uint64(i))
+	}
+
+}
+func BenchmarkAddRocksDB(b *testing.B) {
+
+	log.SetLogger("BenchmarkAddRocksDB", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/balloon_bench.db")
+	defer closeF()
+
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	b.N = 100000
+	for i := 0; i < b.N; i++ {
+		event := rand.Bytes(128)
+		_, mutations, _ := balloon.Add(event)
+		store.Mutate(mutations)
+	}
+
+}
+
+func BenchmarkQueryRocksDB(b *testing.B) {
+	var events [][]byte
+	log.SetLogger("BenchmarkQueryRocksDB", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/ballon_bench.db")
 	defer closeF()
 
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
