@@ -100,13 +100,20 @@ type Config struct {
 
 type Plan [][]Config
 
+type kind string
+
+const (
+	add         kind = "add"
+	membership  kind = "membership"
+	incremental kind = "incremental"
+)
+
 type Attack struct {
 	kind           kind
 	balloonVersion uint64
 
 	config  Config
 	client  *client.HTTPClient
-	reqChan chan uint
 	senChan chan Task
 }
 
@@ -139,7 +146,7 @@ func newRiotCommand() *cobra.Command {
 
 			if riot.Config.Profiling {
 				go func() {
-					log.Info("Go profiling enabled")
+					log.Info("	* Starting Riot Profiling server")
 					log.Info(http.ListenAndServe(":6060", nil))
 				}()
 			}
@@ -176,10 +183,8 @@ func (riot *Riot) Start(APIMode bool) {
 	Register(r)
 	riot.prometheusRegistry = r
 	metricsMux := metricshttp.NewMetricsHTTP(r)
+	log.Debug("	* Starting Riot Metrics server")
 	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
-
-	b, _ := json.MarshalIndent(riot.Config, "", "  ")
-	log.Debugf(">>>>>>>>>>>>> ATTACK: %s", b)
 
 	if APIMode {
 		riot.Serve()
@@ -252,10 +257,7 @@ func (riot *Riot) Serve() {
 		}
 	})
 
-	api := &http.Server{
-		Addr:    ":7700",
-		Handler: mux,
-	}
+	api := &http.Server{Addr: ":7700", Handler: mux}
 
 	log.Debug("	* Starting Riot HTTP server")
 	if err := api.ListenAndServe(); err != http.ErrServerClosed {
@@ -263,17 +265,7 @@ func (riot *Riot) Serve() {
 	}
 }
 
-type kind string
-
-const (
-	add         kind = "add"
-	membership  kind = "membership"
-	incremental kind = "incremental"
-)
-
 func newAttack(conf Config) {
-	b, _ := json.MarshalIndent(conf, "", "  ")
-	log.Debugf(">>>>>>>>>>>>> ATTACK: %s", b)
 
 	cConf := client.DefaultConfig()
 	cConf.Endpoints = []string{conf.Endpoint}
@@ -304,23 +296,23 @@ func (a *Attack) Run() {
 			for {
 				task, ok := <-a.senChan
 				if !ok {
-					log.Infof("Closing #%d", rID)
+					log.Debugf("!!! clos: %d", rID)
 					wg.Done()
 					return
 				}
 
 				switch task.kind {
 				case add:
+					log.Debugf(">>> add: %s", task.event)
 					_, _ = a.client.Add(task.event)
-					log.Debugf("Sending #%s", task.event)
 					RiotEventAdd.Inc()
 				case membership:
+					log.Debugf(">>> mem: %s, %d", task.event, task.version)
 					_, _ = a.client.Membership(task.key, task.version)
-					log.Debugf("Membring #%s", task.event)
 					RiotQueryMembership.Inc()
 				case incremental:
+					log.Debugf(">>> inc: %s", task.event)
 					_, _ = a.client.Incremental(task.start, task.end)
-					log.Debugf("Incrming #%s", task.event)
 					RiotQueryIncremental.Inc()
 				}
 			}
