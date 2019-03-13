@@ -22,10 +22,17 @@ import (
 	"time"
 
 	"github.com/bbva/qed/gossip/member"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+	"github.com/coocood/freecache"
 	"github.com/hashicorp/memberlist"
 )
+
+type hashedBatch struct {
+	batch  *protocol.BatchSnapshots
+	digest hashing.Digest
+}
 
 type Agent struct {
 	config *Config
@@ -38,9 +45,10 @@ type Agent struct {
 
 	stateLock sync.Mutex
 
+	processed  *freecache.Cache
 	processors []Processor
 
-	In   chan *protocol.BatchSnapshots
+	In   chan *hashedBatch
 	Out  chan *protocol.BatchSnapshots
 	quit chan bool
 }
@@ -51,7 +59,8 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 		config:     conf,
 		Topology:   NewTopology(),
 		processors: p,
-		In:         make(chan *protocol.BatchSnapshots, 1<<16),
+		processed:  freecache.NewCache(1 << 20),
+		In:         make(chan *hashedBatch, 1<<16),
 		Out:        make(chan *protocol.BatchSnapshots, 1<<16),
 		quit:       make(chan bool),
 	}
@@ -106,10 +115,12 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 
 	return agent, nil
 }
-func chTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshots) {
+
+// Send a batch into a queue channel with the agent TimeoutQueues timeout.
+func (a *Agent) ChTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshots) {
 	for {
 		select {
-		case <-time.After(200 * time.Millisecond):
+		case <-time.After(a.config.TimeoutQueues):
 			log.Infof("Agent timed out enqueueing batch in out channel")
 			return
 		case ch <- batch:
@@ -119,15 +130,21 @@ func chTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshot
 }
 
 func (a *Agent) start() {
-	outTicker := time.NewTicker(2 * time.Second)
+
 	for {
 		select {
-		case batch := <-a.In:
-			for _, p := range a.processors {
-				go p.Process(*batch)
+		case hashedBatch := <-a.In:
+			_, err := a.processed.Get(hashedBatch.digest)
+			if err == nil {
+				continue
 			}
-			chTimedSend(batch, a.Out)
-		case <-outTicker.C:
+			a.processed.Set(hashedBatch.digest, []byte{0x0}, 0)
+
+			for _, p := range a.processors {
+				go p.Process(hashedBatch.batch)
+			}
+			a.ChTimedSend(hashedBatch.batch, a.Out)
+		case <-time.After(a.config.ProcessInterval):
 			go a.sendOutQueue()
 		case <-a.quit:
 			return
