@@ -17,6 +17,8 @@ variables:
   GO111MODULE: on
   CGO_LDFLAGS_ALLOW: '.*'
 
+pr:
+
 steps:
 - script: |
     mkdir -p '$(GOBIN)'
