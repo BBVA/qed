@@ -42,7 +42,7 @@ steps:
     cd c-deps
     ./builddeps.sh
     cd ..
- displayName: 'Build rocksdb'
+  displayName: 'Build rocksdb'
  
 - script: |
     go version
