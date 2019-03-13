@@ -19,8 +19,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/bbva/qed/rocksdb"
@@ -30,6 +30,15 @@ import (
 
 type RocksDBStore struct {
 	db *rocksdb.DB
+
+	// checkpoints are stored in a path on the same
+	// folder as the database, so rocksdb uses hardlinks instead
+	// of copies
+	checkPointPath string
+
+	// each checkpoint is created in a subdirectory
+	// inside checkPointPath folder
+	checkpoints map[uint64]string
 }
 
 type rocksdbOpts struct {
@@ -55,8 +64,17 @@ func NewRocksDBStoreOpts(opts *rocksdbOpts) (*RocksDBStore, error) {
 	if err != nil {
 		return nil, err
 	}
+	checkPointPath := opts.Path + "/checkpoints"
+	err = os.MkdirAll(checkPointPath, 0755)
+	if err != nil {
+		return nil, err
+	}
 
-	store := &RocksDBStore{db: db}
+	store := &RocksDBStore{
+		db:             db,
+		checkPointPath: checkPointPath,
+		checkpoints:    make(map[uint64]string),
+	}
 	return store, nil
 }
 
@@ -172,26 +190,32 @@ func (s RocksDBStore) Delete(prefix byte, key []byte) error {
 	return s.db.Delete(rocksdb.NewDefaultWriteOptions(), k)
 }
 
-// Backup dumps a protobuf-encoded list of all entries in the database into the
-// given writer, that are newer than the specified version.
-func (s *RocksDBStore) Backup(w io.Writer, until uint64) error {
-
+// Take a snapshot of the store, and returns and id
+// to be used in the back up process. The state of the
+// snapshot is stored in the store instance.
+func (s *RocksDBStore) Snapshot() (uint64, error) {
 	// create temp directory
-	checkDir, err := ioutil.TempDir("", "rocksdb-checkpoint")
-	if err != nil {
-		return err
-	}
+	id := uint64(len(s.checkpoints) + 1)
+	checkDir := fmt.Sprintf("%s/rocksdb-checkpoint-%d", s.checkPointPath, id)
 	os.RemoveAll(checkDir)
 
 	// create checkpoint
 	checkpoint, err := s.db.NewCheckpoint()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer checkpoint.Destroy()
-
 	checkpoint.CreateCheckpoint(checkDir, 0)
-	defer os.RemoveAll(checkDir)
+
+	s.checkpoints[id] = checkDir
+	return id, nil
+}
+
+// Backup dumps a protobuf-encoded list of all entries in the database into the
+// given writer, that are newer than the specified version.
+func (s *RocksDBStore) Backup(w io.Writer, id uint64) error {
+
+	checkDir := s.checkpoints[id]
 
 	// open db for read-only
 	opts := rocksdb.NewDefaultOptions()
@@ -222,6 +246,13 @@ func (s *RocksDBStore) Backup(w io.Writer, until uint64) error {
 			return err
 		}
 	}
+
+	// remove checkpoint from list
+	// order must be maintained,
+	delete(s.checkpoints, id)
+
+	// clean up only after we succesfully backup
+	os.RemoveAll(checkDir)
 
 	return nil
 }

@@ -238,7 +238,7 @@ func TestBackupLoad(t *testing.T) {
 		}
 	}
 
-	version, err := store.GetLastVersion()
+	version, err := store.Snapshot()
 	require.NoError(t, err)
 
 	backupDir := mustTempDir()
@@ -251,7 +251,7 @@ func TestBackupLoad(t *testing.T) {
 	restore, recloseF := openBadgerStore(t)
 	defer recloseF()
 	restore.Load(backupFile)
-	reversion, err := store.GetLastVersion()
+	reversion, err := store.Snapshot()
 
 	require.NoError(t, err)
 	require.Equal(t, reversion, version, "Error in restored version")
