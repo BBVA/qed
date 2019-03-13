@@ -42,6 +42,7 @@ steps:
     cd c-deps
     ./builddeps.sh
     cd ..
+  workingDirectory: '$(modulePath)'  
   displayName: 'Build rocksdb'
  
 - script: |
