@@ -64,11 +64,19 @@ var (
 		},
 	)
 
+	QedStoreEventsStoredTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_store_events_stored_total",
+			Help: "Number of events stored.",
+		},
+	)
+
 	metricsList = []prometheus.Collector{
 		QedStoreInstancesCount,
 		QedStoreBatchesStoredTotal,
 		QedStoreSnapshotsRetrievedTotal,
 		QedStoreAlertsGeneratedTotal,
+		QedStoreEventsStoredTotal,
 	}
 
 	registerMetrics sync.Once
@@ -133,6 +141,7 @@ func (s *snapStore) Put(b *protocol.BatchSnapshots) {
 		targetSegment := snap.Snapshot.Version / segmentSize
 		targetIndex := snap.Snapshot.Version - (targetSegment * segmentSize)
 		s.segments[targetSegment][targetIndex] = snap
+		QedStoreEventsStoredTotal.Inc()
 	}
 }
 
@@ -248,7 +257,11 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
+			if len(b.Snapshots) < 1 {
+				log.Infof("Empty batch recevied!")
+				http.Error(w, "Empty batch recevied!", http.StatusInternalServerError)
+				return
+			}
 			s.snaps.Put(&b)
 			return
 		}
