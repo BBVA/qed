@@ -47,11 +47,12 @@ type DeletableStore interface {
 	Store
 	Delete(prefix byte, key []byte) error
 }
+
 type ManagedStore interface {
 	Store
 	Backup(w io.Writer, until uint64) error
+	Snapshot() (uint64, error)
 	Load(r io.Reader) error
-	GetLastVersion() (uint64, error)
 }
 
 type Mutation struct {
