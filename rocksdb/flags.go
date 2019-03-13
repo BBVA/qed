@@ -23,6 +23,7 @@ package rocksdb
 // #cgo LDFLAGS: -lsnappy
 // #cgo LDFLAGS: -lstdc++
 // #cgo LDFLAGS: -ldl
+// #cgo LDFLAGS: -lpthread
 // #cgo LDFLAGS: -lm
 // #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup
 // #cgo !darwin LDFLAGS: -Wl,-unresolved_symbols=ignore-all -lrt
