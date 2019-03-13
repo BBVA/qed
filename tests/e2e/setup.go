@@ -43,8 +43,9 @@ const (
 	QEDUrl       = "http://127.0.0.1:8800"
 	QEDTLS       = "https://localhost:8800"
 	QEDGossip    = "127.0.0.1:8400"
-	QEDTamperURL = "http://127.0.0.1:18800/tamper"
-	StoreURL     = "http://127.0.0.1:8888"
+	QEDTamperURL = "http://127.0.0.1:18800/"
+	StoreURL     = "http://127.0.0.1:8888/"
+	AlertsURL    = "http://127.0.0.1:8888/"
 	APIKey       = "my-key"
 )
 
@@ -105,7 +106,7 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 
 	agentConf.StartJoin = []string{QEDGossip}
 	agentConf.EnableCompression = true
-	agentConf.AlertsUrls = []string{StoreURL}
+	agentConf.AlertsUrls = []string{AlertsURL}
 	agentConf.Role = role
 
 	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
@@ -126,6 +127,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		auditorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:710%d", id)
 		auditorConf.QEDUrls = []string{QEDUrl}
 		auditorConf.PubUrls = []string{StoreURL}
+		auditorConf.AlertsUrls = []string{AlertsURL}
 		auditorConf.APIKey = APIKey
 
 		au, err = auditor.NewAuditor(*auditorConf)
@@ -161,10 +163,10 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		monitorConf := monitor.DefaultConfig()
 		monitorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:720%d", id)
 		monitorConf.QEDUrls = []string{QEDUrl}
-		monitorConf.PubUrls = []string{StoreURL}
+		monitorConf.AlertsUrls = []string{AlertsURL}
 		monitorConf.APIKey = APIKey
 
-		mn, err = monitor.NewMonitor(*monitorConf)
+		mn, err = monitor.NewMonitor(monitorConf)
 		if err != nil {
 			t.Fatalf("Unable to create a new monitor: %v", err)
 		}
