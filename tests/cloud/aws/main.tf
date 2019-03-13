@@ -19,17 +19,60 @@ provider "aws" {
   profile = "${var.profile}"
 }
 
-data "aws_vpc" "default" {
-  default = true
+data "http" "ip" {
+  url = "http://icanhazip.com"
+}
+
+resource "aws_vpc" "qed-test" {
+  enable_dns_hostnames = true
+  cidr_block           = "${var.vpc_cidr}"
+
+  tags = {
+    Name = "QED-test"
+  }
+}
+
+resource "aws_subnet" "qed-test" {
+  vpc_id                  = "${aws_vpc.qed-test.id}"
+  cidr_block              = "${var.public_subnet_cidr}"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "QED-test"
+  }
+}
+
+resource "aws_internet_gateway" "qed-test" {
+  vpc_id = "${aws_vpc.qed-test.id}"
+
+  tags = {
+    Name = "QED-test"
+  }
+}
+
+resource "aws_route" "qed-test" {
+  route_table_id         = "${aws_vpc.qed-test.default_route_table_id}"
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = "${aws_internet_gateway.qed-test.id}"
+}
+
+resource "aws_vpc_dhcp_options" "qed-test" {
+  domain_name         = "service.qed-test"
+  domain_name_servers = ["AmazonProvidedDNS"]
+
+  tags = {
+    Name = "QED-test"
+  }
+}
+
+resource "aws_vpc_dhcp_options_association" "qed-test" {
+  vpc_id          = "${aws_vpc.qed-test.id}"
+  dhcp_options_id = "${aws_vpc_dhcp_options.qed-test.id}"
 }
 
 resource "aws_key_pair" "qed-benchmark" {
   key_name   = "qed-benchmark"
   public_key = "${file("~/.ssh/id_rsa.pub")}"
-}
-
-data "aws_subnet_ids" "all" {
-  vpc_id = "${data.aws_vpc.default.id}"
 }
 
 data "aws_ami" "amazon_linux" {
@@ -52,16 +95,12 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-data "http" "ip" {
-  url = "http://icanhazip.com"
-}
-
 module "security_group" {
   source = "terraform-aws-modules/security-group/aws"
 
   name        = "qed-benchmark"
   description = "Security group for QED benchmark usage"
-  vpc_id      = "${data.aws_vpc.default.id}"
+  vpc_id      = "${aws_vpc.qed-test.id}"
 
   ingress_cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
   ingress_rules       = ["http-8800-tcp", "all-icmp", "ssh-tcp"]
@@ -95,7 +134,7 @@ module "ec2" {
   ami                         = "${data.aws_ami.amazon_linux.id}"
   instance_type               = "${var.flavour}"
   instance_count              = "${var.cluster_size}"
-  subnet_id                   = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id                   = "${aws_subnet.qed-test.id}"
   vpc_security_group_ids      = ["${module.security_group.this_security_group_id}"]
   associate_public_ip_address = true
   key_name                    = "${aws_key_pair.qed-benchmark.key_name}"
@@ -114,7 +153,7 @@ module "ec2-spartan" {
   name                        = "qed-benchmark-spartan"
   ami                         = "${data.aws_ami.amazon_linux.id}"
   instance_type               = "${var.flavour}"
-  subnet_id                   = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id                   = "${aws_subnet.qed-test.id}"
   vpc_security_group_ids      = ["${module.security_group.this_security_group_id}"]
   associate_public_ip_address = true
   key_name                    = "${aws_key_pair.qed-benchmark.key_name}"
