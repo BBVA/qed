@@ -24,7 +24,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/bbva/qed/api/metricshttp"
@@ -41,6 +40,7 @@ import (
 type Config struct {
 	QEDUrls               []string
 	PubUrls               []string
+	AlertsUrls            []string
 	APIKey                string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
@@ -64,6 +64,10 @@ type Auditor struct {
 	taskCh          chan Task
 	quitCh          chan bool
 	executionTicker *time.Ticker
+}
+
+type Task interface {
+	Do()
 }
 
 func NewAuditor(conf Config) (*Auditor, error) {
@@ -96,16 +100,15 @@ func NewAuditor(conf Config) (*Auditor, error) {
 	auditor.prometheusRegistry = r
 	metricsMux := metricshttp.NewMetricsHTTP(r)
 
-	addr := strings.Split(conf.MetricsAddr, ":")
 	auditor.metricsServer = &http.Server{
-		Addr:    ":1" + addr[1],
+		Addr:    conf.MetricsAddr,
 		Handler: metricsMux,
 	}
 
 	go func() {
-		log.Debugf("	* Starting metrics HTTP server in addr: %s", conf.MetricsAddr)
+		log.Debugf("	* Auditor starting metrics HTTP server in addr: %s", conf.MetricsAddr)
 		if err := auditor.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start metrics HTTP server: %s", err)
+			log.Errorf("Auditor can't start metrics HTTP server: %s", err)
 		}
 	}()
 
@@ -145,49 +148,46 @@ func (a Auditor) dispatchTasks() {
 	}
 }
 
-func (a Auditor) Process(b protocol.BatchSnapshots) {
+func (a Auditor) Process(b *protocol.BatchSnapshots) {
 	// Metrics
 	metrics.QedAuditorBatchesReceivedTotal.Inc()
 	timer := prometheus.NewTimer(metrics.QedAuditorBatchesProcessSeconds)
 	defer timer.ObserveDuration()
 
 	task := &MembershipTask{
-		qed:     a.qed,
-		pubUrl:  a.conf.PubUrls[0],
-		taskCh:  a.taskCh,
-		retries: 2,
-		s:       *b.Snapshots[0],
+		qed:       a.qed,
+		pubUrl:    a.conf.PubUrls[0],
+		alertsUrl: a.conf.AlertsUrls[0],
+		taskCh:    a.taskCh,
+		retries:   2,
+		s:         *b.Snapshots[0],
 	}
 
 	a.taskCh <- task
 }
 
 func (a *Auditor) Shutdown() {
-	// Metrics
 	metrics.QedAuditorInstancesCount.Dec()
 
-	log.Debugf("Metrics enabled: stopping server...")
-	if err := a.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-		log.Error(err)
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	if err := a.metricsServer.Shutdown(ctx); err != nil {
+		log.Infof("Auditor metrics http server shutdown process with error: %v", err)
 	}
-	log.Debugf("Done.\n")
 
 	a.executionTicker.Stop()
 	a.quitCh <- true
 	close(a.quitCh)
 	close(a.taskCh)
-}
-
-type Task interface {
-	Do()
+	log.Debugf("Auditor stopped.")
 }
 
 type MembershipTask struct {
-	qed     *client.HTTPClient
-	pubUrl  string
-	taskCh  chan Task
-	retries int
-	s       protocol.SignedSnapshot
+	qed       *client.HTTPClient
+	pubUrl    string
+	alertsUrl string
+	taskCh    chan Task
+	retries   int
+	s         protocol.SignedSnapshot
 }
 
 func (t *MembershipTask) Do() {
@@ -256,7 +256,7 @@ func (t MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, e
 }
 
 func (t MembershipTask) sendAlert(msg string) {
-	resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json",
+	resp, err := http.Post(t.alertsUrl, "application/json",
 		bytes.NewBufferString(msg))
 	if err != nil {
 		log.Infof("Error saving batch in alertStore: %v", err)
