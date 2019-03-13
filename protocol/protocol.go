@@ -125,10 +125,16 @@ type IncrementalResponse struct {
 // ToMembershipProof translates internal api balloon.MembershipProof to the
 // public struct protocol.MembershipResult.
 func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResult {
+
+	var serialized map[string]hashing.Digest
+	if mp.HistoryProof != nil && mp.HistoryProof.AuditPath != nil {
+		serialized = mp.HistoryProof.AuditPath.Serialize()
+	}
+
 	return &MembershipResult{
 		mp.Exists,
 		mp.HyperProof.AuditPath,
-		mp.HistoryProof.AuditPath.Serialize(),
+		serialized,
 		mp.CurrentVersion,
 		mp.QueryVersion,
 		mp.ActualVersion,
