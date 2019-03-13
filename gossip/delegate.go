@@ -16,7 +16,10 @@
 package gossip
 
 import (
+	"encoding/json"
+
 	"github.com/bbva/qed/gossip/member"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/hashicorp/memberlist"
@@ -81,14 +84,24 @@ func (d *agentDelegate) NodeMeta(limit int) []byte {
 // slice may be modified after the call returns, so it should be copied if needed
 func (d *agentDelegate) NotifyMsg(msg []byte) {
 	var batch protocol.BatchSnapshots
-	err := batch.Decode(msg)
+
+	var tmp map[string]*json.RawMessage
+	err := json.Unmarshal(msg, &tmp)
 	if err != nil {
 		log.Errorf("Unable to decode message: %v", err)
 		return
 	}
 
+	err = batch.Decode(msg)
+	if err != nil {
+		log.Errorf("Unable to decode message: %v", err)
+		return
+	}
 	log.Debugf("Notifying batch  %+v\n", batchId(&batch))
-	d.agent.In <- &batch
+
+	// hashs the snaapshots to deduplicate processing inside the agent
+	hash := hashing.NewSha256Hasher().Do(*tmp["Snapshots"])
+	d.agent.In <- &hashedBatch{&batch, hash}
 }
 
 // GetBroadcasts is called when user data messages can be broadcast.
