@@ -188,11 +188,11 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 	fsm.restoreMu.Lock()
 	defer fsm.restoreMu.Unlock()
 
-	version, err := fsm.store.GetLastVersion()
+	id, err := fsm.store.Snapshot()
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Generating snapshot until version: %d (balloon version %d)", version, fsm.balloon.Version())
+	log.Debugf("Generating snapshot until version: %d (balloon version %d)", id, fsm.balloon.Version())
 
 	// Copy the node metadata.
 	meta, err := json.Marshal(fsm.meta)
@@ -200,8 +200,8 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 		log.Debugf("failed to encode meta for snapshot: %s", err.Error())
 		return nil, err
 	}
-
-	return &fsmSnapshot{lastVersion: version, store: fsm.store, meta: meta}, nil
+	// change lastVersion by checkpoint structure
+	return &fsmSnapshot{id: id, store: fsm.store, meta: meta}, nil
 }
 
 // Restore restores the node to a previous state.

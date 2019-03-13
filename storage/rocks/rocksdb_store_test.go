@@ -207,7 +207,9 @@ func TestBackupLoad(t *testing.T) {
 
 	// create backup
 	ioBuf := bytes.NewBufferString("")
-	require.NoError(t, store.Backup(ioBuf, 0))
+	id, err := store.Snapshot()
+	require.Nil(t, err)
+	require.NoError(t, store.Backup(ioBuf, id))
 
 	// restore backup
 	restore, recloseF := openRocksDBStore(t)
