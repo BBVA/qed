@@ -18,17 +18,56 @@ data "http" "ip" {
   url = "http://icanhazip.com"
 }
 
-data "aws_vpc" "default" {
-  default = true
+resource "aws_vpc" "qed" {
+  enable_dns_hostnames = true
+  cidr_block           = "${var.vpc_cidr}"
+
+  tags = {
+    Name = "QED"
+  }
+}
+
+resource "aws_subnet" "qed" {
+  vpc_id                  = "${aws_vpc.qed.id}"
+  cidr_block              = "${var.public_subnet_cidr}"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "QED"
+  }
+}
+
+resource "aws_internet_gateway" "qed" {
+  vpc_id = "${aws_vpc.qed.id}"
+
+  tags = {
+    Name = "QED"
+  }
+}
+
+resource "aws_route" "qed" {
+  route_table_id         = "${aws_vpc.qed.default_route_table_id}"
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = "${aws_internet_gateway.qed.id}"
+}
+
+resource "aws_vpc_dhcp_options" "qed" {
+  domain_name         = "service.qed"
+  domain_name_servers = ["AmazonProvidedDNS"]
+
+  tags = {
+    Name = "QED"
+  }
+}
+
+resource "aws_vpc_dhcp_options_association" "qed" {
+  vpc_id          = "${aws_vpc.qed.id}"
+  dhcp_options_id = "${aws_vpc_dhcp_options.qed.id}"
 }
 
 resource "aws_key_pair" "qed" {
   key_name   = "qed"
   public_key = "${file("${var.keypath}.pub")}"
-}
-
-data "aws_subnet_ids" "all" {
-  vpc_id = "${data.aws_vpc.default.id}"
 }
 
 module "security_group" {
@@ -37,7 +76,7 @@ module "security_group" {
 
   name        = "qed"
   description = "Security group for QED usage"
-  vpc_id      = "${data.aws_vpc.default.id}"
+  vpc_id      = "${aws_vpc.qed.id}"
 
   egress_rules = ["all-all"]
 
@@ -101,7 +140,7 @@ module "prometheus_security_group" {
 
   name        = "prometheus"
   description = "Security group for Prometheus/Grafana usage"
-  vpc_id      = "${data.aws_vpc.default.id}"
+  vpc_id      = "${aws_vpc.qed.id}"
 
   egress_rules = ["all-all"]
 
