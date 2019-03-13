@@ -26,13 +26,13 @@ import (
 )
 
 type Processor interface {
-	Process(protocol.BatchSnapshots)
+	Process(*protocol.BatchSnapshots)
 }
 
 type FakeProcessor struct {
 }
 
-func (d FakeProcessor) Process(b protocol.BatchSnapshots) {
+func (d FakeProcessor) Process(b *protocol.BatchSnapshots) {
 }
 
 type DummyProcessor struct {
