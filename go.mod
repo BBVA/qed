@@ -8,6 +8,7 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/coocood/freecache v1.1.0
 	github.com/dgraph-io/badger v1.5.4
+	github.com/golang/protobuf v1.2.0
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 	github.com/hashicorp/go-msgpack v0.5.3
 	github.com/hashicorp/logutils v1.0.0
