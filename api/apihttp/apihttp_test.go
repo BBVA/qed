@@ -32,8 +32,8 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
-	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/testutils/rand"
+	storage_utils "github.com/bbva/qed/testutils/storage"
 	assert "github.com/stretchr/testify/require"
 )
 
@@ -372,18 +372,14 @@ func newNodeBench(b *testing.B, id int) (*raftwal.RaftBalloon, func()) {
 	badgerPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
 
 	os.MkdirAll(badgerPath, os.FileMode(0755))
-	badger, err := badger.NewBadgerStore(badgerPath)
-	assert.NoError(b, err)
+	rocks, closeF := storage_utils.OpenRocksDBStore(b, badgerPath)
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	os.MkdirAll(raftPath, os.FileMode(0755))
-	r, err := raftwal.NewRaftBalloon(raftPath, ":8301", fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot))
+	r, err := raftwal.NewRaftBalloon(raftPath, ":8301", fmt.Sprintf("%d", id), rocks, make(chan *protocol.Snapshot))
 	assert.NoError(b, err)
 
-	return r, func() {
-		fmt.Println("Removing node folder")
-		os.RemoveAll(fmt.Sprintf("/var/tmp/raft-test/node%d", id))
-	}
+	return r, closeF
 
 }
 func BenchmarkApiAdd(b *testing.B) {
