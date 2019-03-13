@@ -21,14 +21,65 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/imdario/mergo"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
+	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
 )
+
+var (
+	// Client
+
+	RiotEventAdd = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "riot_event_add",
+			Help: "Number of events added into the cluster.",
+		},
+	)
+	RiotQueryMembership = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "riot_query_membership",
+			Help: "Number of single events directly verified into the cluster.",
+		},
+	)
+	RiotQueryIncremental = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "riot_query_incremental",
+			Help: "Number of range of verified events queried into the cluster.",
+		},
+	)
+	metricsList = []prometheus.Collector{
+		RiotEventAdd,
+		RiotQueryMembership,
+		RiotQueryIncremental,
+	}
+
+	registerMetrics sync.Once
+)
+
+// Register all metrics.
+func Register(r *prometheus.Registry) {
+	// Register the metrics.
+	registerMetrics.Do(
+		func() {
+			for _, metric := range metricsList {
+				r.MustRegister(metric)
+			}
+		},
+	)
+}
+
+type Riot struct {
+	Config Config
+
+	metricsServer      *http.Server
+	prometheusRegistry *prometheus.Registry
+}
 
 type Config struct {
 	// general conf
@@ -36,12 +87,8 @@ type Config struct {
 	APIKey   string
 	Insecure bool
 
-	// load kinds
-	Add         bool
-	Incremental bool
-	Membership  bool
-
 	// stress conf
+	Kind             string
 	Offload          bool
 	Profiling        bool
 	IncrementalDelta uint
@@ -51,160 +98,7 @@ type Config struct {
 	ClusterSize      uint
 }
 
-func main() {
-	if err := newRiotCommand().Execute(); err != nil {
-		os.Exit(-1)
-	}
-}
-
-func newRiotCommand() *cobra.Command {
-	// Input storage.
-	var logLevel string
-	var APIMode bool
-	config := Config{}
-
-	cmd := &cobra.Command{
-		Use:   "riot",
-		Short: "Stresser tool for qed server",
-		PreRun: func(cmd *cobra.Command, args []string) {
-
-			log.SetLogger("Riot", logLevel)
-
-			config.ClusterSize = uint(viper.GetInt("cluster_size"))
-
-			if config.ClusterSize != 0 && config.ClusterSize != 2 && config.ClusterSize != 4 {
-				log.Fatalf("invalid cluster-size specified: %d (only 2 or 4)", config.ClusterSize)
-			}
-
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			if config.Profiling {
-				go func() {
-					log.Info("Go profiling enabled\n")
-					log.Info(http.ListenAndServe(":6061", nil))
-				}()
-			}
-
-			if APIMode {
-				Serve(config)
-			} else {
-				Run(config)
-			}
-
-		},
-	}
-
-	f := cmd.Flags()
-
-	f.StringVarP(&logLevel, "log", "l", "debug", "Choose between log levels: silent, error, info and debug")
-	f.BoolVar(&APIMode, "api", false, "Raise a HTTP api in port 11111 ")
-
-	f.StringVar(&config.Endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
-	f.StringVar(&config.APIKey, "apikey", "my-key", "The key to use qed servers")
-	f.BoolVar(&config.Insecure, "insecure", false, "Allow self-signed TLS certificates")
-	f.BoolVar(&config.Add, "add", false, "Execute add benchmark")
-	f.BoolVarP(&config.Membership, "membership", "m", false, "Benchmark MembershipProof")
-	f.BoolVar(&config.Incremental, "incremental", false, "Execute Incremental benchmark")
-	f.BoolVar(&config.Profiling, "profiling", false, "Enable Go profiling $ go tool pprof -http : http://localhost:6061 ")
-	f.UintVarP(&config.IncrementalDelta, "delta", "d", 1000, "Specify delta for the IncrementalProof")
-	f.UintVar(&config.NumRequests, "n", 10e4, "Number of requests for the attack")
-	f.UintVar(&config.MaxGoRoutines, "r", 10, "Set the concurrency value")
-	f.UintVar(&config.Offset, "offset", 0, "The starting version from which we start the load")
-	f.UintVar(&config.ClusterSize, "cluster-size", 0, "")
-
-	_ = viper.BindPFlag("cluster_size", f.Lookup("cluster-size"))
-	_ = viper.BindEnv("cluster_size", "CLUSTER_SIZE")
-
-	return cmd
-}
-
-func Run(paramsConf Config) {
-	newAttack(paramsConf)
-}
-
-func Serve(paramsConf Config) {
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		if r.Body == nil {
-			http.Error(w, "Please send a request body", http.StatusBadRequest)
-			return
-		}
-
-		var newConf Config
-		err := json.NewDecoder(r.Body).Decode(&newConf)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		var conf Config
-		if err := mergo.Merge(&conf, paramsConf); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if err := mergo.Merge(&conf, newConf); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		go newAttack(conf)
-
-	})
-
-	api := &http.Server{
-		Addr:    ":18800",
-		Handler: mux,
-	}
-
-	log.Debug("	* Starting Riot HTTP server")
-	if err := api.ListenAndServe(); err != http.ErrServerClosed {
-		log.Errorf("Can't start Riot API HTTP server: %s", err)
-	}
-}
-
-type kind string
-
-const (
-	add         kind = "add"
-	membership  kind = "membership"
-	incremental kind = "incremental"
-)
-
-func newAttack(conf Config) {
-	var attack Attack
-
-	if conf.Add { // nolint:gocritic
-		log.Info("Benchmark ADD")
-		attack = Attack{
-			kind: add,
-		}
-	} else if conf.Membership {
-		log.Info("Benchmark MEMBERSHIP")
-
-		attack = Attack{
-			kind:           membership,
-			balloonVersion: uint64(conf.NumRequests + conf.Offset - 1),
-		}
-	} else if conf.Incremental {
-		log.Info("Benchmark INCREMENTAL")
-
-		attack = Attack{
-			kind: incremental,
-		}
-	}
-
-	attack.config = conf
-
-	attack.Run()
-}
+type Plan [][]Config
 
 type Attack struct {
 	kind           kind
@@ -224,88 +118,227 @@ type Task struct {
 	version, start, end uint64
 }
 
-func (a *Attack) Run() {
-	a.CreateFanOut()
-	a.CreateFanIn()
-
-	for i := a.config.Offset; i < a.config.Offset+a.config.NumRequests; i++ {
-		a.reqChan <- i
+func main() {
+	if err := newRiotCommand().Execute(); err != nil {
+		os.Exit(-1)
 	}
-
-}
-func (a *Attack) Shutdown() {
-	close(a.reqChan)
-	close(a.senChan)
 }
 
-func (a *Attack) CreateFanIn() {
-	a.reqChan = make(chan uint, a.config.NumRequests/100)
+func newRiotCommand() *cobra.Command {
+	// Input storage.
+	var logLevel string
+	var APIMode bool
+	riot := Riot{}
 
-	for rID := uint(0); rID < a.config.MaxGoRoutines; rID++ {
-		go func(rID uint) {
-			for {
-				id, ok := <-a.reqChan
-				if !ok {
-					log.Infof("Closing mux chan #%d", rID)
-					return
-				}
-				switch a.kind {
-				case add:
-					a.senChan <- Task{
-						kind:  a.kind,
-						event: fmt.Sprintf("event %d", id),
-					}
-				case membership:
-					a.senChan <- Task{
-						kind:    a.kind,
-						key:     []byte(fmt.Sprintf("event %d", id)),
-						version: a.balloonVersion,
-					}
-				case incremental:
-					a.senChan <- Task{
-						kind:  a.kind,
-						start: uint64(id),
-						end:   uint64(id + a.config.IncrementalDelta),
-					}
-				}
+	cmd := &cobra.Command{
+		Use:   "riot",
+		Short: "Stresser tool for qed server",
+		PreRun: func(cmd *cobra.Command, args []string) {
+
+			log.SetLogger("Riot", logLevel)
+
+			if riot.Config.Profiling {
+				go func() {
+					log.Info("Go profiling enabled")
+					log.Info(http.ListenAndServe(":6060", nil))
+				}()
 			}
-		}(rID)
+
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			riot.Start(APIMode)
+		},
+	}
+
+	f := cmd.Flags()
+
+	f.StringVarP(&logLevel, "log", "l", "debug", "Choose between log levels: silent, error, info and debug")
+	f.BoolVar(&APIMode, "api", false, "Raise a HTTP api in port 7700")
+
+	f.StringVar(&riot.Config.Endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
+	f.StringVarP(&riot.Config.APIKey, "apikey", "k", "my-key", "The key to use qed servers")
+	f.BoolVar(&riot.Config.Insecure, "insecure", false, "Allow self-signed TLS certificates")
+
+	f.StringVar(&riot.Config.Kind, "kind", "", "The kind of load to execute")
+
+	f.BoolVar(&riot.Config.Profiling, "profiling", false, "Enable Go profiling $ go tool pprof")
+	f.UintVarP(&riot.Config.IncrementalDelta, "delta", "d", 1000, "Specify delta for the IncrementalProof")
+	f.UintVar(&riot.Config.NumRequests, "n", 10e4, "Number of requests for the attack")
+	f.UintVar(&riot.Config.MaxGoRoutines, "r", 10, "Set the concurrency value")
+	f.UintVar(&riot.Config.Offset, "offset", 0, "The starting version from which we start the load")
+
+	return cmd
+}
+
+func (riot *Riot) Start(APIMode bool) {
+
+	r := prometheus.NewRegistry()
+	Register(r)
+	riot.prometheusRegistry = r
+	metricsMux := metricshttp.NewMetricsHTTP(r)
+	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
+
+	b, _ := json.MarshalIndent(riot.Config, "", "  ")
+	log.Debugf(">>>>>>>>>>>>> ATTACK: %s", b)
+
+	if APIMode {
+		riot.Serve()
+	} else {
+		riot.RunOnce()
 	}
 
 }
 
-func (a *Attack) CreateFanOut() {
+func (riot *Riot) RunOnce() {
+	newAttack(riot.Config)
+}
+
+func postReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return w, r
+	}
+
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", http.StatusBadRequest)
+	}
+
+	return w, r
+}
+func (riot *Riot) MergeConf(newConf Config) Config {
+	conf := riot.Config
+	_ = mergo.Merge(&conf, newConf)
+	return conf
+}
+
+func (riot *Riot) Serve() {
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
+		w, r = postReqSanitizer(w, r)
+
+		var newConf Config
+		err := json.NewDecoder(r.Body).Decode(&newConf)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		newAttack(riot.MergeConf(newConf))
+	})
+
+	mux.HandleFunc("/plan", func(w http.ResponseWriter, r *http.Request) {
+		var wg sync.WaitGroup
+		w, r = postReqSanitizer(w, r)
+
+		var plan Plan
+		err := json.NewDecoder(r.Body).Decode(&plan)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		for _, batch := range plan {
+			for _, conf := range batch {
+				wg.Add(1)
+				go func(conf Config) {
+					newAttack(riot.MergeConf(conf))
+					wg.Done()
+				}(conf)
+
+			}
+			wg.Wait()
+		}
+	})
+
+	api := &http.Server{
+		Addr:    ":7700",
+		Handler: mux,
+	}
+
+	log.Debug("	* Starting Riot HTTP server")
+	if err := api.ListenAndServe(); err != http.ErrServerClosed {
+		log.Errorf("Can't start Riot API HTTP server: %s", err)
+	}
+}
+
+type kind string
+
+const (
+	add         kind = "add"
+	membership  kind = "membership"
+	incremental kind = "incremental"
+)
+
+func newAttack(conf Config) {
+	b, _ := json.MarshalIndent(conf, "", "  ")
+	log.Debugf(">>>>>>>>>>>>> ATTACK: %s", b)
 
 	cConf := client.DefaultConfig()
-	cConf.Endpoints = []string{a.config.Endpoint}
-	cConf.APIKey = a.config.APIKey
-	cConf.Insecure = a.config.Insecure
-	a.client = client.NewHTTPClient(*cConf)
-	if err := a.client.Ping(); err != nil {
+	cConf.Endpoints = []string{conf.Endpoint}
+	cConf.APIKey = conf.APIKey
+	cConf.Insecure = conf.Insecure
+
+	attack := Attack{
+		client:         client.NewHTTPClient(*cConf),
+		config:         conf,
+		kind:           kind(conf.Kind),
+		balloonVersion: uint64(conf.NumRequests + conf.Offset - 1),
+	}
+
+	if err := attack.client.Ping(); err != nil {
 		panic(err)
 	}
 
-	a.senChan = make(chan Task, a.config.NumRequests/100)
+	attack.Run()
+}
+
+func (a *Attack) Run() {
+	var wg sync.WaitGroup
+	a.senChan = make(chan Task)
 
 	for rID := uint(0); rID < a.config.MaxGoRoutines; rID++ {
-
+		wg.Add(1)
 		go func(rID uint) {
 			for {
 				task, ok := <-a.senChan
 				if !ok {
-					log.Infof("Closing demux chan #%d", rID)
+					log.Infof("Closing #%d", rID)
+					wg.Done()
 					return
 				}
 
 				switch task.kind {
 				case add:
 					_, _ = a.client.Add(task.event)
+					log.Debugf("Sending #%s", task.event)
+					RiotEventAdd.Inc()
 				case membership:
 					_, _ = a.client.Membership(task.key, task.version)
+					log.Debugf("Membring #%s", task.event)
+					RiotQueryMembership.Inc()
 				case incremental:
 					_, _ = a.client.Incremental(task.start, task.end)
+					log.Debugf("Incrming #%s", task.event)
+					RiotQueryIncremental.Inc()
 				}
 			}
 		}(rID)
 	}
+
+	for i := a.config.Offset; i < a.config.Offset+a.config.NumRequests; i++ {
+		ev := fmt.Sprintf("event %d", i)
+		a.senChan <- Task{
+			kind:    a.kind,
+			event:   ev,
+			key:     []byte(ev),
+			version: a.balloonVersion,
+			start:   uint64(i),
+			end:     uint64(i + a.config.IncrementalDelta),
+		}
+	}
+
+	close(a.senChan)
+	wg.Wait()
 }
