@@ -65,6 +65,42 @@ resource "aws_vpc_dhcp_options_association" "qed" {
   dhcp_options_id = "${aws_vpc_dhcp_options.qed.id}"
 }
 
+data "aws_cloudwatch_log_group" "qed" {
+  name = "qed"
+}
+
+resource "aws_iam_role" "qed" {
+  name = "qed"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "vpc-flow-logs.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "qed" {
+  role       = "${aws_iam_role.qed.name}"
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
+resource "aws_flow_log" "qed" {
+  log_destination = "${data.aws_cloudwatch_log_group.qed.arn}"
+  iam_role_arn    = "${aws_iam_role.qed.arn}"
+  vpc_id          = "${aws_vpc.qed.id}"
+  traffic_type    = "ALL"
+}
+
 resource "aws_key_pair" "qed" {
   key_name   = "qed"
   public_key = "${file("${var.keypath}.pub")}"
