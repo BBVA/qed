@@ -15,6 +15,7 @@ variables:
   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
   GO111MODULE: on
+  CGO_LDFLAGS_ALLOW: '.*'
 
 steps:
 - script: |
@@ -36,6 +37,13 @@ steps:
     openssl x509 -req -days 365 -sha256 -in $HOME/.ssh/server.csr -CA $HOME/.ssh/ca.crt -CAkey $HOME/.ssh/ca.key -CAcreateserial -out $HOME/.ssh/server.crt -extfile <(echo subjectAltName = IP:127.0.0.1)
   displayName: 'Generate certificates'
 
+- script: |
+    git submodule update --init --recursive
+    cd c-deps
+    ./builddeps.sh
+    cd ..
+ displayName: 'Build rocksdb'
+ 
 - script: |
     go version
     go mod download
