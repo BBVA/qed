@@ -273,16 +273,17 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 	case err == nil:
 		proof.Exists = true
 		proof.ActualVersion = util.BytesAsUint64(leaf.Value)
-	}
 
-	if proof.ActualVersion <= version {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, version)
-		}()
-	} else {
-		return nil, fmt.Errorf("Query version %d is not on history tree which version is %d", version, proof.ActualVersion)
+		if proof.ActualVersion <= version {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, version)
+			}()
+		} else {
+			return nil, fmt.Errorf("query version %d is not on history tree which version is %d", version, proof.ActualVersion)
+		}
+
 	}
 
 	hyperProof, hyperErr = b.hyperTree.QueryMembership(leaf.Key, leaf.Value)
