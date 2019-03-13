@@ -47,7 +47,7 @@ module "qed" {
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id              = "${aws_subnet.qed.id}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
 }
@@ -60,7 +60,7 @@ module "inmemory-storage" {
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id              = "${aws_subnet.qed.id}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
 }
@@ -75,7 +75,7 @@ module "agent-publisher" {
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id              = "${aws_subnet.qed.id}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
 }
@@ -90,7 +90,7 @@ module "agent-monitor" {
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id              = "${aws_subnet.qed.id}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
 }
@@ -105,7 +105,7 @@ module "agent-auditor" {
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id              = "${aws_subnet.qed.id}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
 }
@@ -117,7 +117,7 @@ module "prometheus" {
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.prometheus_security_group.this_security_group_id}"
-  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id              = "${aws_subnet.qed.id}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
 }
@@ -129,7 +129,7 @@ module "riot" {
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
-  subnet_id              = "${element(data.aws_subnet_ids.all.ids, 0)}"
+  subnet_id              = "${aws_subnet.qed.id}"
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
   endpoint               = "${module.qed.private_ip[0]}"
