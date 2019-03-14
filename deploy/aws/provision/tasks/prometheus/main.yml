@@ -16,21 +16,21 @@
 
 - name: Download Prometheus
   unarchive:
-    src: https://github.com/prometheus/prometheus/releases/download/v2.7.0/prometheus-2.7.0.linux-amd64.tar.gz
+    src: https://github.com/prometheus/prometheus/releases/download/v2.8.0/prometheus-2.8.0.linux-amd64.tar.gz
     dest: /var
     keep_newer: true
     remote_src: true
 
 - name: Create Node Exporter link 
   file:
-    src: /var/prometheus-2.7.0.linux-amd64
+    src: /var/prometheus-2.8.0.linux-amd64
     dest: /var/prometheus
     state: link
 
 - name: Install Grafana
   yum:
       update_cache: yes 
-      name: https://dl.grafana.com/oss/release/grafana-5.4.2-1.x86_64.rpm
+      name: https://dl.grafana.com/oss/release/grafana-6.0.1-1.x86_64.rpm
 
 - name: Copy Grafana config and dashboards to remote
   copy:
