@@ -473,7 +473,7 @@ func BenchmarkAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkAdd", log.SILENT)
 
-	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/history_tree_test.db")
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/history_tree_test.db")
 	defer closeF()
 
 	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 300)

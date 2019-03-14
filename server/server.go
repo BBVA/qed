@@ -45,7 +45,7 @@ import (
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/sign"
-	"github.com/bbva/qed/storage/badger"
+	"github.com/bbva/qed/storage/rocks"
 	"github.com/bbva/qed/util"
 )
 
@@ -112,7 +112,7 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// Open badger store
-	store, err := badger.NewBadgerStoreOpts(&badger.Options{Path: conf.DBPath, ValueLogGC: true})
+	store, err := rocks.NewRocksDBStore(conf.DBPath)
 	if err != nil {
 		return nil, err
 	}

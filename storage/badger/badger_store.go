@@ -335,7 +335,11 @@ func (s *BadgerStore) Load(r io.Reader) error {
 	return s.db.Load(r)
 }
 
-func (s *BadgerStore) GetLastVersion() (uint64, error) {
+// Take a snapshot of the store, and returns and id
+// to be used in the back up process. The state of the
+// snapshot is stored in the store instance.
+// In badger the id corresponds to the last version stored.
+func (s *BadgerStore) Snapshot() (uint64, error) {
 	var version uint64
 	err := s.db.View(func(txn *b.Txn) error {
 		opts := b.DefaultIteratorOptions

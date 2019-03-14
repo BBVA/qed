@@ -13,10 +13,10 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-
-package badger
+package rocks
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -31,7 +31,7 @@ import (
 )
 
 func TestMutate(t *testing.T) {
-	store, closeF := openBadgerStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 	prefix := byte(0x0)
 
@@ -52,10 +52,9 @@ func TestMutate(t *testing.T) {
 		require.Equalf(t, test.expectedError, err, "Error getting key in test: %s", test.testname)
 	}
 }
-
 func TestGetExistentKey(t *testing.T) {
 
-	store, closeF := openBadgerStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	testCases := []struct {
@@ -91,7 +90,7 @@ func TestGetExistentKey(t *testing.T) {
 }
 
 func TestGetRange(t *testing.T) {
-	store, closeF := openBadgerStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	var testCases = []struct {
@@ -121,39 +120,6 @@ func TestGetRange(t *testing.T) {
 
 }
 
-func TestDelete(t *testing.T) {
-	store, closeF := openBadgerStore(t)
-	defer closeF()
-
-	prefix := byte(0x0)
-	tests := []struct {
-		testname      string
-		key, value    []byte
-		expectedError error
-	}{
-		{"Delete key", []byte("Key"), []byte("Value"), storage.ErrKeyNotFound},
-	}
-
-	for _, test := range tests {
-
-		// err := store.Mutate({prefix, test.key, test.value))
-		err := store.Mutate([]*storage.Mutation{
-			{prefix, test.key, test.value},
-		})
-		require.NoError(t, err, "Error mutating in test: %s", test.testname)
-
-		_, err = store.Get(prefix, test.key)
-		require.NoError(t, err, "Error getting key in test: %s", test.testname)
-
-		err = store.Delete(prefix, test.key)
-		require.NoError(t, err, "Error deleting in test: %s", test.testname)
-
-		_, err = store.Get(prefix, test.key)
-		require.Equalf(t, test.expectedError, err, "Error getting non-existent key in test: %s", test.testname)
-	}
-
-}
-
 func TestGetAll(t *testing.T) {
 
 	prefix := storage.HyperCachePrefix
@@ -168,7 +134,7 @@ func TestGetAll(t *testing.T) {
 		{17, 59, 14},
 	}
 
-	store, closeF := openBadgerStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	// insert
@@ -200,7 +166,7 @@ func TestGetAll(t *testing.T) {
 }
 
 func TestGetLast(t *testing.T) {
-	store, closeF := openBadgerStore(t)
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	// insert
@@ -223,7 +189,8 @@ func TestGetLast(t *testing.T) {
 }
 
 func TestBackupLoad(t *testing.T) {
-	store, closeF := openBadgerStore(t)
+
+	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	// insert
@@ -233,36 +200,49 @@ func TestBackupLoad(t *testing.T) {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
 			store.Mutate([]*storage.Mutation{
-				{prefix[0], key, key},
+				{Prefix: prefix[0], Key: key, Value: key},
 			})
 		}
 	}
 
-	version, err := store.Snapshot()
-	require.NoError(t, err)
+	// create backup
+	ioBuf := bytes.NewBufferString("")
+	id, err := store.Snapshot()
+	require.Nil(t, err)
+	require.NoError(t, store.Backup(ioBuf, id))
 
-	backupDir := mustTempDir()
-	defer os.RemoveAll(backupDir)
-	backupFile, err := os.Create(filepath.Join(backupDir, "backup"))
-	require.NoError(t, err)
-
-	store.Backup(backupFile, version)
-
-	restore, recloseF := openBadgerStore(t)
+	// restore backup
+	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
-	restore.Load(backupFile)
-	reversion, err := store.Snapshot()
+	require.NoError(t, restore.Load(ioBuf))
 
-	require.NoError(t, err)
-	require.Equal(t, reversion, version, "Error in restored version")
+	// check elements
+	for _, prefix := range prefixes {
+		reader := store.GetAll(prefix[0])
+		for {
+			entries := make([]*storage.KVPair, 1000)
+			n, _ := reader.Read(entries)
+			if n == 0 {
+				break
+			}
+			for i := 0; i < n; i++ {
+				kv, err := restore.Get(prefix[0], entries[i].Key)
+				require.NoError(t, err)
+				require.Equal(t, entries[i].Value, kv.Value, "The values should match")
+			}
+		}
+		reader.Close()
+	}
+
 }
 
 func BenchmarkMutate(b *testing.B) {
-	store, closeF := openBadgerStore(b)
+	store, closeF := openRocksDBStore(b)
 	defer closeF()
 	prefix := byte(0x0)
-	b.N = 10000
+	b.N = 100000
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		store.Mutate([]*storage.Mutation{
 			{prefix, rand.Bytes(128), []byte("Value")},
@@ -271,84 +251,22 @@ func BenchmarkMutate(b *testing.B) {
 
 }
 
-func BenchmarkGet(b *testing.B) {
-	store, closeF := openBadgerStore(b)
-	defer closeF()
-	prefix := byte(0x0)
-	N := 10000
-	b.N = N
-	var key []byte
-
-	// populate storage
-	for i := 0; i < N; i++ {
-		if i == 10 {
-			key = rand.Bytes(128)
-			store.Mutate([]*storage.Mutation{
-				{prefix, key, []byte("Value")},
-			})
-		} else {
-			store.Mutate([]*storage.Mutation{
-				{prefix, rand.Bytes(128), []byte("Value")},
-			})
-		}
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		store.Get(prefix, key)
-	}
-
-}
-
-func BenchmarkGetRangeInLargeTree(b *testing.B) {
-	store, closeF := openBadgerStore(b)
-	defer closeF()
-	prefix := byte(0x0)
-	N := 1000000
-
-	// populate storage
-	for i := 0; i < N; i++ {
-		store.Mutate([]*storage.Mutation{
-			{prefix, []byte{byte(i)}, []byte("Value")},
-		})
-	}
-
-	b.ResetTimer()
-
-	b.Run("Small range", func(b *testing.B) {
-		b.N = 10000
-		for i := 0; i < b.N; i++ {
-			store.GetRange(prefix, []byte{10}, []byte{10})
-		}
-	})
-
-	b.Run("Large range", func(b *testing.B) {
-		b.N = 10000
-		for i := 0; i < b.N; i++ {
-			store.GetRange(prefix, []byte{10}, []byte{35})
-		}
-	})
-
-}
-
-func openBadgerStore(t require.TestingT) (*BadgerStore, func()) {
+func openRocksDBStore(t require.TestingT) (*RocksDBStore, func()) {
 	path := mustTempDir()
-
-	store, err := NewBadgerStore(filepath.Join(path, "backupbadger_store_test.db"))
+	store, err := NewRocksDBStore(filepath.Join(path, "rockdsdb_store_test.db"))
 	if err != nil {
-		t.Errorf("Error opening badger store: %v", err)
+		t.Errorf("Error opening rocksdb store: %v", err)
 		t.FailNow()
 	}
 	return store, func() {
 		store.Close()
-		defer os.RemoveAll(path)
+		deleteFile(path)
 	}
 }
 
 func mustTempDir() string {
 	var err error
-	path, err := ioutil.TempDir("", "backup-test-")
+	path, err := ioutil.TempDir("/var/tmp", "rocksdbstore-test-")
 	if err != nil {
 		panic("failed to create temp dir")
 	}
