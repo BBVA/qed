@@ -17,6 +17,7 @@
 package balloon
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -313,12 +314,17 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 
 	// Metrics
 	metrics.QedBalloonIncrementalTotal.Inc()
-	//timer := prometheus.NewTimer(metrics.QedBalloonIncrementalDurationSeconds)
-	//defer timer.ObserveDuration()
 
 	stats := metrics.Balloon
 	stats.AddFloat("QueryConsistency", 1)
 	var proof IncrementalProof
+
+	if start >= b.version ||
+		end >= b.version ||
+		start >= end {
+
+		return nil, errors.New("unable to process proof from history tree: invalid range")
+	}
 
 	proof.Start = start
 	proof.End = end
