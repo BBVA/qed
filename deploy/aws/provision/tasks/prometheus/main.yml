@@ -46,14 +46,6 @@
     - dashboards/QED.json
   register: grafana_config
 
-- name: Copy Grafana config and dashboards to remote
-  copy:
-      dest: /etc/grafana/provisioning/
-      src: files/grafana
-      owner: root
-      group: grafana
-  register: grafana_config
-
 - name: Restart Grafana
   service:
     name: grafana-server
