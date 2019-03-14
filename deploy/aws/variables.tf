@@ -3,7 +3,7 @@ variable "aws_profile" {
 }
 
 variable "keypath" {
-  default = "~/.ssh/id_rsa_free"
+  default = "~/.ssh/id_rsa-qed"
 }
 
 variable "vpc_cidr" {
