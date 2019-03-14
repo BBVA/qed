@@ -70,6 +70,7 @@ steps:
   inputs:
     testRunner: JUnit
     testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+    failOnStandardError: 'true'
 
 - task: PublishCodeCoverageResults@1
   inputs:
