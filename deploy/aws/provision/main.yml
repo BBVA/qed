@@ -184,7 +184,6 @@
       shell: > 
         {{ item }}
       with_items:
-        - /var/prometheus/prometheus-start.sh
         - /var/qed/exporter-start.sh
   tags:
     - start-prometheus
