@@ -12,6 +12,18 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
+- name: Fix missing terminfo entries
+  file:
+    state: link
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - src: /usr/share/terminfo/r/rxvt-unicode
+      dest: /usr/share/terminfo/r/rxvt-unicode-256color
+    - src: /usr/share/terminfo/x/xterm-color
+      dest: /usr/share/terminfo/x/xterm-kitty
+
 - name: Create QED and Node Exporter install dir
   file:
       path: /var/{{ item }}
