@@ -151,27 +151,6 @@ var (
 		},
 	)
 
-	// Client
-
-	ClientEventAdd = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "client_event_add",
-			Help: "Number of events added into the cluster.",
-		},
-	)
-	ClientQueryMembership = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "client_query_membership",
-			Help: "Number of single events directly verified into the cluster.",
-		},
-	)
-	ClientQueryIncremental = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "client_query_incremental",
-			Help: "Number of range of verified events queried into the cluster.",
-		},
-	)
-
 	// PROMETHEUS
 
 	metricsList = []prometheus.Collector{
@@ -190,10 +169,6 @@ var (
 
 		QedSenderInstancesCount,
 		QedSenderBatchesSentTotal,
-
-		ClientEventAdd,
-		ClientQueryMembership,
-		ClientQueryIncremental,
 	}
 
 	registerMetrics sync.Once

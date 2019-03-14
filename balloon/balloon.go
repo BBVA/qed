@@ -17,6 +17,7 @@
 package balloon
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 
@@ -265,35 +266,38 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 	leaf, err = b.store.Get(storage.IndexPrefix, proof.KeyDigest)
 	switch {
 	case err != nil && err != storage.ErrKeyNotFound:
-		return nil, fmt.Errorf("Error reading leaf %v data: %v", proof.KeyDigest, err)
+		return nil, fmt.Errorf("error reading leaf %v data: %v", proof.KeyDigest, err)
+
 	case err != nil && err == storage.ErrKeyNotFound:
 		proof.Exists = false
 		proof.ActualVersion = version
-		leaf = &storage.KVPair{keyDigest, util.Uint64AsBytes(version)}
+		leaf = &storage.KVPair{Key: keyDigest, Value: util.Uint64AsBytes(version)}
+
 	case err == nil:
 		proof.Exists = true
 		proof.ActualVersion = util.BytesAsUint64(leaf.Value)
-	}
 
-	if proof.ActualVersion <= version {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, version)
-		}()
-	} else {
-		return nil, fmt.Errorf("Query version %d is not on history tree which version is %d", version, proof.ActualVersion)
+		if proof.ActualVersion <= version {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, version)
+			}()
+		} else {
+			return nil, fmt.Errorf("query version %d is not on history tree which version is %d", version, proof.ActualVersion)
+		}
+
 	}
 
 	hyperProof, hyperErr = b.hyperTree.QueryMembership(leaf.Key, leaf.Value)
 
 	wg.Wait()
 	if hyperErr != nil {
-		return nil, fmt.Errorf("Unable to get proof from hyper tree: %v", err)
+		return nil, fmt.Errorf("unable to get proof from hyper tree: %v", err)
 	}
 
 	if historyErr != nil {
-		return nil, fmt.Errorf("Unable to get proof from history tree: %v", err)
+		return nil, fmt.Errorf("unable to get proof from history tree: %v", err)
 	}
 
 	proof.HyperProof = hyperProof
@@ -310,12 +314,17 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 
 	// Metrics
 	metrics.QedBalloonIncrementalTotal.Inc()
-	//timer := prometheus.NewTimer(metrics.QedBalloonIncrementalDurationSeconds)
-	//defer timer.ObserveDuration()
 
 	stats := metrics.Balloon
 	stats.AddFloat("QueryConsistency", 1)
 	var proof IncrementalProof
+
+	if start >= b.version ||
+		end >= b.version ||
+		start >= end {
+
+		return nil, errors.New("unable to process proof from history tree: invalid range")
+	}
 
 	proof.Start = start
 	proof.End = end
@@ -323,7 +332,7 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 
 	historyProof, err := b.historyTree.ProveConsistency(start, end)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to get proof from history tree: %v", err)
+		return nil, fmt.Errorf("unable to get proof from history tree: %v", err)
 	}
 	proof.AuditPath = historyProof.AuditPath
 

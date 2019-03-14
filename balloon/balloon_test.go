@@ -71,6 +71,10 @@ func TestQueryMembership(t *testing.T) {
 		{[]byte{0x5a}, uint64(0)},
 	}
 
+	// Asking for a future/wrong membership should not fail
+	_, err = balloon.QueryMembership([]byte{0x10}, 15)
+	require.NoError(t, err)
+
 	for i, c := range testCases {
 		_, mutations, err := balloon.Add(c.key)
 		require.NoErrorf(t, err, "Error adding event %d", i)
@@ -164,6 +168,9 @@ func TestQueryConsistencyProof(t *testing.T) {
 		defer closeF()
 		balloon, err := NewBalloon(store, hashing.NewFakeXorHasher)
 		require.NoError(t, err)
+
+		_, err = balloon.QueryConsistency(uint64(30), uint64(600))
+		require.Error(t, err, "Asking for a future/wrong consitency should fail")
 
 		for j := 0; j <= int(c.end); j++ {
 			_, mutations, err := balloon.Add(util.Uint64AsBytes(uint64(j)))

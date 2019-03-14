@@ -17,531 +17,320 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"crypto/tls"
 	"encoding/json"
-	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"log"
-	"math"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
-	"strconv"
 	"sync"
-	"time"
 
-	"github.com/bbva/qed/protocol"
+	"github.com/imdario/mergo"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/cobra"
+
+	"github.com/bbva/qed/api/metricshttp"
+	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/log"
 )
 
 var (
-	endpoint        string
-	apiKey          string
-	wantAdd         bool
-	wantIncremental bool
-	wantMembership  bool
-	offload         bool
+	// Client
 
-	profiling        bool
-	incrementalDelta int
-	offset           int
-	numRequests      int
-	readConcurrency  int
-	writeConcurrency int
-	delay_ms         int
+	RiotEventAdd = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "riot_event_add",
+			Help: "Number of events added into the cluster.",
+		},
+	)
+	RiotQueryMembership = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "riot_query_membership",
+			Help: "Number of single events directly verified into the cluster.",
+		},
+	)
+	RiotQueryIncremental = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "riot_query_incremental",
+			Help: "Number of range of verified events queried into the cluster.",
+		},
+	)
+	metricsList = []prometheus.Collector{
+		RiotEventAdd,
+		RiotQueryMembership,
+		RiotQueryIncremental,
+	}
+
+	registerMetrics sync.Once
 )
 
-func init() {
-	// Create a default config to use as default values in flags
-	config := NewDefaultConfig()
+// Register all metrics.
+func Register(r *prometheus.Registry) {
+	// Register the metrics.
+	registerMetrics.Do(
+		func() {
+			for _, metric := range metricsList {
+				r.MustRegister(metric)
+			}
+		},
+	)
+}
 
-	flag.StringVar(&endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
-	flag.StringVar(&apiKey, "apikey", "my-key", "The key to use qed servers")
-	flag.BoolVar(&wantAdd, "add", false, "Execute add benchmark")
-	flag.IntVar(&delay_ms, "delay", 0, "Set request delay in milliseconds")
+type Riot struct {
+	Config Config
 
-	usage := "Benchmark MembershipProof"
-	flag.BoolVar(&wantMembership, "membership", false, usage)
-	flag.BoolVar(&wantMembership, "m", false, usage+" (shorthand)")
-
-	flag.BoolVar(&wantIncremental, "incremental", false, "Execute Incremental benchmark")
-	flag.BoolVar(&offload, "offload", false, "Perform reads only on %50 of the cluster size (With cluster size 2 reads will be performed only on follower1)")
-	flag.BoolVar(&profiling, "profiling", false, "Enable Go profiling with pprof tool. $ go tool pprof -http : http://localhost:6061 ")
-
-	usageDelta := "Specify delta for the IncrementalProof"
-	flag.IntVar(&incrementalDelta, "delta", 1000, usageDelta)
-	flag.IntVar(&incrementalDelta, "d", 1000, usageDelta+" (shorthand)")
-
-	flag.IntVar(&numRequests, "n", 10e4, "Number of requests for the attack")
-	flag.IntVar(&readConcurrency, "r", config.maxGoRoutines, "Set read concurrency value")
-	flag.IntVar(&writeConcurrency, "w", config.maxGoRoutines, "Set write concurrency value")
-	flag.IntVar(&offset, "offset", 0, "The starting version from which we start the load")
+	metricsServer      *http.Server
+	prometheusRegistry *prometheus.Registry
 }
 
 type Config struct {
-	maxGoRoutines  int
-	numRequests    int
-	apiKey         string
-	startVersion   int
-	continuous     bool
+	// general conf
+	Endpoint string
+	APIKey   string
+	Insecure bool
+
+	// stress conf
+	Kind             string
+	Offload          bool
+	Profiling        bool
+	IncrementalDelta uint
+	Offset           uint
+	NumRequests      uint
+	MaxGoRoutines    uint
+	ClusterSize      uint
+}
+
+type Plan [][]Config
+
+type kind string
+
+const (
+	add         kind = "add"
+	membership  kind = "membership"
+	incremental kind = "incremental"
+)
+
+type Attack struct {
+	kind           kind
 	balloonVersion uint64
-	counter        float64
-	delay_ms       time.Duration
-	req            HTTPClient
+
+	config  Config
+	client  *client.HTTPClient
+	senChan chan Task
 }
 
-type HTTPClient struct {
-	client             *http.Client
-	method             string
-	endpoint           string
-	expectedStatusCode int
-}
-
-// type Config map[string]interface{}
-func NewDefaultConfig() *Config {
-
-	return &Config{
-		maxGoRoutines:  10,
-		numRequests:    numRequests,
-		apiKey:         apiKey,
-		startVersion:   0,
-		continuous:     false,
-		balloonVersion: uint64(numRequests) - 1,
-		counter:        0,
-		req: HTTPClient{
-			client:             nil,
-			method:             "POST",
-			endpoint:           endpoint,
-			expectedStatusCode: 200,
-		},
-	}
-}
-
-type Task func(goRoutineId int, c *Config) ([]byte, error)
-
-// func (t *Task) Timeout()event
-func SpawnerOfEvil(c *Config, t Task) {
-	var wg sync.WaitGroup
-
-	for goRoutineId := 0; goRoutineId < c.maxGoRoutines; goRoutineId++ {
-		wg.Add(1)
-		go func(goRoutineId int) {
-			defer wg.Done()
-			Attacker(goRoutineId, c, t)
-		}(goRoutineId)
-	}
-	wg.Wait()
-}
-
-func Attacker(goRoutineId int, c *Config, f func(j int, c *Config) ([]byte, error)) {
-
-	for eventIndex := c.startVersion + goRoutineId; eventIndex < c.startVersion+c.numRequests || c.continuous; eventIndex += c.maxGoRoutines {
-		query, err := f(eventIndex, c)
-		if len(query) == 0 {
-			log.Fatalf("Empty query: %v", err)
-		}
-
-		req, err := http.NewRequest(c.req.method, c.req.endpoint, bytes.NewBuffer(query))
-		if err != nil {
-			log.Fatalf("Error preparing request: %v", err)
-		}
-
-		// Set Api-Key header
-		req.Header.Set("Api-Key", c.apiKey)
-		res, err := c.req.client.Do(req)
-		if err != nil {
-			log.Fatalf("Unable to perform request: %v", err)
-		}
-
-		if res.StatusCode != c.req.expectedStatusCode {
-			log.Fatalf("Server error: %v", res)
-		}
-
-		c.counter++
-
-		_, _ = io.Copy(ioutil.Discard, res.Body)
-		res.Body.Close()
-
-		c.delay_ms = time.Duration(delay_ms)
-		time.Sleep(c.delay_ms * time.Millisecond)
-	}
-	c.counter = 0
-}
-
-func addSampleEvents(eventIndex int, c *Config) ([]byte, error) {
-
-	return json.Marshal(
-		&protocol.Event{
-			[]byte(fmt.Sprintf("event %d", eventIndex)),
-		},
-	)
-}
-
-func queryMembership(eventIndex int, c *Config) ([]byte, error) {
-	return json.Marshal(
-		&protocol.MembershipQuery{
-			[]byte(fmt.Sprintf("event %d", eventIndex)),
-			c.balloonVersion,
-		},
-	)
-}
-
-func queryIncremental(eventIndex int, c *Config) ([]byte, error) {
-	end := uint64(eventIndex)
-	start := uint64(math.Max(float64(eventIndex-incrementalDelta), 0.0))
-	// start := end >> 1
-	return json.Marshal(
-		&protocol.IncrementalRequest{
-			Start: start,
-			End:   end,
-		},
-	)
-}
-
-func getVersion(eventTemplate string, c *Config) uint64 {
-	ssl := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	client := &http.Client{Transport: ssl}
-
-	buf := fmt.Sprintf(eventTemplate)
-
-	query, err := json.Marshal(&protocol.Event{[]byte(buf)})
-	if len(query) == 0 {
-		log.Fatalf("Empty query: %v", err)
-	}
-
-	req, err := http.NewRequest(c.req.method, c.req.endpoint, bytes.NewBuffer(query))
-	if err != nil {
-		log.Fatalf("Error preparing request: %v", err)
-	}
-
-	// Set Api-Key header
-	req.Header.Set("Api-Key", c.apiKey)
-	res, err := client.Do(req)
-	if err != nil {
-		log.Fatalf("Unable to perform request: %v", err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != 201 {
-		log.Fatalf("Server error: %v", err)
-	}
-
-	body, _ := ioutil.ReadAll(res.Body)
-
-	var signedSnapshot protocol.SignedSnapshot
-	json.Unmarshal(body, &signedSnapshot)
-	version := signedSnapshot.Snapshot.Version
-
-	return version
-}
-
-type axis struct {
-	x, y []float64
-}
-
-func summary(message string, numRequestsf, elapsed float64, c *Config) {
-
-	fmt.Printf(
-		"%s throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
-		message,
-		numRequestsf/elapsed,
-		c.numRequests,
-		elapsed,
-		c.maxGoRoutines,
-	)
-}
-
-func summaryPerDuration(message string, numRequestsf, elapsed float64, c *Config) {
-
-	fmt.Printf(
-		"%s throughput: %.0f req/s | Concurrency: %d | Elapsed time: %.3f seconds\n",
-		message,
-		c.counter/elapsed,
-		c.maxGoRoutines,
-		elapsed,
-	)
-}
-
-func stats(c *Config, t Task, message string) {
-	ticker := time.NewTicker(1 * time.Second)
-	numRequestsf := float64(c.numRequests)
-	start := time.Now()
-	defer ticker.Stop()
-	done := make(chan bool)
-	go func() {
-		SpawnerOfEvil(c, t)
-		elapsed := time.Now().Sub(start).Seconds()
-		fmt.Println("Task done.")
-		summary(message, numRequestsf, elapsed, c)
-		done <- true
-	}()
-	for {
-		select {
-		case <-done:
-			return
-		case t := <-ticker.C:
-			_ = t
-			elapsed := time.Now().Sub(start).Seconds()
-			summaryPerDuration(message, numRequestsf, elapsed, c)
-		}
-	}
-}
-
-func benchmarkAdd(numFollowers, numReqests, readConcurrency, writeConcurrency, offset int) {
-	fmt.Println("\nStarting benchmark run...")
-
-	ssl := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	client := &http.Client{Transport: ssl}
-
-	c := NewDefaultConfig()
-	c.req.client = client
-	c.numRequests = numReqests
-	c.maxGoRoutines = writeConcurrency
-	c.startVersion = offset
-	c.req.expectedStatusCode = 201
-	c.req.endpoint += "/events"
-	stats(c, addSampleEvents, "Add")
-
-}
-
-func benchmarkMembership(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
-	fmt.Println("\nStarting benchmark run...")
-	var queryWg sync.WaitGroup
-	ssl := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	client := &http.Client{Transport: ssl}
-
-	c := NewDefaultConfig()
-	c.req.client = client
-	c.numRequests = numReqests
-	c.maxGoRoutines = writeConcurrency
-	c.req.expectedStatusCode = 201
-	c.req.endpoint += "/events"
-	fmt.Println("PRELOAD")
-	stats(c, addSampleEvents, "Preload")
-
-	config := make([]*Config, 0, numFollowers)
-	if numFollowers == 0 {
-		c := NewDefaultConfig()
-		c.req.client = client
-		c.numRequests = numReqests
-		c.maxGoRoutines = readConcurrency
-		c.req.expectedStatusCode = 200
-		c.req.endpoint += "/proofs/membership"
-
-		config = append(config, c)
-	}
-	for i := 0; i < numFollowers; i++ {
-		c := NewDefaultConfig()
-		c.req.client = client
-		c.numRequests = numReqests
-		c.maxGoRoutines = readConcurrency
-		c.req.expectedStatusCode = 200
-		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8801+i)
-		c.req.endpoint += "/proofs/membership"
-
-		config = append(config, c)
-	}
-
-	time.Sleep(1 * time.Second)
-
-	fmt.Println("EXCLUSIVE QUERY MEMBERSHIP")
-	stats(config[0], queryMembership, "Follower-1-read")
-
-	go hotParams(config)
-	fmt.Println("QUERY MEMBERSHIP UNDER CONTINUOUS LOAD")
-	for i, c := range config {
-		queryWg.Add(1)
-		go func(i int, c *Config) {
-			defer queryWg.Done()
-			stats(c, queryMembership, fmt.Sprintf("Follower-%d-read-mixed", i+1))
-		}(i, c)
-	}
-
-	fmt.Println("Starting continuous load...")
-	ca := NewDefaultConfig()
-	ca.req.client = client
-	ca.numRequests = numReqests
-	ca.maxGoRoutines = writeConcurrency
-	ca.req.expectedStatusCode = 201
-	ca.req.endpoint += "/events"
-	ca.startVersion = c.numRequests
-	ca.continuous = true
-
-	start := time.Now()
-	go stats(ca, addSampleEvents, "Leader-write-mixed")
-	queryWg.Wait()
-	elapsed := time.Now().Sub(start).Seconds()
-
-	numRequestsf := float64(c.numRequests)
-	currentVersion := getVersion("last-event", c)
-	fmt.Printf(
-		"Leader write throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
-		(float64(currentVersion)-numRequestsf)/elapsed,
-		currentVersion-uint64(c.numRequests),
-		elapsed,
-		c.maxGoRoutines,
-	)
-}
-
-func benchmarkIncremental(numFollowers, numReqests, readConcurrency, writeConcurrency int) {
-	fmt.Println("\nStarting benchmark run...")
-	var queryWg sync.WaitGroup
-	ssl := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: ssl}
-
-	c := NewDefaultConfig()
-	c.req.client = client
-	c.numRequests = numReqests
-	c.maxGoRoutines = writeConcurrency
-	c.req.expectedStatusCode = 201
-	c.req.endpoint += "/events"
-
-	fmt.Println("PRELOAD")
-	stats(c, addSampleEvents, "Preload")
-
-	config := make([]*Config, 0, numFollowers)
-	if numFollowers == 0 {
-		c := NewDefaultConfig()
-		c.req.client = client
-		c.numRequests = numReqests
-		c.maxGoRoutines = readConcurrency
-		c.req.expectedStatusCode = 200
-		c.req.endpoint += "/proofs/incremental"
-
-		config = append(config, c)
-	}
-	for i := 0; i < numFollowers; i++ {
-		c := NewDefaultConfig()
-		c.req.client = client
-		c.numRequests = numReqests
-		c.maxGoRoutines = readConcurrency
-		c.req.expectedStatusCode = 200
-		c.req.endpoint = fmt.Sprintf("http://localhost:%d", 8801+i)
-		c.req.endpoint += "/proofs/incremental"
-
-		config = append(config, c)
-	}
-
-	time.Sleep(1 * time.Second)
-	fmt.Println("EXCLUSIVE QUERY INCREMENTAL")
-	stats(config[0], queryIncremental, "Follower-1-read")
-
-	go hotParams(config)
-	fmt.Println("QUERY INCREMENTAL UNDER CONTINUOUS LOAD")
-	for i, c := range config {
-		queryWg.Add(1)
-		go func(i int, c *Config) {
-			defer queryWg.Done()
-			stats(c, queryIncremental, fmt.Sprintf("Follower-%d-read-mixed", i+1))
-		}(i, c)
-	}
-
-	fmt.Println("Starting continuous load...")
-	ca := NewDefaultConfig()
-	ca.req.client = client
-	ca.numRequests = numReqests
-	ca.maxGoRoutines = writeConcurrency
-	ca.req.expectedStatusCode = 201
-	ca.req.endpoint += "/events"
-	ca.startVersion = c.numRequests
-	ca.continuous = true
-
-	start := time.Now()
-	go stats(ca, addSampleEvents, "Leader-write-mixed")
-	queryWg.Wait()
-	elapsed := time.Now().Sub(start).Seconds()
-
-	numRequestsf := float64(c.numRequests)
-	currentVersion := getVersion("last-event", c)
-	fmt.Printf(
-		"Leader-write-mixed throughput: %.0f req/s: (%v reqs in %.3f seconds) | Concurrency: %d\n",
-		(float64(currentVersion)-numRequestsf)/elapsed,
-		currentVersion-uint64(c.numRequests),
-		elapsed,
-		c.maxGoRoutines,
-	)
-}
-func hotParams(config []*Config) {
-	scanner := bufio.NewScanner(os.Stdin)
-
-	for scanner.Scan() {
-		value := scanner.Text()
-
-		switch t := value[0:2]; t {
-		case "mr":
-			i, _ := strconv.ParseInt(value[2:], 10, 64)
-			d := time.Duration(i)
-			for _, c := range config {
-				c.delay_ms = d
-			}
-			fmt.Printf("Read throughtput set to: %d\n", i)
-		case "ir":
-			i, _ := strconv.ParseInt(value[2:], 10, 64)
-			d := time.Duration(i)
-			for _, c := range config {
-				c.delay_ms = d
-			}
-			fmt.Printf("Read throughtput set to: %d\n", i)
-		default:
-			fmt.Println("Invalid command - Valid commands: mr100|ir200")
-		}
-
-	}
+type Task struct {
+	kind kind
+
+	event               string
+	key                 []byte
+	version, start, end uint64
 }
 
 func main() {
-	var n int
-	switch m := os.Getenv("CLUSTER_SIZE"); m {
-	case "":
-		n = 0
-	case "2":
-		n = 2
-	case "4":
-		n = 4
-	default:
-		fmt.Println("Error: CLUSTER_SIZE env var should have values 2 or 4, or not be defined at all.")
+	if err := newRiotCommand().Execute(); err != nil {
+		os.Exit(-1)
+	}
+}
+
+func newRiotCommand() *cobra.Command {
+	// Input storage.
+	var logLevel string
+	var APIMode bool
+	riot := Riot{}
+
+	cmd := &cobra.Command{
+		Use:   "riot",
+		Short: "Stresser tool for qed server",
+		PreRun: func(cmd *cobra.Command, args []string) {
+
+			log.SetLogger("Riot", logLevel)
+
+			if riot.Config.Profiling {
+				go func() {
+					log.Info("	* Starting Riot Profiling server")
+					log.Info(http.ListenAndServe(":6060", nil))
+				}()
+			}
+
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			riot.Start(APIMode)
+		},
 	}
 
-	flag.Parse()
+	f := cmd.Flags()
 
-	if profiling {
-		go func() {
-			fmt.Print("Go profiling enabled\n")
-			log.Print(http.ListenAndServe(":6061", nil))
-		}()
+	f.StringVarP(&logLevel, "log", "l", "debug", "Choose between log levels: silent, error, info and debug")
+	f.BoolVar(&APIMode, "api", false, "Raise a HTTP api in port 7700")
+
+	f.StringVar(&riot.Config.Endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
+	f.StringVarP(&riot.Config.APIKey, "apikey", "k", "my-key", "The key to use qed servers")
+	f.BoolVar(&riot.Config.Insecure, "insecure", false, "Allow self-signed TLS certificates")
+
+	f.StringVar(&riot.Config.Kind, "kind", "", "The kind of load to execute")
+
+	f.BoolVar(&riot.Config.Profiling, "profiling", false, "Enable Go profiling $ go tool pprof")
+	f.UintVarP(&riot.Config.IncrementalDelta, "delta", "d", 1000, "Specify delta for the IncrementalProof")
+	f.UintVar(&riot.Config.NumRequests, "n", 10e4, "Number of requests for the attack")
+	f.UintVar(&riot.Config.MaxGoRoutines, "r", 10, "Set the concurrency value")
+	f.UintVar(&riot.Config.Offset, "offset", 0, "The starting version from which we start the load")
+
+	return cmd
+}
+
+func (riot *Riot) Start(APIMode bool) {
+
+	r := prometheus.NewRegistry()
+	Register(r)
+	riot.prometheusRegistry = r
+	metricsMux := metricshttp.NewMetricsHTTP(r)
+	log.Debug("	* Starting Riot Metrics server")
+	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
+
+	if APIMode {
+		riot.Serve()
+	} else {
+		riot.RunOnce()
 	}
 
-	if offload {
-		n = n / 2
-		fmt.Printf("Offload: %v | %d\n", offload, n)
+}
+
+func (riot *Riot) RunOnce() {
+	newAttack(riot.Config)
+}
+
+func postReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return w, r
 	}
 
-	if wantAdd {
-		fmt.Print("Benchmark ADD")
-		benchmarkAdd(n, numRequests, readConcurrency, writeConcurrency, offset)
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", http.StatusBadRequest)
 	}
 
-	if wantMembership {
-		fmt.Print("Benchmark MEMBERSHIP")
-		benchmarkMembership(n, numRequests, readConcurrency, writeConcurrency)
+	return w, r
+}
+func (riot *Riot) MergeConf(newConf Config) Config {
+	conf := riot.Config
+	_ = mergo.Merge(&conf, newConf)
+	return conf
+}
+
+func (riot *Riot) Serve() {
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
+		w, r = postReqSanitizer(w, r)
+
+		var newConf Config
+		err := json.NewDecoder(r.Body).Decode(&newConf)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		newAttack(riot.MergeConf(newConf))
+	})
+
+	mux.HandleFunc("/plan", func(w http.ResponseWriter, r *http.Request) {
+		var wg sync.WaitGroup
+		w, r = postReqSanitizer(w, r)
+
+		var plan Plan
+		err := json.NewDecoder(r.Body).Decode(&plan)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		for _, batch := range plan {
+			for _, conf := range batch {
+				wg.Add(1)
+				go func(conf Config) {
+					newAttack(riot.MergeConf(conf))
+					wg.Done()
+				}(conf)
+
+			}
+			wg.Wait()
+		}
+	})
+
+	api := &http.Server{Addr: ":7700", Handler: mux}
+
+	log.Debug("	* Starting Riot HTTP server")
+	if err := api.ListenAndServe(); err != http.ErrServerClosed {
+		log.Errorf("Can't start Riot API HTTP server: %s", err)
+	}
+}
+
+func newAttack(conf Config) {
+
+	cConf := client.DefaultConfig()
+	cConf.Endpoints = []string{conf.Endpoint}
+	cConf.APIKey = conf.APIKey
+	cConf.Insecure = conf.Insecure
+
+	attack := Attack{
+		client:         client.NewHTTPClient(*cConf),
+		config:         conf,
+		kind:           kind(conf.Kind),
+		balloonVersion: uint64(conf.NumRequests + conf.Offset - 1),
 	}
 
-	if wantIncremental {
-		fmt.Print("Benchmark INCREMENTAL")
-		benchmarkIncremental(n, numRequests, readConcurrency, writeConcurrency)
+	if err := attack.client.Ping(); err != nil {
+		panic(err)
 	}
+
+	attack.Run()
+}
+
+func (a *Attack) Run() {
+	var wg sync.WaitGroup
+	a.senChan = make(chan Task)
+
+	for rID := uint(0); rID < a.config.MaxGoRoutines; rID++ {
+		wg.Add(1)
+		go func(rID uint) {
+			for {
+				task, ok := <-a.senChan
+				if !ok {
+					log.Debugf("!!! clos: %d", rID)
+					wg.Done()
+					return
+				}
+
+				switch task.kind {
+				case add:
+					log.Debugf(">>> add: %s", task.event)
+					_, _ = a.client.Add(task.event)
+					RiotEventAdd.Inc()
+				case membership:
+					log.Debugf(">>> mem: %s, %d", task.event, task.version)
+					_, _ = a.client.Membership(task.key, task.version)
+					RiotQueryMembership.Inc()
+				case incremental:
+					log.Debugf(">>> inc: %s", task.event)
+					_, _ = a.client.Incremental(task.start, task.end)
+					RiotQueryIncremental.Inc()
+				}
+			}
+		}(rID)
+	}
+
+	for i := a.config.Offset; i < a.config.Offset+a.config.NumRequests; i++ {
+		ev := fmt.Sprintf("event %d", i)
+		a.senChan <- Task{
+			kind:    a.kind,
+			event:   ev,
+			key:     []byte(ev),
+			version: a.balloonVersion,
+			start:   uint64(i),
+			end:     uint64(i + a.config.IncrementalDelta),
+		}
+	}
+
+	close(a.senChan)
+	wg.Wait()
 }
