@@ -58,109 +58,54 @@ func TestQueryMembership(t *testing.T) {
 
 	log.SetLogger("TestQueryMembership", log.SILENT)
 
-	store, closeF := storage_utils.OpenBPlusTreeStore()
-	defer closeF()
-
-	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
-	require.NoError(t, err)
-
 	testCases := []struct {
 		key     []byte
 		version uint64
+		exists  bool
 	}{
-		{[]byte{0x5a}, uint64(0)},
+		{[]byte{0x5a}, uint64(0), true},
+		{nil, uint64(42), false},
 	}
 
-	// Asking for a future/wrong membership should not fail
-	_, err = balloon.QueryMembership([]byte{0x10}, 15)
-	require.NoError(t, err)
-
 	for i, c := range testCases {
-		_, mutations, err := balloon.Add(c.key)
-		require.NoErrorf(t, err, "Error adding event %d", i)
-		store.Mutate(mutations)
+		store, closeF := storage_utils.OpenBPlusTreeStore()
+
+		balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+		require.NoError(t, err)
+
+		if c.key != nil {
+			_, mutations, err := balloon.Add(c.key)
+			require.NoErrorf(t, err, "Error adding event %d", i)
+			store.Mutate(mutations)
+		}
 
 		proof, err := balloon.QueryMembership(c.key, c.version)
 
 		require.NoError(t, err)
-		assert.True(t, proof.Exists, "The event should exist in test %d ", i)
-		assert.Equalf(t, c.version, proof.QueryVersion, "The query version does not match in test %d : expected %d, actual %d", i, c.version, proof.QueryVersion)
-		assert.Equalf(t, c.version, proof.ActualVersion, "The actual version does not match in test %d : expected %d, actual %d", i, c.version, proof.ActualVersion)
-		assert.NotNil(t, proof.HyperProof, "The hyper proof should not be nil in test %d ", i)
-		assert.NotNil(t, proof.HistoryProof, "The history proof should not be nil in test %d ", i)
+		assert.True(t, proof.Exists == c.exists, "The event should exist in test %d ", i)
+
+		if c.exists {
+			assert.Equalf(t, c.version, proof.QueryVersion, "The query version does not match in test %d : expected %d, actual %d", i, c.version, proof.QueryVersion)
+			assert.Equalf(t, c.version, proof.ActualVersion, "The actual version does not match in test %d : expected %d, actual %d", i, c.version, proof.ActualVersion)
+			assert.NotNil(t, proof.HyperProof, "The hyper proof should not be nil in test %d ", i)
+			assert.NotNil(t, proof.HistoryProof, "The history proof should not be nil in test %d ", i)
+		}
+
+		closeF()
 	}
 
 }
-
-// func TestMembershipProofVerify(t *testing.T) {
-
-// 	log.SetLogger("TestMembershipProofVerify", log.SILENT)
-
-// 	testCases := []struct {
-// 		exists         bool
-// 		hyperOK        bool
-// 		historyOK      bool
-// 		currentVersion uint64
-// 		queryVersion   uint64
-// 		actualVersion  uint64
-// 		expectedResult bool
-// 	}{
-// 		// Event exists, queryVersion <= actualVersion, and both trees verify it
-// 		{true, true, true, uint64(0), uint64(0), uint64(0), true},
-// 		// Event exists, queryVersion <= actualVersion, but HyperTree does not verify it
-// 		{true, false, true, uint64(0), uint64(0), uint64(0), false},
-// 		// Event exists, queryVersion <= actualVersion, but HistoryTree does not verify it
-// 		{true, true, false, uint64(0), uint64(0), uint64(0), false},
-
-// 		// Event exists, queryVersion > actualVersion, and both trees verify it
-// 		{true, true, true, uint64(1), uint64(1), uint64(0), true},
-// 		// Event exists, queryVersion > actualVersion, but HyperTree does not verify it
-// 		{true, false, true, uint64(1), uint64(1), uint64(0), false},
-
-// 		// Event does not exist, HyperTree verifies it
-// 		{false, true, false, uint64(0), uint64(0), uint64(0), true},
-// 		// Event does not exist, HyperTree does not verify it
-// 		{false, false, false, uint64(0), uint64(0), uint64(0), false},
-// 	}
-
-// 	hasher := hashing.NewFakeXorHasher()
-// 	hyperDigest := hashing.Digest{0x0}
-// 	historyDigest := hashing.Digest{0x0}
-
-// 	for i, c := range testCases {
-// 		event := hasher.Do([]byte("Yadda yadda"))
-// 		snapshot := &Snapshot{
-// 			event, //TODO: should be eventDigest and used in the test
-// 			historyDigest,
-// 			hyperDigest,
-// 			c.actualVersion,
-// 		}
-// 		proof := NewMembershipProof(
-// 			c.exists,
-// 			NewFakeQueryProof(c.hyperOK, event, hasher),
-// 			NewFakeMembershipProof(c.historyOK, hasher),
-// 			c.currentVersion,
-// 			c.queryVersion,
-// 			c.actualVersion,
-// 			event,
-// 			hasher,
-// 		)
-
-// 		result := proof.Verify(event, snapshot)
-
-// 		fmt.Println(c.expectedResult == result)
-// 		require.Equalf(t, c.expectedResult, result, "Unexpected result '%v' in test case '%d'", result, i)
-// 	}
-// }
 
 func TestQueryConsistencyProof(t *testing.T) {
 
 	log.SetLogger("TestQueryConsistencyProof", log.SILENT)
 
 	testCases := []struct {
-		start, end uint64
+		additions, start, end uint64
+		ok                    bool
 	}{
-		{uint64(0), uint64(2)},
+		{uint64(2), uint64(0), uint64(2), true},
+		{uint64(0), uint64(30), uint64(600), false},
 	}
 
 	for i, c := range testCases {
@@ -169,10 +114,7 @@ func TestQueryConsistencyProof(t *testing.T) {
 		balloon, err := NewBalloon(store, hashing.NewFakeXorHasher)
 		require.NoError(t, err)
 
-		_, err = balloon.QueryConsistency(uint64(30), uint64(600))
-		require.Error(t, err, "Asking for a future/wrong consitency should fail")
-
-		for j := 0; j <= int(c.end); j++ {
+		for j := 0; j <= int(c.addtions); j++ {
 			_, mutations, err := balloon.Add(util.Uint64AsBytes(uint64(j)))
 			require.NoErrorf(t, err, "Error adding event %d", j)
 			store.Mutate(mutations)
@@ -180,10 +122,14 @@ func TestQueryConsistencyProof(t *testing.T) {
 
 		proof, err := balloon.QueryConsistency(c.start, c.end)
 
-		require.NoError(t, err)
-		assert.Equalf(t, c.start, proof.Start, "The query start does not match in test %d: expected %d, actual %d", i, c.start, proof.Start)
-		assert.Equalf(t, c.end, proof.End, "The query end does not match in test %d: expected %d, actual %d", i, c.end, proof.End)
-		assert.Truef(t, len(proof.AuditPath) > 0, "The length of the audith path should be >0 in test %d ", i)
+		if c.ok {
+			require.NoError(t, err)
+			assert.Equalf(t, c.start, proof.Start, "The query start does not match in test %d: expected %d, actual %d", i, c.start, proof.Start)
+			assert.Equalf(t, c.end, proof.End, "The query end does not match in test %d: expected %d, actual %d", i, c.end, proof.End)
+			assert.Truef(t, len(proof.AuditPath) > 0, "The length of the audith path should be >0 in test %d ", i)
+		} else {
+			require.Error(t, err)
+		}
 	}
 }
 
