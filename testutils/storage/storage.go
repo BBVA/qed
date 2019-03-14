@@ -20,27 +20,39 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bbva/qed/storage/badger"
+	"github.com/bbva/qed/storage/bplus"
+	"github.com/bbva/qed/storage/rocks"
 	"github.com/stretchr/testify/require"
-
-	bd "github.com/bbva/qed/storage/badger"
-	bp "github.com/bbva/qed/storage/bplus"
 )
 
-func OpenBPlusTreeStore() (*bp.BPlusTreeStore, func()) {
-	store := bp.NewBPlusTreeStore()
+func OpenBPlusTreeStore() (*bplus.BPlusTreeStore, func()) {
+	store := bplus.NewBPlusTreeStore()
 	return store, func() {
 		store.Close()
 	}
 }
 
-func OpenBadgerStore(t require.TestingT, path string) (*bd.BadgerStore, func()) {
-	opts := &bd.Options{
+func OpenBadgerStore(t require.TestingT, path string) (*badger.BadgerStore, func()) {
+	opts := &badger.Options{
 		Path:       path,
 		ValueLogGC: true,
 	}
-	store, err := bd.NewBadgerStoreOpts(opts)
+	store, err := badger.NewBadgerStoreOpts(opts)
 	if err != nil {
 		t.Errorf("Error opening badger store: %v", err)
+		t.FailNow()
+	}
+	return store, func() {
+		store.Close()
+		deleteFile(path)
+	}
+}
+
+func OpenRocksDBStore(t require.TestingT, path string) (*rocks.RocksDBStore, func()) {
+	store, err := rocks.NewRocksDBStore(path)
+	if err != nil {
+		t.Errorf("Error opening rocksdb store: %v", err)
 		t.FailNow()
 	}
 	return store, func() {

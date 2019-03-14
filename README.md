@@ -73,9 +73,16 @@ and verifing events. This example runs a standalone server. You can add any
 source of ordered events like logs, ledgers, etc...
 
 ### Standalone example
- - Download the software and its dependencies
+ - Download the software and its dependencies (including rocksdb)
  ```
- go get -v -u -d github.com/bbva/qed/...
+ $ git clone https://github.com/bbva/qed $GOPATH/src/github.com/bbva/qed
+ $ cd $GOPATH/src/github.com/bbva/qed
+ $ git submodule update --init --recursive
+ $ cd c-deps
+ $ ./builddeps.sh
+ $ cd ..
+ $ CGO_LDFLAGS_ALLOW='.*' go build
+
  ```
  - Start the standalone server
 

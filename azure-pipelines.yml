@@ -15,6 +15,7 @@ variables:
   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
   GO111MODULE: on
+  CGO_LDFLAGS_ALLOW: '.*'
 
 steps:
 - script: |
@@ -37,10 +38,42 @@ steps:
   displayName: 'Generate certificates'
 
 - script: |
+    git submodule update --init --recursive
+    cd c-deps
+    ./builddeps.sh
+    cd ..
+  workingDirectory: '$(modulePath)'  
+  displayName: 'Build rocksdb'
+
+- script: |
+    GO111MODULE=auto go get github.com/jstemmer/go-junit-report
+    GO111MODULE=auto go get github.com/axw/gocov/gocov
+    GO111MODULE=auto go get github.com/AlekSi/gocov-xml
+    GO111MODULE=auto go get gopkg.in/matm/v1/gocov-html
+  workingDirectory: '$(modulePath)'  
+  displayName: 'Download code coverage tools'
+  
+- script: |
     go version
     go mod download
-    go test -v -coverprofile=coverage.txt -covermode=atomic ./...
+    go test -v -coverprofile=coverage.txt -covermode=count ./... 2>&1 | tee coverage.out
+    cat coverage.out | go-junit-report > report.xml
     go vet -composites=false ./...
+    gocov convert coverage.txt > coverage.json
+    gocov-xml < coverage.json > coverage.xml
+    mkdir coverage
+    gocov-html < coverage.json > coverage/index.html    
   workingDirectory: '$(modulePath)'
   displayName: 'Get dependencies, then build'
 
+- task: PublishTestResults@2
+  inputs:
+    testRunner: JUnit
+    testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+    failOnStandardError: 'true'
+
+- task: PublishCodeCoverageResults@1
+  inputs:
+    codeCoverageTool: Cobertura 
+    summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
+    reportDirectory: $(System.DefaultWorkingDirectory)/**/coverage
