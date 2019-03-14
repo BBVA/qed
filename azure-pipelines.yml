@@ -45,12 +45,14 @@ steps:
   workingDirectory: '$(modulePath)'  
   displayName: 'Build rocksdb'
 
-- script |
+- script: |
     go get github.com/jstemmer/go-junit-report
     go get github.com/axw/gocov/gocov
     go get github.com/AlekSi/gocov-xml
     go get -u gopkg.in/matm/v1/gocov-html
-
+  workingDirectory: '$(modulePath)'  
+  displayName: 'Download code coverage tools'
+  
 - script: |
     go version
     go mod download
