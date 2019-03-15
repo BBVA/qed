@@ -155,6 +155,24 @@
   tags:
     - start-storage
 
+- hosts: riot
+  remote_user: ec2-user
+  become: true
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Restart riot
+      shell: >
+        {{ item }}
+      with_items:
+        - /var/qed/riot-stop.sh
+        - /var/qed/riot-start.sh
+      wait_for:
+        port: 7700
+        host: "{{ansible_hostname}}"
+  tags:
+    - start-storage
+
 - hosts: prometheus
   remote_user: ec2-user
   become: true
