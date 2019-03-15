@@ -16,6 +16,82 @@
 
 package client
 
+import (
+	"time"
+)
+
+// ReadPref specifies the preferred type of node in the cluster
+// to send request to.
+type ReadPref int
+
+const (
+	// Primary forces to read only from the primary node (or leader).
+	Primary ReadPref = iota
+
+	// PrimaryPreferred aims to read from the primary node (or leader).
+	//
+	// Use PrimaryPreferred if you want an application to read from the primary
+	// under normal circumstances, but to allow stale reads from secondaries when
+	// the primary is unavailable. This provides a "read-only mode" for your
+	// application during a failover.
+	PrimaryPreferred
+
+	// Secondary force to read only from secondary nodes (or replicas).
+	Secondary
+
+	// SecondaryPreferred aims to read from secondary nodes (or replicas).
+	//
+	// In general, do not use SecondaryPreferred to provide extra capacity for reads,
+	// because all members of a cluster have roughly equivalent write traffic; as
+	// a result, secondaries will service reads at roughly the same rate as the
+	// primary. In addition, although replication is synchronous, there is some amount
+	// of dely between event replication to secondaries and change application
+	// to the corresponding balloon. Reading from a secondary can return stale data.
+	SecondaryPreferred
+
+	// Any forces to read from any node in the cluster including the leader.
+	Any
+)
+
+const (
+	// DefaultTimeout is the default number of seconds to wait for a request to QED.
+	DefaultTimeout = 10 * time.Second
+
+	// DefaultDialTimeout is the default number of seconds to wait for the connection
+	// to be established.
+	DefaultDialTimeout = 5 * time.Second
+
+	// DefaultHandshakeTimeout is the default number of seconds to wait for a handshake
+	// negotiation.
+	DefaultHandshakeTimeout = 5 * time.Second
+
+	// DefaultInsecure sets if the client verifies, by default, the server's
+	// certificate chain and host name, allowing MiTM vector attacks.
+	DefaultInsecure = false
+
+	// DefaultMaxRetries sets the default maximum number of retries before giving up
+	// when performing an HTTP request to QED.
+	DefaultMaxRetries = 0
+
+	// DefaultHealthCheckEnabled specifies if healthchecks are enabled by default.
+	DefaultHealthCheckEnabled = true
+
+	// DefaultHealthCheckTimeout specifies the time the healtch checker waits for
+	// a response from QED.
+	DefaultHealthCheckTimeout = 2 * time.Second
+
+	// DefaultTopologyDiscoveryEnabled specifies if the discoverer is enabled by default.
+	DefaultTopologyDiscoveryEnabled = true
+
+	// DefaultTopologyDiscoveryTimeout specifies the time the discoverer waits for
+	// a response from QED.
+	DefaultTopologyDiscoveryTimeout = 2 * time.Second
+
+	// off is used to disable timeouts.
+	off = -1 * time.Second
+)
+
+// Config sets the HTTP client configuration
 type Config struct {
 	// Endpoints [host:port,host:port,...] to ask for QED cluster-topology.
 	Endpoints []string
@@ -23,35 +99,56 @@ type Config struct {
 	// ApiKey to query the server endpoint.
 	APIKey string
 
-	// Enable self-signed certificates, allowing MiTM vector attacks.
+	// Insecure enables the verification of the server's certificate chain
+	// and host name, allowing MiTM vector attacks.
 	Insecure bool
 
-	// Seconds to wait for an established connection.
-	TimeoutSeconds int
+	// Timeout is the number of seconds to wait for a request to QED.
+	Timeout time.Duration
 
-	// Seconds to wait for the connection to be established.
-	DialTimeoutSeconds int
+	// DialTimeout is the number of seconds to wait for the connection to be established.
+	DialTimeout time.Duration
 
-	// Seconds to wait for a handshake negotiation.
-	HandshakeTimeoutSeconds int
+	// HandshakeTimeout is the number of seconds to wait for a handshake negotiation.
+	HandshakeTimeout time.Duration
+
+	// Controls how the client will route all queries to members of the cluster.
+	ReadPreference ReadPref
+
+	// MaxRetries sets the maximum number of retries before giving up
+	// when performing an HTTP request to QED.
+	MaxRetries int
+
+	// EnableTopologyDiscovery enables the process of discovering the cluster
+	// topology when requests fail.
+	EnableTopologyDiscovery bool
+
+	// DiscoveryTimeout is the timeout in seconds the discoverer waits for a response
+	// from a QED server.
+	DiscoveryTimeout time.Duration
+
+	// EnableHealthChecks enables helthchecks of all endpoints in the current cluster topology.
+	EnableHealthChecks bool
+
+	// HealthCheckTimeout is the timeout in seconds the healthcheck waits for a response
+	// from a QED server.
+	HealthCheckTimeout time.Duration
 }
 
-type Topology struct {
-	// Topology endpoints [host:port,host:port,...a]
-	Endpoints []string
-
-	// Endpoint [host:port] to operate.
-	// Must be the QED cluster leader.
-	Leader string
-}
-
+// DefaultConfig creates a Config structures with default values.
 func DefaultConfig() *Config {
 	return &Config{
 		Endpoints:               []string{"127.0.0.1:8800"},
 		APIKey:                  "my-key",
-		Insecure:                true,
-		TimeoutSeconds:          10,
-		DialTimeoutSeconds:      5,
-		HandshakeTimeoutSeconds: 5,
+		Insecure:                DefaultInsecure,
+		Timeout:                 DefaultTimeout,
+		DialTimeout:             DefaultDialTimeout,
+		HandshakeTimeout:        DefaultHandshakeTimeout,
+		ReadPreference:          Primary,
+		MaxRetries:              DefaultMaxRetries,
+		EnableTopologyDiscovery: DefaultTopologyDiscoveryEnabled,
+		EnableHealthChecks:      DefaultHealthCheckEnabled,
+		DiscoveryTimeout:        DefaultTopologyDiscoveryTimeout,
+		HealthCheckTimeout:      DefaultHealthCheckTimeout,
 	}
 }

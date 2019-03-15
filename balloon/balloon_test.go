@@ -114,7 +114,7 @@ func TestQueryConsistencyProof(t *testing.T) {
 		balloon, err := NewBalloon(store, hashing.NewFakeXorHasher)
 		require.NoError(t, err)
 
-		for j := 0; j <= int(c.addtions); j++ {
+		for j := 0; j <= int(c.additions); j++ {
 			_, mutations, err := balloon.Add(util.Uint64AsBytes(uint64(j)))
 			require.NoErrorf(t, err, "Error adding event %d", j)
 			store.Mutate(mutations)

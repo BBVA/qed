@@ -17,6 +17,7 @@
 package e2e
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -35,6 +36,7 @@ import (
 	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -296,10 +298,21 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 	return before, after
 }
 
-func getClient(id int) *client.HTTPClient {
-	return client.NewHTTPClient(client.Config{
-		Endpoints: []string{fmt.Sprintf("http://127.0.0.1:880%d", id)},
-		APIKey:    APIKey,
-		Insecure:  false,
-	})
+func getClient(t *testing.T, id int) *client.HTTPClient {
+	// QED client
+	transport := http.DefaultTransport.(*http.Transport)
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
+	httpClient := http.DefaultClient
+	httpClient.Transport = transport
+	client, err := client.NewHTTPClient(
+		client.SetHttpClient(httpClient),
+		client.SetURLs(fmt.Sprintf("http://127.0.0.1:880%d", id)),
+		client.SetAPIKey(APIKey),
+		client.SetTopologyDiscovery(false),
+		client.SetHealthchecks(false),
+	)
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "Cannot start http client: "))
+	}
+	return client
 }
