@@ -151,6 +151,10 @@ func newRiotCommand() *cobra.Command {
 				}()
 			}
 
+			if !APIMode && riot.Config.Kind == "" {
+				log.Fatal("Argument `kind` is required")
+			}
+
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			riot.Start(APIMode)
@@ -173,8 +177,6 @@ func newRiotCommand() *cobra.Command {
 	f.UintVar(&riot.Config.NumRequests, "n", 10e4, "Number of requests for the attack")
 	f.UintVar(&riot.Config.MaxGoRoutines, "r", 10, "Set the concurrency value")
 	f.UintVar(&riot.Config.Offset, "offset", 0, "The starting version from which we start the load")
-
-	cmd.MarkFlagRequired("kind")
 
 	return cmd
 }
