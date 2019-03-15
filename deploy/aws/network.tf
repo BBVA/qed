@@ -145,6 +145,12 @@ module "security_group" {
       cidr_blocks = "${chomp(data.http.ip.body)}/32"
     },
     {
+      from_port   = 7700
+      to_port     = 7700
+      protocol    = "tcp"
+      cidr_blocks = "${chomp(data.http.ip.body)}/32"
+    },
+    {
       from_port   = 9100
       to_port     = 9100
       protocol    = "tcp"

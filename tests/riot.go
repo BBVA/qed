@@ -151,6 +151,10 @@ func newRiotCommand() *cobra.Command {
 				}()
 			}
 
+			if !APIMode && riot.Config.Kind == "" {
+				log.Fatal("Argument `kind` is required")
+			}
+
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			riot.Start(APIMode)
@@ -272,8 +276,13 @@ func newAttack(conf Config) {
 	cConf.APIKey = conf.APIKey
 	cConf.Insecure = conf.Insecure
 
+	client, err := client.NewHTTPClientFromConfig(cConf)
+	if err != nil {
+		panic(err)
+	}
+
 	attack := Attack{
-		client:         client.NewHTTPClient(*cConf),
+		client:         client,
 		config:         conf,
 		kind:           kind(conf.Kind),
 		balloonVersion: uint64(conf.NumRequests + conf.Offset - 1),
