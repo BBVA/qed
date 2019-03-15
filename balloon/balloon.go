@@ -284,7 +284,7 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 				historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, version)
 			}()
 		} else {
-			return nil, fmt.Errorf("query version %d is not on history tree which version is %d", version, proof.ActualVersion)
+			return nil, fmt.Errorf("query version %d is greater than the actual version which is %d", version, proof.ActualVersion)
 		}
 
 	}
