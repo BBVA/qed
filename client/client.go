@@ -421,7 +421,7 @@ func (c *HTTPClient) discover() error {
 
 // Ping will do a healthcheck request to the primary node
 func (c *HTTPClient) Ping() error {
-	_, err := c.callPrimary("GET", "/healthcheck", nil)
+	_, err := c.callPrimary("HEAD", "/healthcheck", nil)
 	if err != nil {
 		return err
 	}
