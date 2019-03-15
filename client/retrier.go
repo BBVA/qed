@@ -72,8 +72,8 @@ func (r *NoRequestRetrier) DoReq(req *RetriableRequest) (*http.Response, error) 
 	if err == nil && resp.StatusCode > 0 && resp.StatusCode < 500 {
 		return resp, nil
 	}
-	return nil, fmt.Errorf("%s %s giving up after %d attempts",
-		req.Method, req.URL, 1)
+	return nil, fmt.Errorf("%s %s returned %d: giving up after %d attempts",
+		req.Method, req.URL, resp.StatusCode, 1)
 }
 
 // BackoffRequestRetrier is an implementation that uses the given backoff strategy.

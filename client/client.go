@@ -304,7 +304,8 @@ func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data 
 	// Get response
 	resp, err := c.retrier.DoReq(req)
 	if err != nil {
-		log.Infof("%s is dead", endpoint)
+		log.Infof("Request error: %v\n", err)
+		log.Infof("%s is dead\n", endpoint)
 		endpoint.MarkAsDead()
 		return nil, err
 	}
@@ -378,7 +379,13 @@ func (c *HTTPClient) discover() error {
 		return nil
 	}
 
-	for _, e := range c.topology.Endpoints() {
+	for {
+
+		e, err := c.topology.NextReadEndpoint(Any)
+		if err != nil {
+			return err
+		}
+
 		body, err := c.doReq("GET", e, "/info/shards", nil)
 		if err == nil {
 			info := make(map[string]interface{})

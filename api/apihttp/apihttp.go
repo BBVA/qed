@@ -335,8 +335,11 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 		latency := time.Now().Sub(start)
 
 		log.Debugf("Request: lat %d %+v", latency, request)
-		if writer.status >= 400 {
+		if writer.status >= 400 && writer.status < 500 {
 			log.Infof("Bad Request: %d %+v", latency, request)
+		}
+		if writer.status >= 500 {
+			log.Infof("Server error: %d %+v", latency, request)
 		}
 	}
 }

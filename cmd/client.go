@@ -65,7 +65,6 @@ func newClientCommand(ctx *cmdContext) *cobra.Command {
 		clientCtx.config.EnableTopologyDiscovery = false
 		clientCtx.config.EnableHealthChecks = false
 		clientCtx.config.MaxRetries = 0
-		clientCtx.config.ReadPreference = client.Any
 
 		client, err := client.NewHTTPClientFromConfig(clientCtx.config)
 		if err != nil {
