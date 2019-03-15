@@ -174,6 +174,8 @@ func newRiotCommand() *cobra.Command {
 	f.UintVar(&riot.Config.MaxGoRoutines, "r", 10, "Set the concurrency value")
 	f.UintVar(&riot.Config.Offset, "offset", 0, "The starting version from which we start the load")
 
+	cmd.MarkFlagRequired("kind")
+
 	return cmd
 }
 
@@ -272,8 +274,13 @@ func newAttack(conf Config) {
 	cConf.APIKey = conf.APIKey
 	cConf.Insecure = conf.Insecure
 
+	client, err := client.NewHTTPClientFromConfig(cConf)
+	if err != nil {
+		panic(err)
+	}
+
 	attack := Attack{
-		client:         client.NewHTTPClient(*cConf),
+		client:         client,
 		config:         conf,
 		kind:           kind(conf.Kind),
 		balloonVersion: uint64(conf.NumRequests + conf.Offset - 1),
