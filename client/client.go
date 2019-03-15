@@ -335,7 +335,6 @@ func (c *HTTPClient) healthCheck(timeout time.Duration) {
 		// the goroutines execute the health-check HTTP request and sets status
 		go func(endpointURL string) {
 
-			fmt.Printf("start healthcheck goroutine: %s\n", endpoint.URL())
 			// Run a GET request against QED with a timeout
 			// TODO it should be a HEAD instead of a GET
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -379,37 +378,43 @@ func (c *HTTPClient) discover() error {
 		return nil
 	}
 
-	body, err := c.callAny("GET", "/info/shards", nil)
-	info := make(map[string]interface{})
-	err = json.Unmarshal(body, &info)
-	if err != nil {
-		return err
-	}
+	for _, e := range c.topology.Endpoints() {
+		body, err := c.doReq("GET", e, "/info/shards", nil)
+		if err == nil {
+			info := make(map[string]interface{})
+			err = json.Unmarshal(body, &info)
+			if err != nil {
+				return err
+			}
 
-	clusterMeta := info["meta"].(map[string]interface{})
-	primaryID := info["leaderID"].(string)
-	scheme := info["URIScheme"].(string)
+			clusterMeta := info["meta"].(map[string]interface{})
+			primaryID := info["leaderID"].(string)
+			scheme := info["URIScheme"].(string)
 
-	var prim string
-	secondaries := make([]string, 0)
-	for id, nodeMeta := range clusterMeta {
-		for k, address := range nodeMeta.(map[string]interface{}) {
-			if k == "HTTPAddr" {
-				if id == primaryID {
-					prim = scheme + address.(string)
-				} else {
-					secondaries = append(secondaries, scheme+address.(string))
+			var prim string
+			secondaries := make([]string, 0)
+			for id, nodeMeta := range clusterMeta {
+				for k, address := range nodeMeta.(map[string]interface{}) {
+					if k == "HTTPAddr" {
+						if id == primaryID {
+							prim = scheme + address.(string)
+						} else {
+							secondaries = append(secondaries, scheme+address.(string))
+						}
+					}
 				}
 			}
+			c.topology.Update(prim, secondaries...)
+			break
 		}
 	}
-	c.topology.Update(prim, secondaries...)
+
 	return nil
 }
 
 // Ping will do a healthcheck request to the primary node
 func (c *HTTPClient) Ping() error {
-	_, err := c.callPrimary("GET", "/health-check", nil)
+	_, err := c.callPrimary("GET", "/healthcheck", nil)
 	if err != nil {
 		return err
 	}
