@@ -18,7 +18,6 @@
 package apihttp
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -37,33 +36,26 @@ type HealthCheckResponse struct {
 
 // HealthCheckHandler checks the system status and returns it accordinly.
 // The http call it answer is:
-//	GET /health-check
+//	HEAD /
 //
 // The following statuses are expected:
 //
-// If everything is alright, the HTTP status is 200 and the body contains:
-//	 {"version": "0", "status":"ok"}
+// If everything is alright, the HTTP response will have a 204 status code
+// and no body.
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 	metrics.QedAPIHealthcheckRequestsTotal.Inc()
 
-	result := HealthCheckResponse{
-		Version: 0,
-		Status:  "ok",
+	// Make sure we can only be called with an HTTP POST request.
+	if r.Method != "HEAD" {
+		w.Header().Set("Allow", "HEAD")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
 	}
 
-	resultJson, _ := json.Marshal(result)
-
 	// A very simple health check.
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
 
-	// In the future we could report back on the status of our DB, or our cache
-	// (e.g. Redis) by performing a simple PING, and include them in the response.
-	out := new(bytes.Buffer)
-	_ = json.Compact(out, resultJson)
-
-	_, _ = w.Write(out.Bytes())
 }
 
 // Add posts an event into the system:
@@ -304,7 +296,7 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 
 	api := http.NewServeMux()
-	api.HandleFunc("/health-check", AuthHandlerMiddleware(HealthCheckHandler))
+	api.HandleFunc("/healthcheck", AuthHandlerMiddleware(HealthCheckHandler))
 	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
@@ -343,8 +335,11 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 		latency := time.Now().Sub(start)
 
 		log.Debugf("Request: lat %d %+v", latency, request)
-		if writer.status >= 400 {
+		if writer.status >= 400 && writer.status < 500 {
 			log.Infof("Bad Request: %d %+v", latency, request)
+		}
+		if writer.status >= 500 {
+			log.Infof("Server error: %d %+v", latency, request)
 		}
 	}
 }

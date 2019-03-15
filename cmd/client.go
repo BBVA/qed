@@ -17,6 +17,9 @@
 package cmd
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 	v "github.com/spf13/viper"
 
@@ -37,9 +40,9 @@ func newClientCommand(ctx *cmdContext) *cobra.Command {
 	f := cmd.PersistentFlags()
 	f.StringSliceVarP(&clientCtx.config.Endpoints, "endpoints", "e", []string{"127.0.0.1:8800"}, "Endpoint for REST requests on (host:port)")
 	f.BoolVar(&clientCtx.config.Insecure, "insecure", false, "Allow self signed certificates")
-	f.IntVar(&clientCtx.config.TimeoutSeconds, "timeout-seconds", 10, "Seconds to cut the connection")
-	f.IntVar(&clientCtx.config.DialTimeoutSeconds, "dial-timeout-seconds", 5, "Seconds to cut the dialing")
-	f.IntVar(&clientCtx.config.HandshakeTimeoutSeconds, "handshake-timeout-seconds", 5, "Seconds to cut the handshaking")
+	f.DurationVar(&clientCtx.config.Timeout, "timeout-seconds", 10*time.Second, "Seconds to cut the connection")
+	f.DurationVar(&clientCtx.config.DialTimeout, "dial-timeout-seconds", 5*time.Second, "Seconds to cut the dialing")
+	f.DurationVar(&clientCtx.config.HandshakeTimeout, "handshake-timeout-seconds", 5*time.Second, "Seconds to cut the handshaking")
 
 	// Lookups
 	v.BindPFlag("client.endpoints", f.Lookup("endpoints"))
@@ -49,17 +52,25 @@ func newClientCommand(ctx *cmdContext) *cobra.Command {
 	v.BindPFlag("client.timeout.handshake", f.Lookup("handshake-timeout-seconds"))
 
 	clientPreRun := func(cmd *cobra.Command, args []string) {
+
 		log.SetLogger("QEDClient", ctx.logLevel)
 
 		clientCtx.config.APIKey = ctx.apiKey
 		clientCtx.config.Endpoints = v.GetStringSlice("client.endpoints")
 		clientCtx.config.Insecure = v.GetBool("client.insecure")
-		clientCtx.config.TimeoutSeconds = v.GetInt("client.timeout.connection")
-		clientCtx.config.DialTimeoutSeconds = v.GetInt("client.timeout.dial")
-		clientCtx.config.HandshakeTimeoutSeconds = v.GetInt("client.timeout.handshake")
+		clientCtx.config.Timeout = v.GetDuration("client.timeout.connection")
+		clientCtx.config.DialTimeout = v.GetDuration("client.timeout.dial")
+		clientCtx.config.HandshakeTimeout = v.GetDuration("client.timeout.handshake")
+		clientCtx.config.ReadPreference = client.Any
+		clientCtx.config.EnableTopologyDiscovery = false
+		clientCtx.config.EnableHealthChecks = false
+		clientCtx.config.MaxRetries = 0
 
-		clientCtx.client = client.NewHTTPClient(*clientCtx.config)
-
+		client, err := client.NewHTTPClientFromConfig(clientCtx.config)
+		if err != nil {
+			panic(fmt.Sprintf("Unable to start http client: %v", err))
+		}
+		clientCtx.client = client
 	}
 
 	cmd.AddCommand(

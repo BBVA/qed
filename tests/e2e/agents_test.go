@@ -88,7 +88,7 @@ func TestAgentsWithoutTampering(t *testing.T) {
 		var ss *protocol.SignedSnapshot
 		var err error
 
-		client := getClient(0)
+		client := getClient(t, 0)
 
 		let("Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
@@ -139,7 +139,7 @@ func TestAgentsDeleteTampering(t *testing.T) {
 	scenario("Add 1st event. Tamper it. Check auditor alerts correctly", func() {
 		var err error
 
-		client := getClient(0)
+		client := getClient(t, 0)
 
 		let("Add 1st event", func(t *testing.T) {
 			_, err = client.Add(event)
@@ -190,7 +190,7 @@ func TestAgentsPatchTampering(t *testing.T) {
 		tampered := rand.RandomString(10)
 		event2 := rand.RandomString(10)
 
-		client := getClient(0)
+		client := getClient(t, 0)
 
 		let("Add 1st event", func(t *testing.T) {
 			_, err := client.Add(event)
