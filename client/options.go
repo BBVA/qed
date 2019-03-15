@@ -80,6 +80,13 @@ func SetURLs(primary string, secondaries ...string) HTTPClientOptionF {
 	}
 }
 
+func SetAttemptToReviveEndpoints(value bool) HTTPClientOptionF {
+	return func(c *HTTPClient) error {
+		c.topology.attemptToRevive = value
+		return nil
+	}
+}
+
 func SetRequestRetrier(retrier RequestRetrier) HTTPClientOptionF {
 	return func(c *HTTPClient) error {
 		if retrier != nil {

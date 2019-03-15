@@ -295,7 +295,7 @@ func TestIncremental(t *testing.T) {
 
 func TestAuthHandlerMiddleware(t *testing.T) {
 
-	req, err := http.NewRequest("GET", "/health-check", nil)
+	req, err := http.NewRequest("HEAD", "/healthcheck", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,9 +312,9 @@ func TestAuthHandlerMiddleware(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	// Check the status code is what we expect.
-	if status := rr.Code; status != http.StatusOK {
+	if status := rr.Code; status != http.StatusNoContent {
 		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
+			status, http.StatusNoContent)
 	}
 }
 
