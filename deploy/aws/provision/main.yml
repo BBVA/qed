@@ -167,6 +167,7 @@
       with_items:
         - /var/qed/riot-stop.sh
         - /var/qed/riot-start.sh
+    - name: wait for raised riot port
       wait_for:
         port: 7700
         host: "{{ansible_hostname}}"
