@@ -19,3 +19,13 @@
       mode: 0777
   with_items:
     - riot
+
+- name: Create QED start|stop script
+  template:
+    dest: /var/qed/{{ item }}
+    src: ../../templates/{{ item }}.j2
+    force: true
+    mode: 0775
+  with_items:
+    - riot-start.sh
+    - riot-stop.sh
