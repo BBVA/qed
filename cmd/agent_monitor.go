@@ -81,7 +81,7 @@ func newAgentMonitorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 
 	// Lookups
 	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
-	v.BindPFlag("agent.alert_urls", f.Lookup("pubUrls"))
+	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
 
 	return cmd
 }
