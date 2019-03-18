@@ -16,16 +16,11 @@
 package e2e
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"testing"
 	"time"
-
-	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
 
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/testutils/rand"
@@ -71,7 +66,7 @@ func TestAgentsWithoutTampering(t *testing.T) {
 		var ss *protocol.SignedSnapshot
 		var err error
 
-		client := getClient(0)
+		client := getClient(t, 0)
 
 		let("Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
@@ -86,8 +81,5 @@ func TestAgentsWithoutTampering(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, snapshot, ss.Snapshot, "Snapshots must be equal")
 		})
-
+	})
 }
-
-/* The following tests must be reworked alongside the gossip agents and
-processors */
