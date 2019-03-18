@@ -18,14 +18,11 @@ package publisher
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/api/metricshttp"
-	"github.com/bbva/qed/gossip/metrics"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/coocood/freecache"
@@ -33,8 +30,32 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var (
+	QedPublisherInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_publisher_instances_count",
+			Help: "Number of publisher agents running.",
+		},
+	)
+
+	QedPublisherBatchesReceivedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_publisher_batches_received_total",
+			Help: "Number of batches received by publishers.",
+		},
+	)
+
+	QedPublisherBatchesProcessSeconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_publisher_batches_process_seconds",
+			Help: "Duration of Publisher batch processing",
+		},
+	)
+)
+
 type Config struct {
 	PubUrls               []string
+	AlertsUrls            []string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
 	MetricsAddr           string
@@ -57,9 +78,7 @@ type Publisher struct {
 	store *http.Client
 	conf  Config
 
-	processed          *freecache.Cache
-	metricsServer      *http.Server
-	prometheusRegistry *prometheus.Registry
+	processed *freecache.Cache
 
 	taskCh          chan Task
 	quitCh          chan bool
@@ -71,7 +90,7 @@ type Task interface {
 }
 
 func NewPublisher(conf Config) (*Publisher, error) {
-	metrics.QedPublisherInstancesCount.Inc()
+	QedPublisherInstancesCount.Inc()
 	publisher := Publisher{
 		store:     &http.Client{},
 		conf:      conf,
@@ -80,32 +99,27 @@ func NewPublisher(conf Config) (*Publisher, error) {
 		quitCh:    make(chan bool),
 	}
 
-	r := prometheus.NewRegistry()
-	metrics.Register(r)
-	publisher.prometheusRegistry = r
-	metricsMux := metricshttp.NewMetricsHTTP(r)
-
-	publisher.metricsServer = &http.Server{
-		Addr:    conf.MetricsAddr,
-		Handler: metricsMux,
-	}
-
-	go func() {
-		log.Debugf("	* Starting metrics HTTP server in addr: %s", conf.MetricsAddr)
-		if err := publisher.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start metrics HTTP server: %s", err)
-		}
-	}()
-
 	publisher.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go publisher.runTaskDispatcher()
 
 	return &publisher, nil
 }
 
+func (p Publisher) RegisterMetrics(r *prometheus.Registry) {
+	metrics := []prometheus.Collector{
+		QedPublisherInstancesCount,
+		QedPublisherBatchesReceivedTotal,
+		QedPublisherBatchesProcessSeconds,
+	}
+
+	for _, m := range metrics {
+		r.Register(m)
+	}
+}
+
 func (p *Publisher) Process(b *protocol.BatchSnapshots) {
-	metrics.QedPublisherBatchesReceivedTotal.Inc()
-	timer := prometheus.NewTimer(metrics.QedPublisherBatchesProcessSeconds)
+	QedPublisherBatchesReceivedTotal.Inc()
+	timer := prometheus.NewTimer(QedPublisherBatchesProcessSeconds)
 	defer timer.ObserveDuration()
 	var batch protocol.BatchSnapshots
 
@@ -146,12 +160,7 @@ func (p Publisher) runTaskDispatcher() {
 }
 
 func (p *Publisher) Shutdown() {
-	metrics.QedPublisherInstancesCount.Dec()
-
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	if err := p.metricsServer.Shutdown(ctx); err != nil {
-		log.Infof("Publisher metrics http server shutdown process with error: %v", err)
-	}
+	QedPublisherInstancesCount.Dec()
 
 	p.executionTicker.Stop()
 	p.quitCh <- true
@@ -189,12 +198,12 @@ func (t PublishTask) Do() {
 	log.Debugf("Publisher is going to execute task: %+v", t)
 	buf, err := t.batch.Encode()
 	if err != nil {
-		log.Debug("Publisher: Error marshalling: %s\n", err.Error())
+		log.Debug("Publisher had an error marshalling: %s\n", err.Error())
 		return
 	}
-	resp, err := t.store.Post(t.pubUrl, "application/json", bytes.NewBuffer(buf))
+	resp, err := t.store.Post(t.pubUrl+"/batch", "application/json", bytes.NewBuffer(buf))
 	if err != nil {
-		log.Infof("Publised had an error saving batch in snapStore: %v\n", err)
+		log.Infof("Publisher had an error saving batch in snapStore: %v", err)
 		t.taskCh <- t
 		return
 	}
@@ -204,3 +213,4 @@ func (t PublishTask) Do() {
 		log.Infof("Publisher had an error getting response from snapStore saving a batch: %v", err)
 	}
 }
+
