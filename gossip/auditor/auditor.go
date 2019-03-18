@@ -18,6 +18,7 @@ package auditor
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -28,6 +29,7 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+	"github.com/pkg/errors"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -94,12 +96,22 @@ type Task interface {
 
 func NewAuditor(conf Config) (*Auditor, error) {
 	QedAuditorInstancesCount.Inc()
+	// QED client
+	transport := http.DefaultTransport.(*http.Transport)
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
+	httpClient := http.DefaultClient
+	httpClient.Transport = transport
+	qed, err := client.NewHTTPClient(
+		client.SetHttpClient(httpClient),
+		client.SetURLs(conf.QEDUrls[0], conf.QEDUrls[1:]...),
+		client.SetAPIKey(conf.APIKey),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "Cannot start http client: ")
+	}
+
 	auditor := Auditor{
-		qed: client.NewHTTPClient(client.Config{
-			Endpoints: conf.QEDUrls,
-			APIKey:    conf.APIKey,
-			Insecure:  false,
-		}),
+		qed:    qed,
 		conf:   conf,
 		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
