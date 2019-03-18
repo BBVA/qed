@@ -38,6 +38,7 @@ func newAgentCommand(cmdCtx *cmdContext, args []string) *cobra.Command {
 	f.StringVar(&config.NodeName, "node", "", "Unique name for node. If not set, fallback to hostname")
 	f.StringVar(&config.BindAddr, "bind", "", "Bind address for TCP/UDP gossip on (host:port)")
 	f.StringVar(&config.AdvertiseAddr, "advertise", "", "Address to advertise to cluster")
+	f.StringVar(&config.MetricsAddr, "metrics", "", "Address to bind metrics endpoint")
 	f.StringSliceVar(&config.StartJoin, "join", []string{}, "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
 	f.StringSliceVar(&config.AlertsUrls, "alertsUrls", []string{}, "Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts")
 
@@ -45,16 +46,18 @@ func newAgentCommand(cmdCtx *cmdContext, args []string) *cobra.Command {
 	v.BindPFlag("agent.node", f.Lookup("node"))
 	v.BindPFlag("agent.bind", f.Lookup("bind"))
 	v.BindPFlag("agent.advertise", f.Lookup("advertise"))
+	v.BindPFlag("agent.metrics", f.Lookup("metrics"))
 	v.BindPFlag("agent.join", f.Lookup("join"))
-	v.BindPFlag("agent.alert_urls", f.Lookup("alertsUrls"))
+	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
 
 	agentPreRun := func(config gossip.Config) gossip.Config {
 		config.EnableCompression = true
 		config.NodeName = v.GetString("agent.node")
 		config.BindAddr = v.GetString("agent.bind")
 		config.AdvertiseAddr = v.GetString("agent.advertise")
+		config.MetricsAddr = v.GetString("agent.metrics")
 		config.StartJoin = v.GetStringSlice("agent.join")
-		config.AlertsUrls = v.GetStringSlice("agent.alert_urls")
+		config.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
 
 		markStringRequired(config.NodeName, "node")
 		markStringRequired(config.BindAddr, "bind")
