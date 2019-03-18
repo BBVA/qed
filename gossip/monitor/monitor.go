@@ -18,23 +18,48 @@ package monitor
 
 import (
 	"bytes"
-	"context"
-	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/gossip/metrics"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
-	"github.com/pkg/errors"
 
 	"github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	QedMonitorInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_monitor_instances_count",
+			Help: "Number of monitor agents running.",
+		},
+	)
+
+	QedMonitorBatchesReceivedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_monitor_batches_received_total",
+			Help: "Number of batches received by monitors.",
+		},
+	)
+
+	QedMonitorBatchesProcessSeconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_monitor_batches_process_seconds",
+			Help: "Duration of Monitor batch processing",
+		},
+	)
+
+	QedMonitorGetIncrementalProofErrTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_monitor_get_incremental_proof_err_total",
+			Help: "Number of errors trying to get incremental proofs by monitors.",
+		},
+	)
 )
 
 type Config struct {
@@ -54,12 +79,8 @@ func DefaultConfig() *Config {
 }
 
 type Monitor struct {
-	client *client.HTTPClient
-	conf   *Config
-
-	metricsServer      *http.Server
-	prometheusRegistry *prometheus.Registry
-
+	client          *client.HTTPClient
+	conf            *Config
 	taskCh          chan Task
 	quitCh          chan bool
 	executionTicker *time.Ticker
@@ -70,46 +91,18 @@ type Task interface {
 }
 
 func NewMonitor(conf *Config) (*Monitor, error) {
-	// Metrics
-	metrics.QedMonitorInstancesCount.Inc()
-
-	// QED client
-	transport := http.DefaultTransport.(*http.Transport)
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
-	httpClient := http.DefaultClient
-	httpClient.Transport = transport
-	client, err := client.NewHTTPClient(
-		client.SetHttpClient(httpClient),
-		client.SetURLs(conf.QEDUrls[0], conf.QEDUrls[1:]...),
-		client.SetAPIKey(conf.APIKey),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "Cannot start http client: ")
-	}
+	QedMonitorInstancesCount.Inc()
 
 	monitor := Monitor{
-		client: client,
+		client: client.NewHTTPClient(client.Config{
+			Endpoints: conf.QEDUrls,
+			APIKey:    conf.APIKey,
+			Insecure:  false,
+		}),
 		conf:   conf,
 		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
 	}
-
-	r := prometheus.NewRegistry()
-	metrics.Register(r)
-	monitor.prometheusRegistry = r
-	metricsMux := metricshttp.NewMetricsHTTP(r)
-
-	monitor.metricsServer = &http.Server{
-		Addr:    conf.MetricsAddr,
-		Handler: metricsMux,
-	}
-
-	go func() {
-		log.Debugf("	* Monitor starting metrics HTTP server in addr: %s", conf.MetricsAddr)
-		if err := monitor.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Monitor can't start metrics HTTP server: %s", err)
-		}
-	}()
 
 	monitor.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go monitor.runTaskDispatcher()
@@ -117,9 +110,22 @@ func NewMonitor(conf *Config) (*Monitor, error) {
 	return &monitor, nil
 }
 
+func (m Monitor) RegisterMetrics(r *prometheus.Registry) {
+	metrics := []prometheus.Collector{
+		QedMonitorInstancesCount,
+		QedMonitorBatchesReceivedTotal,
+		QedMonitorBatchesProcessSeconds,
+		QedMonitorGetIncrementalProofErrTotal,
+	}
+
+	for _, m := range metrics {
+		r.Register(m)
+	}
+}
+
 func (m Monitor) Process(b *protocol.BatchSnapshots) {
-	metrics.QedMonitorBatchesReceivedTotal.Inc()
-	timer := prometheus.NewTimer(metrics.QedMonitorBatchesProcessSeconds)
+	QedMonitorBatchesReceivedTotal.Inc()
+	timer := prometheus.NewTimer(QedMonitorBatchesProcessSeconds)
 	defer timer.ObserveDuration()
 
 	first := b.Snapshots[0].Snapshot
@@ -152,12 +158,7 @@ func (m Monitor) runTaskDispatcher() {
 }
 
 func (m *Monitor) Shutdown() {
-	metrics.QedMonitorInstancesCount.Dec()
-
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	if err := m.metricsServer.Shutdown(ctx); err != nil {
-		log.Infof("Monitor metrics http server shutdown process with error: %v", err)
-	}
+	QedMonitorInstancesCount.Dec()
 
 	m.executionTicker.Stop()
 	m.quitCh <- true
@@ -211,10 +212,10 @@ func (q QueryTask) sendAlert(msg string) {
 }
 
 func (q QueryTask) Do() {
-	log.Debug("Executing task: %+v", q)
+	log.Debugf("Executing task: %+v", q)
 	resp, err := q.client.Incremental(q.Start, q.End)
 	if err != nil {
-		metrics.QedMonitorGetIncrementalProofErrTotal.Inc()
+		QedMonitorGetIncrementalProofErrTotal.Inc()
 		log.Infof("Monitor is unable to get incremental proof from QED server: %s", err.Error())
 		return
 	}
