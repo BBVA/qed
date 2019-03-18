@@ -97,10 +97,10 @@ func (d *agentDelegate) NotifyMsg(msg []byte) {
 		log.Errorf("Unable to decode message: %v", err)
 		return
 	}
-	log.Debugf("Notifying batch  %+v\n", batchId(&batch))
 
 	// hashs the snaapshots to deduplicate processing inside the agent
 	hash := hashing.NewSha256Hasher().Do(*tmp["Snapshots"])
+	log.Debugf("Notifying batch %v\n", hash)
 	d.agent.In <- &hashedBatch{&batch, hash}
 }
 
