@@ -43,9 +43,9 @@ const (
 	QEDUrl       = "http://127.0.0.1:8800"
 	QEDTLS       = "https://localhost:8800"
 	QEDGossip    = "127.0.0.1:8400"
-	QEDTamperURL = "http://127.0.0.1:18800/"
-	StoreURL     = "http://127.0.0.1:8888/"
-	AlertsURL    = "http://127.0.0.1:8888/"
+	QEDTamperURL = "http://127.0.0.1:18800"
+	StoreURL     = "http://127.0.0.1:8888"
+	AlertsURL    = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
 )
 
@@ -67,6 +67,18 @@ func delay(duration time.Duration) scope.TestF {
 	return func(t *testing.T) {
 		time.Sleep(duration)
 	}
+}
+
+func retry(tries int, delay time.Duration, fn func() error) int {
+	var i int
+	for i = 0; i < tries; i++ {
+		err := fn()
+		if err == nil {
+			return i
+		}
+		time.Sleep(delay)
+	}
+	return i
 }
 
 func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Response, error) {
@@ -98,10 +110,13 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 	switch role {
 	case member.Auditor:
 		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:810%d", id)
+		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:811%d", id)
 	case member.Monitor:
 		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:820%d", id)
+		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:821%d", id)
 	case member.Publisher:
 		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:830%d", id)
+		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:831%d", id)
 	}
 
 	agentConf.StartJoin = []string{QEDGossip}
