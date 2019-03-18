@@ -40,13 +40,13 @@ func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 			// must be curried.
 			config = agentPreRun(config)
 
-			// Bindings
-			auditorConfig.MetricsAddr = config.BindAddr // TODO: make MetricsAddr configurable
 			auditorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
-			auditorConfig.PubUrls = v.GetStringSlice("agent.alert_urls")
+			auditorConfig.PubUrls = v.GetStringSlice("agent.pub_urls")
+			auditorConfig.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
 
 			markSliceStringRequired(auditorConfig.QEDUrls, "qedUrls")
 			markSliceStringRequired(auditorConfig.PubUrls, "pubUrls")
+			markSliceStringRequired(auditorConfig.AlertsUrls, "alertsUrls")
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -76,11 +76,11 @@ func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 
 	f := cmd.Flags()
 	f.StringSliceVarP(&auditorConfig.QEDUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
-	f.StringSliceVarP(&auditorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
-
+	f.StringSliceVarP(&auditorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of store servers ([host]:port), through which an auditor can make queries")
+	f.StringSliceVarP(&auditorConfig.AlertsUrls, "alertsUrls", "", []string{}, "Comma-delimited list of alerts servers ([host]:port), through which an auditor can make queries")
 	// Lookups
 	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
-	v.BindPFlag("agent.alert_urls", f.Lookup("pubUrls"))
-
+	v.BindPFlag("agent.pub_urls", f.Lookup("pubUrls"))
+	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
 	return cmd
 }
