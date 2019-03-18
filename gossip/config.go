@@ -107,6 +107,9 @@ type Config struct {
 
 	// Interval to send out messages to other agents
 	ProcessInterval time.Duration
+	
+	// Address to bind the metrics endpoint
+	MetricsAddr string
 }
 
 // AddrParts returns the parts of the BindAddr that should be
