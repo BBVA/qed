@@ -23,20 +23,24 @@ import (
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Processor interface {
 	Process(*protocol.BatchSnapshots)
+	RegisterMetrics(*prometheus.Registry)
 }
 
 type FakeProcessor struct {
 }
 
-func (d FakeProcessor) Process(b *protocol.BatchSnapshots) {
-}
+func (d FakeProcessor) Process(b *protocol.BatchSnapshots)     {}
+func (d FakeProcessor) RegisterMetrics(r *prometheus.Registry) {}
 
 type DummyProcessor struct {
 }
+
+func (d DummyProcessor) RegisterMetrics(r *prometheus.Registry) {}
 
 func (d DummyProcessor) Process(b *protocol.BatchSnapshots) {
 	for i := 0; i < len(b.Snapshots); i++ {
