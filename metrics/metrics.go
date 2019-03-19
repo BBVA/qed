@@ -18,6 +18,8 @@ package metrics
 
 import (
 	"context"
+	"expvar"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -26,11 +28,29 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Balloon has a Map of all the stats relative to Balloon
+var Balloon *expvar.Map
+
+// Implement expVar.Var interface
+type Uint64ToVar uint64
+
+func (v Uint64ToVar) String() string {
+	return fmt.Sprintf("%d", v)
+}
+
+func init() {
+	Balloon = expvar.NewMap("Qed_balloon_stats")
+}
+
+// A metrics server holds the http API and the prometheus registry
+// which provides access to the registered metrics.
 type Server struct {
 	server   *http.Server
 	registry *prometheus.Registry
 }
 
+// Create new metrics server. Do not listen to the given address until
+// the server is started.
 func NewServer(addr string) *Server {
 	r := prometheus.NewRegistry()
 	return &Server{
@@ -42,17 +62,22 @@ func NewServer(addr string) *Server {
 	}
 }
 
+// Listens on the configured address and blocks until shutdown is called.
 func (m Server) Start() {
 	if err := m.server.ListenAndServe(); err != http.ErrServerClosed {
 		log.Errorf("Can't start metrics HTTP server: %s", err)
 	}
 }
 
+// Gracefully shitdown metrics http server waiting 5 seconds for
+// connections to be closed.
 func (m Server) Shutdown() {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	m.server.Shutdown(ctx)
 }
 
+// Register a prometheus collector in the prometheus registry used
+// by the metrics server.
 func (m Server) Register(metric prometheus.Collector) {
 	if err := m.registry.Register(metric); err != nil {
 		log.Infof("metric not registered:", err)
