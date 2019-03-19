@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/gossip/member"
+	"github.com/bbva/qed/metrics"
 )
 
 func TestJoin(t *testing.T) {
@@ -30,7 +31,8 @@ func TestJoin(t *testing.T) {
 	conf.NodeName = "testNode"
 	conf.Role = member.Auditor
 	conf.BindAddr = "127.0.0.1:12345"
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}})
+	metricsServer := metrics.NewServer("127.0.0.2:23464")
+	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
 
 	testCases := []struct {
 		agentState             member.Status
@@ -71,7 +73,8 @@ func TestLeave(t *testing.T) {
 	conf.NodeName = "testNode"
 	conf.Role = member.Auditor
 	conf.BindAddr = "127.0.0.1:12346"
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}})
+	metricsServer := metrics.NewServer("127.0.0.2:13445")
+	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
 
 	testCases := []struct {
 		agentState  member.Status
@@ -119,7 +122,8 @@ func TestShutdown(t *testing.T) {
 	conf.NodeName = "testNode"
 	conf.Role = member.Auditor
 	conf.BindAddr = "127.0.0.1:12347"
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}})
+	metricsServer := metrics.NewServer("127.0.0.2:43512")
+	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
 
 	testCases := []struct {
 		agentState  member.Status

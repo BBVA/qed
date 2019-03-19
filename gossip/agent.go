@@ -24,6 +24,7 @@ import (
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/coocood/freecache"
 	"github.com/hashicorp/memberlist"
@@ -38,7 +39,7 @@ type Agent struct {
 	config *Config
 	Self   *member.Peer
 
-	metricsServer *metricsServer
+	metricsServer *metrics.Server
 
 	memberlist *memberlist.Memberlist
 	broadcasts *memberlist.TransmitLimitedQueue
@@ -55,11 +56,11 @@ type Agent struct {
 	quit chan bool
 }
 
-func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
+func NewAgent(conf *Config, p []Processor, m *metrics.Server) (agent *Agent, err error) {
 	log.Infof("New agent %s\n", conf.NodeName)
 	agent = &Agent{
 		config:        conf,
-		metricsServer: newMetricsServer(conf.MetricsAddr),
+		metricsServer: m,
 		Topology:      NewTopology(),
 		processors:    p,
 		processed:     freecache.NewCache(1 << 20),
@@ -134,11 +135,11 @@ func (a *Agent) ChTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.Ba
 func (a *Agent) start() {
 
 	for _, p := range a.processors {
-		p.RegisterMetrics(a.metricsServer.registry)
+		p.RegisterMetrics(a.metricsServer)
 	}
 
 	go func() {
-		a.metricsServer.start()
+		a.metricsServer.Start()
 	}()
 
 	for {
@@ -261,7 +262,7 @@ func (a *Agent) Shutdown() error {
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
 
-	a.metricsServer.shutdown()
+	a.metricsServer.Shutdown()
 
 	if a.Self.Status == member.Shutdown {
 		return nil

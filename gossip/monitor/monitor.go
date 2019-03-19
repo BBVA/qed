@@ -28,6 +28,7 @@ import (
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/pkg/errors"
 
@@ -120,7 +121,7 @@ func NewMonitor(conf *Config) (*Monitor, error) {
 	return &monitor, nil
 }
 
-func (m Monitor) RegisterMetrics(r *prometheus.Registry) {
+func (m Monitor) RegisterMetrics(srv *metrics.Server) {
 	metrics := []prometheus.Collector{
 		QedMonitorInstancesCount,
 		QedMonitorBatchesReceivedTotal,
@@ -129,7 +130,7 @@ func (m Monitor) RegisterMetrics(r *prometheus.Registry) {
 	}
 
 	for _, m := range metrics {
-		r.Register(m)
+		srv.Register(m)
 	}
 }
 
