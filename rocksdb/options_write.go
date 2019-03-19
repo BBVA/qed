@@ -21,7 +21,7 @@ import "C"
 
 // WriteOptions represent all options available when writing to a database.
 type WriteOptions struct {
-	opts *C.rocksdb_writeoptions_t
+	c *C.rocksdb_writeoptions_t
 }
 
 // NewDefaultWriteOptions creates a default WriteOptions object.
@@ -34,11 +34,19 @@ func NewDefaultWriteOptions() *WriteOptions {
 // and the write may got lost after a crash.
 // Default: false
 func (o *WriteOptions) SetDisableWAL(value bool) {
-	C.rocksdb_writeoptions_disable_WAL(o.opts, C.int(btoi(value)))
+	C.rocksdb_writeoptions_disable_WAL(o.c, C.int(btoi(value)))
+}
+
+// SetSync sets the sync mode. If true, the write will be flushed
+// from the operating system buffer cache before the write is considered complete.
+// If this flag is true, writes will be slower.
+// Default: false
+func (o *WriteOptions) SetSync(value bool) {
+	C.rocksdb_writeoptions_set_sync(o.c, boolToUchar(value))
 }
 
 // Destroy deallocates the WriteOptions object.
 func (o *WriteOptions) Destroy() {
-	C.rocksdb_writeoptions_destroy(o.opts)
-	o.opts = nil
+	C.rocksdb_writeoptions_destroy(o.c)
+	o.c = nil
 }
