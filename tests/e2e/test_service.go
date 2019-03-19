@@ -25,11 +25,13 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/coocood/freecache"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+	"github.com/bbva/qed/util"
 )
 
 var (
@@ -64,11 +66,19 @@ var (
 		},
 	)
 
+	QedStoreEventsStoredTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_store_events_stored_total",
+			Help: "Number of events stored.",
+		},
+	)
+
 	metricsList = []prometheus.Collector{
 		QedStoreInstancesCount,
 		QedStoreBatchesStoredTotal,
 		QedStoreSnapshotsRetrievedTotal,
 		QedStoreAlertsGeneratedTotal,
+		QedStoreEventsStoredTotal,
 	}
 
 	registerMetrics sync.Once
@@ -108,43 +118,42 @@ func (a *alertStore) GetAll() []string {
 	return n
 }
 
-const segmentSize uint64 = 1 << 20
-
-type Segment [segmentSize]*protocol.SignedSnapshot
-
 type snapStore struct {
-	segments []Segment
-	sync.Mutex
+	data *freecache.Cache
 }
 
 func newSnapStore() *snapStore {
-	return &snapStore{segments: append([]Segment{}, Segment{})}
+	return &snapStore{
+		data: freecache.NewCache(2 << 30),
+	}
 }
 
-func (s *snapStore) Put(b *protocol.BatchSnapshots) {
-	s.Lock()
-	defer s.Unlock()
-	lastVersion := b.Snapshots[len(b.Snapshots)-1].Snapshot.Version
-	maxSegment := lastVersion / segmentSize
-	for i := uint64(len(s.segments)); i <= maxSegment; i++ {
-		s.segments = append(s.segments, Segment{})
-	}
+func (s *snapStore) Put(b *protocol.BatchSnapshots) error {
 	for _, snap := range b.Snapshots {
-		targetSegment := snap.Snapshot.Version / segmentSize
-		targetIndex := snap.Snapshot.Version - (targetSegment * segmentSize)
-		s.segments[targetSegment][targetIndex] = snap
+		key := util.Uint64AsBytes(snap.Snapshot.Version)
+		val, err := snap.Encode()
+		if err != nil {
+			return err
+		}
+		s.data.Set(key, val, 0)
+		log.Debugf("snapStore(): saved snapshot with version ", snap.Snapshot.Version)
+		QedStoreEventsStoredTotal.Inc()
 	}
+	return nil
 }
 
-func (s *snapStore) Get(version uint64) *protocol.SignedSnapshot {
-	s.Lock()
-	defer s.Unlock()
-	targetSegment := version / segmentSize
-	if targetSegment >= uint64(len(s.segments)) {
-		return nil
+func (s *snapStore) Get(version uint64) (*protocol.SignedSnapshot, error) {
+	var snap protocol.SignedSnapshot
+	key := util.Uint64AsBytes(version)
+	val, err := s.data.Get(key)
+	if err != nil {
+		return nil, err
 	}
-	targetIndex := version - (targetSegment * segmentSize)
-	return s.segments[targetSegment][targetIndex]
+	err = snap.Decode(val)
+	if err != nil {
+		return nil, err
+	}
+	return &snap, nil
 }
 
 type Service struct {
@@ -240,15 +249,21 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 			var b protocol.BatchSnapshots
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
+				log.Infof("test_service(POST /batch): %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			err = b.Decode(buf)
 			if err != nil {
+				log.Infof("test_service(POST /batch): %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-
+			if len(b.Snapshots) < 1 {
+				log.Infof("test_service(POST /batch): Empty batch recevied!")
+				http.Error(w, "Empty batch recevied!", http.StatusInternalServerError)
+				return
+			}
 			s.snaps.Put(&b)
 			return
 		}
@@ -266,9 +281,10 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			b := s.snaps.Get(uint64(version))
-			if b == nil {
-				http.Error(w, fmt.Sprintf("Version not found: %v", version), http.StatusUnprocessableEntity)
+			b, err := s.snaps.Get(uint64(version))
+			if err != nil {
+				log.Infof("test_service(GET /snapshots?v=%d): not found becasue %v", version, err)
+				http.Error(w, fmt.Sprintf("Version not found: %v", version), http.StatusNotFound)
 				return
 			}
 			buf, err := b.Encode()
@@ -291,6 +307,7 @@ func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 		if r.Method == "GET" {
 			b, err := json.Marshal(s.alerts.GetAll())
 			if err != nil {
+				log.Infof("test_service(GET /alert) error decoding alerts because ", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -304,6 +321,7 @@ func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
+				log.Infof("test_service(GET /alert) error reading alerts because ", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}

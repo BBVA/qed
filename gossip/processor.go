@@ -22,21 +22,25 @@ import (
 	"net/http"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 )
 
 type Processor interface {
-	Process(protocol.BatchSnapshots)
+	Process(*protocol.BatchSnapshots)
+	RegisterMetrics(*metrics.Server)
 }
 
 type FakeProcessor struct {
 }
 
-func (d FakeProcessor) Process(b protocol.BatchSnapshots) {
-}
+func (d FakeProcessor) Process(b *protocol.BatchSnapshots) {}
+func (d FakeProcessor) RegisterMetrics(m *metrics.Server)  {}
 
 type DummyProcessor struct {
 }
+
+func (d DummyProcessor) RegisterMetrics(m *metrics.Server) {}
 
 func (d DummyProcessor) Process(b *protocol.BatchSnapshots) {
 	for i := 0; i < len(b.Snapshots); i++ {

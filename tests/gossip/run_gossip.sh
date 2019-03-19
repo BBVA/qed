@@ -4,7 +4,9 @@
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
+#
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,19 +37,19 @@ sleep 2s
 
 for i in `seq 1 $1`;
 do
-	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint auditor -k key -l debug --bind 127.0.0.1:810$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node auditor$i" &
+	xterm -hold -e "$QED agent --metrics 127.0.0.2:1810$i  auditor -k key -l debug --bind 127.0.0.1:810$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node auditor$i --alertsUrls $alertsStoreEndpoint" &
 	pids+=($!)
 done 
 
 for i in `seq 1 $2`;
 do
-	xterm  -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint monitor -k key -l debug --bind 127.0.0.1:820$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint --pubUrls $snapshotStoreEndpoint --node monitor$i" &
+	xterm  -hold -e "$QED agent --metrics 127.0.0.2:1820$i --alertsUrls $alertsStoreEndpoint monitor -k key -l debug --bind 127.0.0.1:820$i --join $qedGossipEndpoint --qedUrls $qedHTTPEndpoint  --node monitor$i " &
 	pids+=($!)
 done 
 
 for i in `seq 1 $3`;
 do
-	xterm -hold -e "$QED agent --alertsUrls $alertsStoreEndpoint publisher -k key -l debug --bind 127.0.0.1:830$i --join $qedGossipEndpoint --pubUrls $snapshotStoreEndpoint --node publisher$i" &
+	xterm -hold -e "$QED agent --metrics 127.0.0.2:1830$i --alertsUrls $alertsStoreEndpoint publisher -k key -l debug --bind 127.0.0.1:830$i --join $qedGossipEndpoint --pubUrls $snapshotStoreEndpoint --node publisher$i " &
 	pids+=($!)
 done 
 

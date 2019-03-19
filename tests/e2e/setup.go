@@ -34,6 +34,7 @@ import (
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/monitor"
 	"github.com/bbva/qed/gossip/publisher"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
 	"github.com/pkg/errors"
@@ -43,8 +44,9 @@ const (
 	QEDUrl       = "http://127.0.0.1:8800"
 	QEDTLS       = "https://localhost:8800"
 	QEDGossip    = "127.0.0.1:8400"
-	QEDTamperURL = "http://127.0.0.1:18800/tamper"
+	QEDTamperURL = "http://127.0.0.1:18800"
 	StoreURL     = "http://127.0.0.1:8888"
+	AlertsURL    = "http://127.0.0.1:8888"
 	APIKey       = "my-key"
 )
 
@@ -66,6 +68,18 @@ func delay(duration time.Duration) scope.TestF {
 	return func(t *testing.T) {
 		time.Sleep(duration)
 	}
+}
+
+func retry(tries int, delay time.Duration, fn func() error) int {
+	var i int
+	for i = 0; i < tries; i++ {
+		err := fn()
+		if err == nil {
+			return i
+		}
+		time.Sleep(delay)
+	}
+	return i
 }
 
 func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Response, error) {
@@ -97,18 +111,21 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 	switch role {
 	case member.Auditor:
 		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:810%d", id)
+		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:811%d", id)
 	case member.Monitor:
 		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:820%d", id)
+		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:821%d", id)
 	case member.Publisher:
 		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:830%d", id)
+		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:831%d", id)
 	}
 
 	agentConf.StartJoin = []string{QEDGossip}
 	agentConf.EnableCompression = true
-	agentConf.AlertsUrls = []string{StoreURL}
+	agentConf.AlertsUrls = []string{AlertsURL}
 	agentConf.Role = role
-
-	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
+	metricsServer := metrics.NewServer(agentConf.MetricsAddr)
+	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p}, metricsServer)
 	if err != nil {
 		t.Fatalf("Failed to start AGENT %s: %v", name, err)
 	}
@@ -126,6 +143,7 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		auditorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:710%d", id)
 		auditorConf.QEDUrls = []string{QEDUrl}
 		auditorConf.PubUrls = []string{StoreURL}
+		auditorConf.AlertsUrls = []string{AlertsURL}
 		auditorConf.APIKey = APIKey
 
 		au, err = auditor.NewAuditor(*auditorConf)
@@ -161,10 +179,10 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 		monitorConf := monitor.DefaultConfig()
 		monitorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:720%d", id)
 		monitorConf.QEDUrls = []string{QEDUrl}
-		monitorConf.PubUrls = []string{StoreURL}
+		monitorConf.AlertsUrls = []string{AlertsURL}
 		monitorConf.APIKey = APIKey
 
-		mn, err = monitor.NewMonitor(*monitorConf)
+		mn, err = monitor.NewMonitor(monitorConf)
 		if err != nil {
 			t.Fatalf("Unable to create a new monitor: %v", err)
 		}
@@ -280,7 +298,6 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 				t.Log(err)
 			}
 		})()
-		time.Sleep(2 * time.Second)
 	}
 
 	after := func(t *testing.T) {
@@ -310,6 +327,7 @@ func getClient(t *testing.T, id int) *client.HTTPClient {
 		client.SetAPIKey(APIKey),
 		client.SetTopologyDiscovery(false),
 		client.SetHealthchecks(false),
+		client.SetMaxRetries(3),
 	)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "Cannot start http client: "))
