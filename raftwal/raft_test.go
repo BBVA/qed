@@ -30,7 +30,7 @@ import (
 	"github.com/bbva/qed/protocol"
 
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/storage/badger"
+	"github.com/bbva/qed/storage/rocks"
 	utilrand "github.com/bbva/qed/testutils/rand"
 	"github.com/hashicorp/raft"
 	"github.com/stretchr/testify/require"
@@ -46,21 +46,20 @@ func raftAddr(id int) string {
 }
 
 func newNode(t *testing.T, id int) (*RaftBalloon, func()) {
-	badgerPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
+	dbPath := fmt.Sprintf("/var/tmp/raft-test/node%d/db", id)
 
-	err := os.MkdirAll(badgerPath, os.FileMode(0755))
+	err := os.MkdirAll(dbPath, os.FileMode(0755))
 	require.NoError(t, err)
-	badger, err := badger.NewBadgerStore(badgerPath)
+	db, err := rocks.NewRocksDBStore(dbPath)
 	require.NoError(t, err)
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	err = os.MkdirAll(raftPath, os.FileMode(0755))
 	require.NoError(t, err)
-	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot, 25000))
+	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), db, make(chan *protocol.Snapshot, 25000))
 	require.NoError(t, err)
 
 	return r, func() {
-		fmt.Println("Removing node folder")
 		os.RemoveAll(fmt.Sprintf("/var/tmp/raft-test/node%d", id))
 	}
 }
@@ -450,17 +449,17 @@ func mustTempDir() string {
 }
 
 func newNodeBench(b *testing.B, id int) (*RaftBalloon, func()) {
-	badgerPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
+	rocksdbPath := fmt.Sprintf("/var/tmp/raft-test/node%d/rocksdb", id)
 
-	err := os.MkdirAll(badgerPath, os.FileMode(0755))
+	err := os.MkdirAll(rocksdbPath, os.FileMode(0755))
 	require.NoError(b, err)
-	badger, err := badger.NewBadgerStore(badgerPath)
+	rocksdb, err := rocks.NewRocksDBStore(rocksdbPath)
 	require.NoError(b, err)
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	err = os.MkdirAll(raftPath, os.FileMode(0755))
 	require.NoError(b, err)
-	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), badger, make(chan *protocol.Snapshot, 100))
+	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), rocksdb, make(chan *protocol.Snapshot, 100))
 	require.NoError(b, err)
 
 	return r, func() {
