@@ -35,10 +35,12 @@ func DefaultConfig() *Config {
 		EnableCompression:   false,
 		BroadcastTimeout:    5 * time.Second,
 		LeavePropagateDelay: 0,
+		TimeoutQueues:       200 * time.Millisecond,
+		ProcessInterval:     1 * time.Second,
 	}
 }
 
-// Config is the configuration for creating an Auditor instance
+// Config is the configuration for creating an Agent instance
 type Config struct {
 	// The name of this node. This must be unique in the cluster. If this
 	// is not set, Auditor will set it to the hostname of the running machine.
@@ -99,6 +101,15 @@ type Config struct {
 
 	// Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts
 	AlertsUrls []string
+
+	// Timeout enqueuing elements on a channel
+	TimeoutQueues time.Duration
+
+	// Interval to send out messages to other agents
+	ProcessInterval time.Duration
+	
+	// Address to bind the metrics endpoint
+	MetricsAddr string
 }
 
 // AddrParts returns the parts of the BindAddr that should be

@@ -21,6 +21,7 @@ import (
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/util"
 )
 
@@ -43,8 +44,10 @@ func newAgentPublisherCommand(ctx *cmdContext, config gossip.Config, agentPreRun
 			// Bindings
 			publisherConfig.MetricsAddr = config.BindAddr // TODO: make MetricsAddr configurable
 			publisherConfig.PubUrls = v.GetStringSlice("agent.snapshots_store_urls")
+			publisherConfig.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
 
 			markSliceStringRequired(publisherConfig.PubUrls, "pubUrls")
+			markSliceStringRequired(publisherConfig.AlertsUrls, "alertsUrls")
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -54,8 +57,8 @@ func newAgentPublisherCommand(ctx *cmdContext, config gossip.Config, agentPreRun
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
-
-			agent, err := gossip.NewAgent(&config, []gossip.Processor{publisher})
+			metricsServer := metrics.NewServer(config.MetricsAddr)
+			agent, err := gossip.NewAgent(&config, []gossip.Processor{publisher}, metricsServer)
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
@@ -72,11 +75,12 @@ func newAgentPublisherCommand(ctx *cmdContext, config gossip.Config, agentPreRun
 	}
 
 	f := cmd.Flags()
-	f.StringSliceVarP(&publisherConfig.PubUrls, "pubUrls", "", []string{},
-		"Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
+	f.StringSliceVarP(&publisherConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
+	f.StringSliceVarP(&publisherConfig.AlertsUrls, "alertsUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an monitor can publish alerts")
 
 	// Lookups
 	v.BindPFlag("agent.snapshots_store_urls", f.Lookup("pubUrls"))
+	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
 
 	return cmd
 }

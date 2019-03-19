@@ -18,29 +18,57 @@ package auditor
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/gossip/metrics"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/pkg/errors"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var (
+	QedAuditorInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_auditor_instances_count",
+			Help: "Number of auditor agents running.",
+		},
+	)
+
+	QedAuditorBatchesProcessSeconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_auditor_batches_process_seconds",
+			Help: "Duration of Auditor batch processing",
+		},
+	)
+
+	QedAuditorBatchesReceivedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_auditor_batches_received_total",
+			Help: "Number of batches received by auditors.",
+		},
+	)
+
+	QedAuditorGetMembershipProofErrTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_auditor_get_membership_proof_err_total",
+			Help: "Number of errors trying to get membership proofs by auditors.",
+		},
+	)
+)
+
 type Config struct {
 	QEDUrls               []string
 	PubUrls               []string
+	AlertsUrls            []string
 	APIKey                string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
@@ -58,24 +86,23 @@ type Auditor struct {
 	qed  *client.HTTPClient
 	conf Config
 
-	metricsServer      *http.Server
-	prometheusRegistry *prometheus.Registry
-
 	taskCh          chan Task
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
 
+type Task interface {
+	Do()
+}
+
 func NewAuditor(conf Config) (*Auditor, error) {
-
-	metrics.QedAuditorInstancesCount.Inc()
-
+	QedAuditorInstancesCount.Inc()
 	// QED client
 	transport := http.DefaultTransport.(*http.Transport)
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
 	httpClient := http.DefaultClient
 	httpClient.Transport = transport
-	client, err := client.NewHTTPClient(
+	qed, err := client.NewHTTPClient(
 		client.SetHttpClient(httpClient),
 		client.SetURLs(conf.QEDUrls[0], conf.QEDUrls[1:]...),
 		client.SetAPIKey(conf.APIKey),
@@ -85,34 +112,29 @@ func NewAuditor(conf Config) (*Auditor, error) {
 	}
 
 	auditor := Auditor{
-		qed:    client,
+		qed:    qed,
 		conf:   conf,
 		taskCh: make(chan Task, 100),
 		quitCh: make(chan bool),
 	}
 
-	r := prometheus.NewRegistry()
-	metrics.Register(r)
-	auditor.prometheusRegistry = r
-	metricsMux := metricshttp.NewMetricsHTTP(r)
-
-	addr := strings.Split(conf.MetricsAddr, ":")
-	auditor.metricsServer = &http.Server{
-		Addr:    ":1" + addr[1],
-		Handler: metricsMux,
-	}
-
-	go func() {
-		log.Debugf("	* Starting metrics HTTP server in addr: %s", conf.MetricsAddr)
-		if err := auditor.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start metrics HTTP server: %s", err)
-		}
-	}()
-
 	auditor.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go auditor.runTaskDispatcher()
 
 	return &auditor, nil
+}
+
+func (a Auditor) RegisterMetrics(srv *metrics.Server) {
+	metrics := []prometheus.Collector{
+		QedAuditorInstancesCount,
+		QedAuditorBatchesProcessSeconds,
+		QedAuditorBatchesReceivedTotal,
+		QedAuditorGetMembershipProofErrTotal,
+	}
+
+	for _, m := range metrics {
+		srv.Register(m)
+	}
 }
 
 func (a Auditor) runTaskDispatcher() {
@@ -145,63 +167,52 @@ func (a Auditor) dispatchTasks() {
 	}
 }
 
-func (a Auditor) Process(b protocol.BatchSnapshots) {
-	// Metrics
-	metrics.QedAuditorBatchesReceivedTotal.Inc()
-	timer := prometheus.NewTimer(metrics.QedAuditorBatchesProcessSeconds)
+func (a Auditor) Process(b *protocol.BatchSnapshots) {
+	QedAuditorBatchesReceivedTotal.Inc()
+	timer := prometheus.NewTimer(QedAuditorBatchesProcessSeconds)
 	defer timer.ObserveDuration()
 
 	task := &MembershipTask{
-		qed:     a.qed,
-		pubUrl:  a.conf.PubUrls[0],
-		taskCh:  a.taskCh,
-		retries: 2,
-		s:       *b.Snapshots[0],
+		qed:       a.qed,
+		pubUrl:    a.conf.PubUrls[0],
+		alertsUrl: a.conf.AlertsUrls[0],
+		taskCh:    a.taskCh,
+		retries:   2,
+		s:         b.Snapshots[0],
 	}
 
 	a.taskCh <- task
 }
 
 func (a *Auditor) Shutdown() {
-	// Metrics
-	metrics.QedAuditorInstancesCount.Dec()
-
-	log.Debugf("Metrics enabled: stopping server...")
-	if err := a.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-		log.Error(err)
-	}
-	log.Debugf("Done.\n")
-
+	QedAuditorInstancesCount.Dec()
 	a.executionTicker.Stop()
 	a.quitCh <- true
 	close(a.quitCh)
 	close(a.taskCh)
-}
-
-type Task interface {
-	Do()
+	log.Debugf("Auditor stopped.")
 }
 
 type MembershipTask struct {
-	qed     *client.HTTPClient
-	pubUrl  string
-	taskCh  chan Task
-	retries int
-	s       protocol.SignedSnapshot
+	qed       *client.HTTPClient
+	pubUrl    string
+	alertsUrl string
+	taskCh    chan Task
+	retries   int
+	s         *protocol.SignedSnapshot
 }
 
 func (t *MembershipTask) Do() {
 
 	proof, err := t.qed.MembershipDigest(t.s.Snapshot.EventDigest, t.s.Snapshot.Version)
 	if err != nil {
-		// TODO: retry
-		log.Infof("Unable to get membership proof from QED server: %s", err.Error())
+		log.Infof("Auditor is unable to get membership proof from QED server: %s", err.Error())
 
 		switch fmt.Sprintf("%T", err) {
 		case "*errors.errorString":
-			t.sendAlert(fmt.Sprintf("Unable to get membership proof from QED server: %s", err.Error()))
+			t.sendAlert(fmt.Sprintf("Auditor is unable to get membership proof from QED server: %s", err.Error()))
 		default:
-			metrics.QedAuditorGetMembershipProofErrTotal.Inc()
+			QedAuditorGetMembershipProofErrTotal.Inc()
 		}
 
 		return
@@ -256,7 +267,7 @@ func (t MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, e
 }
 
 func (t MembershipTask) sendAlert(msg string) {
-	resp, err := http.Post(fmt.Sprintf("%s/alert", t.pubUrl), "application/json",
+	resp, err := http.Post(t.alertsUrl+"/alert", "application/json",
 		bytes.NewBufferString(msg))
 	if err != nil {
 		log.Infof("Error saving batch in alertStore: %v", err)
