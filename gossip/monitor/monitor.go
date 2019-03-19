@@ -217,7 +217,7 @@ func (q QueryTask) sendAlert(msg string) {
 	defer resp.Body.Close()
 	_, err = io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
-		log.Infof("MOnitor had an error from alertStore saving a batch: %v", err)
+		log.Infof("Monitor had an error from alertStore saving a batch: %v", err)
 	}
 }
 
