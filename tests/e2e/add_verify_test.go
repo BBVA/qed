@@ -19,7 +19,6 @@ package e2e
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
@@ -30,8 +29,8 @@ import (
 
 func TestAddVerify(t *testing.T) {
 	before, after := setupServer(0, "", false, t)
-	scenario, let := scope.Scope(t, before, merge(after, delay(2*time.Second)))
-
+	scenario, let := scope.Scope(t, before, after)
+	// log.SetLogger("", log.DEBUG)
 	event := rand.RandomString(10)
 
 	scenario("Add one event and get its membership proof", func() {
