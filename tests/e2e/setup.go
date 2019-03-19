@@ -34,6 +34,7 @@ import (
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/monitor"
 	"github.com/bbva/qed/gossip/publisher"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
 	"github.com/pkg/errors"
@@ -123,8 +124,8 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 	agentConf.EnableCompression = true
 	agentConf.AlertsUrls = []string{AlertsURL}
 	agentConf.Role = role
-
-	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p})
+	metricsServer := metrics.NewServer(agentConf.MetricsAddr)
+	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p}, metricsServer)
 	if err != nil {
 		t.Fatalf("Failed to start AGENT %s: %v", name, err)
 	}

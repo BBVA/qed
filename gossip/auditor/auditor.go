@@ -28,6 +28,7 @@ import (
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/pkg/errors"
 
@@ -123,7 +124,7 @@ func NewAuditor(conf Config) (*Auditor, error) {
 	return &auditor, nil
 }
 
-func (a Auditor) RegisterMetrics(r *prometheus.Registry) {
+func (a Auditor) RegisterMetrics(srv *metrics.Server) {
 	metrics := []prometheus.Collector{
 		QedAuditorInstancesCount,
 		QedAuditorBatchesProcessSeconds,
@@ -132,7 +133,7 @@ func (a Auditor) RegisterMetrics(r *prometheus.Registry) {
 	}
 
 	for _, m := range metrics {
-		r.Register(m)
+		srv.Register(m)
 	}
 }
 
