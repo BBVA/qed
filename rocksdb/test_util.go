@@ -24,7 +24,7 @@ import (
 )
 
 func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
-	dir, err := ioutil.TempDir("", "rocksdb-"+name)
+	path, err := ioutil.TempDir("", "rocksdb-"+name)
 	require.NoError(t, err)
 
 	opts := NewDefaultOptions()
@@ -33,8 +33,29 @@ func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
 		applyOpts(opts)
 	}
 
-	db, err := OpenDB(dir, opts)
+	db, err := OpenDB(path, opts)
 	require.NoError(t, err)
 
 	return db
+}
+
+func newTestDBCF(t *testing.T, name string) (db *DB, cfh []*ColumnFamilyHandle, cleanup func()) {
+	path, err := ioutil.TempDir("", "rocksdb-"+name)
+	require.NoError(t, err)
+
+	givenNames := []string{"default", "other"}
+	opts := NewDefaultOptions()
+	opts.SetCreateIfMissingColumnFamilies(true)
+	opts.SetCreateIfMissing(true)
+
+	db, cfh, err = OpenDBColumnFamilies(path, opts, givenNames, []*Options{opts, opts})
+	require.NoError(t, err)
+
+	cleanup = func() {
+		for _, cf := range cfh {
+			cf.Destroy()
+		}
+		db.Close()
+	}
+	return db, cfh, cleanup
 }

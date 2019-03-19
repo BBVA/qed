@@ -22,7 +22,7 @@ import "C"
 // FlushOptions represent all of the available options when manual flushing the
 // database.
 type FlushOptions struct {
-	opts *C.rocksdb_flushoptions_t
+	c *C.rocksdb_flushoptions_t
 }
 
 // NewDefaultFlushOptions creates a default FlushOptions object.
@@ -33,11 +33,11 @@ func NewDefaultFlushOptions() *FlushOptions {
 // SetWait specify if the flush will wait until the flush is done.
 // Default: true
 func (o *FlushOptions) SetWait(value bool) {
-	C.rocksdb_flushoptions_set_wait(o.opts, boolToUchar(value))
+	C.rocksdb_flushoptions_set_wait(o.c, boolToUchar(value))
 }
 
 // Destroy deallocates the FlushOptions object.
 func (o *FlushOptions) Destroy() {
-	C.rocksdb_flushoptions_destroy(o.opts)
-	o.opts = nil
+	C.rocksdb_flushoptions_destroy(o.c)
+	o.c = nil
 }
