@@ -144,7 +144,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 	if client.discoveryEnabled {
 		// try to discover the cluster topology initially
 		if err := client.discover(); err != nil {
-			return nil, err
+			log.Infof("Unable to get QED topology, we will try it later: %v", err)
 		}
 	}
 
@@ -153,9 +153,9 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 		client.healthCheck(client.healthcheckTimeout)
 	}
 
-	// Ensure thath we have at least one endpoint, the primary, available
+	// Ensure that we have at least one endpoint, the primary, available
 	if !client.topology.HasActivePrimary() {
-		return nil, ErrNoPrimary
+		log.Infof("QED does not have a primary node or it is down, we will try it later.")
 	}
 
 	// if t.discoveryEnabled {
@@ -215,7 +215,7 @@ func (c *HTTPClient) setRetrier(maxRetries int) error {
 		// Create a Retrier that will wait for 100ms between requests.
 		ticks := make([]int, maxRetries)
 		for i := 0; i < len(ticks); i++ {
-			ticks[i] = 100
+			ticks[i] = 1000
 		}
 		backoff := NewSimpleBackoff(ticks...)
 		c.retrier = NewBackoffRequestRetrier(c.httpClient, c.maxRetries, backoff)
