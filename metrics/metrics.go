@@ -1,5 +1,5 @@
 /*
-   Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
+   Copyright 2018 Banco Bilbao Vizcaya Argentaria, S.A.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,182 +17,47 @@
 package metrics
 
 import (
-	"expvar"
-	"fmt"
-	"sync"
+	"context"
+	"net/http"
+	"time"
 
+	"github.com/bbva/qed/api/metricshttp"
+	"github.com/bbva/qed/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
+type Server struct {
+	server   *http.Server
+	registry *prometheus.Registry
+}
 
-	// Balloon has a Map of all the stats relative to Balloon
-	Balloon *expvar.Map
-
-	// Prometheus
-
-	// SERVER
-
-	QedInstancesCount = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "qed_instances_count",
-			Help: "Number of QED servers currently running",
+func NewServer(addr string) *Server {
+	r := prometheus.NewRegistry()
+	return &Server{
+		server: &http.Server{
+			Addr:    addr,
+			Handler: metricshttp.NewMetricsHTTP(r),
 		},
-	)
-
-	// API
-
-	QedAPIHealthcheckRequestsTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_api_healthcheck_requests_total",
-			Help: "The total number of healthcheck api requests",
-		},
-	)
-
-	// BALLOON
-
-	QedBalloonAddDurationSeconds = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "qed_balloon_add_duration_seconds",
-			Help: "Duration of the add operation.",
-		},
-	)
-	QedBalloonMembershipDurationSeconds = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "qed_balloon_membership_duration_seconds",
-			Help: "Duration of the membership queries.",
-		},
-	)
-	QedBalloonDigestMembershipDurationSeconds = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "qed_balloon_digest_membership_duration_seconds",
-			Help: "Duration of the membership by digest queries.",
-		},
-	)
-	QedBalloonIncrementalDurationSeconds = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "qed_balloon_incremental_duration_seconds",
-			Help: "Duration of the incremental queries.",
-		},
-	)
-	QedBalloonAddTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_balloon_add_total",
-			Help: "Number of add operations",
-		},
-	)
-	QedBalloonMembershipTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_balloon_membership_total",
-			Help: "Number of membership queries.",
-		},
-	)
-	QedBalloonDigestMembershipTotal = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "qed_balloon_digest_membership_total",
-			Help: "Number of membership by digest queries.",
-		},
-	)
-	QedBalloonIncrementalTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_balloon_incremental_total",
-			Help: "Number of incremental queries.",
-		},
-	)
-
-	// HYPER TREE
-
-	QedHyperAddTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_hyper_add_total",
-			Help: "Number of the events added to the hyper tree.",
-		},
-	)
-	QedHyperMembershipTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_hyper_membership_total",
-			Help: "Number of membership queries",
-		},
-	)
-
-	// HISTORY TREE
-
-	QedHistoryAddTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_history_add_total",
-			Help: "Number of the events added to the history tree.",
-		},
-	)
-	QedHistoryMembershipTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_history_membership_total",
-			Help: "Number of membership queries",
-		},
-	)
-	QedHistoryConsistencyTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_history_consistency_total",
-			Help: "Number of consistency queries",
-		},
-	)
-
-	// SENDER
-
-	QedSenderInstancesCount = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "qed_sender_instances_count",
-			Help: "Number of sender agents running",
-		},
-	)
-	QedSenderBatchesSentTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_sender_batches_sent_total",
-			Help: "Number of batches sent by the sender.",
-		},
-	)
-
-	// PROMETHEUS
-
-	metricsList = []prometheus.Collector{
-		QedInstancesCount,
-		QedAPIHealthcheckRequestsTotal,
-
-		QedBalloonAddDurationSeconds,
-		QedBalloonMembershipDurationSeconds,
-		QedBalloonDigestMembershipDurationSeconds,
-		QedBalloonIncrementalDurationSeconds,
-
-		QedBalloonAddTotal,
-		QedBalloonMembershipTotal,
-		QedBalloonDigestMembershipTotal,
-		QedBalloonIncrementalTotal,
-
-		QedSenderInstancesCount,
-		QedSenderBatchesSentTotal,
+		registry: r,
 	}
-
-	registerMetrics sync.Once
-)
-
-// Register all metrics.
-func Register(r *prometheus.Registry) {
-	// Register the metrics.
-	registerMetrics.Do(
-		func() {
-			for _, metric := range metricsList {
-				r.MustRegister(metric)
-			}
-		},
-	)
 }
 
-// Implement expVar.Var interface
-type Uint64ToVar uint64
-
-func (v Uint64ToVar) String() string {
-	return fmt.Sprintf("%d", v)
+func (m Server) Start() {
+	if err := m.server.ListenAndServe(); err != http.ErrServerClosed {
+		log.Errorf("Can't start metrics HTTP server: %s", err)
+	}
 }
 
-func init() {
-	Balloon = expvar.NewMap("Qed_balloon_stats")
+func (m Server) Shutdown() {
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	m.server.Shutdown(ctx)
 }
+
+func (m Server) Register(metric prometheus.Collector) {
+	if err := m.registry.Register(metric); err != nil {
+		log.Infof("metric not registered:", err)
+	} else {
+		log.Infof("metric registered.")
+	}
+}
+

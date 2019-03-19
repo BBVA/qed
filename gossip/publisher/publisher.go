@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/coocood/freecache"
 
@@ -105,7 +106,7 @@ func NewPublisher(conf Config) (*Publisher, error) {
 	return &publisher, nil
 }
 
-func (p Publisher) RegisterMetrics(r *prometheus.Registry) {
+func (p Publisher) RegisterMetrics(srv *metrics.Server) {
 	metrics := []prometheus.Collector{
 		QedPublisherInstancesCount,
 		QedPublisherBatchesReceivedTotal,
@@ -113,7 +114,7 @@ func (p Publisher) RegisterMetrics(r *prometheus.Registry) {
 	}
 
 	for _, m := range metrics {
-		r.Register(m)
+		srv.Register(m)
 	}
 }
 

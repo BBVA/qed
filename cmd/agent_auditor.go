@@ -21,6 +21,7 @@ import (
 	"github.com/bbva/qed/gossip/auditor"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/util"
 )
 
@@ -57,8 +58,8 @@ func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
-
-			agent, err := gossip.NewAgent(&config, []gossip.Processor{auditor})
+			metricsServer := metrics.NewServer(config.MetricsAddr)
+			agent, err := gossip.NewAgent(&config, []gossip.Processor{auditor}, metricsServer)
 			if err != nil {
 				log.Fatalf("Failed to start the QED auditor: %v", err)
 			}

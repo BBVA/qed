@@ -21,6 +21,7 @@ import (
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/util"
 )
 
@@ -56,8 +57,8 @@ func newAgentPublisherCommand(ctx *cmdContext, config gossip.Config, agentPreRun
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
-
-			agent, err := gossip.NewAgent(&config, []gossip.Processor{publisher})
+			metricsServer := metrics.NewServer(config.MetricsAddr)
+			agent, err := gossip.NewAgent(&config, []gossip.Processor{publisher}, metricsServer)
 			if err != nil {
 				log.Fatalf("Failed to start the QED publisher: %v", err)
 			}
