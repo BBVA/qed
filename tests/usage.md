@@ -4,14 +4,7 @@
 ## Requirements:
 * Dialog
 * Gnuplot
-* Vegeta
 * Wrk
-
-## Latency test
-```bash
-./stress-latency-60s
-```
-This will run an latency benchmark with Vegeta for 60s by default and output plot.html.
 
 ## Throughput test
 ```bash
