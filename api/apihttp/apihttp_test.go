@@ -368,10 +368,10 @@ func BenchmarkAuth(b *testing.B) {
 }
 
 func newNodeBench(b *testing.B, id int) (*raftwal.RaftBalloon, func()) {
-	badgerPath := fmt.Sprintf("/var/tmp/raft-test/node%d/badger", id)
+	rocksdbPath := fmt.Sprintf("/var/tmp/raft-test/node%d/rocksdb", id)
 
-	os.MkdirAll(badgerPath, os.FileMode(0755))
-	rocks, closeF := storage_utils.OpenRocksDBStore(b, badgerPath)
+	os.MkdirAll(rocksdbPath, os.FileMode(0755))
+	rocks, closeF := storage_utils.OpenRocksDBStore(b, rocksdbPath)
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	os.MkdirAll(raftPath, os.FileMode(0755))
