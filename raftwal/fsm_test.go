@@ -14,7 +14,7 @@ import (
 )
 
 func TestApply(t *testing.T) {
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
@@ -39,7 +39,7 @@ func TestApply(t *testing.T) {
 }
 
 func TestSnapshot(t *testing.T) {
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
@@ -63,7 +63,7 @@ func (f *fakeRC) Close() error {
 }
 
 func TestRestore(t *testing.T) {
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
@@ -73,7 +73,7 @@ func TestRestore(t *testing.T) {
 }
 
 func TestAddAndRestoreSnapshot(t *testing.T) {
-	store, closeF := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.db")
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
@@ -104,7 +104,7 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	snaps, _ := snap.List()
 	_, r, _ := snap.Open(snaps[0].ID)
 
-	store2, close2F := storage_utils.OpenBadgerStore(t, "/var/tmp/balloon.test.2.db")
+	store2, close2F := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.2.db")
 	defer close2F()
 
 	// New FSMStore

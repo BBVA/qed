@@ -28,8 +28,8 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal/commands"
+	"github.com/bbva/qed/raftwal/raftrocks"
 	"github.com/bbva/qed/storage"
-	raftbadger "github.com/bbva/raft-badger"
 	"github.com/hashicorp/raft"
 )
 
@@ -75,10 +75,10 @@ type RaftBalloon struct {
 	}
 
 	store struct {
-		db        storage.ManagedStore    // Persistent database
-		log       raft.LogStore           // Persistent log store
-		badgerLog *raftbadger.BadgerStore // Underlying badger-backed persistent log store
-		stable    *raftbadger.BadgerStore // Persistent k-v store
+		db         storage.ManagedStore    // Persistent database
+		log        raft.LogStore           // Persistent log store
+		rocksStore *raftrocks.RocksDBStore // Underlying rocksdb-backed persistent log store
+		//stable    *raftrocks.RocksDBStore // Persistent k-v store
 		snapshots *raft.FileSnapshotStore // Persistent snapstop store
 	}
 
@@ -91,23 +91,23 @@ type RaftBalloon struct {
 
 }
 
-// New returns a new RaftBalloon.
+// NewRaftBalloon returns a new RaftBalloon.
 func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, agentsQueue chan *protocol.Snapshot) (*RaftBalloon, error) {
 
 	// Create the log store and stable store
-	badgerLogStore, err := raftbadger.New(raftbadger.Options{Path: path + "/logs", NoSync: true, ValueLogGC: true}) // raftbadger.NewBadgerStore(path + "/logs")
+	rocksStore, err := raftrocks.New(raftrocks.Options{Path: path + "/wal", NoSync: true})
 	if err != nil {
-		return nil, fmt.Errorf("new badger store: %s", err)
+		return nil, fmt.Errorf("cannot create a new rocksdb log store: %s", err)
 	}
-	logStore, err := raft.NewLogCache(raftLogCacheSize, badgerLogStore)
+	logStore, err := raft.NewLogCache(raftLogCacheSize, rocksStore)
 	if err != nil {
-		return nil, fmt.Errorf("new cached store: %s", err)
+		return nil, fmt.Errorf("cannot create a new cached store: %s", err)
 	}
 
-	stableStore, err := raftbadger.New(raftbadger.Options{Path: path + "/config", NoSync: true, ValueLogGC: true}) // raftbadger.NewBadgerStore(path + "/config")
-	if err != nil {
-		return nil, fmt.Errorf("new badger store: %s", err)
-	}
+	// stableStore, err := raftrocks.New(raftrocks.Options{Path: path + "/config", NoSync: true})
+	// if err != nil {
+	// 	return nil, fmt.Errorf("cannot create a new rocksdb stable store: %s", err)
+	// }
 
 	// Instantiate balloon FSM
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, agentsQueue)
@@ -125,8 +125,7 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, agentsQue
 
 	rb.store.db = store
 	rb.store.log = logStore
-	rb.store.stable = stableStore
-	rb.store.badgerLog = badgerLogStore
+	rb.store.rocksStore = rocksStore
 
 	return rb, nil
 }
@@ -168,7 +167,7 @@ func (b *RaftBalloon) Open(bootstrap bool, metadata map[string]string) error {
 	}
 
 	// Instantiate the Raft system
-	b.raft.api, err = raft.NewRaft(b.raft.config, b.fsm, b.store.log, b.store.stable, b.store.snapshots, b.raft.transport)
+	b.raft.api, err = raft.NewRaft(b.raft.config, b.fsm, b.store.log, b.store.rocksStore, b.store.snapshots, b.raft.transport)
 	if err != nil {
 		return fmt.Errorf("new raft: %s", err)
 	}
@@ -226,15 +225,12 @@ func (b *RaftBalloon) Close(wait bool) error {
 	}
 
 	// close raft store
-	if err := b.store.badgerLog.Close(); err != nil {
-		return err
-	}
-	if err := b.store.stable.Close(); err != nil {
+	if err := b.store.rocksStore.Close(); err != nil {
 		return err
 	}
 
+	b.store.rocksStore = nil
 	b.store.log = nil
-	b.store.stable = nil
 
 	// Close FSM
 	b.fsm.Close()

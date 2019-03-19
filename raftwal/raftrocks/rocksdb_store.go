@@ -28,7 +28,7 @@ import (
 
 var (
 	// ErrKeyNotFound is an error indicating a given key does not exist
-	ErrKeyNotFound = errors.New("key not found")
+	ErrKeyNotFound = errors.New("not found")
 )
 
 const (
@@ -66,10 +66,7 @@ type RocksDBStore struct {
 type Options struct {
 	// Path is the directory path to the RocksDB instance to use.
 	Path string
-	// TODO decide if we should use a diferent directory for the Rocks WAl
-
-	// BadgerOptions contains any specific RocksDB options you might
-	// want to specify.
+	// TODO decide if we should use a diferent directory for the Rocks WAL
 
 	// NoSync causes the database to skip fsync calls after each
 	// write to the log. This is unsafe, so it should be used
@@ -308,7 +305,7 @@ func (s *RocksDBStore) SetUint64(key []byte, val uint64) error {
 }
 
 // GetUint64 is like Get, but handles uint64 values
-func (s *RocksDBStore) GetUint64(key []byte) (uint64, error) { // TODO use GEt instead getBytes
+func (s *RocksDBStore) GetUint64(key []byte) (uint64, error) {
 	val, err := s.Get(key)
 	if err != nil {
 		return 0, err
