@@ -105,7 +105,7 @@
 
 - name: Create Node Exporter start script
   template:
-    dest: /var/qed/exporter-{{ item }} 
+    dest: /var/qed/exporter-{{ item }}
     src: ../../templates/exporter-{{ item }}.j2
     force: true
     mode: 0775
