@@ -13,8 +13,20 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 #}
-#!/bin/bash
+[Unit]
+Description=Prometheus service
+Requires=network-online.target
+After=network-online.target
 
-export PROMETHEUS_HOME=/var/prometheus
-nohup $PROMETHEUS_HOME/prometheus --config.file=$PROMETHEUS_HOME/prometheus.yml >> prometheus.log 2>&1 &
+[Service]
+User=prometheus
+Group=prometheus
+Restart=on-failure
+ExecStart=/usr/bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/var/lib/prometheus/data
+ExecReload=/bin/kill -HUP $MAINPID
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=full
 
+[Install]
+WantedBy=multi-user.target

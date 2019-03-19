@@ -17,19 +17,70 @@
 - name: Download Prometheus
   unarchive:
     src: https://github.com/prometheus/prometheus/releases/download/v2.8.0/prometheus-2.8.0.linux-amd64.tar.gz
-    dest: /var
+    dest: /tmp
     keep_newer: true
     remote_src: true
 
-- name: Create Node Exporter link 
+- name: Install Prometheus binary
+  copy:
+    src: /tmp/prometheus-2.8.0.linux-amd64/prometheus
+    dest: /usr/bin/prometheus
+    remote_src: yes
+    mode: preserve
+
+- name: Create Prometheus system group
+  group:
+    name: prometheus
+    system: yes
+    gid: 210
+
+- name: Create Prometheus system user
+  user:
+    name: prometheus
+    system: yes
+    uid: 210
+    group: 210
+
+- name: Create Prometheus work dir
   file:
-    src: /var/prometheus-2.8.0.linux-amd64
-    dest: /var/prometheus
-    state: link
+    path: /var/lib/prometheus
+    owner: prometheus
+    group: prometheus
+    mode: 0755
+    state: directory
+
+- name: Create Prometheus config dir
+  file:
+    path: /etc/prometheus
+    state: directory
+
+- name: Create Prometheus config
+  template:
+    dest: /etc/prometheus/prometheus.yml
+    src: ../../templates/prometheus-config.yml.j2
+    force: yes
+  notify:
+    - Restart Prometheus
+
+- name: Install Prometheus systemd service unit file
+  template:
+    dest: /etc/systemd/system/{{ item }}
+    src: ../../templates/{{ item }}.j2
+  with_items:
+    - prometheus.service
+  notify:
+    - Restart Prometheus
+
+- name: Enable and run Prometheus service
+  systemd:
+    name: prometheus
+    state: started
+    enabled: yes
+    daemon_reload: yes
 
 - name: Install Grafana
   yum:
-      update_cache: yes 
+      update_cache: yes
       name: https://dl.grafana.com/oss/release/grafana-6.0.1-1.x86_64.rpm
 
 - name: Copy Grafana config and dashboards to remote
@@ -51,18 +102,3 @@
     name: grafana-server
     state: restarted
   when: grafana_config.changed
-
-- name: Create Prometheus config
-  template:
-    dest: /var/prometheus/prometheus.yml 
-    src: ../../templates/prometheus-config.yml.j2
-    force: yes
-
-- name: Create Prometheus start script
-  template:
-    dest: /var/prometheus/{{ item }} 
-    src: ../../templates/{{ item }}.j2
-    force: yes
-    mode: 0775
-  with_items:
-    - prometheus-start.sh
