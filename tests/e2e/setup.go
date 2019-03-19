@@ -298,7 +298,6 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 				t.Log(err)
 			}
 		})()
-		time.Sleep(2 * time.Second)
 	}
 
 	after := func(t *testing.T) {
@@ -328,6 +327,7 @@ func getClient(t *testing.T, id int) *client.HTTPClient {
 		client.SetAPIKey(APIKey),
 		client.SetTopologyDiscovery(false),
 		client.SetHealthchecks(false),
+		client.SetMaxRetries(3),
 	)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "Cannot start http client: "))
