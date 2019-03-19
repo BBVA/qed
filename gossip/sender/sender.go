@@ -25,6 +25,24 @@ import (
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/sign"
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	// SENDER
+
+	QedSenderInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_sender_instances_count",
+			Help: "Number of sender agents running",
+		},
+	)
+	QedSenderBatchesSentTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_sender_batches_sent_total",
+			Help: "Number of batches sent by the sender.",
+		},
+	)
 )
 
 type Sender struct {
@@ -56,7 +74,7 @@ func DefaultConfig() *Config {
 }
 
 func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
-	metrics.QedSenderInstancesCount.Inc()
+	QedSenderInstancesCount.Inc()
 	return &Sender{
 		agent:  a,
 		config: c,
@@ -74,6 +92,17 @@ func (s Sender) Start(ch chan *protocol.Snapshot) {
 		go s.batcherSender(i, ch, s.quit)
 	}
 	<-s.quit
+}
+
+func (s Sender) RegisterMetrics(srv *metrics.Server) {
+	metrics := []prometheus.Collector{
+		QedSenderInstancesCount,
+		QedSenderBatchesSentTotal,
+	}
+
+	for _, m := range metrics {
+		srv.Register(m)
+	}
 }
 
 func (s Sender) newBatch() *protocol.BatchSnapshots {
@@ -103,7 +132,7 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 				log.Errorf("Failed signing message: %v", err)
 			}
 			batch.Snapshots = append(batch.Snapshots, ss)
-		case b := <- s.out:
+		case b := <-s.out:
 			go s.sender(b)
 		case <-time.After(s.config.SendTimer):
 			// send whatever we have on each tick, do not wait
@@ -126,7 +155,7 @@ func (s Sender) sender(batch *protocol.BatchSnapshots) {
 	msg, _ := batch.Encode()
 	peers := s.agent.Topology.Each(s.config.EachN, nil)
 	for _, peer := range peers.L {
-		metrics.QedSenderBatchesSentTotal.Inc()
+		QedSenderBatchesSentTotal.Inc()
 		dst := peer.Node()
 
 		log.Debugf("Sending batch %+v to node %+v\n", batch, dst.Name)
@@ -140,7 +169,7 @@ func (s Sender) sender(batch *protocol.BatchSnapshots) {
 }
 
 func (s Sender) Stop() {
-	metrics.QedSenderInstancesCount.Dec()
+	QedSenderInstancesCount.Dec()
 	close(s.quit)
 }
 
