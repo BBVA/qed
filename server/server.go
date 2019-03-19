@@ -122,8 +122,11 @@ func NewServer(conf *Config) (*Server, error) {
 		return nil, err
 	}
 
-	// metrics server
+	// create metrics server and register default qed metrics
 	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
+	for _, m := range metrics.DefaultMetrics {
+		server.metricsServer.Register(m)
+	}
 
 	// Create gossip agent
 	config := gossip.DefaultConfig()
@@ -148,6 +151,7 @@ func NewServer(conf *Config) (*Server, error) {
 
 	// Create sender
 	server.sender = sender.NewSender(server.agent, sender.DefaultConfig(), server.signer)
+	server.sender.RegisterMetrics(server.metricsServer)
 
 	// Create RaftBalloon
 	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.agentsQueue)

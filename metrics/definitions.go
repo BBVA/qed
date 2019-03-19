@@ -17,22 +17,10 @@
 package metrics
 
 import (
-	"expvar"
-	"fmt"
-	"sync"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
-
-	// Balloon has a Map of all the stats relative to Balloon
-	Balloon *expvar.Map
-
-	// Prometheus
-
-	// SERVER
-
 	QedInstancesCount = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_instances_count",
@@ -136,24 +124,9 @@ var (
 		},
 	)
 
-	// SENDER
-
-	QedSenderInstancesCount = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "qed_sender_instances_count",
-			Help: "Number of sender agents running",
-		},
-	)
-	QedSenderBatchesSentTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_sender_batches_sent_total",
-			Help: "Number of batches sent by the sender.",
-		},
-	)
-
 	// PROMETHEUS
 
-	metricsList = []prometheus.Collector{
+	DefaultMetrics = []prometheus.Collector{
 		QedInstancesCount,
 		QedAPIHealthcheckRequestsTotal,
 
@@ -166,33 +139,6 @@ var (
 		QedBalloonMembershipTotal,
 		QedBalloonDigestMembershipTotal,
 		QedBalloonIncrementalTotal,
-
-		QedSenderInstancesCount,
-		QedSenderBatchesSentTotal,
 	}
-
-	registerMetrics sync.Once
 )
 
-// Register all metrics.
-func Register(r *prometheus.Registry) {
-	// Register the metrics.
-	registerMetrics.Do(
-		func() {
-			for _, metric := range metricsList {
-				r.MustRegister(metric)
-			}
-		},
-	)
-}
-
-// Implement expVar.Var interface
-type Uint64ToVar uint64
-
-func (v Uint64ToVar) String() string {
-	return fmt.Sprintf("%d", v)
-}
-
-func init() {
-	Balloon = expvar.NewMap("Qed_balloon_stats")
-}
