@@ -20,12 +20,12 @@ package rocksdb
 import "C"
 
 type ReadOptions struct {
-	opts *C.rocksdb_readoptions_t
+	c *C.rocksdb_readoptions_t
 }
 
 // NewDefaultReadOptions creates a default ReadOptions object.
 func NewDefaultReadOptions() *ReadOptions {
-	return &ReadOptions{opts: C.rocksdb_readoptions_create()}
+	return &ReadOptions{c: C.rocksdb_readoptions_create()}
 }
 
 // SetFillCache specify whether the "data block"/"index block"/"filter block"
@@ -33,11 +33,19 @@ func NewDefaultReadOptions() *ReadOptions {
 // Callers may wish to set this field to false for bulk scans.
 // Default: true
 func (o *ReadOptions) SetFillCache(value bool) {
-	C.rocksdb_readoptions_set_fill_cache(o.opts, boolToUchar(value))
+	C.rocksdb_readoptions_set_fill_cache(o.c, boolToUchar(value))
+}
+
+// SetIgnoreRangeDeletions specify whether keys deleted using the DeleteRange()
+// API will be visible to readers until they are naturally deleted during compaction.
+// This improves read performance in DBs with many range deletions.
+// Default: false
+func (o *ReadOptions) SetIgnoreRangeDeletions(value bool) {
+	C.rocksdb_readoptions_set_ignore_range_deletions(o.c, boolToUchar(value))
 }
 
 // Destroy deallocates the ReadOptions object.
 func (o *ReadOptions) Destroy() {
-	C.rocksdb_readoptions_destroy(o.opts)
-	o.opts = nil
+	C.rocksdb_readoptions_destroy(o.c)
+	o.c = nil
 }

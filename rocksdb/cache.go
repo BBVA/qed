@@ -19,25 +19,30 @@ package rocksdb
 // #include <rocksdb/c.h>
 import "C"
 
-// FlushOptions represent all of the available options when manual flushing the
-// database.
-type FlushOptions struct {
-	c *C.rocksdb_flushoptions_t
+// Cache is a cache used to store data read from data in memory.
+type Cache struct {
+	c *C.rocksdb_cache_t
 }
 
-// NewDefaultFlushOptions creates a default FlushOptions object.
-func NewDefaultFlushOptions() *FlushOptions {
-	return &FlushOptions{C.rocksdb_flushoptions_create()}
+// NewLRUCache creates a new LRU Cache object with the given capacity.
+func NewLRUCache(capacity int) *Cache {
+	return &Cache{
+		c: C.rocksdb_cache_create_lru(C.size_t(capacity)),
+	}
 }
 
-// SetWait specify if the flush will wait until the flush is done.
-// Default: true
-func (o *FlushOptions) SetWait(value bool) {
-	C.rocksdb_flushoptions_set_wait(o.c, boolToUchar(value))
+// GetUsage returns the Cache memory usage.
+func (c *Cache) GetUsage() int {
+	return int(C.rocksdb_cache_get_usage(c.c))
 }
 
-// Destroy deallocates the FlushOptions object.
-func (o *FlushOptions) Destroy() {
-	C.rocksdb_flushoptions_destroy(o.c)
-	o.c = nil
+// GetPinnedUsage returns the Cache pinned memory usage.
+func (c *Cache) GetPinnedUsage() int {
+	return int(C.rocksdb_cache_get_pinned_usage(c.c))
+}
+
+// Destroy deallocates the Cache object.
+func (c *Cache) Destroy() {
+	C.rocksdb_cache_destroy(c.c)
+	c.c = nil
 }

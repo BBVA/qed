@@ -57,3 +57,62 @@ func TestWriteBatch(t *testing.T) {
 	require.Nil(t, v2.Data())
 
 }
+
+func TestDeleteRange(t *testing.T) {
+
+	db := newTestDB(t, "TestDeleteRange", nil)
+	defer db.Close()
+
+	wo := NewDefaultWriteOptions()
+	defer wo.Destroy()
+	ro := NewDefaultReadOptions()
+	defer ro.Destroy()
+
+	var (
+		key1 = []byte("key1")
+		key2 = []byte("key2")
+		key3 = []byte("key3")
+		key4 = []byte("key4")
+		val1 = []byte("value")
+		val2 = []byte("12345678")
+		val3 = []byte("abcdefg")
+		val4 = []byte("xyz")
+	)
+
+	require.NoError(t, db.Put(wo, key1, val1))
+	require.NoError(t, db.Put(wo, key2, val2))
+	require.NoError(t, db.Put(wo, key3, val3))
+	require.NoError(t, db.Put(wo, key4, val4))
+
+	actualVal1, err := db.GetBytes(ro, key1)
+	require.NoError(t, err)
+	require.Equal(t, actualVal1, val1)
+	actualVal2, err := db.GetBytes(ro, key2)
+	require.NoError(t, err)
+	require.Equal(t, actualVal2, val2)
+	actualVal3, err := db.GetBytes(ro, key3)
+	require.NoError(t, err)
+	require.Equal(t, actualVal3, val3)
+	actualVal4, err := db.GetBytes(ro, key4)
+	require.NoError(t, err)
+	require.Equal(t, actualVal4, val4)
+
+	batch := NewWriteBatch()
+	defer batch.Destroy()
+	batch.DeleteRange(key2, key4)
+	db.Write(wo, batch)
+
+	actualVal1, err = db.GetBytes(ro, key1)
+	require.NoError(t, err)
+	require.Equal(t, actualVal1, val1)
+	actualVal2, err = db.GetBytes(ro, key2)
+	require.NoError(t, err)
+	require.Nil(t, actualVal2)
+	actualVal3, err = db.GetBytes(ro, key3)
+	require.NoError(t, err)
+	require.Nil(t, actualVal3)
+	actualVal4, err = db.GetBytes(ro, key4)
+	require.NoError(t, err)
+	require.Equal(t, actualVal4, val4)
+
+}

@@ -111,7 +111,7 @@ func NewServer(conf *Config) (*Server, error) {
 		return nil, err
 	}
 
-	// Open badger store
+	// Open RocksDB store
 	store, err := rocks.NewRocksDBStore(conf.DBPath)
 	if err != nil {
 		return nil, err
