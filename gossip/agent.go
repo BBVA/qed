@@ -22,14 +22,24 @@ import (
 	"time"
 
 	"github.com/bbva/qed/gossip/member"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
+	"github.com/coocood/freecache"
 	"github.com/hashicorp/memberlist"
 )
+
+type hashedBatch struct {
+	batch  *protocol.BatchSnapshots
+	digest hashing.Digest
+}
 
 type Agent struct {
 	config *Config
 	Self   *member.Peer
+
+	metricsServer *metrics.Server
 
 	memberlist *memberlist.Memberlist
 	broadcasts *memberlist.TransmitLimitedQueue
@@ -38,22 +48,25 @@ type Agent struct {
 
 	stateLock sync.Mutex
 
+	processed  *freecache.Cache
 	processors []Processor
 
-	In   chan *protocol.BatchSnapshots
+	In   chan *hashedBatch
 	Out  chan *protocol.BatchSnapshots
 	quit chan bool
 }
 
-func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
+func NewAgent(conf *Config, p []Processor, m *metrics.Server) (agent *Agent, err error) {
 	log.Infof("New agent %s\n", conf.NodeName)
 	agent = &Agent{
-		config:     conf,
-		Topology:   NewTopology(),
-		processors: p,
-		In:         make(chan *protocol.BatchSnapshots, 1<<16),
-		Out:        make(chan *protocol.BatchSnapshots, 1<<16),
-		quit:       make(chan bool),
+		config:        conf,
+		metricsServer: m,
+		Topology:      NewTopology(),
+		processors:    p,
+		processed:     freecache.NewCache(1 << 20),
+		In:            make(chan *hashedBatch, 1<<16),
+		Out:           make(chan *protocol.BatchSnapshots, 1<<16),
+		quit:          make(chan bool),
 	}
 
 	bindIP, bindPort, err := conf.AddrParts(conf.BindAddr)
@@ -77,7 +90,6 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 	conf.MemberlistConfig.AdvertisePort = advertisePort
 	conf.MemberlistConfig.Name = conf.NodeName
 	conf.MemberlistConfig.Logger = log.GetLogger()
-
 	// Configure delegates
 	conf.MemberlistConfig.Delegate = newAgentDelegate(agent)
 	conf.MemberlistConfig.Events = &eventDelegate{agent}
@@ -106,10 +118,12 @@ func NewAgent(conf *Config, p []Processor) (agent *Agent, err error) {
 
 	return agent, nil
 }
-func chTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshots) {
+
+// Send a batch into a queue channel with the agent TimeoutQueues timeout.
+func (a *Agent) ChTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshots) {
 	for {
 		select {
-		case <-time.After(200 * time.Millisecond):
+		case <-time.After(a.config.TimeoutQueues):
 			log.Infof("Agent timed out enqueueing batch in out channel")
 			return
 		case ch <- batch:
@@ -119,47 +133,49 @@ func chTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshot
 }
 
 func (a *Agent) start() {
-	outTicker := time.NewTicker(2 * time.Second)
+
+	for _, p := range a.processors {
+		p.RegisterMetrics(a.metricsServer)
+	}
+
+	go func() {
+		a.metricsServer.Start()
+	}()
+
 	for {
 		select {
-		case batch := <-a.In:
-			for _, p := range a.processors {
-				go p.Process(*batch)
+		case hashedBatch := <-a.In:
+			_, err := a.processed.Get(hashedBatch.digest)
+			if err == nil {
+				continue
 			}
-			chTimedSend(batch, a.Out)
-		case <-outTicker.C:
-			go a.sendOutQueue()
+			a.processed.Set(hashedBatch.digest, []byte{0x0}, 0)
+
+			for _, p := range a.processors {
+				go p.Process(hashedBatch.batch)
+			}
+			a.ChTimedSend(hashedBatch.batch, a.Out)
+		case b := <-a.Out:
+			go a.send(b)
 		case <-a.quit:
 			return
 		}
 	}
 }
 
-func batchId(b *protocol.BatchSnapshots) string {
-	return fmt.Sprintf("( ttl %d, lv %d)", b.TTL, b.Snapshots[len(b.Snapshots)-1].Snapshot.Version)
-}
+func (a *Agent) send(batch *protocol.BatchSnapshots) {
 
-func (a *Agent) sendOutQueue() {
-	var batch *protocol.BatchSnapshots
-	for {
-		select {
-		case batch = <-a.Out:
-		default:
-			return
-		}
+	if batch.TTL <= 0 {
+		return
+	}
 
-		if batch.TTL <= 0 {
-			continue
-		}
-
-		batch.TTL -= 1
-		from := batch.From
-		batch.From = a.Self
-		msg, _ := batch.Encode()
-		for _, dst := range a.route(from) {
-			log.Debugf("Sending %+v to %+v\n", batchId(batch), dst.Name)
-			a.memberlist.SendReliable(dst, msg)
-		}
+	batch.TTL -= 1
+	from := batch.From
+	batch.From = a.Self
+	msg, _ := batch.Encode()
+	for _, dst := range a.route(from) {
+		log.Debugf("Sending batch to %+v\n", dst.Name)
+		a.memberlist.SendReliable(dst, msg)
 	}
 }
 
@@ -242,9 +258,11 @@ func (a *Agent) Leave() error {
 //
 // It is safe to call this method multiple times.
 func (a *Agent) Shutdown() error {
-	log.Info("\nShutting down agent %s", a.config.NodeName)
+	log.Infof("Shutting down agent %s", a.config.NodeName)
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
+
+	a.metricsServer.Shutdown()
 
 	if a.Self.Status == member.Shutdown {
 		return nil

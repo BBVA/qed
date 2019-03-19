@@ -21,6 +21,7 @@ import (
 	"github.com/bbva/qed/gossip/auditor"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/util"
 )
 
@@ -40,13 +41,13 @@ func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 			// must be curried.
 			config = agentPreRun(config)
 
-			// Bindings
-			auditorConfig.MetricsAddr = config.BindAddr // TODO: make MetricsAddr configurable
 			auditorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
-			auditorConfig.PubUrls = v.GetStringSlice("agent.alert_urls")
+			auditorConfig.PubUrls = v.GetStringSlice("agent.pub_urls")
+			auditorConfig.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
 
 			markSliceStringRequired(auditorConfig.QEDUrls, "qedUrls")
 			markSliceStringRequired(auditorConfig.PubUrls, "pubUrls")
+			markSliceStringRequired(auditorConfig.AlertsUrls, "alertsUrls")
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -57,8 +58,8 @@ func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
-
-			agent, err := gossip.NewAgent(&config, []gossip.Processor{auditor})
+			metricsServer := metrics.NewServer(config.MetricsAddr)
+			agent, err := gossip.NewAgent(&config, []gossip.Processor{auditor}, metricsServer)
 			if err != nil {
 				log.Fatalf("Failed to start the QED auditor: %v", err)
 			}
@@ -76,11 +77,11 @@ func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 
 	f := cmd.Flags()
 	f.StringSliceVarP(&auditorConfig.QEDUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
-	f.StringSliceVarP(&auditorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
-
+	f.StringSliceVarP(&auditorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of store servers ([host]:port), through which an auditor can make queries")
+	f.StringSliceVarP(&auditorConfig.AlertsUrls, "alertsUrls", "", []string{}, "Comma-delimited list of alerts servers ([host]:port), through which an auditor can make queries")
 	// Lookups
 	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
-	v.BindPFlag("agent.alert_urls", f.Lookup("pubUrls"))
-
+	v.BindPFlag("agent.pub_urls", f.Lookup("pubUrls"))
+	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
 	return cmd
 }

@@ -18,23 +18,45 @@ package publisher
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/bbva/qed/api/metricshttp"
-	"github.com/bbva/qed/gossip/metrics"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
+	"github.com/coocood/freecache"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var (
+	QedPublisherInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_publisher_instances_count",
+			Help: "Number of publisher agents running.",
+		},
+	)
+
+	QedPublisherBatchesReceivedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_publisher_batches_received_total",
+			Help: "Number of batches received by publishers.",
+		},
+	)
+
+	QedPublisherBatchesProcessSeconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_publisher_batches_process_seconds",
+			Help: "Duration of Publisher batch processing",
+		},
+	)
+)
+
 type Config struct {
 	PubUrls               []string
+	AlertsUrls            []string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
 	MetricsAddr           string
@@ -47,9 +69,9 @@ func DefaultConfig() *Config {
 	}
 }
 
-func NewConfig(PubUrls []string) *Config {
+func NewConfig(urls []string) *Config {
 	cfg := DefaultConfig()
-	cfg.PubUrls = PubUrls
+	cfg.PubUrls = urls
 	return cfg
 }
 
@@ -57,40 +79,26 @@ type Publisher struct {
 	store *http.Client
 	conf  Config
 
-	metricsServer      *http.Server
-	prometheusRegistry *prometheus.Registry
+	processed *freecache.Cache
 
 	taskCh          chan Task
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
 
+type Task interface {
+	Do()
+}
+
 func NewPublisher(conf Config) (*Publisher, error) {
-	metrics.QedPublisherInstancesCount.Inc()
+	QedPublisherInstancesCount.Inc()
 	publisher := Publisher{
-		store:  &http.Client{},
-		conf:   conf,
-		taskCh: make(chan Task, 100),
-		quitCh: make(chan bool),
+		store:     &http.Client{},
+		conf:      conf,
+		processed: freecache.NewCache(1 << 20),
+		taskCh:    make(chan Task, 100),
+		quitCh:    make(chan bool),
 	}
-
-	r := prometheus.NewRegistry()
-	metrics.Register(r)
-	publisher.prometheusRegistry = r
-	metricsMux := metricshttp.NewMetricsHTTP(r)
-
-	addr := strings.Split(conf.MetricsAddr, ":")
-	publisher.metricsServer = &http.Server{
-		Addr:    ":1" + addr[1],
-		Handler: metricsMux,
-	}
-
-	go func() {
-		log.Debugf("	* Starting metrics HTTP server in addr: %s", conf.MetricsAddr)
-		if err := publisher.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start metrics HTTP server: %s", err)
-		}
-	}()
 
 	publisher.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
 	go publisher.runTaskDispatcher()
@@ -98,17 +106,44 @@ func NewPublisher(conf Config) (*Publisher, error) {
 	return &publisher, nil
 }
 
-func (p *Publisher) Process(b protocol.BatchSnapshots) {
-	// Metrics
-	metrics.QedPublisherBatchesReceivedTotal.Inc()
-	timer := prometheus.NewTimer(metrics.QedPublisherBatchesProcessSeconds)
+func (p Publisher) RegisterMetrics(srv *metrics.Server) {
+	metrics := []prometheus.Collector{
+		QedPublisherInstancesCount,
+		QedPublisherBatchesReceivedTotal,
+		QedPublisherBatchesProcessSeconds,
+	}
+
+	for _, m := range metrics {
+		srv.Register(m)
+	}
+}
+
+func (p *Publisher) Process(b *protocol.BatchSnapshots) {
+	QedPublisherBatchesReceivedTotal.Inc()
+	timer := prometheus.NewTimer(QedPublisherBatchesProcessSeconds)
 	defer timer.ObserveDuration()
+	var batch protocol.BatchSnapshots
+
+	for _, signedSnap := range b.Snapshots {
+		_, err := p.processed.Get(signedSnap.Signature)
+		if err != nil {
+			p.processed.Set(signedSnap.Signature, []byte{0x0}, 0)
+			batch.Snapshots = append(batch.Snapshots, signedSnap)
+		}
+	}
+
+	if len(batch.Snapshots) < 1 {
+		return
+	}
+
+	batch.From = b.From
+	batch.TTL = b.TTL
 
 	task := &PublishTask{
 		store:  p.store,
 		pubUrl: p.conf.PubUrls[0],
 		taskCh: p.taskCh,
-		batch:  b,
+		batch:  &batch,
 	}
 	p.taskCh <- task
 }
@@ -126,19 +161,13 @@ func (p Publisher) runTaskDispatcher() {
 }
 
 func (p *Publisher) Shutdown() {
-	// Metrics
-	metrics.QedPublisherInstancesCount.Dec()
-
-	log.Debugf("Metrics enabled: stopping server...")
-	if err := p.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-		log.Error(err)
-	}
-	log.Debugf("Done.\n")
+	QedPublisherInstancesCount.Dec()
 
 	p.executionTicker.Stop()
 	p.quitCh <- true
 	close(p.quitCh)
 	close(p.taskCh)
+	log.Debugf("Publisher stopped.")
 }
 
 func (p Publisher) dispatchTasks() {
@@ -159,33 +188,30 @@ func (p Publisher) dispatchTasks() {
 	}
 }
 
-type Task interface {
-	Do()
-}
-
 type PublishTask struct {
 	store  *http.Client
 	pubUrl string
-	batch  protocol.BatchSnapshots
+	batch  *protocol.BatchSnapshots
 	taskCh chan Task
 }
 
 func (t PublishTask) Do() {
-	log.Debugf("Executing task: %+v", t)
+	log.Debugf("Publisher is going to execute task: %+v", t)
 	buf, err := t.batch.Encode()
 	if err != nil {
-		log.Debug("Publisher: Error marshalling: %s\n", err.Error())
+		log.Debug("Publisher had an error marshalling: %s\n", err.Error())
 		return
 	}
 	resp, err := t.store.Post(t.pubUrl+"/batch", "application/json", bytes.NewBuffer(buf))
 	if err != nil {
-		log.Infof("Error saving batch in snapStore: %v\n", err)
+		log.Infof("Publisher had an error saving batch in snapStore: %v", err)
 		t.taskCh <- t
 		return
 	}
 	defer resp.Body.Close()
 	_, err = io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
-		log.Infof("Error getting response from snapStore saving a batch: %v", err)
+		log.Infof("Publisher had an error getting response from snapStore saving a batch: %v", err)
 	}
 }
+

@@ -35,13 +35,23 @@ func TestStart(t *testing.T) {
 
 	scenario("Test availability of qed server", func() {
 		let("Query metrics endpoint", func(t *testing.T) {
-			resp, err := doReq("GET", "http://localhost:8800/info", APIKey, nil)
+			var resp *http.Response
+			var err error
+			retry(3, 1*time.Second, func() error {
+				resp, err = doReq("GET", "http://localhost:8800/info", APIKey, nil)
+				return err
+			})
 			assert.NoError(t, err, "Subprocess must not exit with non-zero status")
 			assert.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
 
 		let("Query to unexpected context", func(t *testing.T) {
-			resp, err := doReq("GET", "http://localhost:8800/xD", APIKey, nil)
+			var resp *http.Response
+			var err error
+			retry(3, 1*time.Second, func() error {
+				resp, err = doReq("GET", "http://localhost:8800/xD", APIKey, nil)
+				return err
+			})
 			assert.NoError(t, err)
 			assert.Equal(t, resp.StatusCode, http.StatusNotFound, "Server should respond with http status code 404")
 
@@ -50,7 +60,12 @@ func TestStart(t *testing.T) {
 
 	scenario("Test availability of metrics server", func() {
 		let("Query metrics endpoint", func(t *testing.T) {
-			resp, err := doReq("GET", "http://localhost:8600/metrics", APIKey, nil)
+			var resp *http.Response
+			var err error
+			retry(3, 1*time.Second, func() error {
+				resp, err = doReq("GET", "http://localhost:8600/metrics", APIKey, nil)
+				return err
+			})
 			assert.NoError(t, err, "Subprocess must not exit with non-zero status")
 			assert.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})

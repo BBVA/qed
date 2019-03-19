@@ -13,9 +13,9 @@ func NewMetricsHTTP(r *prometheus.Registry) *http.ServeMux {
 		prometheus.DefaultGatherer,
 		r,
 	}
-	mux.Handle(
-		"/metrics",
-		promhttp.InstrumentMetricHandler(r, promhttp.HandlerFor(g, promhttp.HandlerOpts{})),
-	)
+
+	handler := promhttp.HandlerFor(g, promhttp.HandlerOpts{})
+	instrumentedHandler := promhttp.InstrumentMetricHandler(r, handler)
+	mux.Handle("/metrics", instrumentedHandler)
 	return mux
 }

@@ -33,7 +33,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/bbva/qed/api/apihttp"
-	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/api/mgmthttp"
 	"github.com/bbva/qed/api/tampering"
 	"github.com/bbva/qed/gossip"
@@ -58,7 +57,7 @@ type Server struct {
 	mgmtServer         *http.Server
 	raftBalloon        *raftwal.RaftBalloon
 	tamperingServer    *http.Server
-	metricsServer      *http.Server
+	metricsServer      *metrics.Server
 	prometheusRegistry *prometheus.Registry
 	signer             sign.Signer
 	sender             *sender.Sender
@@ -123,12 +122,19 @@ func NewServer(conf *Config) (*Server, error) {
 		return nil, err
 	}
 
+	// create metrics server and register default qed metrics
+	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
+	for _, m := range metrics.DefaultMetrics {
+		server.metricsServer.Register(m)
+	}
+
 	// Create gossip agent
 	config := gossip.DefaultConfig()
 	config.BindAddr = conf.GossipAddr
 	config.Role = member.Server
 	config.NodeName = conf.NodeID
-	server.agent, err = gossip.NewAgent(config, nil)
+
+	server.agent, err = gossip.NewAgent(config, nil, server.metricsServer)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +151,7 @@ func NewServer(conf *Config) (*Server, error) {
 
 	// Create sender
 	server.sender = sender.NewSender(server.agent, sender.DefaultConfig(), server.signer)
+	server.sender.RegisterMetrics(server.metricsServer)
 
 	// Create RaftBalloon
 	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.agentsQueue)
@@ -172,13 +179,6 @@ func NewServer(conf *Config) (*Server, error) {
 		tamperMux := tampering.NewTamperingAPI(store, hashing.NewSha256Hasher())
 		server.tamperingServer = newHTTPServer(fmt.Sprintf("localhost:1880%d", id), tamperMux)
 	}
-
-	r := prometheus.NewRegistry()
-	metrics.Register(r)
-	server.prometheusRegistry = r
-	metricsMux := metricshttp.NewMetricsHTTP(r)
-
-	server.metricsServer = newHTTPServer(conf.MetricsAddr, metricsMux)
 
 	return server, nil
 }
@@ -218,9 +218,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
-		if err := s.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start metrics HTTP server: %s", err)
-		}
+		s.metricsServer.Start()
 	}()
 
 	if s.tamperingServer != nil {
@@ -290,10 +288,8 @@ func (s *Server) Stop() error {
 	log.Infof("\nShutting down QED server %s", s.conf.NodeID)
 
 	log.Debugf("Metrics enabled: stopping server...")
-	if err := s.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-		log.Error(err)
-		return err
-	}
+	s.metricsServer.Shutdown()
+
 	log.Debugf("Done.\n")
 
 	if s.tamperingServer != nil {
