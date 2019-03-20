@@ -1,40 +1,56 @@
 ## Introduction
 
-QED is an implementation of a forward-secure append-only persistent authenticated data structure. Each append operation emits a cryptographic structure (a signed snapshot) used to verify:
+QED is an implementation of a forward-secure append-only persistent authenticated data structure. Each append operation produces as a result a cryptographic structure (a signed snapshot), which can be used to verify:
  *  if the data was appended or not
  * whether the appended data is consistent, in insertion order, to another entry
 
-The snapshot, the piece of data inserted and a QED proof are needed to verify both statements. The snapshots are emited proactively by QED and must be stored elsewhere. The proofs are not verified or emited by QED proactively, its the user responsibility to know when and how the data must be verified depending on their needs.
+The snapshot, the piece of data inserted and a QED proof are needed to verify both statements. The snapshots are emited proactively by QED and must be stored, accesible and indexed elsewhere. The proofs are not verified or emited by QED proactively, its the user responsibility to know when and how the data must be verified depending on their needs.
 
-The data is not stored in QED, only a representation of it produced by a collision-resistan hash function. A system to send the data or a representation of if to QED is also not provided by QED beyond a basic HTTP API.
+The data is not stored in QED, only a representation of it produced by a collision-resistant hash function. A system to send the data or a representation of it to QED is also not provided.
 
 The semantic of the appended data and the relation between each item appended is also a client responsibility.
 
-In this document we are going to describe some use cases for the technology along with its limitations.
+In this document we are going to describe some use cases for the technology.
 
 ## Why 
 
-The functionality described can be achieved using other tecnologies such as digitally signed data in a database, or other block chain's related structures. The advantages of the data structure implemented in QED are:
+The functionality described can be achieved using other tecnologies such as digitally signed data in a database, or block chain's related structures. The advantages of the data structure implemented in QED are:
  * scalability to thousands of millions of entries
  * proof of membership or non-membership generation in logarithmic time
  * proofs of logarithmic size
-
+ * proof of temporal consistency related to QED insertion time
 
 ## Use cases
 
+### Dependency management: authenticating a repository of software
 
+In this scenario we have:
 
-### Artifactory
+ * a team of developers working on a software project stored in a repository
+ * an automated software construction pipeline which builds and packages the work of the team
+ * multiple third-party repositories containing software or artifacts needed in the build pipeline
+ * a QED log
+ * a QED snapshot store
 
-An artifactory is a repository of objects produced as a result of software construction and packaging. These artifacts are used, among other uses and users, by other software developers as a dependency of the software they are buildding.
+Each system is managed by different tenants following their own regulations, and each team is only responsible for one of each asset. QED log ans snapsot store are managed by different teams too.
 
-This leads to the problem of whether a given artifact has been altered by a possible malicious third party. This problem is not only an integrity issue, as there are multiple versions of the same artifact used at the same time, the relation between these different versions is also important.
-
-Modern development workflows include complex pipelines of highly automated processes which builds software dozens of times per day.
+The workflow we are assuming consist of the following steps:
+ * developers commit code to the respository of code, including dependencies information such as location and version
+ * on each commit, the software is built by the automated system: this system will fetch all the dependencies, compile them and build the project
+ * each build wil pass a set of tests and the the pipeline will be finished, generating an artifact that will be managed elsewhere
+ 
+One question that can arise is: is the dependency downloaded legit or has been modified without my knowledge? 
 
 We can leverage QED to verify the history of an artifact ensuring our dependencies are correct automatically, failing the construction in the pipeline in case one of the dependencies have been modified.
 
-#### workflow example
+In this scenario we can also contemplate multiple teams working on multiple software projects with overlapping dependencies which uses a single QED log and snapshot store.
+
+All the files generated during this test are present in the respository as an example to guide a possible production implementation, but the scripts and data are not meant to be used in production.
+
+
+#### Tampering the dependency repository
+
+The first scenario contemplates the dependency distribution has been compromised, using a corrupted version instead of a legit one with the same metadata as the original.
 
 * Generate package data and add it to QED
 * Publish the artifact in the artifactory for others to use when the data was already inserted in QED
@@ -49,7 +65,8 @@ For this example, we have created some scripts to easy the operation:
  * append.sh reads from stdin the generate output and insert it into QED
  * membershit.sh read from stdin the generate output and insert it into QED
  
-##### The first artifact
+##### The happy path
+
     $ ./generate.sh 
     usage:
     ./generate.sh pkg_name pkg_version pkg_url
@@ -106,7 +123,7 @@ For this example, we have created some scripts to easy the operation:
     
     Verify: OK
 
-##### Lifecycle of a single dependency
+##### Lifecycle of a single dependency: tampering the source of a past release
 
 Create a timeline of a single dependency, for example for Facebook database Rocksdb, we add the following versions to QED:
     v5.13.3 
@@ -263,15 +280,15 @@ Generate a data entry  for each version and add it to QED. Each data entry will 
 
 Now we have a QED with 9 rocksdb versions ordered by release date from older to newer.
 
-Als we have 9 snapshots in a third party public store, so we can get anytime the snapshot of each version.
+Also we have 9 snapshots in a third party public store, so we can get anytime the snapshot of each version.
 
-In this example we suppose we are using the version v5.16.6. In our pipeline we build our software depending on that version of rocksdb, but out DNS server gots corrupted and a fake github is presented to our build server, so it downloads a corrupted version of rocksdb containing malware.
+In this example we suppose we are using the version v5.16.6. In our pipeline we build our software depending on that version of rocksdb. The software distributor or repository has been compromised, a new package has been uploaded to the official repository, with an old version but new contents and new download hashes.
 
 Ir our pipeline, every time we download a dependency, we generate its QED entry, but this time, because the package was altered by a third party, we generate a different version of the entry:
 
     rocksdb/corrupted-v5.16.6.json
     
-Before using it to build our software we ask QED for a membership proof, so we can verify that own download was already verified and inserted into the QED:
+Before using it to build our software we ask QED for a membership proof, so we can verify that our download was already verified and inserted into the QED:
 
     $ ./membership.sh 6 rocksdb/corrupted-v5.16.6.json
 
@@ -316,8 +333,157 @@ We use the hyperdigest presented here, and the client tries to verify the inform
 
 As we can see, the QED tells us that the information was not on QED and the client verified that there is no such event given the cryptographic information published in the insertion time of the event. With this information we can alert one of our dependencies was altered and stop the pipeline alerting the devops team of the issue.
 
-In this scenario we have authenticated an artifactory (a github release repository) which is the source of the events, then we have inserted into QED the information related to a set of  verified releases of rocksdb. Later, the artifactory was the target of an attack and a modified version of a dependency was downloaded automatically by the software construction pipeline. Our dependency check phase checked the information agains QED and discovered a tamper in the artifactory.
+In this scenario we have authenticated a third party repository (a github release repository) which is the source of the events, then we have inserted into QED the information related to a set of  verified releases of rocksdb. Later, the artifactory was the target of an attack and a modified version of a dependency was downloaded automatically by the software construction pipeline. Our dependency check phase checked the information against QED and discovered a tamper in the remote software repository.
 
-##### Tampering QED itself
+This simple scenario can be implemented by just storing the hashes into the repository and checking against them when downloading the dependency. Furthermore, most package management tools like go mod, npm, cargo, etc. use dependency package files containng hashes of the depndency version tha must be used in the construction.
 
-Using the last scenario as a starting point, we have the situation that an administrator on QED inserted an old version of rocksdb again into QED, with the same version, but with other package digest, so a corrupted package can be downloaded and verified.
+##### Tampering the source code repository
+
+Using the last scenario as a starting point, we have now the situation on which our source code respository has been compromised and a new download url and hash has been provided to our package manager.
+
+In this case, our building pipeline will download the new dependency and will generate the entry for QED. But this entry was not inserted into QED, so the check will again fail.
+
+This scenario assumes that only autheticated developers can insert entries to QED, and with their digital signature they provide a personal warranty the entry is legit.
+
+#####  Tampering the builder pipeline
+
+In this case, the builder system has been compromised, and instead of building the software as programmed, it will build a special release containing arbitrary code and dependencies. Also it will be modified to only ask QED non-modified dependencies.
+
+In this case, the help from QED will be limited as it only can work if someone ask for the proofs, and if those proofs contain the appropriate metadata to discover the tampering.
+
+We can leverage the gossip agents platform included in QED to build a special proxy to detect such behaviour. This proxy server will be in charge of outgoing HTTP connections to the internet and will check against QED all the package urls before being downloaded.
+
+#####  Tampering the QED log
+
+The QED server log stores its cryptographic information in a local database that is replicated against the other nodes of the QED cluster using the RAFT protocol.
+
+In our development version of QED we have included a special endpoint to modify the database without using the QED API or stopping the server, which would be the worst scenario possible in case of an attack agains QED.
+
+In QED we can modify either the hyper or the history tree. The hyper tree is a sparse merkle tree with some optimizations that maps a given piece of data with is position in the history tree. This history tree is an always growing complete binary tree and stores the entries ordered by its insertion time.
+
+The hyper tree will tell us if an event has been inserted or not and will give us a proof which we can use to verify it. The history tree will tell us if the event is consistent with the stored order of another entry, and will give us a also a verifiable proof.
+
+Given this, and using as a starting point the rocksdb example, our history tree contains:
+
+    v5.13.3  v5.12.5  v5.13.4  v5.14.2  v5.14.3  v5.15.10 v5.16.6  v5.17.2  v5.18.3    
+    .________.________.________.________.________.________.________.________.
+
+
+
+This fork is possible if we insert three new events into QED, and then tamper the hyper tree using the following values:
+
+ * event v5.16.6 and v5.16.6', both,  point to history tree version 6
+ * event v5.17.2 and v5.17.2' to version 7
+ * event v5.18.3 and v5.18.3' to version 8
+
+We insert into QED three new events, v5.16.6' v5.17.2' v5.18.3':
+
+    $ for i in v5.16.6p v5.17.2p v5.18.3p; do ./append.sh rocksdb/$i.json; done
+    Adding key [ {
+            "pkg_name": "rocksdb",
+            "pkg_version": "v5.16.6",
+            "pkg_digest": "aaaa5304c905418d85aa6b6e84b2854286bdc6083c0e6e2df756d0cf74663f"
+    } ]
+    
+    Received snapshot with values:
+    
+     EventDigest: 71f7fc4137f752b9128f57b903b0216ff949dd3b90a85c1918ace4f7608c7a7c
+     HyperDigest: 6e5bf0d4b9351463ba600cb70e042ad0e4cbb5d0d84b8f54b5cc098eab631b4d
+     HistoryDigest: 460572d1444d21135b83c36d0e4defd0f66b568fbd1359a2de2a0ec358e64bf5
+     Version: 9
+    
+    
+    Adding key [ {
+            "pkg_name": "rocksdb",
+            "pkg_version": "v5.17.2",
+            "pkg_digest": "aaaa266c1fc12d1e73682ed1a05296588e8482d188e6d56408a29de447ce87d7"
+    } ]
+    
+    Received snapshot with values:
+    
+     EventDigest: dae174b4f11ae7fca95bdc1f95ab9b002ecb97f36f54a7b9cecc0b0a0c597894
+     HyperDigest: bdc713608fe0a158e62e66865e9e3d3098ae1f4e698f9b01d6047035e18d7673
+     HistoryDigest: c2f309be529381a12fcb41168676ef0f1c8511174e1c96aaae29cd97e94295fb
+     Version: 10
+    
+    
+    Adding key [ {
+            "pkg_name": "rocksdb",
+            "pkg_version": "v5.18.3",
+            "pkg_digest": "aaaa973cd9f034b95f7b03fe513feee5cf089ebbe34d4a83f59fdbb7c59f3ae3"
+    } ]
+    
+    Received snapshot with values:
+    
+     EventDigest: b460c0fba33f7d14f1d2f454dc5f381e82dc6eb1d5d77dacc0fd90f6c3076c14
+     HyperDigest: 16e7c19c00998d1478f37612544a9ca7b27ea6d4087883e8e4d45f28a027d70f
+     HistoryDigest: 2df4d8ac43f559a5954cab3a095cd7be9e17dd191602fe166fabc04956f6dc69
+     Version: 11
+
+After this, our history tree contains:
+
+    v5.13.3   ... v5.15.10 v5.16.6  v5.17.2  v5.18.3  v5.16.6' v5.17.2' v5.18.3'   
+    .________ ... .________.________.________.________.________.________.
+
+
+And the events v5.16.6' v5.17.2' v5.18.3' in hyper tree points to versions 9, 10 and 11 respectively.
+
+Also, every time an event is inserted into QED, a new snapshot is generated and publised, so or snapshot store contains also this three extra snapshots.
+
+Now we tamper the last three events to point to the prior history versions:
+
+	$ ./tamperhyper.sh 6e5bf0d4b9351463ba600cb70e042ad0e4cbb5d0d84b8f54b5cc098eab631b4d 6
+	$ ./tamperhyper.sh bdc713608fe0a158e62e66865e9e3d3098ae1f4e698f9b01d6047035e18d7673 7
+    $ ./tamperhyper.sh 16e7c19c00998d1478f37612544a9ca7b27ea6d4087883e8e4d45f28a027d70f 8
+
+Our forked history tree now looks like:
+
+    v5.13.3  v5.12.5  v5.13.4  v5.14.2  v5.14.3  v5.15.10 v5.16.6  v5.17.2  v5.18.3    real
+    .________.________.________.________.________.________.________.________.
+
+                                                          |
+                                                          .________.________.
+                                                          v5.16.6' v5.17.2' v5.18.3'    fork
+
+if we use the versions stored in the hyper tree.
+
+In this situation we will download the compromised dependency, v5.16.6' and ask QED for it, like we did before:
+
+    $ ./membership.sh 6 rocksdb/v5.16.6p.json
+
+    
+ ./membership.sh 6 rocksdb/v5.16.6p.json
+    
+    Querying key [ key6 ] with version [ 6 ]
+    
+    Received membership proof:
+    
+     Exists: false
+     Hyper audit path: <TRUNCATED>
+     History audit path: <TRUNCATED>
+     CurrentVersion: 11
+     QueryVersion: 6
+     ActualVersion: 6
+     KeyDigest: 8dfad052fee5c62957d3ebe1752219a02f45634b2c32a6ac408b26ffcedfb7da
+    
+    Please, provide the hyperDigest for current version [ 11 ]: 16e7c19c00998d1478f37612544a9ca7b27ea6d4087883e8e4d45f28a027d70f
+    
+    Verifying with Snapshot: 
+    
+     EventDigest:8dfad052fee5c62957d3ebe1752219a02f45634b2c32a6ac408b26ffcedfb7da
+     HyperDigest: 16e7c19c00998d1478f37612544a9ca7b27ea6d4087883e8e4d45f28a027d70f
+     HistoryDigest: 
+     Version: 6
+    
+    Verify: KO
+
+    
+
+The first we notice is that the entry for the version v5.16.6 is in the version 6, when we inserted it in the version 9. This means the tampering was succesfull.
+
+But, because we use the version as part of the digest process, the root digest of the tree is different, as the original had a version of 9, and the verification fails.
+
+This means simple tampering in the database will not work. In order to tamper we need to build a special version of QED which will do a valid insert, and will publish an snapshot, but inserting a custom version in the hyper tree instead of the one corresponding to the history version.
+
+
+#####  Tampering the QED snapshot store
