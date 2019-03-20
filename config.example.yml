@@ -69,6 +69,7 @@ agent:
   node: "nodeName"  # Role for node, it can be only `auditor`, `monitor` or `publisher`
   bind: ":8200"  # Bind address for TCP/UDP gossip on (host:port)
   advertise: ""  # Address to advertise to cluster
+  metrics: "" # Address to bind metrics endpoint
   join:  # Comma-delimited list of nodes ([host]:port), through which a cluster can be joined
     - "127.0.0.1:8400"
   alert_urls:  # List of Alert servers ([host]:port), through which an agent can post alerts
