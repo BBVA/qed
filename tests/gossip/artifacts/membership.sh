@@ -26,8 +26,8 @@ entry=$(cat $2)
 go run $GOPATH/src/github.com/bbva/qed/main.go 	\
 	--apikey foo \
 	client \
-		--log info \
-		--endpoints http://${QED_LEADER}:8800 \
+		--log debug \
+		--endpoints http://127.0.0.1:8800 \
 		membership --key "$entry" \
 		--version $1 --verify
 
