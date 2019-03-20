@@ -95,7 +95,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		// Wait for the response
 		response, err := balloon.Add(event.Event)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -108,7 +108,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 
 		out, err := json.Marshal(snapshot)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -154,13 +154,13 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		// Wait for the response
 		proof, err := balloon.QueryMembership(query.Key, query.Version)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
 		out, err := json.Marshal(protocol.ToMembershipResult(query.Key, proof))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -208,13 +208,13 @@ func DigestMembership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		// Wait for the response
 		proof, err := balloon.QueryDigestMembership(query.KeyDigest, query.Version)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
 		out, err := json.Marshal(protocol.ToMembershipResult([]byte(nil), proof))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -255,13 +255,13 @@ func Incremental(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		// Wait for the response
 		proof, err := balloon.QueryConsistency(request.Start, request.End)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
 		out, err := json.Marshal(protocol.ToIncrementalResponse(proof))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 
@@ -364,7 +364,7 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 
 		out, err := json.Marshal(info)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
