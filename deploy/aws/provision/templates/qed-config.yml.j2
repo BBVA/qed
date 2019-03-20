@@ -38,7 +38,7 @@ server:
 agent:
   node: "monitor-{{ ansible_hostname }}"
   bind: "{{ ansible_eth0.ipv4.address }}:8200"
-  advertise: ""
+  metrics: "{{ ansible_eth0.ipv4.address }}:18200"
   join:
 {% for host in groups['name_qed-0'] %}
     - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
@@ -58,7 +58,7 @@ agent:
 agent:
   node: "auditor-{{ ansible_hostname }}"
   bind: "{{ ansible_eth0.ipv4.address }}:8100"
-  advertise: ""
+  metrics: "{{ ansible_eth0.ipv4.address }}:18100"
   join:
 {% for host in groups['name_qed-0'] %}
     - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
@@ -78,7 +78,7 @@ agent:
 agent:
   node: "publisher-{{ ansible_hostname }}"
   bind: "{{ ansible_eth0.ipv4.address }}:8300"
-  advertise: ""
+  metrics: "{{ ansible_eth0.ipv4.address }}:18300"
   join:
 {% for host in groups['name_qed-0'] %}
     - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
