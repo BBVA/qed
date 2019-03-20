@@ -19,39 +19,34 @@ package tampering
 import (
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/bbva/qed/api/apihttp"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
 
 type tamperEvent struct {
 	Digest string
-	Value  string
+	Value  uint64
 }
 
 // NewTamperingAPI will return a mux server with the endpoint required to
 // tamper the server. it's a internal debug implementation. Running a server
 // with this enabled will run useless the qed server.
-func NewTamperingAPI(store storage.DeletableStore, hasher hashing.Hasher) *http.ServeMux {
+func NewTamperingAPI(store storage.DeletableStore, b *balloon.Balloon, queue chan *protocol.Snapshot) *http.ServeMux {
 	api := http.NewServeMux()
-	api.HandleFunc("/tamper", apihttp.AuthHandlerMiddleware(http.HandlerFunc(tamperFunc(store, hasher))))
+	api.HandleFunc("/tamper", apihttp.AuthHandlerMiddleware(http.HandlerFunc(tamperFunc(store, b, queue))))
 	return api
 }
 
-func tamperFunc(store storage.DeletableStore, hasher hashing.Hasher) http.HandlerFunc {
+func tamperFunc(store storage.DeletableStore, b *balloon.Balloon, queue chan *protocol.Snapshot) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		// Make sure we can only be called with an HTTP POST request.
-		if !(r.Method == "PATCH" || r.Method == "DELETE") {
-			w.Header().Set("Allow", "PATCH, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
+		var err error
+		var snapshot *balllon.Snapshot
 
 		if r.Body == nil {
 			http.Error(w, "Please send a request body", http.StatusBadRequest)
@@ -59,39 +54,67 @@ func tamperFunc(store storage.DeletableStore, hasher hashing.Hasher) http.Handle
 		}
 
 		var tp tamperEvent
-		err := json.NewDecoder(r.Body).Decode(&tp)
+		err = json.NewDecoder(r.Body).Decode(&tp)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		digest, _ := hex.DecodeString(tp.Digest)
-		value, _ := hex.DecodeString(tp.Value)
+		version := util.Uint64AsBytes(tp.Value)
+
+		mutations := make([]*storage.Mutation, 0)
 
 		switch r.Method {
+		case "POST":
+			if r.URL.Path == "/tamper/history" {
+				// Size of the index plus 2 bytes for the height, which is always 0,
+				// as it is always a leaf what we want to tamper
+				bIndex := make([]byte, 10)
+				copy(bIndex, version)
+				mutation := &storage.Mutation{storage.HistoryCachePrefix, bIndex, digest}
+				mutations = append(mutations, mutation)
+			} else {
+				snapshot, mutations, err = b.TamperHyper(digest, tp.Value)
+				queue <- snap
+			}
+			err := store.Mutate(mutations)
+			log.Debugf("tamper_api: post called balloon.TamperHyper()  store mutations %+v --> %v", mutations, err)
+
 		case "PATCH":
-			index, err := store.Get(storage.IndexPrefix, digest)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("%s: %X", err.Error(), index), http.StatusUnprocessableEntity)
-				return
+			if r.URL.Path == "/tamper/history" {
+				// Size of the index plus 2 bytes for the height, which is always 0,
+				// as it is always a leaf what we want to tamper
+				bIndex := make([]byte, 10)
+				copy(bIndex, version)
+				mutation := &storage.Mutation{storage.HistoryCachePrefix, bIndex, digest}
+				mutations = append(mutations, mutation)
+			} else {
+				mutation := &storage.Mutation{storage.IndexPrefix, digest, version}
+				mutations = append(mutations, mutation)
 			}
 
-			bIndex := make([]byte, 10) // Size of the index plus 2 bytes for the height
-			copy(bIndex, index.Value)
-			copy(bIndex[len(index.Value):], util.Uint16AsBytes(uint16(0)))
-
-			mutations := []*storage.Mutation{{storage.HistoryCachePrefix, bIndex, value}}
-
-			log.Debugf("Tamper: %v", store.Mutate(mutations))
+			err := store.Mutate(mutations)
+			log.Debugf("tamper_api: patch store mutations %+v --> %v", mutations, err)
 
 		case "DELETE":
-			_, err = store.Get(storage.IndexPrefix, digest)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("%s: %X", err.Error(), digest), http.StatusUnprocessableEntity)
-				return
+			if r.URL.Path == "/tamper/history" {
+				bIndex := make([]byte, 10)
+				copy(bIndex, version)
+				err := store.Delete(storage.HistoryCachePrefix, bIndex)
+				if err != nil {
+					http.Error(w, "Error deleting hyper digest", http.StatusInternalServerError)
+					return
+				}
+			} else {
+				err := store.Delete(storage.IndexPrefix, digest)
+				if err != nil {
+					http.Error(w, "Error deleting hyper digest", http.StatusInternalServerError)
+					return
+				}
 			}
 
-			log.Debugf("Delete: %v", store.Delete(storage.IndexPrefix, digest))
+			log.Debugf("tamper_api: deleted mutations %+v -->: %v", mutations, err)
 
 		}
 

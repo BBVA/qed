@@ -180,6 +180,47 @@ func (b *Balloon) RefreshVersion() error {
 	return nil
 }
 
+func (b *Ballon) TamperHyper(eventDigest []byte, versionValue uint64) (*Snapshot, []*storage.Mutation, error) {
+	// Get version
+	version := b.version
+	b.version++
+
+	// Update trees
+	var historyDigest hashing.Digest
+	var historyMutations []*storage.Mutation
+	var historyErr error
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		historyDigest, historyMutations, historyErr = b.historyTree.Add(eventDigest, version)
+		wg.Done()
+	}()
+
+	hyperDigest, mutations, hyperErr := b.hyperTree.Add(eventDigest, versionValue)
+
+	wg.Wait()
+
+	if historyErr != nil {
+		return nil, nil, historyErr
+	}
+	if hyperErr != nil {
+		return nil, nil, hyperErr
+	}
+
+	// Append trees mutations
+	mutations = append(mutations, historyMutations...)
+
+	snapshot := &Snapshot{
+		EventDigest:   eventDigest,
+		HistoryDigest: historyDigest,
+		HyperDigest:   hyperDigest,
+		Version:       version,
+	}
+
+	return snapshot, mutations, nil
+}
+
 func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 
 	// Metrics
@@ -284,7 +325,7 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 				historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, version)
 			}()
 		} else {
-			return nil, fmt.Errorf("query version %d is greater than the actual version which is %d", version, proof.ActualVersion)
+			return nil, fmt.Errorf("The actual version of the entry is %d, but the query version is %d,  we're unable to build the proof becasue the entry was not inserted in version we are asking for.", proof.ActualVersion, version)
 		}
 
 	}
