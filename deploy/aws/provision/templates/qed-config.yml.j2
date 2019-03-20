@@ -48,7 +48,7 @@ agent:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
 {% endfor %}
 {% for host in groups['role_storage'] %}
-  alert_urls:
+  alerts_urls:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
   snapshots_store_urls:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
@@ -68,7 +68,7 @@ agent:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
 {% endfor %}
 {% for host in groups['role_storage'] %}
-  alert_urls:
+  alerts_urls:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
   snapshots_store_urls:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
@@ -88,7 +88,7 @@ agent:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
 {% endfor %}
 {% for host in groups['role_storage'] %}
-  alert_urls:
+  alerts_urls:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
   snapshots_store_urls:
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888"
