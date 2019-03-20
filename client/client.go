@@ -18,11 +18,11 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sync"
@@ -285,7 +285,7 @@ func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 }
 
 func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data []byte) ([]byte, error) {
-
+	var buf *bytes.Buffer
 	url, err := url.Parse(endpoint.URL() + path)
 	if err != nil {
 		return nil, err
@@ -304,25 +304,24 @@ func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data 
 	// Get response
 	resp, err := c.retrier.DoReq(req)
 	if err != nil {
-		log.Infof("Request error: %v\n", err)
-		log.Infof("%s is dead\n", endpoint)
 		endpoint.MarkAsDead()
-		return nil, err
+		return nil, fmt.Errorf("Server responded with an internal server error status!")
 	}
 
-	if resp.Body != nil {
-		defer resp.Body.Close()
-	}
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	buf = new(bytes.Buffer)
+	buf.ReadFrom(resp.Body)
 
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		return nil, fmt.Errorf("Invalid request %v", string(bodyBytes))
+		err := fmt.Errorf("Server responded with an error!: %v", buf.String())
+		log.Infof("Error: %v", err)
+		return nil, err
 	}
 
 	// we successfully made a request to this endpoint
 	endpoint.MarkAsHealthy()
 
-	return bodyBytes, nil
+	return buf.Bytes(), nil
 }
 
 // healthCheck does a health check on all nodes in the cluster.
