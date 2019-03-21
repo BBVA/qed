@@ -52,6 +52,7 @@ var (
 // RaftBalloon is the interface Raft-backed balloons must implement.
 type RaftBalloonApi interface {
 	Add(event []byte) (*balloon.Snapshot, error)
+	TamperHyper(eventDigest []byte, versionValue uint64) (*balloon.Snapshot, error)
 	QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
 	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
@@ -364,6 +365,15 @@ func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interf
 func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	cmd := &commands.AddEventCommand{Event: event}
 	resp, err := b.raftApply(commands.AddEventCommandType, cmd)
+	if err != nil {
+		return nil, err
+	}
+	return resp.(*fsmAddResponse).snapshot, nil
+}
+
+func (b *RaftBalloon) TamperHyper(event []byte, version uint64) (*balloon.Snapshot, error) {
+	cmd := &commands.TamperHyperEventCommand{Event: event, Version: version}
+	resp, err := b.raftApply(commands.TamperHyperCommandType, cmd)
 	if err != nil {
 		return nil, err
 	}

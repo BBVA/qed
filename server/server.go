@@ -38,7 +38,6 @@ import (
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/sender"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
@@ -176,7 +175,7 @@ func NewServer(conf *Config) (*Server, error) {
 	// Get id from the last number of any server Addr (HttpAddr in this case)
 	id, _ := strconv.Atoi(conf.HTTPAddr[len(conf.HTTPAddr)-1:])
 	if conf.EnableTampering {
-		tamperMux := tampering.NewTamperingAPI(store, hashing.NewSha256Hasher())
+		tamperMux := tampering.NewTamperingAPI(store, server.raftBalloon)
 		server.tamperingServer = newHTTPServer(fmt.Sprintf("localhost:1880%d", id), tamperMux)
 	}
 

@@ -26,14 +26,21 @@ import (
 // and must go through raft.
 type CommandType uint8
 
+// Commands which modify the database.
 const (
-	AddEventCommandType       CommandType = 0 // Commands which modify the database.
-	MetadataSetCommandType    CommandType = 1
-	MetadataDeleteCommandType CommandType = 2
+	AddEventCommandType CommandType = iota
+	MetadataSetCommandType
+	MetadataDeleteCommandType
+	TamperHyperCommandType
 )
 
 type AddEventCommand struct {
 	Event []byte
+}
+
+type TamperHyperEventCommand struct {
+	Event   []byte
+	Version uint64
 }
 
 type MetadataSetCommand struct {

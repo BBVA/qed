@@ -180,7 +180,7 @@ func (b *Balloon) RefreshVersion() error {
 	return nil
 }
 
-func (b *Ballon) TamperHyper(eventDigest []byte, versionValue uint64) (*Snapshot, []*storage.Mutation, error) {
+func (b *Balloon) TamperHyper(eventDigest []byte, versionValue uint64) (*Snapshot, []*storage.Mutation, error) {
 	// Get version
 	version := b.version
 	b.version++

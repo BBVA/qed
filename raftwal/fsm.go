@@ -145,7 +145,16 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 			return fsm.applyAdd(cmd.Event, newState)
 		}
 		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
-
+	case commands.TamperHyperCommandType:
+		var cmd commands.TamperHyperEventCommand
+		if err := commands.Decode(buf[1:], &cmd); err != nil {
+			return &fsmAddResponse{error: err}
+		}
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
+		if fsm.state.shouldApply(newState) {
+			return fsm.applyTamperHyper(cmd.Event, cmd.Version, newState)
+		}
+		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 	case commands.MetadataSetCommandType:
 		var cmd commands.MetadataSetCommand
 		if err := commands.Decode(buf[1:], &cmd); err != nil {
@@ -243,8 +252,37 @@ func (fsm *BalloonFSM) Close() error {
 	return nil
 }
 
-func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
+func (fsm *BalloonFSM) applyTamperHyper(event []byte, version uint64, state *fsmState) *fsmAddResponse {
+	snapshot, mutations, err := fsm.balloon.TamperHyper(event, version)
+	if err != nil {
+		return &fsmAddResponse{error: err}
+	}
 
+	stateBuff, err := encodeMsgPack(state)
+	if err != nil {
+		return &fsmAddResponse{error: err}
+	}
+
+	mutations = append(mutations, storage.NewMutation(storage.FSMStatePrefix, []byte{0xab}, stateBuff.Bytes()))
+	err = fsm.store.Mutate(mutations)
+	if err != nil {
+		return &fsmAddResponse{error: err}
+	}
+	fsm.state = state
+
+	//Send snapshot to gossip agents
+	fsm.agentsQueue <- &protocol.Snapshot{
+		HistoryDigest: snapshot.HistoryDigest,
+		HyperDigest:   snapshot.HyperDigest,
+		Version:       snapshot.Version,
+		EventDigest:   snapshot.EventDigest,
+	}
+
+	return &fsmAddResponse{snapshot: snapshot}
+
+}
+
+func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 	snapshot, mutations, err := fsm.balloon.Add(event)
 	if err != nil {
 		return &fsmAddResponse{error: err}

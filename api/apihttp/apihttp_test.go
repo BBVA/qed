@@ -48,6 +48,10 @@ func (b fakeRaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	return &balloon.Snapshot{hashing.Digest{0x02}, hashing.Digest{0x00}, hashing.Digest{0x01}, 0}, nil
 }
 
+func (b fakeRaftBalloon) TamperHyper(event []byte, version uint64) (*balloon.Snapshot, error) {
+	return &balloon.Snapshot{hashing.Digest{0x02}, hashing.Digest{0x00}, hashing.Digest{0x01}, 0}, nil
+}
+
 func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) error {
 	return nil
 }
