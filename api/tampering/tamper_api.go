@@ -17,11 +17,12 @@
 package tampering
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/bbva/qed/api/apihttp"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
@@ -30,8 +31,8 @@ import (
 )
 
 type tamperEvent struct {
-	Digest string
-	Value  uint64
+	Event string
+	Value uint64
 }
 
 // NewTamperingAPI will return a mux server with the endpoint required to
@@ -39,10 +40,35 @@ type tamperEvent struct {
 // with this enabled will run useless the qed server.
 func NewTamperingAPI(store storage.DeletableStore, balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	api := http.NewServeMux()
+	api.HandleFunc("/ballon/version", apihttp.AuthHandlerMiddleware(setBalloonVersion(balloon)))
 	api.HandleFunc("/hyper/store", apihttp.AuthHandlerMiddleware(hyperStore(store)))
 	api.HandleFunc("/hyper/add", apihttp.AuthHandlerMiddleware(hyperAdd(balloon)))
 	api.HandleFunc("/history/store", apihttp.AuthHandlerMiddleware(historyStore(store)))
 	return api
+}
+
+func setBalloonVersion(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Make sure we can only be called with an HTTP GET request.
+		if r.Method != "GET" {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		q := r.URL.Query()
+		version, err := strconv.ParseUint(q.Get("v"), 10, 64)
+		if err != nil {
+			http.Error(w, "Unable to decode version from URL", http.StatusBadRequest)
+			return
+		}
+
+		balloon.SetVersion(version)
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("Balloon version set"))
+
+		return
+	}
 }
 
 func hyperAdd(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
@@ -66,10 +92,8 @@ func hyperAdd(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		digest, _ := hex.DecodeString(tp.Digest)
-
 		// Wait for the response
-		response, err := balloon.TamperHyper(digest, tp.Value)
+		response, err := balloon.TamperHyper([]byte(tp.Event), tp.Value)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
@@ -111,7 +135,7 @@ func historyStore(store storage.DeletableStore) http.HandlerFunc {
 			return
 		}
 
-		digest, _ := hex.DecodeString(tp.Digest)
+		digest := hashing.NewSha256Hasher().Do([]byte(tp.Event))
 		version := util.Uint64AsBytes(tp.Value)
 
 		mutations := make([]*storage.Mutation, 0)
@@ -160,7 +184,7 @@ func hyperStore(store storage.DeletableStore) http.HandlerFunc {
 			return
 		}
 
-		digest, _ := hex.DecodeString(tp.Digest)
+		digest := hashing.NewSha256Hasher().Do([]byte(tp.Event))
 		version := util.Uint64AsBytes(tp.Value)
 
 		mutations := make([]*storage.Mutation, 0)

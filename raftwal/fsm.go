@@ -49,7 +49,9 @@ type BalloonFSM struct {
 
 	store   storage.ManagedStore
 	balloon *balloon.Balloon
-	state   *fsmState
+
+	raftVersion uint64
+	state       *fsmState
 
 	agentsQueue chan *protocol.Snapshot
 
@@ -121,7 +123,7 @@ func (s fsmState) shouldApply(f *fsmState) bool {
 	}
 
 	if f.BalloonVersion > 0 && s.BalloonVersion != (f.BalloonVersion-1) {
-		panic(fmt.Sprintf("balloonVersion panic! old: %+v, new %+v", s, f))
+		// panic(fmt.Sprintf("balloonVersion panic! old: %+v, new %+v", s, f))
 	}
 
 	return true
@@ -135,12 +137,21 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 	cmdType := commands.CommandType(buf[0])
 
 	switch cmdType {
+	case commands.SetVersionCommandType:
+		var cmd commands.SetVersionCommand
+		if err := commands.Decode(buf[1:], &cmd); err != nil {
+			return &fsmAddResponse{error: err}
+		}
+		fsm.raftVersion = fsm.balloon.Version() - uint64(cmd) - 1
+		fsm.balloon.SetVersion(uint64(cmd))
+		fsm.state = &fsmState{l.Index, l.Term, uint64(cmd) + fsm.raftVersion}
+		return &fsmAddResponse{}
 	case commands.AddEventCommandType:
 		var cmd commands.AddEventCommand
 		if err := commands.Decode(buf[1:], &cmd); err != nil {
 			return &fsmAddResponse{error: err}
 		}
-		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + fsm.raftVersion}
 		if fsm.state.shouldApply(newState) {
 			return fsm.applyAdd(cmd.Event, newState)
 		}
@@ -150,7 +161,7 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 		if err := commands.Decode(buf[1:], &cmd); err != nil {
 			return &fsmAddResponse{error: err}
 		}
-		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + fsm.raftVersion}
 		if fsm.state.shouldApply(newState) {
 			return fsm.applyTamperHyper(cmd.Event, cmd.Version, newState)
 		}
@@ -201,7 +212,7 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Generating snapshot until version: %d (balloon version %d)", id, fsm.balloon.Version())
+	log.Debugf("Generating snapshot until version: %d (balloon version %d)", id, fsm.balloon.Version()+fsm.raftVersion)
 
 	// Copy the node metadata.
 	meta, err := json.Marshal(fsm.meta)

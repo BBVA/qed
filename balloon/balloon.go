@@ -180,10 +180,17 @@ func (b *Balloon) RefreshVersion() error {
 	return nil
 }
 
-func (b *Balloon) TamperHyper(eventDigest []byte, versionValue uint64) (*Snapshot, []*storage.Mutation, error) {
+func (b *Balloon) SetVersion(version uint64) {
+	b.version = version
+}
+
+func (b *Balloon) TamperHyper(event []byte, versionValue uint64) (*Snapshot, []*storage.Mutation, error) {
 	// Get version
 	version := b.version
 	b.version++
+
+	// Hash event
+	eventDigest := b.hasher.Do(event)
 
 	// Update trees
 	var historyDigest hashing.Digest

@@ -16,12 +16,11 @@
 
 if [ -z "$1" -o -z "$2" ]; then
 	echo usage:
-	echo $0 qed_version entry_file
+	echo $0 entry_file qed_version 
 	exit -1
 fi
 
-entry=$(cat $2)
-
+entry=$(cat $1 | sed 's/\n//g' |base64 -w0)
 
 go run $GOPATH/src/github.com/bbva/qed/main.go 	\
 	--apikey foo \
@@ -29,5 +28,5 @@ go run $GOPATH/src/github.com/bbva/qed/main.go 	\
 		--log debug \
 		--endpoints http://127.0.0.1:8800 \
 		membership --key "$entry" \
-		--version $1 --verify
+		--version $2 --verify
 

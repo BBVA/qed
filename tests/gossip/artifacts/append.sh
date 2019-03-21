@@ -18,7 +18,7 @@ if [ -z "$1" ]; then
 	echo $0 entry_file
 	exit -1
 fi
-entry=$(cat $1)
+
+entry=$(cat $1 | sed 's/\n//g' |base64 -w0)
 
 go run $GOPATH/src/github.com/bbva/qed/main.go client add --apikey foo -e http://127.0.0.1:8800 --key "$entry"
-

@@ -14,5 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-curl -X POST  http://localhost:18800/hyper/add -H 'Api-Key: foo' -d '{"digest":"'$1'" , "value": '$2'}'
+if [ -z "$1"  ]; then
+	echo usage:
+	echo $0 value_version
+	exit -1
+fi
 
+curl -X GET  http://localhost:18800/ballon/version?v=$1 -H 'Api-Key: foo' 

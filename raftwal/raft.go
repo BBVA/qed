@@ -52,6 +52,7 @@ var (
 // RaftBalloon is the interface Raft-backed balloons must implement.
 type RaftBalloonApi interface {
 	Add(event []byte) (*balloon.Snapshot, error)
+	SetVersion(version uint64) error
 	TamperHyper(eventDigest []byte, versionValue uint64) (*balloon.Snapshot, error)
 	QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
 	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
@@ -88,8 +89,8 @@ type RaftBalloon struct {
 	wg     sync.WaitGroup
 	done   chan struct{}
 
-	fsm *BalloonFSM // balloon's finite state machine
-
+	fsm         *BalloonFSM // balloon's finite state machine
+	raftVersion uint64
 }
 
 // NewRaftBalloon returns a new RaftBalloon.
@@ -369,6 +370,15 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 		return nil, err
 	}
 	return resp.(*fsmAddResponse).snapshot, nil
+}
+
+func (b *RaftBalloon) SetVersion(version uint64) error {
+	cmd := version
+	_, err := b.raftApply(commands.SetVersionCommandType, &cmd)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *RaftBalloon) TamperHyper(event []byte, version uint64) (*balloon.Snapshot, error) {

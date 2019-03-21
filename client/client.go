@@ -431,6 +431,7 @@ func (c *HTTPClient) Ping() error {
 func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
 	data, _ := json.Marshal(&protocol.Event{Event: []byte(event)})
+	log.Debugf("CLIENT EVENT: %+v", protocol.Event{Event: []byte(event)})
 	body, err := c.callPrimary("POST", "/events", data)
 	if err != nil {
 		return nil, err

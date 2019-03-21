@@ -32,7 +32,10 @@ const (
 	MetadataSetCommandType
 	MetadataDeleteCommandType
 	TamperHyperCommandType
+	SetVersionCommandType
 )
+
+type SetVersionCommand uint64
 
 type AddEventCommand struct {
 	Event []byte

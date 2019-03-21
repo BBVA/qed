@@ -14,5 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-curl -X POST  http://localhost:18800/hyper/add -H 'Api-Key: foo' -d '{"digest":"'$1'" , "value": '$2'}'
+if [ -z "$1" -o -z "$2" ]; then
+	echo usage:
+	echo $0 entry_file value_version
+	exit -1
+fi
+event=$(cat $1 | sed 's/\n//g' |base64 -w0)
 
+payload=$(cat <<-EOF
+	{"event":"$event" , "value": $2}
+EOF
+)
+curl -X POST  http://localhost:18800/hyper/add -H 'Api-Key: foo' -d "$payload"

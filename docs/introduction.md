@@ -139,6 +139,7 @@ Create a timeline of a single dependency, for example for Facebook database Rock
 in order from old to new.
 
 Generate a data entry  for each version and add it to QED. Each data entry will have the form of a json message:
+
     {
     	"pkg_name": "rocksdb",
      	"pkg_version": "vX.XX.X",
@@ -149,134 +150,9 @@ Generate a data entry  for each version and add it to QED. Each data entry will 
     	./generate.sh rocksdb ${i} https://github.com/facebook/rocksdb/archive/${i}.zip > rocksdb/${i}.json
     done
     
-    Append the data to a QED server:
+Append the data to a QED server:
     
     $ for i in v5.13.3 v5.12.5 v5.13.4 v5.14.2 v5.14.3 v5.15.10 v5.16.6 v5.17.2 v5.18.3; do ./append.sh rocksdb/$i.json; done
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.13.3",
-    	"pkg_digest": "2a37af01c9a7a0fda64ccb57aa350d0dfd495beaba6649977cc4c8f31ba2e8db"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: e11e5995de7d52fa22d6111592fb6ab4377702bdb8265e72655f0a02f2803c6a
-     HyperDigest: 0d9c4318fd8c0c9c79b8b2d594d77245d9a00fa8807bfdf8e1a37b0a7c00c64f
-     HistoryDigest: d7655612204fe6b7d12522b83b7588c4ec6d9314e620a94e712013a39daea707
-     Version: 0
-    
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.12.5",
-    	"pkg_digest": "adc6660befe44bd4030a3bfadaccbb7e6a41a1c2f7526849686c80dc7a5c5a5d"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: 431c542196c7a6992a779930349cc25730074f2742144867185f651dcdcbb11b
-     HyperDigest: 8da93187d3ea448c3ebb3054e08d4039f877d55179a6cc1b8ac9c3461188518a
-     HistoryDigest: a07836a792ddc9b2f2010e994f788df82ed13529f5dfa786808a614ece447c63
-     Version: 1
-    
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.13.4",
-    	"pkg_digest": "d4df72df4faf9fddf942ba1eb0946138c218a572301b8b7f604754189ea16ce5"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: 4c19f3212b9d2b5ca2439ece3d6b3740354102025dbed159631c70c2af9240bc
-     HyperDigest: 8189a13e4d7bd4987dca88a6a2b9efd10b294f17f48be6183f3e28a8ba75f315
-     HistoryDigest: 7d2e6c4306af2be0fcddfbc893aadbdd22f0bf4df4a3409606b70422cca6e6ed
-     Version: 2
-    
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.14.2",
-    	"pkg_digest": "15bb12b9492fc2a20c0c4dbd8873703a1b6b620c32708aaaf558b0a4f58feeda"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: c4edaeafda5a0540d49f9f2e1d28e87fe881c7772c33058ae7bd6b11c96826c4
-     HyperDigest: 141f1c5a50140940c7253dcd59a0ffb37c95e2a411cca3a772e9fce6da496f6a
-     HistoryDigest: e4c182324960bec2a2ada1c9a06a3f429e94e44be852d8ead4e0352f77a91920
-     Version: 3
-    
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.14.3",
-    	"pkg_digest": "e927efa48b01100bfe7aa43cd0f18c1a3c37afdcdf7337d89cd9ab7541d4f07a"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: 04962bc63cbee1fbdcd91ed385f7aba15b9b654a384797edd82acb43da066b7e
-     HyperDigest: 830fc0a7e6ab78d84327ba8dd493f8a1be4f7b8ccb0bedd708ba6538cce4ed66
-     HistoryDigest: 961a857ad441a2d3d9326264383ef1e3b777d0aea0b9b5cc1425814ebd933e92
-     Version: 4
-    
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.15.10",
-    	"pkg_digest": "16356771775376b50e5cd4e7a185e84f398493183d375ff14cd6d396cdae6ea0"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: 2714b2d8a1eb6fb888ff6deb428861bebf8b05feba10d121e90567e427fdcae3
-     HyperDigest: 58961f73238e55b50739ab5786351a8580a46af3ee4e07f534a2537c600962ff
-     HistoryDigest: bdb080bd3d92f7363306cfcce22b0e8d6f4b4a6b4ff7cda94f19f9b5009a04d2
-     Version: 5
-    
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.16.6",
-    	"pkg_digest": "34c6575304c905418d85aa6b6e84b2854286bdc6083c0e6e2df756d0cf74663f"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: f7370d22bb6172aa1880c422133dc6c682a6fe7dc020676d2b762de4ea2799b6
-     HyperDigest: 8300b4a08d023c5569858d71593560742758e2e5878ff201db134ef7fb8a36a8
-     HistoryDigest: fa50ad9f6644ac21fecd6ebd3648e31c5521f5e0bba1350f65e00cdccfbb866f
-     Version: 6
-    
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.17.2",
-    	"pkg_digest": "269c266c1fc12d1e73682ed1a05296588e8482d188e6d56408a29de447ce87d7"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: 1594149fd2713cd25c2d8cf742cf94a3340652025b8f8b6b31c30ef739f2d566
-     HyperDigest: 2d724a6262ed4b9339f6a11c2ff797407399b3b79cd8695e54994fca846caaaf
-     HistoryDigest: 85c91d11b7034cae1e589ce1684ec17a8df3d88af14d3b8dbe8653aa337de699
-     Version: 7
-    
-    
-    Adding key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.18.3",
-    	"pkg_digest": "4d86973cd9f034b95f7b03fe513feee5cf089ebbe34d4a83f59fdbb7c59f3ae3"
-    } ]
-
-    Received snapshot with values:
-    
-     EventDigest: 41eeff6cb10f1bd92c6141be0cc5e6313a28e97114ec58ca4cc5a326e6c6e55f
-     HyperDigest: 33e90cdcc6eff1cecbde0ae5b0d4edbfdbaf64b2bccc470c7ee4ba935982c454
-     HistoryDigest: 113b14afa62f8187f37a9e3692c6edfe3c70437213a9c4a0e3a51faf69be960b
-     Version: 8
 
 Now we have a QED with 9 rocksdb versions ordered by release date from older to newer.
 
@@ -295,40 +171,10 @@ Before using it to build our software we ask QED for a membership proof, so we c
 To verify the event we need the correct snapshot information. Because we're using the interactive client, it ask us the hyperDigest for the current version of the QED. We go to the snapshot store to get it:
 
     $ ./getsnapshot.sh 8
-    HyperDigest: 33e90cdcc6eff1cecbde0ae5b0d4edbfdbaf64b2bccc470c7ee4ba935982c454
-    HistoryDigest: 113b14afa62f8187f37a9e3692c6edfe3c70437213a9c4a0e3a51faf69be960b
     
 We use the hyperdigest presented here, and the client tries to verify the information:
 
-    $ ./membership.sh 6 rocksdb/corrupted-v5.16.6.json
-    
-    Querying key [ {
-    	"pkg_name": "rocksdb",
-    	"pkg_version": "v5.16.6",
-    	"pkg_digest": "34c6575304c905418d85aa6b6e84b2854286bdc6083c0e6e2df756d0cf74663l"
-    } ] with version [ 6 ]
-    
-    Received membership proof:
-    
-     Exists: false
-     Hyper audit path: <TRUNCATED>
-     History audit path: <TRUNCATED>
-     CurrentVersion: 8
-     QueryVersion: 6
-     ActualVersion: 6
-     KeyDigest: e217828ce68032cc4ab2840e5303311aad19f0d139f21f440ca455d6691f8f65
-    
-    Please, provide the hyperDigest for current version [ 8 ]: 33e90cdcc6eff1cecbde0ae5b0d4edbfdbaf64b2bccc470c7ee4ba935982c454
-    
-    Verifying with Snapshot: 
-    
-     EventDigest:e217828ce68032cc4ab2840e5303311aad19f0d139f21f440ca455d6691f8f65
-     HyperDigest: 33e90cdcc6eff1cecbde0ae5b0d4edbfdbaf64b2bccc470c7ee4ba935982c454
-     HistoryDigest: 
-     Version: 6
-    
-    Verify: KO
-    
+    $ ./membership.sh rocksdb/corrupted-v5.16.6.json 6
     $ 
 
 As we can see, the QED tells us that the information was not on QED and the client verified that there is no such event given the cryptographic information published in the insertion time of the event. With this information we can alert one of our dependencies was altered and stop the pipeline alerting the devops team of the issue.
@@ -369,81 +215,34 @@ Given this, and using as a starting point the rocksdb example, our history tree 
     .________.________.________.________.________.________.________.________.
 
 
+This fork is possible if we insert three new events into QED, into the same positions of old events, and generate new snapshots for them.
 
-This fork is possible if we insert three new events into QED, and then tamper the hyper tree using the following values:
+It will not work modifying the hyper tree only, as the history will contain the correct hash and the membership query will not validate. Also, we can't modify just the history leaf in its storage because all the intermediate nodes will not be updated, and the generated audit paths will be unverfiable.
 
- * event v5.16.6 and v5.16.6', both,  point to history tree version 6
- * event v5.17.2 and v5.17.2' to version 7
- * event v5.18.3 and v5.18.3' to version 8
+A way to rewrite the QED is to insert again new events reseting the ballon version to the one we want to modify. In a RAFT cluster, the hijacked node needs to preserve the raft log order to be able to tamper the data without corrupting the RAFT server making it crash. We also need to modify all the events from the given point in history to the end to have the same history size than before.
 
-We insert into QED three new events, v5.16.6' v5.17.2' v5.18.3':
+In this case we are going to insert the new compromised events in the same position as the old ones:
+ * event v5.16.6 becomes v5.16.6'
+ * event v5.17.2 becomes v5.17.2'
+ * event v5.18.3 becomes v5.18.3'
 
-    $ for i in v5.16.6p v5.17.2p v5.18.3p; do ./append.sh rocksdb/$i.json; done
-    Adding key [ {
-            "pkg_name": "rocksdb",
-            "pkg_version": "v5.16.6",
-            "pkg_digest": "aaaa5304c905418d85aa6b6e84b2854286bdc6083c0e6e2df756d0cf74663f"
-    } ]
+
+We insert into QED three new events, v5.16.6' v5.17.2' v5.18.3', but instead of using the regfular API, we are going to suppose we have a custom QED implementation that inserts in the hyper tree the version we want.
+
+    $ ./resetVersion.sh 6
+    $ ./append.sh rocksdb/v5.16.6p.json
+    $ ./append.sh rocksdb/v5.17.2p.json
+    $ ./append.sh rocksdb/v5.18.3p.json
     
-    Received snapshot with values:
-    
-     EventDigest: 71f7fc4137f752b9128f57b903b0216ff949dd3b90a85c1918ace4f7608c7a7c
-     HyperDigest: 6e5bf0d4b9351463ba600cb70e042ad0e4cbb5d0d84b8f54b5cc098eab631b4d
-     HistoryDigest: 460572d1444d21135b83c36d0e4defd0f66b568fbd1359a2de2a0ec358e64bf5
-     Version: 9
-    
-    
-    Adding key [ {
-            "pkg_name": "rocksdb",
-            "pkg_version": "v5.17.2",
-            "pkg_digest": "aaaa266c1fc12d1e73682ed1a05296588e8482d188e6d56408a29de447ce87d7"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: dae174b4f11ae7fca95bdc1f95ab9b002ecb97f36f54a7b9cecc0b0a0c597894
-     HyperDigest: bdc713608fe0a158e62e66865e9e3d3098ae1f4e698f9b01d6047035e18d7673
-     HistoryDigest: c2f309be529381a12fcb41168676ef0f1c8511174e1c96aaae29cd97e94295fb
-     Version: 10
-    
-    
-    Adding key [ {
-            "pkg_name": "rocksdb",
-            "pkg_version": "v5.18.3",
-            "pkg_digest": "aaaa973cd9f034b95f7b03fe513feee5cf089ebbe34d4a83f59fdbb7c59f3ae3"
-    } ]
-    
-    Received snapshot with values:
-    
-     EventDigest: b460c0fba33f7d14f1d2f454dc5f381e82dc6eb1d5d77dacc0fd90f6c3076c14
-     HyperDigest: 16e7c19c00998d1478f37612544a9ca7b27ea6d4087883e8e4d45f28a027d70f
-     HistoryDigest: 2df4d8ac43f559a5954cab3a095cd7be9e17dd191602fe166fabc04956f6dc69
-     Version: 11
-
-After this, our history tree contains:
-
-    v5.13.3   ... v5.15.10 v5.16.6  v5.17.2  v5.18.3  v5.16.6' v5.17.2' v5.18.3'   
-    .________ ... .________.________.________.________.________.________.
-
-
-And the events v5.16.6' v5.17.2' v5.18.3' in hyper tree points to versions 9, 10 and 11 respectively.
-
-Also, every time an event is inserted into QED, a new snapshot is generated and publised, so or snapshot store contains also this three extra snapshots.
-
-Now we tamper the last three events to point to the prior history versions:
-
-	$ ./tamperhyper.sh 6e5bf0d4b9351463ba600cb70e042ad0e4cbb5d0d84b8f54b5cc098eab631b4d 6
-	$ ./tamperhyper.sh bdc713608fe0a158e62e66865e9e3d3098ae1f4e698f9b01d6047035e18d7673 7
-    $ ./tamperhyper.sh 16e7c19c00998d1478f37612544a9ca7b27ea6d4087883e8e4d45f28a027d70f 8
 
 Our forked history tree now looks like:
 
-    v5.13.3  v5.12.5  v5.13.4  v5.14.2  v5.14.3  v5.15.10 v5.16.6  v5.17.2  v5.18.3    real
+    v5.13.3  v5.12.5  v5.13.4  v5.14.2  v5.14.3  v5.15.10 v5.16.6  v5.17.2  v5.18.3 
     .________.________.________.________.________.________.________.________.
 
                                                           |
                                                           .________.________.
-                                                          v5.16.6' v5.17.2' v5.18.3'    fork
+                                                          v5.16.6' v5.17.2' v5.18.3' 
 
 if we use the versions stored in the hyper tree.
 
@@ -451,39 +250,10 @@ In this situation we will download the compromised dependency, v5.16.6' and ask 
 
     $ ./membership.sh 6 rocksdb/v5.16.6p.json
 
-    
- ./membership.sh 6 rocksdb/v5.16.6p.json
-    
-    Querying key [ key6 ] with version [ 6 ]
-    
-    Received membership proof:
-    
-     Exists: false
-     Hyper audit path: <TRUNCATED>
-     History audit path: <TRUNCATED>
-     CurrentVersion: 11
-     QueryVersion: 6
-     ActualVersion: 6
-     KeyDigest: 8dfad052fee5c62957d3ebe1752219a02f45634b2c32a6ac408b26ffcedfb7da
-    
-    Please, provide the hyperDigest for current version [ 11 ]: 16e7c19c00998d1478f37612544a9ca7b27ea6d4087883e8e4d45f28a027d70f
-    
-    Verifying with Snapshot: 
-    
-     EventDigest:8dfad052fee5c62957d3ebe1752219a02f45634b2c32a6ac408b26ffcedfb7da
-     HyperDigest: 16e7c19c00998d1478f37612544a9ca7b27ea6d4087883e8e4d45f28a027d70f
-     HistoryDigest: 
-     Version: 6
-    
-    Verify: KO
+And it will verify it.
 
-    
-
-The first we notice is that the entry for the version v5.16.6 is in the version 6, when we inserted it in the version 9. This means the tampering was succesfull.
-
-But, because we use the version as part of the digest process, the root digest of the tree is different, as the original had a version of 9, and the verification fails.
-
-This means simple tampering in the database will not work. In order to tamper we need to build a special version of QED which will do a valid insert, and will publish an snapshot, but inserting a custom version in the hyper tree instead of the one corresponding to the history version.
+To detect that we can user the snapshot store because it will have two entries for each tampered event on QED
 
 
 #####  Tampering the QED snapshot store
+

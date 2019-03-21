@@ -91,7 +91,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
+		log.Debugf("ADDING EVENT: %+v", event)
 		// Wait for the response
 		response, err := balloon.Add(event.Event)
 		if err != nil {
