@@ -45,7 +45,13 @@ We can leverage QED to verify the history of an artifact ensuring our dependenci
 
 In this scenario we can also contemplate multiple teams working on multiple software projects with overlapping dependencies which uses a single QED log and snapshot store.
 
-All the files generated during this test are present in the respository as an example to guide a possible production implementation, but the scripts and data are not meant to be used in production.
+Suppose for each dependency we have the following data in JSON format:
+
+    {
+    	"pkg_name": "rocksdb",
+     	"pkg_version": "vX.XX.X",
+    	"pkg_digest": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
 
 
 #### Tampering the dependency repository
@@ -55,7 +61,7 @@ The first scenario contemplates the dependency distribution has been compromised
 * Generate package data and add it to QED
 * Publish the artifact in the artifactory for others to use when the data was already inserted in QED
 * Users wanting to use that artifact as a dependency in their pipelines will need to
-  -  download the artifact
+  - download the artifact
   - calculate the data that was inserted into QED 
   - get a membership proof QED
   - verify the proof using the published snapshot
@@ -138,18 +144,12 @@ Create a timeline of a single dependency, for example for Facebook database Rock
 
 in order from old to new.
 
-Generate a data entry  for each version and add it to QED. Each data entry will have the form of a json message:
-
-    {
-    	"pkg_name": "rocksdb",
-     	"pkg_version": "vX.XX.X",
-    	"pkg_digest": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    }
+Generate a data entry for each version and add it to QED:
 
     $ for i in v5.13.3 v5.12.5 v5.13.4 v5.14.2 v5.14.3 v5.15.10 v5.16.6 v5.17.2 v5.18.3; do
     	./generate.sh rocksdb ${i} https://github.com/facebook/rocksdb/archive/${i}.zip > rocksdb/${i}.json
     done
-    
+
 Append the data to a QED server:
     
     $ for i in v5.13.3 v5.12.5 v5.13.4 v5.14.2 v5.14.3 v5.15.10 v5.16.6 v5.17.2 v5.18.3; do ./append.sh rocksdb/$i.json; done
@@ -179,25 +179,29 @@ We use the hyperdigest presented here, and the client tries to verify the inform
 
 As we can see, the QED tells us that the information was not on QED and the client verified that there is no such event given the cryptographic information published in the insertion time of the event. With this information we can alert one of our dependencies was altered and stop the pipeline alerting the devops team of the issue.
 
-In this scenario we have authenticated a third party repository (a github release repository) which is the source of the events, then we have inserted into QED the information related to a set of  verified releases of rocksdb. Later, the artifactory was the target of an attack and a modified version of a dependency was downloaded automatically by the software construction pipeline. Our dependency check phase checked the information against QED and discovered a tamper in the remote software repository.
+We have authenticated a third party repository (a github release repository) which is the source of the events, then we have inserted into QED the information related to a set of verified releases of rocksdb. Later, the repository was the target of an attack and a modified version of a dependency was downloaded automatically by the software construction pipeline. Our dependency check phase checked the information against QED and discovered a tamper in the remote software repository.
 
 This simple scenario can be implemented by just storing the hashes into the repository and checking against them when downloading the dependency. Furthermore, most package management tools like go mod, npm, cargo, etc. use dependency package files containng hashes of the depndency version tha must be used in the construction.
+
+Having an external validation tool is useful in situations when resistance to tampering is needed. As a reference example, in the case of [the event-stream npm case](https://snyk.io/blog/malicious-code-found-in-npm-package-event-stream/), their source code respository was compromised, and a new version was generated with malicious code in it.
 
 ##### Tampering the source code repository
 
 Using the last scenario as a starting point, we have now the situation on which our source code respository has been compromised and a new download url and hash has been provided to our package manager.
 
-In this case, our building pipeline will download the new dependency and will generate the entry for QED. But this entry was not inserted into QED, so the check will again fail.
+In this case, our building pipeline will download the new dependency and will generate the entry for QED. But this entry was not inserted into QED, so the check will fail the verification process.
 
 This scenario assumes that only autheticated developers can insert entries to QED, and with their digital signature they provide a personal warranty the entry is legit.
+
+QED do not detect vulnerabilities, nor validate the correctness of changes in software,  but can support a process involving multiple parties to be more resistant to them.
 
 #####  Tampering the builder pipeline
 
 In this case, the builder system has been compromised, and instead of building the software as programmed, it will build a special release containing arbitrary code and dependencies. Also it will be modified to only ask QED non-modified dependencies.
 
-In this case, the help from QED will be limited as it only can work if someone ask for the proofs, and if those proofs contain the appropriate metadata to discover the tampering.
+In this case, QED will not be used in the pipeline, and as it only can work if someone ask for the proofs, and if those proofs contain the appropriate metadata to discover the tampering.
 
-We can leverage the gossip agents platform included in QED to build a special proxy to detect such behaviour. This proxy server will be in charge of outgoing HTTP connections to the internet and will check against QED all the package urls before being downloaded.
+We can leverage the gossip agents platform included in QED to build external tools. For example a special proxy to detect unwanted dependencies downloads. This proxy server will be in charge of outgoing HTTP connections to the internet and will check against QED all the package urls before being downloaded.
 
 #####  Tampering the QED log
 
@@ -252,8 +256,24 @@ In this situation we will download the compromised dependency, v5.16.6' and ask 
 
 And it will verify it.
 
-To detect that we can user the snapshot store because it will have two entries for each tampered event on QED
+To detect that we can user the snapshot store because it will have two entries for each tampered event on QED.
 
 
 #####  Tampering the QED snapshot store
+
+
+QED does not provide an implementation for the snapshot store, just the HTTP API to be implemented to store and retrieve snapshots.
+
+Because the tampering procedure explained before, it is advised to select an append only database with an autogenerated primary key, so it is possible to detect multiple snapshots for the same version.
+
+In case someone deletes an entry from the snapshot store, the event inserted in that version won't validate.
+
+Also if someone is able to control the log and the snapshot store, it is possible to fake a verifiable history, but will fail the verification of the event source. The only way to avoid detection is to control all of the parts of the system: the event source, the QED log and the snapshot store. This is equivalent to deploy a new QED with a custom events inserted.
+
+### Transferences transparency: moving money between different institutions
+
+
+### USer activity non-repudiation: log the history of actions
+
+
 
