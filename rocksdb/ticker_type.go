@@ -16,16 +16,21 @@
 
 package rocksdb
 
-// #cgo CFLAGS: -I${SRCDIR}/../c-deps/rocksdb/include
-// #cgo CXXFLAGS: -std=c++11 -O3 -I${SRCDIR}/../c-deps/rocksdb/include
-// #cgo LDFLAGS: -L${SRCDIR}/../c-deps/libs
-// #cgo LDFLAGS: -lrocksdb
-// #cgo LDFLAGS: -ljemalloc
-// #cgo LDFLAGS: -lsnappy
-// #cgo LDFLAGS: -lstdc++
-// #cgo LDFLAGS: -ldl
-// #cgo LDFLAGS: -lpthread
-// #cgo LDFLAGS: -lm
-// #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup
-// #cgo !darwin LDFLAGS: -Wl,-unresolved_symbols=ignore-all -lrt
-import "C"
+// #include "extended.h"
+import (
+	"C"
+)
+
+// TickerType is the logical mapping of tickers defined in rocksdb::Tickers.
+type TickerType uint32
+
+const (
+	// TickerBytesWritten is the number of uncompressed bytes issued by db.Put(),
+	// db.Delete(), db.Merge(), and db.Write().
+	TickerBytesWritten = TickerType(C.BYTES_WRITTEN)
+	// TickerBytesRead is the number of uncompressed bytes read from db.Get().
+	// It could be either from memtables, cache, or table files.
+	// For the number of logical bytes read from db.MultiGet(),
+	// please use NumberMultiGetBytesRead.
+	TickerBytesRead = TickerType(C.BYTES_READ)
+)
