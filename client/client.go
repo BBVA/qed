@@ -508,7 +508,7 @@ func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalRespon
 
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
-func (c HTTPClient) Verify(
+func (c *HTTPClient) Verify(
 	result *protocol.MembershipResult,
 	snap *protocol.Snapshot,
 	hasherF func() hashing.Hasher,
@@ -527,7 +527,7 @@ func (c HTTPClient) Verify(
 
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
-func (c HTTPClient) DigestVerify(
+func (c *HTTPClient) DigestVerify(
 	result *protocol.MembershipResult,
 	snap *protocol.Snapshot,
 	hasherF func() hashing.Hasher,
@@ -544,7 +544,7 @@ func (c HTTPClient) DigestVerify(
 
 }
 
-func (c HTTPClient) VerifyIncremental(
+func (c *HTTPClient) VerifyIncremental(
 	result *protocol.IncrementalResponse,
 	startSnapshot, endSnapshot *protocol.Snapshot,
 	hasher hashing.Hasher,
