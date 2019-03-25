@@ -108,7 +108,6 @@ func TestGetHistogramData(t *testing.T) {
 	require.True(t, histogramData.GetMax() > 0)
 	require.True(t, histogramData.GetCount() > 0)
 	require.True(t, histogramData.GetSum() > 0)
-	require.True(t, histogramData.GetMin() > 0)
 }
 
 func TestReset(t *testing.T) {
