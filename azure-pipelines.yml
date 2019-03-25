@@ -48,7 +48,7 @@ steps:
 - script: |
     GO111MODULE=auto go get github.com/jstemmer/go-junit-report
     GO111MODULE=auto go get github.com/axw/gocov/gocov
-    GO111MODULE=auto go get github.com/AlekSi/gocov-xml
+    GO111MODULE=auto go get github.com/AlekSi/gocov-xml 
     GO111MODULE=auto go get gopkg.in/matm/v1/gocov-html
   workingDirectory: '$(modulePath)'  
   displayName: 'Download code coverage tools'
@@ -70,7 +70,7 @@ steps:
   inputs:
     testRunner: JUnit
     testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
-    failOnStandardError: 'true'
+    failTaskOnFailedTests: true
 
 - task: PublishCodeCoverageResults@1
   inputs:

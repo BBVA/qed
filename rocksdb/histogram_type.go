@@ -16,16 +16,15 @@
 
 package rocksdb
 
-// #cgo CFLAGS: -I${SRCDIR}/../c-deps/rocksdb/include
-// #cgo CXXFLAGS: -std=c++11 -O3 -I${SRCDIR}/../c-deps/rocksdb/include
-// #cgo LDFLAGS: -L${SRCDIR}/../c-deps/libs
-// #cgo LDFLAGS: -lrocksdb
-// #cgo LDFLAGS: -ljemalloc
-// #cgo LDFLAGS: -lsnappy
-// #cgo LDFLAGS: -lstdc++
-// #cgo LDFLAGS: -ldl
-// #cgo LDFLAGS: -lpthread
-// #cgo LDFLAGS: -lm
-// #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup
-// #cgo !darwin LDFLAGS: -Wl,-unresolved_symbols=ignore-all -lrt
-import "C"
+// #include "extended.h"
+import (
+	"C"
+)
+
+// HistogramType is the logical mapping of histograms defined in rocksdb:Histogram.
+type HistogramType uint32
+
+const (
+	// HistogramBytesPerRead is value size distribution in read operations.
+	HistogramBytesPerRead = HistogramType(C.BYTES_PER_READ)
+)

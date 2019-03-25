@@ -18,6 +18,7 @@ package rocksdb
 
 // #include <stdlib.h>
 // #include <rocksdb/c.h>
+// #include <extended.h>
 import "C"
 import "unsafe"
 
@@ -313,6 +314,11 @@ func (o *Options) SetMaxBackgroundCompactions(value int) {
 // Default: 0
 func (o *Options) SetMaxBackgroundFlushes(value int) {
 	C.rocksdb_options_set_max_background_flushes(o.c, C.int(value))
+}
+
+// SetStatistics sets a statistics object to pass to the DB.
+func (o *Options) SetStatistics(s *Statistics) {
+	C.rocksdb_options_set_statistics(o.c, s.c)
 }
 
 // Destroy deallocates the Options object.
