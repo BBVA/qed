@@ -17,6 +17,7 @@
 package rocksdb
 
 // #cgo CFLAGS: -I${SRCDIR}/../c-deps/rocksdb/include
+// #cgo CXXFLAGS: -std=c++11 -O3 -I${SRCDIR}
 // #cgo LDFLAGS: -L${SRCDIR}/../c-deps/libs
 // #cgo LDFLAGS: -lrocksdb
 // #cgo LDFLAGS: -ljemalloc
