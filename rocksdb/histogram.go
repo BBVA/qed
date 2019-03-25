@@ -70,11 +70,6 @@ func (d *HistogramData) GetSum() uint64 {
 	return uint64(C.rocksdb_histogram_get_sum(d.c))
 }
 
-// GetMin returns the min value.
-func (d *HistogramData) GetMin() float64 {
-	return float64(C.rocksdb_histogram_get_min(d.c))
-}
-
 // Destroy deallocates the HistogramData object.
 func (d *HistogramData) Destroy() {
 	C.rocksdb_histogram_data_destroy(d.c)

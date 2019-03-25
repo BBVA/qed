@@ -126,10 +126,6 @@ uint64_t rocksdb_histogram_get_sum(rocksdb_histogram_data_t* data) {
     return data->rep->sum;
 }
 
-double rocksdb_histogram_get_min(rocksdb_histogram_data_t* data) {
-    return data->rep->min;
-}
-
 void rocksdb_histogram_data_destroy(rocksdb_histogram_data_t* data);
 
 void rocksdb_histogram_data_destroy(rocksdb_histogram_data_t* data) {

@@ -507,8 +507,6 @@ extern uint64_t rocksdb_histogram_get_count(rocksdb_histogram_data_t* data);
 
 extern uint64_t rocksdb_histogram_get_sum(rocksdb_histogram_data_t* data);
 
-extern double rocksdb_histogram_get_min(rocksdb_histogram_data_t* data);
-
 extern void rocksdb_histogram_data_destroy(rocksdb_histogram_data_t* data);
 
 #ifdef __cplusplus
