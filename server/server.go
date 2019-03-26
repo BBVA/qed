@@ -28,17 +28,14 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/mgmthttp"
-	"github.com/bbva/qed/api/tampering"
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/gossip/sender"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
@@ -56,7 +53,6 @@ type Server struct {
 	httpServer         *http.Server
 	mgmtServer         *http.Server
 	raftBalloon        *raftwal.RaftBalloon
-	tamperingServer    *http.Server
 	metricsServer      *metrics.Server
 	prometheusRegistry *prometheus.Registry
 	signer             sign.Signer
@@ -173,13 +169,6 @@ func NewServer(conf *Config) (*Server, error) {
 	mgmtMux := mgmthttp.NewMgmtHttp(server.raftBalloon)
 	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux)
 
-	// Get id from the last number of any server Addr (HttpAddr in this case)
-	id, _ := strconv.Atoi(conf.HTTPAddr[len(conf.HTTPAddr)-1:])
-	if conf.EnableTampering {
-		tamperMux := tampering.NewTamperingAPI(store, hashing.NewSha256Hasher())
-		server.tamperingServer = newHTTPServer(fmt.Sprintf("localhost:1880%d", id), tamperMux)
-	}
-
 	return server, nil
 }
 
@@ -220,16 +209,6 @@ func (s *Server) Start() error {
 		log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
 		s.metricsServer.Start()
 	}()
-
-	if s.tamperingServer != nil {
-		log.Info(">>>>>>>>>>>>>>>>>>> Tampering is enabled! DO NOT RUN THIS IN PRODUCTION! <<<<<<<<<<<<<<<<<<<")
-		go func() {
-			log.Debug("	* Starting tampering HTTP server in addr: localhost:8081")
-			if err := s.tamperingServer.ListenAndServe(); err != http.ErrServerClosed {
-				log.Errorf("Can't start tampering HTTP server: %s", err)
-			}
-		}()
-	}
 
 	if s.conf.EnableTLS {
 		go func() {
@@ -291,15 +270,6 @@ func (s *Server) Stop() error {
 	s.metricsServer.Shutdown()
 
 	log.Debugf("Done.\n")
-
-	if s.tamperingServer != nil {
-		log.Debugf("Tampering enabled: stopping server...")
-		if err := s.tamperingServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-			log.Error(err)
-			return err
-		}
-		log.Debugf("Done.\n")
-	}
 
 	log.Debugf("Stopping MGMT server...")
 	if err := s.mgmtServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil

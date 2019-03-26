@@ -213,11 +213,6 @@ func (s RocksDBStore) Close() error {
 	return nil
 }
 
-func (s RocksDBStore) Delete(prefix byte, key []byte) error {
-	k := append([]byte{prefix}, key...)
-	return s.db.Delete(rocksdb.NewDefaultWriteOptions(), k)
-}
-
 // Take a snapshot of the store, and returns and id
 // to be used in the back up process. The state of the
 // snapshot is stored in the store instance.

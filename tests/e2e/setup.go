@@ -284,7 +284,6 @@ func setupServer(id int, joinAddr string, tls bool, t *testing.T) (scope.TestF, 
 			conf.SSLCertificate = fmt.Sprintf("%s/.ssh/server.crt", usr.HomeDir)
 			conf.SSLCertificateKey = fmt.Sprintf("%s/.ssh/server.key", usr.HomeDir)
 		}
-		conf.EnableTampering = true
 		conf.EnableTLS = tls
 
 		srv, err = server.NewServer(conf)

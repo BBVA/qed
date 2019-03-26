@@ -236,38 +236,8 @@ func TestTamperAndVerify(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestDeleteAndVerify(t *testing.T) {
-	log.SetLogger("TestDeleteAndVerify", log.SILENT)
-
-	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.3")
-	defer closeF()
-
-	b, err := NewBalloon(store, hashing.NewSha256Hasher)
-	assert.NoError(t, err)
-
-	event := hashing.Digest("Never knows best")
-	eventDigest := b.hasher.Do(event)
-
-	snapshot, mutations, err := b.Add(event)
-	store.Mutate(mutations)
-
-	memProof, err := b.QueryMembership(event, snapshot.Version)
-	assert.NoError(t, err)
-	assert.True(t, memProof.Verify(event, snapshot), "The proof should verify correctly")
-
-	err = store.Delete(storage.IndexPrefix, eventDigest)
-	assert.NoError(t, err, "store delete returned non nil value")
-
-	tampered, _ := store.Get(storage.IndexPrefix, eventDigest)
-	assert.Nil(t, tampered)
-
-	proof, err := b.QueryMembership(event, snapshot.Version)
-	assert.False(t, proof.Exists, "Member must not exist on qed after its deletion")
-	assert.NoErrorf(t, err, "Ballon must return a proof for a non-existen event: %v", err)
-}
-
 func TestGenIncrementalAndVerify(t *testing.T) {
-	log.SetLogger("TestDeleteAndVerify", log.SILENT)
+	log.SetLogger("TestGenIncrementalAndVerify", log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.3")
 	defer closeF()
