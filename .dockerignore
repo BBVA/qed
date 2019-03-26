@@ -1,0 +1,12 @@
+# Exclude stuff to avoid large Docker context.
+**qed
+storage
+!storage
+**riot
+**prometheus
+**/.git
+**/.terraform
+c-deps/jemalloc
+c-deps/libs
+c-deps/snappy
+c-deps/rocksdb
