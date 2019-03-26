@@ -271,13 +271,6 @@ func (s BadgerStore) Close() error {
 	return s.db.Close()
 }
 
-func (s BadgerStore) Delete(prefix byte, key []byte) error {
-	return s.db.Update(func(txn *b.Txn) error {
-		k := append([]byte{prefix}, key...)
-		return txn.Delete(k)
-	})
-}
-
 // Borrowed from github.com/dgraph-io/badger/backup.go
 func writeTo(entry *protos.KVPair, w io.Writer) error {
 	if err := binary.Write(w, binary.LittleEndian, uint64(entry.Size())); err != nil {

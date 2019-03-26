@@ -47,7 +47,7 @@ func getSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
 	return s, nil
 }
 
-func TestAgentsWithoutTampering(t *testing.T) {
+func TestAgents(t *testing.T) {
 	bStore, aStore := setupStore(t)
 	bServer, aServer := setupServer(0, "", false, t)
 	bAuditor, aAuditor := setupAuditor(0, t)
