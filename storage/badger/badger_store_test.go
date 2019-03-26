@@ -121,39 +121,6 @@ func TestGetRange(t *testing.T) {
 
 }
 
-func TestDelete(t *testing.T) {
-	store, closeF := openBadgerStore(t)
-	defer closeF()
-
-	prefix := byte(0x0)
-	tests := []struct {
-		testname      string
-		key, value    []byte
-		expectedError error
-	}{
-		{"Delete key", []byte("Key"), []byte("Value"), storage.ErrKeyNotFound},
-	}
-
-	for _, test := range tests {
-
-		// err := store.Mutate({prefix, test.key, test.value))
-		err := store.Mutate([]*storage.Mutation{
-			{prefix, test.key, test.value},
-		})
-		require.NoError(t, err, "Error mutating in test: %s", test.testname)
-
-		_, err = store.Get(prefix, test.key)
-		require.NoError(t, err, "Error getting key in test: %s", test.testname)
-
-		err = store.Delete(prefix, test.key)
-		require.NoError(t, err, "Error deleting in test: %s", test.testname)
-
-		_, err = store.Get(prefix, test.key)
-		require.Equalf(t, test.expectedError, err, "Error getting non-existent key in test: %s", test.testname)
-	}
-
-}
-
 func TestGetAll(t *testing.T) {
 
 	prefix := storage.HyperCachePrefix
