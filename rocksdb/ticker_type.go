@@ -25,6 +25,11 @@ import (
 type TickerType uint32
 
 const (
+	// TickerBlockCacheMiss is the total number of block bache misses.
+	TickerBlockCacheMiss = TickerType(C.BLOCK_CACHE_MISS)
+	// TickerBlockCacheHit is the total number of block bache hits.
+	TickerBlockCacheHit = TickerType(C.BLOCK_CACHE_HIT)
+
 	// TickerBytesWritten is the number of uncompressed bytes issued by db.Put(),
 	// db.Delete(), db.Merge(), and db.Write().
 	TickerBytesWritten = TickerType(C.BYTES_WRITTEN)

@@ -31,6 +31,8 @@ import (
 type RocksDBStore struct {
 	db *rocksdb.DB
 
+	stats *rocksdb.Statistics
+
 	// checkpoints are stored in a path on the same
 	// folder as the database, so rocksdb uses hardlinks instead
 	// of copies
@@ -44,20 +46,27 @@ type RocksDBStore struct {
 	wo *rocksdb.WriteOptions
 }
 
-type rocksdbOpts struct {
-	Path string
+type Options struct {
+	Path             string
+	EnableStatistics bool
 }
 
 func NewRocksDBStore(path string) (*RocksDBStore, error) {
-	return NewRocksDBStoreOpts(&rocksdbOpts{Path: path})
+	return NewRocksDBStoreOpts(&Options{Path: path, EnableStatistics: true})
 }
 
-func NewRocksDBStoreOpts(opts *rocksdbOpts) (*RocksDBStore, error) {
+func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	rocksdbOpts := rocksdb.NewDefaultOptions()
 	rocksdbOpts.SetCreateIfMissing(true)
 	rocksdbOpts.IncreaseParallelism(4)
 	rocksdbOpts.SetMaxWriteBufferNumber(5)
 	rocksdbOpts.SetMinWriteBufferNumberToMerge(2)
+
+	var stats *rocksdb.Statistics
+	if opts.EnableStatistics {
+		stats = rocksdb.NewStatistics()
+		rocksdbOpts.SetStatistics(stats)
+	}
 
 	blockOpts := rocksdb.NewDefaultBlockBasedTableOptions()
 	blockOpts.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
@@ -75,11 +84,17 @@ func NewRocksDBStoreOpts(opts *rocksdbOpts) (*RocksDBStore, error) {
 
 	store := &RocksDBStore{
 		db:             db,
+		stats:          stats,
 		checkPointPath: checkPointPath,
 		checkpoints:    make(map[uint64]string),
 		wo:             rocksdb.NewDefaultWriteOptions(),
 		ro:             rocksdb.NewDefaultReadOptions(),
 	}
+
+	if rms == nil && stats != nil {
+		rms = newRocksDBMetrics(stats)
+	}
+
 	return store, nil
 }
 
