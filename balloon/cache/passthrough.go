@@ -21,19 +21,19 @@ import (
 )
 
 type PassThroughCache struct {
-	prefix byte
-	store  storage.Store
+	table storage.Table
+	store storage.Store
 }
 
-func NewPassThroughCache(prefix byte, store storage.Store) *PassThroughCache {
+func NewPassThroughCache(table storage.Table, store storage.Store) *PassThroughCache {
 	return &PassThroughCache{
-		prefix: prefix,
-		store:  store,
+		table: table,
+		store: store,
 	}
 }
 
 func (c PassThroughCache) Get(key []byte) ([]byte, bool) {
-	pair, err := c.store.Get(c.prefix, key)
+	pair, err := c.store.Get(c.table, key)
 	if err != nil {
 		return nil, false
 	}

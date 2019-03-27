@@ -29,22 +29,26 @@ import (
 func TestMutate(t *testing.T) {
 	store, closeF := openBPlusTreeStore()
 	defer closeF()
-	prefix := byte(0x0)
 
 	tests := []struct {
 		testname      string
+		table         storage.Table
 		key, value    []byte
 		expectedError error
 	}{
-		{"Mutate Key=Value", []byte("Key"), []byte("Value"), nil},
+		{"Mutate Key=Value", storage.IndexTable, []byte("Key"), []byte("Value"), nil},
 	}
 
 	for _, test := range tests {
 		err := store.Mutate([]*storage.Mutation{
-			{prefix, test.key, test.value},
+			{
+				Table: test.table,
+				Key:   test.key,
+				Value: test.value,
+			},
 		})
 		require.Equalf(t, test.expectedError, err, "Error mutating in test: %s", test.testname)
-		_, err = store.Get(prefix, test.key)
+		_, err = store.Get(test.table, test.key)
 		require.Equalf(t, test.expectedError, err, "Error getting key in test: %s", test.testname)
 	}
 }
@@ -55,25 +59,25 @@ func TestGetExistentKey(t *testing.T) {
 	defer closeF()
 
 	testCases := []struct {
-		prefix        byte
+		table         storage.Table
 		key, value    []byte
 		expectedError error
 	}{
-		{byte(0x0), []byte("Key1"), []byte("Value1"), nil},
-		{byte(0x0), []byte("Key2"), []byte("Value2"), nil},
-		{byte(0x1), []byte("Key3"), []byte("Value3"), nil},
-		{byte(0x1), []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
+		{storage.IndexTable, []byte("Key1"), []byte("Value1"), nil},
+		{storage.IndexTable, []byte("Key2"), []byte("Value2"), nil},
+		{storage.HyperCacheTable, []byte("Key3"), []byte("Value3"), nil},
+		{storage.HyperCacheTable, []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
 	}
 
 	for _, test := range testCases {
 		if test.expectedError == nil {
 			err := store.Mutate([]*storage.Mutation{
-				{test.prefix, test.key, test.value},
+				{test.table, test.key, test.value},
 			})
 			require.NoError(t, err)
 		}
 
-		stored, err := store.Get(test.prefix, test.key)
+		stored, err := store.Get(test.table, test.key)
 		if test.expectedError == nil {
 			require.NoError(t, err)
 			require.Equalf(t, stored.Key, test.key, "The stored key does not match the original: expected %d, actual %d", test.key, stored.Key)
@@ -100,15 +104,15 @@ func TestGetRange(t *testing.T) {
 		{0, 20, 10},
 	}
 
-	prefix := byte(0x0)
+	table := storage.IndexTable
 	for i := 10; i < 50; i++ {
 		store.Mutate([]*storage.Mutation{
-			{prefix, []byte{byte(i)}, []byte("Value")},
+			{table, []byte{byte(i)}, []byte("Value")},
 		})
 	}
 
 	for _, test := range testCases {
-		slice, err := store.GetRange(prefix, []byte{test.start}, []byte{test.end})
+		slice, err := store.GetRange(table, []byte{test.start}, []byte{test.end})
 		require.NoError(t, err)
 		require.Equalf(t, len(slice), test.size, "Slice length invalid: expected %d, actual %d", test.size, len(slice))
 	}
@@ -117,7 +121,7 @@ func TestGetRange(t *testing.T) {
 
 func TestGetAll(t *testing.T) {
 
-	prefix := storage.HyperCachePrefix
+	table := storage.HyperCacheTable
 	numElems := uint16(1000)
 	testCases := []struct {
 		batchSize    int
@@ -136,12 +140,12 @@ func TestGetAll(t *testing.T) {
 	for i := uint16(0); i < numElems; i++ {
 		key := util.Uint16AsBytes(i)
 		store.Mutate([]*storage.Mutation{
-			{prefix, key, key},
+			{table, key, key},
 		})
 	}
 
 	for i, c := range testCases {
-		reader := store.GetAll(storage.HyperCachePrefix)
+		reader := store.GetAll(table)
 		numBatches := 0
 		var lastBatchLen int
 		for {
@@ -166,18 +170,18 @@ func TestGetLast(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	prefixes := [][]byte{{storage.IndexPrefix}, {storage.HistoryCachePrefix}, {storage.HyperCachePrefix}}
-	for _, prefix := range prefixes {
+	tables := []storage.Table{storage.IndexTable, storage.HistoryCacheTable, storage.HyperCacheTable}
+	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
 			store.Mutate([]*storage.Mutation{
-				{prefix[0], key, key},
+				{table, key, key},
 			})
 		}
 	}
 
-	// get last element for history prefix
-	kv, err := store.GetLast(storage.HistoryCachePrefix)
+	// get last element for history table
+	kv, err := store.GetLast(storage.HistoryCacheTable)
 	require.NoError(t, err)
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Key, "The key should match the last inserted element")
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
@@ -186,12 +190,11 @@ func TestGetLast(t *testing.T) {
 func BenchmarkMutate(b *testing.B) {
 	store, closeF := openBPlusTreeStore()
 	defer closeF()
-	prefix := byte(0x0)
 	b.N = 10000
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		store.Mutate([]*storage.Mutation{
-			{prefix, rand.Bytes(128), []byte("Value")},
+			{storage.IndexTable, rand.Bytes(128), []byte("Value")},
 		})
 	}
 }
@@ -199,7 +202,6 @@ func BenchmarkMutate(b *testing.B) {
 func BenchmarkGet(b *testing.B) {
 	store, closeF := openBPlusTreeStore()
 	defer closeF()
-	prefix := byte(0x0)
 	N := 10000
 	b.N = N
 	var key []byte
@@ -209,11 +211,11 @@ func BenchmarkGet(b *testing.B) {
 		if i == 10 {
 			key = rand.Bytes(128)
 			store.Mutate([]*storage.Mutation{
-				{prefix, key, []byte("Value")},
+				{storage.IndexTable, key, []byte("Value")},
 			})
 		} else {
 			store.Mutate([]*storage.Mutation{
-				{prefix, rand.Bytes(128), []byte("Value")},
+				{storage.IndexTable, rand.Bytes(128), []byte("Value")},
 			})
 		}
 	}
@@ -221,7 +223,7 @@ func BenchmarkGet(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		store.Get(prefix, key)
+		store.Get(storage.IndexTable, key)
 	}
 
 }
@@ -229,13 +231,12 @@ func BenchmarkGet(b *testing.B) {
 func BenchmarkGetRangeInLargeTree(b *testing.B) {
 	store, closeF := openBPlusTreeStore()
 	defer closeF()
-	prefix := byte(0x0)
 	N := 1000000
 
 	// populate storage
 	for i := 0; i < N; i++ {
 		store.Mutate([]*storage.Mutation{
-			{prefix, []byte{byte(i)}, []byte("Value")},
+			{storage.IndexTable, []byte{byte(i)}, []byte("Value")},
 		})
 	}
 
@@ -244,14 +245,14 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 	b.Run("Small range", func(b *testing.B) {
 		b.N = 10000
 		for i := 0; i < b.N; i++ {
-			store.GetRange(prefix, []byte{10}, []byte{10})
+			store.GetRange(storage.IndexTable, []byte{10}, []byte{10})
 		}
 	})
 
 	b.Run("Large range", func(b *testing.B) {
 		b.N = 10000
 		for i := 0; i < b.N; i++ {
-			store.GetRange(prefix, []byte{10}, []byte{35})
+			store.GetRange(storage.IndexTable, []byte{10}, []byte{35})
 		}
 	})
 

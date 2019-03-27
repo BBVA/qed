@@ -169,7 +169,7 @@ func (b Balloon) Version() uint64 {
 
 func (b *Balloon) RefreshVersion() error {
 	// get last stored version
-	kv, err := b.store.GetLast(storage.HistoryCachePrefix)
+	kv, err := b.store.GetLast(storage.HistoryCacheTable)
 	if err != nil {
 		if err != storage.ErrKeyNotFound {
 			return err
@@ -263,7 +263,7 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 		version = proof.CurrentVersion
 	}
 
-	leaf, err = b.store.Get(storage.IndexPrefix, proof.KeyDigest)
+	leaf, err = b.store.Get(storage.IndexTable, proof.KeyDigest)
 	switch {
 	case err != nil && err != storage.ErrKeyNotFound:
 		return nil, fmt.Errorf("error reading leaf %v data: %v", proof.KeyDigest, err)
