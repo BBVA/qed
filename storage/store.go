@@ -42,6 +42,9 @@ const (
 	FSMStateTable
 )
 
+// FSMStateTableKey single key to persist fsm state.
+var FSMStateTableKey = []byte{0xab}
+
 // String returns a string representation of the table.
 func (t Table) String() string {
 	var s string
