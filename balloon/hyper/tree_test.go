@@ -122,7 +122,7 @@ func TestProveMembership(t *testing.T) {
 			require.NoErrorf(t, err, "This should not fail for index %d", i)
 		}
 
-		leaf, err := store.Get(storage.IndexPrefix, searchedDigest)
+		leaf, err := store.Get(storage.IndexTable, searchedDigest)
 		require.NoErrorf(t, err, "No leaf with digest %v", err)
 
 		proof, err := tree.QueryMembership(leaf.Key, leaf.Value)
@@ -161,7 +161,7 @@ func TestAddAndVerify(t *testing.T) {
 		require.NoErrorf(t, err, "Add operation should not fail for index %d", i)
 		tree.store.Mutate(mutations)
 
-		leaf, err := store.Get(storage.IndexPrefix, key)
+		leaf, err := store.Get(storage.IndexTable, key)
 		require.NoErrorf(t, err, "No leaf with key %d: %v", key, err)
 
 		proof, err := tree.QueryMembership(leaf.Key, leaf.Value)
@@ -202,8 +202,8 @@ func TestDeterministicAdd(t *testing.T) {
 	}
 
 	// check index store equality
-	reader11 := store1.GetAll(storage.IndexPrefix)
-	reader21 := store2.GetAll(storage.IndexPrefix)
+	reader11 := store1.GetAll(storage.IndexTable)
+	reader21 := store2.GetAll(storage.IndexTable)
 	defer reader11.Close()
 	defer reader21.Close()
 	buff11 := make([]*storage.KVPair, 0)
@@ -227,8 +227,8 @@ func TestDeterministicAdd(t *testing.T) {
 	require.Equalf(t, buff11, buff21, "The stored indexes should be equal")
 
 	// check cache store equality
-	reader12 := store1.GetAll(storage.HyperCachePrefix)
-	reader22 := store2.GetAll(storage.HyperCachePrefix)
+	reader12 := store1.GetAll(storage.HyperCacheTable)
+	reader22 := store2.GetAll(storage.HyperCacheTable)
 	defer reader12.Close()
 	defer reader22.Close()
 	buff12 := make([]*storage.KVPair, 0)

@@ -340,8 +340,8 @@ func TestInsertInterpretation(t *testing.T) {
 			storedBatches: map[string][]byte{},
 			expectedMutations: []*storage.Mutation{
 				{
-					Prefix: storage.HyperCachePrefix,
-					Key:    pos(0, 4).Bytes(),
+					Table: storage.HyperCacheTable,
+					Key:   pos(0, 4).Bytes(),
 					Value: []byte{
 						0xe0, 0x00, 0x00, 0x00, // bitmap: 11100000 00000000 00000000 00000000
 						0x00, 0x01, // iBatch 0 -> hash=0x00 (shortcut index=0)
@@ -388,8 +388,8 @@ func TestInsertInterpretation(t *testing.T) {
 			},
 			expectedMutations: []*storage.Mutation{
 				{
-					Prefix: storage.HyperCachePrefix,
-					Key:    pos(0, 4).Bytes(),
+					Table: storage.HyperCacheTable,
+					Key:   pos(0, 4).Bytes(),
 					Value: []byte{
 						0xe0, 0x00, 0x00, 0x00, // bitmap: 11100000 00000000 00000000 00000000
 						0x00, 0x01, // iBatch 0 -> hash=0x00 (shortcut index=0)
@@ -437,8 +437,8 @@ func TestInsertInterpretation(t *testing.T) {
 			},
 			expectedMutations: []*storage.Mutation{
 				{
-					Prefix: storage.HyperCachePrefix,
-					Key:    pos(1, 0).Bytes(),
+					Table: storage.HyperCacheTable,
+					Key:   pos(1, 0).Bytes(),
 					Value: []byte{
 						0xe0, 0x00, 0x00, 0x00, // bitmap: 11100000 00000000 00000000 00000000
 						0x01, 0x01, // iBatch 0 -> hash=0x01 (shortcut index=0)
@@ -447,8 +447,8 @@ func TestInsertInterpretation(t *testing.T) {
 					},
 				},
 				{
-					Prefix: storage.HyperCachePrefix,
-					Key:    pos(0, 0).Bytes(),
+					Table: storage.HyperCacheTable,
+					Key:   pos(0, 0).Bytes(),
 					Value: []byte{
 						0xe0, 0x00, 0x00, 0x00, // bitmap: 11100000 00000000 00000000 00000000
 						0x00, 0x01, // iBatch 0 -> hash=0x00 (shortcut index=0)
@@ -457,8 +457,8 @@ func TestInsertInterpretation(t *testing.T) {
 					},
 				},
 				{
-					Prefix: storage.HyperCachePrefix,
-					Key:    pos(0, 4).Bytes(),
+					Table: storage.HyperCacheTable,
+					Key:   pos(0, 4).Bytes(),
 					Value: []byte{
 						0xd1, 0x01, 0x80, 0x00, // bitmap: 11010001 00000001 10000000 00000000
 						0x01, 0x00, // iBatch 0 -> hash=0x01
@@ -509,8 +509,8 @@ func TestInsertInterpretation(t *testing.T) {
 			},
 			expectedMutations: []*storage.Mutation{
 				{
-					Prefix: storage.HyperCachePrefix,
-					Key:    pos(0, 4).Bytes(),
+					Table: storage.HyperCacheTable,
+					Key:   pos(0, 4).Bytes(),
 					Value: []byte{
 						0xfe, 0x00, 0x00, 0x00, // bitmap: 11111110 00000000 00000000 00000000
 						0x08, 0x00, // iBatch 0 -> hash=0x08
@@ -566,8 +566,8 @@ func TestInsertInterpretation(t *testing.T) {
 			},
 			expectedMutations: []*storage.Mutation{
 				{
-					Prefix: storage.HyperCachePrefix,
-					Key:    pos(0, 4).Bytes(),
+					Table: storage.HyperCacheTable,
+					Key:   pos(0, 4).Bytes(),
 					Value: []byte{
 						0xfe, 0x1e, 0x00, 0x00, // bitmap: 11111110 00011110 00000000 00000000
 						0x04, 0x00, // iBatch 0 -> hash=0x08
@@ -622,8 +622,8 @@ func TestInsertInterpretation(t *testing.T) {
 			},
 			expectedMutations: []*storage.Mutation{
 				{
-					Prefix: storage.HyperCachePrefix,
-					Key:    pos(128, 4).Bytes(),
+					Table: storage.HyperCacheTable,
+					Key:   pos(128, 4).Bytes(),
 					Value: []byte{
 						0xe0, 0x00, 0x00, 0x00, // bitmap: 11100000 00000000 00000000 00000000
 						0x80, 0x01, // iBatch 0 -> hash=0x80 (shortcut index=128)

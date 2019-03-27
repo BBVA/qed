@@ -122,7 +122,7 @@ func NewBadgerStoreOpts(opts *Options) (*BadgerStore, error) {
 func (s BadgerStore) Mutate(mutations []*storage.Mutation) error {
 	return s.db.Update(func(txn *b.Txn) error {
 		for _, m := range mutations {
-			key := append([]byte{m.Prefix}, m.Key...)
+			key := append([]byte{m.Table.Prefix()}, m.Key...)
 			err := txn.Set(key, m.Value)
 			if err != nil {
 				return err
@@ -132,8 +132,9 @@ func (s BadgerStore) Mutate(mutations []*storage.Mutation) error {
 	})
 }
 
-func (s BadgerStore) GetRange(prefix byte, start, end []byte) (storage.KVRange, error) {
+func (s BadgerStore) GetRange(table storage.Table, start, end []byte) (storage.KVRange, error) {
 	result := make(storage.KVRange, 0)
+	prefix := table.Prefix()
 	startKey := append([]byte{prefix}, start...)
 	endKey := append([]byte{prefix}, end...)
 	err := s.db.View(func(txn *b.Txn) error {
@@ -163,11 +164,11 @@ func (s BadgerStore) GetRange(prefix byte, start, end []byte) (storage.KVRange, 
 	return result, nil
 }
 
-func (s BadgerStore) Get(prefix byte, key []byte) (*storage.KVPair, error) {
+func (s BadgerStore) Get(table storage.Table, key []byte) (*storage.KVPair, error) {
 	result := new(storage.KVPair)
 	result.Key = key
 	err := s.db.View(func(txn *b.Txn) error {
-		k := append([]byte{prefix}, key...)
+		k := append([]byte{table.Prefix()}, key...)
 		item, err := txn.Get(k)
 		if err != nil {
 			return err
@@ -189,7 +190,7 @@ func (s BadgerStore) Get(prefix byte, key []byte) (*storage.KVPair, error) {
 	}
 }
 
-func (s BadgerStore) GetLast(prefix byte) (*storage.KVPair, error) {
+func (s BadgerStore) GetLast(table storage.Table) (*storage.KVPair, error) {
 	result := new(storage.KVPair)
 	err := s.db.View(func(txn *b.Txn) error {
 		var err error
@@ -200,6 +201,7 @@ func (s BadgerStore) GetLast(prefix byte) (*storage.KVPair, error) {
 		defer it.Close()
 		// we are using a reversed iterator so we need to seek for
 		// the last possible key for history prefix
+		prefix := table.Prefix()
 		it.Seek([]byte{prefix, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff})
 		if it.ValidForPrefix([]byte{prefix}) {
 			item := it.Item()
@@ -227,12 +229,12 @@ type BadgerKVPairReader struct {
 	it     *b.Iterator
 }
 
-func NewBadgerKVPairReader(prefix byte, txn *b.Txn) *BadgerKVPairReader {
+func NewBadgerKVPairReader(table storage.Table, txn *b.Txn) *BadgerKVPairReader {
 	opts := b.DefaultIteratorOptions
 	opts.PrefetchSize = 10
 	it := txn.NewIterator(opts)
-	it.Seek([]byte{prefix})
-	return &BadgerKVPairReader{prefix, txn, it}
+	it.Seek([]byte{table.Prefix()})
+	return &BadgerKVPairReader{table.Prefix(), txn, it}
 }
 
 func (r *BadgerKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
@@ -257,8 +259,8 @@ func (r *BadgerKVPairReader) Close() {
 	r.txn.Discard()
 }
 
-func (s BadgerStore) GetAll(prefix byte) storage.KVPairReader {
-	return NewBadgerKVPairReader(prefix, s.db.NewTransaction(false))
+func (s BadgerStore) GetAll(table storage.Table) storage.KVPairReader {
+	return NewBadgerKVPairReader(table, s.db.NewTransaction(false))
 }
 
 func (s BadgerStore) Close() error {
@@ -328,7 +330,7 @@ func (s *BadgerStore) Load(r io.Reader) error {
 	return s.db.Load(r)
 }
 
-// Take a snapshot of the store, and returns and id
+// Snapshot takes a snapshot of the store, and returns and id
 // to be used in the back up process. The state of the
 // snapshot is stored in the store instance.
 // In badger the id corresponds to the last version stored.

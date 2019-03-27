@@ -49,7 +49,6 @@ type RocksDBStore struct {
 	wo             *rocksdb.WriteOptions
 	stableCFHandle *rocksdb.ColumnFamilyHandle
 	logCFHandle    *rocksdb.ColumnFamilyHandle
-	cfHandles      rocksdb.ColumnFamilyHandles
 
 	// global options
 	globalOpts *rocksdb.Options
@@ -176,11 +175,14 @@ func New(options Options) (*RocksDBStore, error) {
 
 // Close is used to gracefully close the DB connection.
 func (s *RocksDBStore) Close() error {
+	if s.stableCFHandle != nil {
+		s.stableCFHandle.Destroy()
+	}
+	if s.logCFHandle != nil {
+		s.logCFHandle.Destroy()
+	}
 	if s.db != nil {
 		s.db.Close()
-	}
-	for _, cfh := range s.cfHandles {
-		cfh.Destroy()
 	}
 	if s.stableBbto != nil {
 		s.stableBbto.Destroy()
