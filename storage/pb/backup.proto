@@ -18,7 +18,16 @@ syntax = "proto3";
 
 package pb;
 
+enum Table {
+    DEFAULT = 0;
+    INDEX = 1;
+    HYPER = 2;
+    HISTORY = 3;
+    FSM = 4;
+}
+
 message KVPair {
-    bytes key = 1;
-    bytes value = 2;
+    Table table = 1;
+    bytes key = 2;
+    bytes value = 3;
 }

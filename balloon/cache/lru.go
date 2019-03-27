@@ -14,16 +14,16 @@ type entry struct {
 }
 
 type LruReadThroughCache struct {
-	prefix    byte
+	table     storage.Table
 	store     storage.Store
 	size      int
 	items     map[[lruKeySize]byte]*list.Element
 	evictList *list.List
 }
 
-func NewLruReadThroughCache(prefix byte, store storage.Store, cacheSize uint16) *LruReadThroughCache {
+func NewLruReadThroughCache(table storage.Table, store storage.Store, cacheSize uint16) *LruReadThroughCache {
 	return &LruReadThroughCache{
-		prefix:    prefix,
+		table:     table,
 		store:     store,
 		size:      int(cacheSize),
 		items:     make(map[[lruKeySize]byte]*list.Element),
@@ -36,7 +36,7 @@ func (c LruReadThroughCache) Get(key []byte) ([]byte, bool) {
 	copy(k[:], key)
 	e, ok := c.items[k]
 	if !ok {
-		pair, err := c.store.Get(c.prefix, key)
+		pair, err := c.store.Get(c.table, key)
 		if err != nil {
 			return nil, false
 		}

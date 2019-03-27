@@ -44,24 +44,24 @@ func TestInsertVisitor(t *testing.T) {
 			))),
 			expectedMutations: []*storage.Mutation{
 				{
-					Prefix: storage.HistoryCachePrefix,
-					Key:    pos(7, 0).Bytes(),
-					Value:  []byte{7},
+					Table: storage.HistoryCacheTable,
+					Key:   pos(7, 0).Bytes(),
+					Value: []byte{7},
 				},
 				{
-					Prefix: storage.HistoryCachePrefix,
-					Key:    pos(6, 1).Bytes(),
-					Value:  []byte{7},
+					Table: storage.HistoryCacheTable,
+					Key:   pos(6, 1).Bytes(),
+					Value: []byte{7},
 				},
 				{
-					Prefix: storage.HistoryCachePrefix,
-					Key:    pos(4, 2).Bytes(),
-					Value:  []byte{7},
+					Table: storage.HistoryCacheTable,
+					Key:   pos(4, 2).Bytes(),
+					Value: []byte{7},
 				},
 				{
-					Prefix: storage.HistoryCachePrefix,
-					Key:    pos(0, 3).Bytes(),
-					Value:  []byte{7},
+					Table: storage.HistoryCacheTable,
+					Key:   pos(0, 3).Bytes(),
+					Value: []byte{7},
 				},
 			},
 			expectedElements: []*cachedElement{
@@ -75,7 +75,7 @@ func TestInsertVisitor(t *testing.T) {
 
 	for i, c := range testCases {
 		cache := cache.NewFakeCache([]byte{0x0})
-		visitor := newInsertVisitor(hashing.NewFakeXorHasher(), cache, storage.HistoryCachePrefix)
+		visitor := newInsertVisitor(hashing.NewFakeXorHasher(), cache, storage.HistoryCacheTable)
 
 		c.op.Accept(visitor)
 

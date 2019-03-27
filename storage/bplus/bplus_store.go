@@ -41,16 +41,16 @@ func (p KVItem) Less(b btree.Item) bool {
 
 func (s *BPlusTreeStore) Mutate(mutations []*storage.Mutation) error {
 	for _, m := range mutations {
-		key := append([]byte{m.Prefix}, m.Key...)
+		key := append([]byte{m.Table.Prefix()}, m.Key...)
 		s.db.ReplaceOrInsert(KVItem{key, m.Value})
 	}
 	return nil
 }
 
-func (s BPlusTreeStore) GetRange(prefix byte, start, end []byte) (storage.KVRange, error) {
+func (s BPlusTreeStore) GetRange(table storage.Table, start, end []byte) (storage.KVRange, error) {
 	result := make(storage.KVRange, 0)
-	startKey := append([]byte{prefix}, start...)
-	endKey := append([]byte{prefix}, end...)
+	startKey := append([]byte{table.Prefix()}, start...)
+	endKey := append([]byte{table.Prefix()}, end...)
 	s.db.AscendGreaterOrEqual(KVItem{startKey, nil}, func(i btree.Item) bool {
 		key := i.(KVItem).Key
 		if bytes.Compare(key, endKey) > 0 {
@@ -62,10 +62,10 @@ func (s BPlusTreeStore) GetRange(prefix byte, start, end []byte) (storage.KVRang
 	return result, nil
 }
 
-func (s BPlusTreeStore) Get(prefix byte, key []byte) (*storage.KVPair, error) {
+func (s BPlusTreeStore) Get(table storage.Table, key []byte) (*storage.KVPair, error) {
 	result := new(storage.KVPair)
 	result.Key = key
-	k := append([]byte{prefix}, key...)
+	k := append([]byte{table.Prefix()}, key...)
 	item := s.db.Get(KVItem{k, nil})
 	if item != nil {
 		result.Value = item.(KVItem).Value
@@ -75,9 +75,9 @@ func (s BPlusTreeStore) Get(prefix byte, key []byte) (*storage.KVPair, error) {
 	}
 }
 
-func (s BPlusTreeStore) GetLast(prefix byte) (*storage.KVPair, error) {
+func (s BPlusTreeStore) GetLast(table storage.Table) (*storage.KVPair, error) {
 	result := new(storage.KVPair)
-	s.db.DescendGreaterThan(KVItem{[]byte{prefix}, nil}, func(i btree.Item) bool {
+	s.db.DescendGreaterThan(KVItem{[]byte{table.Prefix()}, nil}, func(i btree.Item) bool {
 		item := i.(KVItem)
 		result.Key = item.Key[1:]
 		result.Value = item.Value
@@ -89,8 +89,8 @@ func (s BPlusTreeStore) GetLast(prefix byte) (*storage.KVPair, error) {
 	return result, nil
 }
 
-func (s BPlusTreeStore) GetAll(prefix byte) storage.KVPairReader {
-	return NewBPlusKVPairReader(prefix, s.db)
+func (s BPlusTreeStore) GetAll(table storage.Table) storage.KVPairReader {
+	return NewBPlusKVPairReader(table, s.db)
 }
 
 type BPlusKVPairReader struct {
@@ -99,11 +99,11 @@ type BPlusKVPairReader struct {
 	lastKey []byte
 }
 
-func NewBPlusKVPairReader(prefix byte, db *btree.BTree) *BPlusKVPairReader {
+func NewBPlusKVPairReader(table storage.Table, db *btree.BTree) *BPlusKVPairReader {
 	return &BPlusKVPairReader{
-		prefix:  prefix,
+		prefix:  table.Prefix(),
 		db:      db,
-		lastKey: []byte{prefix},
+		lastKey: []byte{table.Prefix()},
 	}
 }
 
