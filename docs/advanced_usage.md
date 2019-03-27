@@ -5,12 +5,12 @@
 Besides the standalone example given in the [README](../README.md), QED is also designed 
 to be a production-ready cluster. Here you can find some detailed examples.
 
-<p align="center"><img width="100%" src="./full_architecture.png" alt="Architecture overview"/></p>
+<p align="center"><img width="100%" src="./architecture/full_architecture.png" alt="Architecture overview"/></p>
 
 ## QED cluster
 
 In order to guarantee reliability and high availabity, QED servers include
-hashicorp's [raft](https://github.com/hashicorp/raft) consensus protocol implementation.
+[hashicorp's raft](https://github.com/hashicorp/raft) consensus protocol implementation.
 An architectural perspective can be found at [raft](architecture/raft.md) doc. file. 
 
 To have identified the leader beforehand (demo purpose), launch first a single 
