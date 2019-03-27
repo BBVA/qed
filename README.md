@@ -20,6 +20,8 @@ This software is experimental and part of the research being done at BBVA Labs.
 We will eventually publish our research work, analysis and the experiments for
 anyone to reproduce.
 
+To dive into deep explanation, see [QED mission](docs/mission.md).
+
 ## Motivation
 The use of a technology that allows to verify the information it stores is
 quite broad. Audit logs are a common tool for forensic investigations and legal
@@ -146,7 +148,7 @@ For more elaborated examples please review the [Advanced Usage](docs/advanced_us
 
 ## Contributions
 
-Contributions are very welcome, see [CONTRIBUTING.md](https://github.com/BBVA/qed/blob/master/CONTRIBUTING.md)
+Contributions are very welcome, see [CONTRIBUTING.md](docs/contribute/contributing.md)
 or skim [existing tickets](https://github.com/BBVA/qed/issues) to see where you could help out.
 
 ## License
