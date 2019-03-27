@@ -19,16 +19,12 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/bbva/qed/storage"
-	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/util"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -239,30 +235,6 @@ func TestBackupLoad(t *testing.T) {
 			}
 		}
 		reader.Close()
-	}
-
-}
-
-func BenchmarkMutate(b *testing.B) {
-	store, closeF := openRocksDBStore(b)
-	defer closeF()
-
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(PrometheusCollectors()...)
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	go http.ListenAndServe(":2112", nil)
-
-	b.N = 10000000
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		store.Mutate([]*storage.Mutation{
-			{
-				Table: storage.IndexTable,
-				Key:   rand.Bytes(128),
-				Value: []byte("Value"),
-			},
-		})
 	}
 
 }

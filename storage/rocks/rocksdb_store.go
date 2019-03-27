@@ -46,12 +46,9 @@ type RocksDBStore struct {
 	cfHandles rocksdb.ColumnFamilyHandles
 
 	// global options
-	globalOpts            *rocksdb.Options
-	defaultTableOpts      *rocksdb.Options
-	indexTableOpts        *rocksdb.Options
-	hyperCacheTableOpts   *rocksdb.Options
-	historyCacheTableOpts *rocksdb.Options
-	fsmStateTableOpts     *rocksdb.Options
+	globalOpts *rocksdb.Options
+	// per column family options
+	cfOpts []*rocksdb.Options
 
 	// read/write options
 	ro *rocksdb.ReadOptions
@@ -81,33 +78,21 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
+	globalOpts.IncreaseParallelism(4)
 	var stats *rocksdb.Statistics
 	if opts.EnableStatistics {
 		stats = rocksdb.NewStatistics()
 		globalOpts.SetStatistics(stats)
 	}
 
-	defaultTableOpts := rocksdb.NewDefaultOptions()
-	indexTableOpts := getIndexTableOpts()
-	hyperCacheTableOpts := getHyperCacheTableOpts()
-	historyCacheTableOpts := getHistoryCacheTableOpts()
-	fsmStateTableOpts := getFsmStateTableOpts()
-
+	// Per column family options
 	cfOpts := []*rocksdb.Options{
-		defaultTableOpts,
-		indexTableOpts,
-		hyperCacheTableOpts,
-		historyCacheTableOpts,
-		fsmStateTableOpts,
+		rocksdb.NewDefaultOptions(),
+		getIndexTableOpts(),
+		getHyperCacheTableOpts(),
+		getHistoryCacheTableOpts(),
+		getFsmStateTableOpts(),
 	}
-
-	// rocksdbOpts.IncreaseParallelism(4)
-	// rocksdbOpts.SetMaxWriteBufferNumber(5)
-	// rocksdbOpts.SetMinWriteBufferNumberToMerge(2)
-
-	// blockOpts := rocksdb.NewDefaultBlockBasedTableOptions()
-	// blockOpts.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
-	// rocksdbOpts.SetBlockBasedTableFactory(blockOpts)
 
 	db, cfHandles, err := rocksdb.OpenDBColumnFamilies(opts.Path, globalOpts, cfNames, cfOpts)
 	if err != nil {
@@ -121,19 +106,15 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	}
 
 	store := &RocksDBStore{
-		db:                    db,
-		stats:                 stats,
-		cfHandles:             cfHandles,
-		checkPointPath:        checkPointPath,
-		checkpoints:           make(map[uint64]string),
-		globalOpts:            globalOpts,
-		defaultTableOpts:      defaultTableOpts,
-		indexTableOpts:        indexTableOpts,
-		hyperCacheTableOpts:   hyperCacheTableOpts,
-		historyCacheTableOpts: historyCacheTableOpts,
-		fsmStateTableOpts:     fsmStateTableOpts,
-		wo:                    rocksdb.NewDefaultWriteOptions(),
-		ro:                    rocksdb.NewDefaultReadOptions(),
+		db:             db,
+		stats:          stats,
+		cfHandles:      cfHandles,
+		checkPointPath: checkPointPath,
+		checkpoints:    make(map[uint64]string),
+		globalOpts:     globalOpts,
+		cfOpts:         cfOpts,
+		wo:             rocksdb.NewDefaultWriteOptions(),
+		ro:             rocksdb.NewDefaultReadOptions(),
 	}
 
 	if rms == nil && stats != nil {
@@ -144,30 +125,79 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 }
 
 func getIndexTableOpts() *rocksdb.Options {
+	// index table is append-only so we have to optimize for
+	// read amplification
+
+	// TODO change this!!!
+
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
 	opts := rocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
+	opts.SetCompression(rocksdb.SnappyCompression)
+	// in normal mode, by default, we try to minimize space amplification,
+	// so we set:
+	//
+	// L0 size = 64MBytes * 2 (min_write_buffer_number_to_merge) * \
+	//              8 (level0_file_num_compaction_trigger)
+	//         = 1GBytes
+	// L1 size close to L0, 1GBytes, max_bytes_for_level_base = 1GBytes,
+	//   max_bytes_for_level_multiplier = 2
+	// L2 size is 2G, L3 is 4G, L4 is 8G, L5 16G...
+	//
+	opts.SetWriteBufferSize(64 * 1024 * 1024)
+	opts.SetMaxWriteBufferNumber(5)
+	opts.SetMinWriteBufferNumberToMerge(2)
+	opts.SetLevel0FileNumCompactionTrigger(8)
+	// MaxBytesForLevelBase is the total size of L1, should be close to
+	// the size of L0
+	opts.SetMaxBytesForLevelBase(1 * 1024 * 1024 * 1024)
+	opts.SetMaxBytesForLevelMultiplier(2)
+	// files in L1 will have TargetFileSizeBase bytes
+	opts.SetTargetFileSizeBase(64 * 1024 * 1024)
+	opts.SetTargetFileSizeMultiplier(10)
+	// io parallelism
+	opts.SetMaxBackgroundCompactions(2)
+	opts.SetMaxBackgroundFlushes(2)
 	return opts
 }
 
 func getHyperCacheTableOpts() *rocksdb.Options {
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
 	opts := rocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
+	opts.SetCompression(rocksdb.SnappyCompression)
 	return opts
 }
 
 func getHistoryCacheTableOpts() *rocksdb.Options {
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
 	opts := rocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
+	opts.SetCompression(rocksdb.SnappyCompression)
 	return opts
 }
 
 func getFsmStateTableOpts() *rocksdb.Options {
+	// FSM state contains only one key that is updated on every
+	// add event operation. We should try to reduce write and
+	// space amplification by keeping a lower number of levels.
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
 	opts := rocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
+	opts.SetCompression(rocksdb.SnappyCompression)
+	// we try to reduce write and space amplification, so we:
+	//   * set a low size for the in-memory write buffers
+	//   * reduce the number of write buffers
+	//   * activate merging before flushing
+	//   * set parallelism to 1
+	opts.SetWriteBufferSize(4 * 1024 * 1024)
+	opts.SetMaxWriteBufferNumber(3)
+	opts.SetMinWriteBufferNumberToMerge(2)
+	opts.SetMaxBackgroundCompactions(1)
+	opts.SetMaxBackgroundFlushes(1)
 	return opts
 }
 
@@ -290,18 +320,11 @@ func (s *RocksDBStore) Close() error {
 	if s.globalOpts != nil {
 		s.globalOpts.Destroy()
 	}
-	if s.defaultTableOpts != nil {
-		s.defaultTableOpts.Destroy()
+
+	for _, opt := range s.cfOpts {
+		opt.Destroy()
 	}
-	if s.indexTableOpts != nil {
-		s.indexTableOpts.Destroy()
-	}
-	if s.hyperCacheTableOpts != nil {
-		s.hyperCacheTableOpts.Destroy()
-	}
-	if s.fsmStateTableOpts != nil {
-		s.fsmStateTableOpts.Destroy()
-	}
+
 	if s.ro != nil {
 		s.ro.Destroy()
 	}
