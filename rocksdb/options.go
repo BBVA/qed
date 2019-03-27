@@ -89,6 +89,34 @@ func (o *Options) SetMinWriteBufferNumberToMerge(value int) {
 	C.rocksdb_options_set_min_write_buffer_number_to_merge(o.c, C.int(value))
 }
 
+// SetMaxOpenFiles sets the number of open files that can be used by the DB.
+//
+// You may need to increase this if your database has a large working set
+// (budget one open file per 2MB of working set).
+// Default: 1000
+func (o *Options) SetMaxOpenFiles(value int) {
+	C.rocksdb_options_set_max_open_files(o.c, C.int(value))
+}
+
+// SetMaxFileOpeningThreads sets the maximum number of file opening threads.
+// If max_open_files is -1, DB will open all files on db.Open(). You can
+// use this option to increase the number of threads used to open the files.
+// Default: 16
+func (o *Options) SetMaxFileOpeningThreads(value int) {
+	C.rocksdb_options_set_max_file_opening_threads(o.c, C.int(value))
+}
+
+// SetMaxTotalWalSize sets the maximum total wal size in bytes.
+// Once write-ahead logs exceed this size, we will start forcing the flush of
+// column families whose memtables are backed by the oldest live WAL file
+// (i.e. the ones that are causing all the space amplification). If set to 0
+// (default), we will dynamically choose the WAL size limit to be
+// [sum of all write_buffer_size * max_write_buffer_number] * 4
+// Default: 0
+func (o *Options) SetMaxTotalWalSize(value uint64) {
+	C.rocksdb_options_set_max_total_wal_size(o.c, C.uint64_t(value))
+}
+
 // SetBlockBasedTableFactory sets the block based table factory.
 func (o *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
 	o.bbto = value
@@ -314,6 +342,43 @@ func (o *Options) SetMaxBackgroundCompactions(value int) {
 // Default: 0
 func (o *Options) SetMaxBackgroundFlushes(value int) {
 	C.rocksdb_options_set_max_background_flushes(o.c, C.int(value))
+}
+
+// SetMaxLogFileSize sets the maximal size of the info log file.
+//
+// If the log file is larger than `max_log_file_size`, a new info log
+// file will be created.
+// If max_log_file_size == 0, all logs will be written to one log file.
+// Default: 0
+func (o *Options) SetMaxLogFileSize(value int) {
+	C.rocksdb_options_set_max_log_file_size(o.c, C.size_t(value))
+}
+
+// SetLogFileTimeToRoll sets the time for the info log file to roll (in seconds).
+//
+// If specified with non-zero value, log file will be rolled
+// if it has been active longer than `log_file_time_to_roll`.
+// Default: 0 (disabled)
+func (o *Options) SetLogFileTimeToRoll(value int) {
+	C.rocksdb_options_set_log_file_time_to_roll(o.c, C.size_t(value))
+}
+
+// SetKeepLogFileNum sets the maximal info log files to be kept.
+// Default: 1000
+func (o *Options) SetKeepLogFileNum(value int) {
+	C.rocksdb_options_set_keep_log_file_num(o.c, C.size_t(value))
+}
+
+// SetAllowMmapReads enable/disable mmap reads for reading sst tables.
+// Default: false
+func (o *Options) SetAllowMmapReads(value bool) {
+	C.rocksdb_options_set_allow_mmap_reads(o.c, boolToUchar(value))
+}
+
+// SetAllowMmapWrites enable/disable mmap writes for writing sst tables.
+// Default: false
+func (o *Options) SetAllowMmapWrites(value bool) {
+	C.rocksdb_options_set_allow_mmap_writes(o.c, boolToUchar(value))
 }
 
 // SetStatistics sets a statistics object to pass to the DB.
