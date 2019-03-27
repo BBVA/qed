@@ -61,7 +61,7 @@ type BalloonFSM struct {
 
 func loadState(s storage.ManagedStore) (*fsmState, error) {
 	var state fsmState
-	kvstate, err := s.Get(storage.FSMStatePrefix, []byte{0xab})
+	kvstate, err := s.Get(storage.FSMStateTable, storage.FSMStateTableKey)
 	if err == storage.ErrKeyNotFound {
 		log.Infof("Unable to find previous state: assuming a clean instance")
 		return &fsmState{0, 0, 0}, nil
@@ -255,7 +255,7 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 		return &fsmAddResponse{error: err}
 	}
 
-	mutations = append(mutations, storage.NewMutation(storage.FSMStatePrefix, []byte{0xab}, stateBuff.Bytes()))
+	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff.Bytes()))
 	err = fsm.store.Mutate(mutations)
 	if err != nil {
 		return &fsmAddResponse{error: err}

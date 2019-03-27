@@ -19,16 +19,12 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/bbva/qed/storage"
-	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/util"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,22 +32,22 @@ import (
 func TestMutate(t *testing.T) {
 	store, closeF := openRocksDBStore(t)
 	defer closeF()
-	prefix := byte(0x0)
 
 	tests := []struct {
 		testname      string
+		table         storage.Table
 		key, value    []byte
 		expectedError error
 	}{
-		{"Mutate Key=Value", []byte("Key"), []byte("Value"), nil},
+		{"Mutate Key=Value", storage.IndexTable, []byte("Key"), []byte("Value"), nil},
 	}
 
 	for _, test := range tests {
 		err := store.Mutate([]*storage.Mutation{
-			{prefix, test.key, test.value},
+			{Table: test.table, Key: test.key, Value: test.value},
 		})
 		require.Equalf(t, test.expectedError, err, "Error mutating in test: %s", test.testname)
-		_, err = store.Get(prefix, test.key)
+		_, err = store.Get(test.table, test.key)
 		require.Equalf(t, test.expectedError, err, "Error getting key in test: %s", test.testname)
 	}
 }
@@ -61,25 +57,29 @@ func TestGetExistentKey(t *testing.T) {
 	defer closeF()
 
 	testCases := []struct {
-		prefix        byte
+		table         storage.Table
 		key, value    []byte
 		expectedError error
 	}{
-		{byte(0x0), []byte("Key1"), []byte("Value1"), nil},
-		{byte(0x0), []byte("Key2"), []byte("Value2"), nil},
-		{byte(0x1), []byte("Key3"), []byte("Value3"), nil},
-		{byte(0x1), []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
+		{storage.IndexTable, []byte("Key1"), []byte("Value1"), nil},
+		{storage.IndexTable, []byte("Key2"), []byte("Value2"), nil},
+		{storage.HyperCacheTable, []byte("Key3"), []byte("Value3"), nil},
+		{storage.HyperCacheTable, []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
 	}
 
 	for _, test := range testCases {
 		if test.expectedError == nil {
 			err := store.Mutate([]*storage.Mutation{
-				{test.prefix, test.key, test.value},
+				{
+					Table: test.table,
+					Key:   test.key,
+					Value: test.value,
+				},
 			})
 			require.NoError(t, err)
 		}
 
-		stored, err := store.Get(test.prefix, test.key)
+		stored, err := store.Get(test.table, test.key)
 		if test.expectedError == nil {
 			require.NoError(t, err)
 			require.Equalf(t, stored.Key, test.key, "The stored key does not match the original: expected %d, actual %d", test.key, stored.Key)
@@ -108,15 +108,15 @@ func TestGetRange(t *testing.T) {
 		{0, 20, 10},
 	}
 
-	prefix := byte(0x0)
+	table := storage.IndexTable
 	for i := 10; i < 50; i++ {
 		store.Mutate([]*storage.Mutation{
-			{prefix, []byte{byte(i)}, []byte("Value")},
+			{table, []byte{byte(i)}, []byte("Value")},
 		})
 	}
 
 	for _, test := range testCases {
-		slice, err := store.GetRange(prefix, []byte{test.start}, []byte{test.end})
+		slice, err := store.GetRange(table, []byte{test.start}, []byte{test.end})
 		require.NoError(t, err)
 		require.Equalf(t, len(slice), test.size, "Slice length invalid: expected %d, actual %d", test.size, len(slice))
 	}
@@ -125,7 +125,7 @@ func TestGetRange(t *testing.T) {
 
 func TestGetAll(t *testing.T) {
 
-	prefix := storage.HyperCachePrefix
+	table := storage.HyperCacheTable
 	numElems := uint16(1000)
 	testCases := []struct {
 		batchSize    int
@@ -144,12 +144,12 @@ func TestGetAll(t *testing.T) {
 	for i := uint16(0); i < numElems; i++ {
 		key := util.Uint16AsBytes(i)
 		store.Mutate([]*storage.Mutation{
-			{prefix, key, key},
+			{table, key, key},
 		})
 	}
 
 	for i, c := range testCases {
-		reader := store.GetAll(storage.HyperCachePrefix)
+		reader := store.GetAll(table)
 		numBatches := 0
 		var lastBatchLen int
 		for {
@@ -174,18 +174,18 @@ func TestGetLast(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	prefixes := [][]byte{{storage.IndexPrefix}, {storage.HistoryCachePrefix}, {storage.HyperCachePrefix}}
-	for _, prefix := range prefixes {
+	tables := []storage.Table{storage.IndexTable, storage.HistoryCacheTable, storage.HyperCacheTable}
+	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
 			store.Mutate([]*storage.Mutation{
-				{prefix[0], key, key},
+				{table, key, key},
 			})
 		}
 	}
 
-	// get last element for history prefix
-	kv, err := store.GetLast(storage.HistoryCachePrefix)
+	// get last element for history table
+	kv, err := store.GetLast(storage.HistoryCacheTable)
 	require.NoError(t, err)
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Key, "The key should match the last inserted element")
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
@@ -198,12 +198,12 @@ func TestBackupLoad(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	prefixes := [][]byte{{storage.IndexPrefix}, {storage.HistoryCachePrefix}, {storage.HyperCachePrefix}}
-	for _, prefix := range prefixes {
+	tables := []storage.Table{storage.IndexTable, storage.HistoryCacheTable, storage.HyperCacheTable}
+	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
 			store.Mutate([]*storage.Mutation{
-				{Prefix: prefix[0], Key: key, Value: key},
+				{Table: table, Key: key, Value: key},
 			})
 		}
 	}
@@ -220,8 +220,8 @@ func TestBackupLoad(t *testing.T) {
 	require.NoError(t, restore.Load(ioBuf))
 
 	// check elements
-	for _, prefix := range prefixes {
-		reader := store.GetAll(prefix[0])
+	for _, table := range tables {
+		reader := store.GetAll(table)
 		for {
 			entries := make([]*storage.KVPair, 1000)
 			n, _ := reader.Read(entries)
@@ -229,37 +229,12 @@ func TestBackupLoad(t *testing.T) {
 				break
 			}
 			for i := 0; i < n; i++ {
-				kv, err := restore.Get(prefix[0], entries[i].Key)
+				kv, err := restore.Get(table, entries[i].Key)
 				require.NoError(t, err)
 				require.Equal(t, entries[i].Value, kv.Value, "The values should match")
 			}
 		}
 		reader.Close()
-	}
-
-}
-
-func BenchmarkMutate(b *testing.B) {
-	store, closeF := openRocksDBStore(b)
-	defer closeF()
-
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(PrometheusCollectors()...)
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	go http.ListenAndServe(":2112", nil)
-
-	prefix := byte(0x0)
-	b.N = 10000000
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		store.Mutate([]*storage.Mutation{
-			{
-				Prefix: prefix,
-				Key:    rand.Bytes(128),
-				Value:  []byte("Value"),
-			},
-		})
 	}
 
 }

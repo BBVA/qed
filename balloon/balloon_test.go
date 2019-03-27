@@ -217,18 +217,18 @@ func TestTamperAndVerify(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, memProof.Verify(event, snapshot), "The proof should verify correctly")
 
-	original, err := store.Get(storage.IndexPrefix, eventDigest)
+	original, err := store.Get(storage.IndexTable, eventDigest)
 	assert.NoError(t, err)
 
 	tpBytes := util.Uint64AsBytes(^uint64(0))
 
 	assert.NoError(t, store.Mutate(
 		[]*storage.Mutation{
-			{storage.IndexPrefix, eventDigest, tpBytes},
+			{storage.IndexTable, eventDigest, tpBytes},
 		},
 	), "store add returned non nil value")
 
-	tampered, _ := store.Get(storage.IndexPrefix, eventDigest)
+	tampered, _ := store.Get(storage.IndexTable, eventDigest)
 	assert.Equal(t, tpBytes, tampered.Value, "Tamper unsuccessful")
 	assert.NotEqual(t, original.Value, tampered.Value, "Tamper unsuccessful")
 

@@ -39,13 +39,13 @@ func TestPassThroughCache(t *testing.T) {
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
-	prefix := byte(0x0)
-	cache := NewPassThroughCache(prefix, store)
+	table := storage.IndexTable
+	cache := NewPassThroughCache(table, store)
 
 	for i, c := range testCases {
 		if c.cached {
 			err := store.Mutate([]*storage.Mutation{
-				{prefix, c.key, c.value},
+				{table, c.key, c.value},
 			})
 			require.NoError(t, err)
 		}
