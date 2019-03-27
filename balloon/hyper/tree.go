@@ -94,7 +94,7 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	rh := ops.Pop().Interpret(ops, ctx)
 
 	// create a mutation for the new leaf
-	leafMutation := storage.NewMutation(storage.IndexPrefix, eventDigest, versionAsBytes)
+	leafMutation := storage.NewMutation(storage.IndexTable, eventDigest, versionAsBytes)
 
 	// collect mutations
 	mutations := append(ctx.Mutations, leafMutation)
@@ -134,7 +134,7 @@ func (t *HyperTree) RebuildCache() {
 	end := make([]byte, 2+t.hasher.Len()/8)
 	start[1] = byte(t.cacheHeightLimit)
 	end[1] = byte(t.cacheHeightLimit + 1)
-	nodes, err := t.store.GetRange(storage.HyperCachePrefix, start, end)
+	nodes, err := t.store.GetRange(storage.HyperCacheTable, start, end)
 	if err != nil {
 		log.Fatalf("Oops, something went wrong: %v", err)
 	}

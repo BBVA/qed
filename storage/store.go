@@ -17,18 +17,67 @@
 package storage
 
 import (
-	"bytes"
 	"errors"
 	"io"
-	"sort"
 )
 
+// Table groups related key-value pairs under a
+// consistent space.
+type Table uint32
+
 const (
-	IndexPrefix        = byte(0x0)
-	HyperCachePrefix   = byte(0x1)
-	HistoryCachePrefix = byte(0x2)
-	FSMStatePrefix     = byte(0x3)
+	// DefaultTable is mandatory but not used.
+	DefaultTable Table = iota
+	// IndexTable contains maps between event hashes and versions.
+	// H(event) -> version
+	IndexTable
+	// HyperCacheTable contains cached batches of the hyper tree.
+	// Position -> Batch
+	HyperCacheTable
+	// HistoryCacheTable contains cached hashes of the history tree.
+	// Position -> Hash
+	HistoryCacheTable
+	// FSMStateTable contains the current state of the FSM (index, term, version...).
+	// key -> state
+	FSMStateTable
 )
+
+// String returns a string representation of the table.
+func (t Table) String() string {
+	var s string
+	switch t {
+	case DefaultTable:
+		s = "default"
+	case IndexTable:
+		s = "index"
+	case HyperCacheTable:
+		s = "hyper"
+	case HistoryCacheTable:
+		s = "history"
+	case FSMStateTable:
+		s = "fsm"
+	}
+	return s
+}
+
+// Prefix returns the byte prefix associated with this table.
+// This method exists for backward compatibility purposes.
+func (t Table) Prefix() byte {
+	var prefix byte
+	switch t {
+	case IndexTable:
+		prefix = byte(0x0)
+	case HyperCacheTable:
+		prefix = byte(0x1)
+	case HistoryCacheTable:
+		prefix = byte(0x2)
+	case FSMStateTable:
+		prefix = byte(0x3)
+	default:
+		prefix = byte(0x4)
+	}
+	return prefix
+}
 
 var (
 	ErrKeyNotFound = errors.New("key not found")
@@ -36,10 +85,10 @@ var (
 
 type Store interface {
 	Mutate(mutations []*Mutation) error
-	GetRange(prefix byte, start, end []byte) (KVRange, error)
-	Get(prefix byte, key []byte) (*KVPair, error)
-	GetAll(prefix byte) KVPairReader
-	GetLast(prefix byte) (*KVPair, error)
+	GetRange(table Table, start, end []byte) (KVRange, error)
+	Get(table Table, key []byte) (*KVPair, error)
+	GetAll(table Table) KVPairReader
+	GetLast(table Table) (*KVPair, error)
 	Close() error
 }
 
@@ -51,12 +100,16 @@ type ManagedStore interface {
 }
 
 type Mutation struct {
-	Prefix     byte
+	Table      Table
 	Key, Value []byte
 }
 
-func NewMutation(prefix byte, key, value []byte) *Mutation {
-	return &Mutation{prefix, key, value}
+func NewMutation(table Table, key, value []byte) *Mutation {
+	return &Mutation{
+		Table: table,
+		Key:   key,
+		Value: value,
+	}
 }
 
 type KVPair struct {
@@ -76,44 +129,4 @@ type KVRange []KVPair
 
 func NewKVRange() KVRange {
 	return make(KVRange, 0)
-}
-
-func (r KVRange) InsertSorted(p KVPair) KVRange {
-
-	if len(r) == 0 {
-		r = append(r, p)
-		return r
-	}
-
-	index := sort.Search(len(r), func(i int) bool {
-		return bytes.Compare(r[i].Key, p.Key) > 0
-	})
-
-	if index > 0 && bytes.Equal(r[index-1].Key, p.Key) {
-		return r
-	}
-
-	r = append(r, p)
-	copy(r[index+1:], r[index:])
-	r[index] = p
-	return r
-}
-
-func (r KVRange) Split(key []byte) (left, right KVRange) {
-	// the smallest index i where r[i] >= index
-	index := sort.Search(len(r), func(i int) bool {
-		return bytes.Compare(r[i].Key, key) >= 0
-	})
-	return r[:index], r[index:]
-}
-
-func (r KVRange) Get(key []byte) KVPair {
-	index := sort.Search(len(r), func(i int) bool {
-		return bytes.Compare(r[i].Key, key) >= 0
-	})
-	if index < len(r) && bytes.Equal(r[index].Key, key) {
-		return r[index]
-	} else {
-		panic("This should never happen")
-	}
 }

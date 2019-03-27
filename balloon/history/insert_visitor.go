@@ -25,19 +25,19 @@ import (
 )
 
 type insertVisitor struct {
-	hasher        hashing.Hasher
-	cache         cache.ModifiableCache
-	storagePrefix byte // TODO shall i remove this?
+	hasher       hashing.Hasher
+	cache        cache.ModifiableCache
+	storageTable storage.Table // TODO shall i remove this?
 
 	mutations []*storage.Mutation
 }
 
-func newInsertVisitor(hasher hashing.Hasher, cache cache.ModifiableCache, storagePrefix byte) *insertVisitor {
+func newInsertVisitor(hasher hashing.Hasher, cache cache.ModifiableCache, storageTable storage.Table) *insertVisitor {
 	return &insertVisitor{
-		hasher:        hasher,
-		cache:         cache,
-		storagePrefix: storagePrefix,
-		mutations:     make([]*storage.Mutation, 0),
+		hasher:       hasher,
+		cache:        cache,
+		storageTable: storageTable,
+		mutations:    make([]*storage.Mutation, 0),
 	}
 }
 
@@ -76,7 +76,7 @@ func (v *insertVisitor) VisitPutCacheOp(op putCacheOp) hashing.Digest {
 
 func (v *insertVisitor) VisitMutateOp(op mutateOp) hashing.Digest {
 	hash := op.operation.Accept(v)
-	v.mutations = append(v.mutations, storage.NewMutation(v.storagePrefix, op.Position().Bytes(), hash))
+	v.mutations = append(v.mutations, storage.NewMutation(v.storageTable, op.Position().Bytes(), hash))
 	return hash
 }
 

@@ -217,7 +217,6 @@ func (db *DB) Close() error {
 		C.rocksdb_close(db.c)
 		db.c = nil
 	}
-	db.opts.Destroy()
 	return nil
 }
 
