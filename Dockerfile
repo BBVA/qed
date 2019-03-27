@@ -40,8 +40,10 @@ COPY . /go/src/github.com/bbva/qed
 # Move C deps to current working dir.
 RUN mv /tmp/qed/c-deps/* c-deps/
 
-# Build QED binary
-RUN go build -o /usr/local/bin/qed
+# Build QED, Storage binary and riot
+RUN go build -o /usr/local/bin/qed                                   &&\
+    go build -o /usr/local/bin/riot tests/riot.go                    &&\
+    go build -o /usr/local/bin/storage tests/gossip/test_service.go
 
 # Clean
 RUN rm -rf /var/lib/apt/lists/* /tmp/qed
