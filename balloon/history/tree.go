@@ -33,10 +33,10 @@ type HistoryTree struct {
 func NewHistoryTree(hasherF func() hashing.Hasher, store storage.Store, cacheSize uint16) *HistoryTree {
 
 	// create cache for Adding
-	writeCache := cache.NewLruReadThroughCache(storage.HistoryCachePrefix, store, cacheSize)
+	writeCache := cache.NewLruReadThroughCache(storage.HistoryCacheTable, store, cacheSize)
 
 	// create cache for Membership and Incremental
-	readCache := cache.NewPassThroughCache(storage.HistoryCachePrefix, store)
+	readCache := cache.NewPassThroughCache(storage.HistoryCacheTable, store)
 
 	return &HistoryTree{
 		hasherF:    hasherF,
@@ -51,7 +51,7 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
 
 	// build a visitable pruned tree and then visit it to generate the root hash
-	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryCachePrefix)
+	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryCacheTable)
 	rh := pruneToInsert(version, eventDigest).Accept(visitor)
 
 	return rh, visitor.Result(), nil
