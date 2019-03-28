@@ -358,16 +358,33 @@ func (o *Options) SetKeepLogFileNum(value int) {
 	C.rocksdb_options_set_keep_log_file_num(o.c, C.size_t(value))
 }
 
-// SetAllowMmapReads enable/disable mmap reads for reading sst tables.
+// SetAllowMmapReads enables/disables mmap reads for reading sst tables.
 // Default: false
 func (o *Options) SetAllowMmapReads(value bool) {
 	C.rocksdb_options_set_allow_mmap_reads(o.c, boolToUchar(value))
 }
 
-// SetAllowMmapWrites enable/disable mmap writes for writing sst tables.
+// SetAllowMmapWrites enables/disables mmap writes for writing sst tables.
 // Default: false
 func (o *Options) SetAllowMmapWrites(value bool) {
 	C.rocksdb_options_set_allow_mmap_writes(o.c, boolToUchar(value))
+}
+
+// SetAtomicFlush enables/disables atomic flushes.
+// If true, RocksDB supports flushing multiple column families and committing
+// their results atomically to MANIFEST. Note that it is not
+// necessary to set atomic_flush to true if WAL is always enabled since WAL
+// allows the database to be restored to the last persistent state in WAL.
+// This option is useful when there are column families with writes NOT
+// protected by WAL.
+// For manual flush, application has to specify which column families to
+// flush atomically in db.Flush.
+// For auto-triggered flush, RocksDB atomically flushes ALL column families.
+//
+// Currently, any WAL-enabled writes after atomic flush may be replayed
+// independently if the process crashes later and tries to recover.
+func (o *Options) SetAtomicFlush(value bool) {
+	C.rocksdb_options_set_atomic_flush(o.c, boolToUchar(value))
 }
 
 // SetStatistics sets a statistics object to pass to the DB.
