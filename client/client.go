@@ -108,7 +108,6 @@ func NewHTTPClientFromConfig(conf *Config) (*HTTPClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("client(): creating new client with options: %v", options)
 	return NewHTTPClient(options...)
 }
 
@@ -137,7 +136,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 			return nil, err
 		}
 	}
-	log.Debugf("client(): options configured")
+
 	// configure retrier
 	client.setRetrier(client.maxRetries)
 
@@ -150,11 +149,8 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 		}
 	}
 
-	log.Debugf("client(): got topology")
-
 	if client.healthcheckEnabled {
 		// perform an initial healthcheck
-		log.Debugf("client(): performing initial healthcheck")
 		client.healthCheck(client.healthcheckTimeout)
 	}
 
