@@ -143,7 +143,6 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 	// Initial topology assignment
 	if client.discoveryEnabled {
 		// try to discover the cluster topology initially
-		log.Debugf("client(): trying to get topology")
 		if err := client.discover(); err != nil {
 			log.Infof("Unable to get QED topology, we will try it later: %v", err)
 		}
