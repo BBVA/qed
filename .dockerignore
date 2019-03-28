@@ -2,6 +2,7 @@
 **qed
 storage
 !storage
+**deploy
 **riot
 **prometheus
 **/.git

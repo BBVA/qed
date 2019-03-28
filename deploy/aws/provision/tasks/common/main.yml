@@ -111,9 +111,36 @@
     mode: 0775
   with_items:
     - start.sh
+    - stop.sh
+
+- name: Create Node Exporter start|stop script
+  template:
+    dest: /var/qed/{{ item }} 
+    src: ../../templates/{{ item }}.j2
+    force: true
+    mode: 0775
+  with_items:
+    - qed-start.sh
+    - qed-stop.sh
+
+- name: Install Node Exporter systemd service unit file
+  template:
+    dest: /etc/systemd/system/{{ item }}
+    src: ../../templates/{{ item }}.j2
+  with_items:
+    - exporter.service
+  register: exporter_unit
 
 - name: Create QED tmp dir link
   file:
     src: /var/qed
     dest: /var/tmp/qed
     state: link
+
+- name: Restart Node Exporter
+  service:
+    name: exporter
+    state: restarted
+    daemon_reload: yes
+  when: exporter_unit.changed
+

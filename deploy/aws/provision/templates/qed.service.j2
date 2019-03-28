@@ -1,0 +1,21 @@
+[Unit]
+Description=QED service
+Documentation=https://github.com/bbva/qed
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=root
+Group=root
+Restart=always
+RestartSec=10
+WorkingDirectory=/var/qed
+RuntimeDirectory=root
+RuntimeDirectoryMode=0750
+ExecStart=/var/qed/qed-start.sh
+ExecStop=/var/qed/qed-stop.sh
+LimitNOFILE=10000
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
