@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	v "github.com/spf13/viper"
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/gossip/member"
@@ -40,6 +41,10 @@ func newAgentPublisherCommand(ctx *cmdContext, config gossip.Config, agentPreRun
 			// cmd/root so inbetween preRuns must be curried.
 			config = agentPreRun(config)
 
+			// Bindings
+
+			publisherConfig.PubUrls = v.GetStringSlice("agent.snapshots_store_urls")
+			markSliceStringRequired(publisherConfig.PubUrls, "pubUrls")
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
@@ -67,6 +72,10 @@ func newAgentPublisherCommand(ctx *cmdContext, config gossip.Config, agentPreRun
 	}
 
 	f := cmd.Flags()
+	f.StringSliceVarP(&publisherConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
+
+	// Lookups
+	v.BindPFlag("agent.snapshots_store_urls", f.Lookup("pubUrls"))
 
 	return cmd
 }
