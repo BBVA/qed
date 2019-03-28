@@ -25,6 +25,5 @@ nohup $QED_HOME/riot --api \
     --apikey terraform_qed \
     --n ${reqs} \
 {% for host in groups['name_qed-0'] %}
-    --endpoint "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400" \
+    --endpoint "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
 {% endfor %}
-    >> $QED_HOME/qed.log 2>&1 &

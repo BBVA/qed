@@ -103,18 +103,19 @@
 
 - hosts: role_qed
   remote_user: ec2-user
+  gather_facts: true
   serial: 1
   become: true
   vars_files:
     - vars.yml
   tasks:
     - name: Restart all services
-      shell: >
-        {{ item }}
+      systemd:
+        name: "{{ item }}"
+        state: restarted
       with_items:
-        - /var/qed/qed-stop.sh
-        - /var/qed/qed-start.sh
-        - /var/qed/exporter-start.sh
+        - qed
+        - exporter
     - name: wait for raised api port
       wait_for:
         port: 8800
@@ -138,12 +139,12 @@
     - vars.yml
   tasks:
     - name: Restart all services
-      shell: >
-        {{ item }}
+      systemd:
+        name: "{{ item }}"
+        state: restarted
       with_items:
-        - /var/qed/qed-stop.sh
-        - /var/qed/qed-start.sh
-        - /var/qed/exporter-start.sh
+        - qed
+        - exporter
   tags:
     - start-agents
 
@@ -154,11 +155,12 @@
     - vars.yml
   tasks:
     - name: Start all services
-      shell: > 
-        {{ item }}
+      systemd:
+        name: "{{ item }}"
+        state: started
       with_items:
-        - /var/qed/storage-start.sh
-        - /var/qed/exporter-start.sh
+        - storage
+        - exporter
   tags:
     - start-storage
 
@@ -168,12 +170,13 @@
   vars_files:
     - vars.yml
   tasks:
-    - name: Restart riot
-      shell: >
-        {{ item }}
+    - name: Restart all services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
       with_items:
-        - /var/qed/riot-stop.sh
-        - /var/qed/riot-start.sh
+        - riot
+        - exporter
     - name: wait for raised riot port
       wait_for:
         port: 7700
@@ -188,10 +191,12 @@
     - vars.yml
   tasks:
     - name: Start all services
-      shell: > 
-        {{ item }}
+      systemd:
+        name: "{{ item }}"
+        state: started
       with_items:
-        - /var/qed/exporter-start.sh
+        - prometheus
+        - exporter
   tags:
     - start-prometheus
     - prometheus

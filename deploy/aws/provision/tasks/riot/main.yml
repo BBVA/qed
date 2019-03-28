@@ -20,7 +20,7 @@
   with_items:
     - riot
 
-- name: Create QED start|stop script
+- name: Create Riot start|stop script
   template:
     dest: /var/qed/{{ item }}
     src: ../../templates/{{ item }}.j2
@@ -29,3 +29,25 @@
   with_items:
     - riot-start.sh
     - riot-stop.sh
+
+- name: Install Riot systemd service unit file
+  template:
+    dest: /etc/systemd/system/{{ item }}
+    src: ../../templates/{{ item }}.j2
+  with_items:
+    - riot.service
+  register: riot_unit
+
+- name: Enable and run Riot service
+  systemd:
+    name: riot
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Restart Riot
+  service:
+    name: riot
+    state: restarted
+    daemon_reload: yes
+  when: riot_unit.changed

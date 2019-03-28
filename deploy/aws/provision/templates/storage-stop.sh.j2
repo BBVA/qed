@@ -15,18 +15,4 @@
 #}
 #!/bin/bash
 
-ulimit -n 819200
-
-export QED_HOME=/var/qed
-{% if 'role_qed' in group_names %}
-$QED_HOME/qed start
-{% endif %}
-{% if 'role_monitor' in group_names %}
-$QED_HOME/qed agent monitor
-{% endif %}
-{% if 'role_auditor' in group_names %}
-$QED_HOME/qed agent auditor
-{% endif %}
-{% if 'role_publisher' in group_names %}
-$QED_HOME/qed agent publisher
-{% endif %}
+killall storage || true

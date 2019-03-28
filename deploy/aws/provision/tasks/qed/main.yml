@@ -38,4 +38,25 @@
     - qed-start.sh
     - qed-stop.sh
 
+- name: Install QED systemd service unit file
+  template:
+    dest: /etc/systemd/system/{{ item }}
+    src: ../../templates/{{ item }}.j2
+  with_items:
+    - qed.service
+  register: qed_unit
+
+- name: Enable and run QED service
+  systemd:
+    name: qed
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Restart Qed
+  service:
+    name: qed
+    state: restarted
+    daemon_reload: yes
+  when: qed_unit.changed
 
