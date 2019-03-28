@@ -17,10 +17,8 @@
 package auditor
 
 import (
-	"bytes"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -88,6 +86,7 @@ type Auditor struct {
 
 	taskCh          chan Task
 	quitCh          chan bool
+	alertsCh        chan string
 	executionTicker *time.Ticker
 }
 
@@ -95,7 +94,7 @@ type Task interface {
 	Do()
 }
 
-func NewAuditor(conf Config) (*Auditor, error) {
+func NewAuditor(conf Config, alertsCh chan string) (*Auditor, error) {
 	QedAuditorInstancesCount.Inc()
 	// QED client
 	transport := http.DefaultTransport.(*http.Transport)
@@ -112,10 +111,11 @@ func NewAuditor(conf Config) (*Auditor, error) {
 	}
 
 	auditor := Auditor{
-		qed:    qed,
-		conf:   conf,
-		taskCh: make(chan Task, 100),
-		quitCh: make(chan bool),
+		qed:      qed,
+		conf:     conf,
+		taskCh:   make(chan Task, 100),
+		quitCh:   make(chan bool),
+		alertsCh: alertsCh,
 	}
 
 	auditor.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
@@ -173,12 +173,12 @@ func (a Auditor) Process(b *protocol.BatchSnapshots) {
 	defer timer.ObserveDuration()
 
 	task := &MembershipTask{
-		qed:       a.qed,
-		pubUrl:    a.conf.PubUrls[0],
-		alertsUrl: a.conf.AlertsUrls[0],
-		taskCh:    a.taskCh,
-		retries:   2,
-		s:         b.Snapshots[0],
+		qed:      a.qed,
+		pubUrl:   a.conf.PubUrls[0],
+		alertsCh: a.alertsCh,
+		taskCh:   a.taskCh,
+		retries:  2,
+		s:        b.Snapshots[0],
 	}
 
 	a.taskCh <- task
@@ -194,12 +194,12 @@ func (a *Auditor) Shutdown() {
 }
 
 type MembershipTask struct {
-	qed       *client.HTTPClient
-	pubUrl    string
-	alertsUrl string
-	taskCh    chan Task
-	retries   int
-	s         *protocol.SignedSnapshot
+	qed      *client.HTTPClient
+	pubUrl   string
+	alertsCh chan string
+	taskCh   chan Task
+	retries  int
+	s        *protocol.SignedSnapshot
 }
 
 func (t *MembershipTask) Do() {
@@ -210,7 +210,7 @@ func (t *MembershipTask) Do() {
 
 		switch fmt.Sprintf("%T", err) {
 		case "*errors.errorString":
-			t.sendAlert(fmt.Sprintf("Auditor is unable to get membership proof from QED server: %s", err.Error()))
+			t.alertsCh <- fmt.Sprintf("Auditor is unable to get membership proof from QED server: %s", err.Error())
 		default:
 			QedAuditorGetMembershipProofErrTotal.Inc()
 		}
@@ -238,7 +238,7 @@ func (t *MembershipTask) Do() {
 
 	ok := t.qed.DigestVerify(proof, checkSnap, hashing.NewSha256Hasher)
 	if !ok {
-		t.sendAlert(fmt.Sprintf("Unable to verify snapshot %v", t.s.Snapshot))
+		t.alertsCh <- fmt.Sprintf("Unable to verify snapshot %v", t.s.Snapshot)
 		log.Infof("Unable to verify snapshot %v", t.s.Snapshot)
 	}
 
@@ -264,18 +264,4 @@ func (t MembershipTask) getSnapshot(version uint64) (*protocol.SignedSnapshot, e
 		return nil, fmt.Errorf("Error decoding signed snapshot %d codec", t.s.Snapshot.Version)
 	}
 	return &s, nil
-}
-
-func (t MembershipTask) sendAlert(msg string) {
-	resp, err := http.Post(t.alertsUrl+"/alert", "application/json",
-		bytes.NewBufferString(msg))
-	if err != nil {
-		log.Infof("Error saving batch in alertStore: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-	_, err = io.Copy(ioutil.Discard, resp.Body)
-	if err != nil {
-		log.Infof("Error reading request body: %v", err)
-	}
 }

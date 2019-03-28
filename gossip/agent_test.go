@@ -32,7 +32,7 @@ func TestJoin(t *testing.T) {
 	conf.Role = member.Auditor
 	conf.BindAddr = "127.0.0.1:12345"
 	metricsServer := metrics.NewServer("127.0.0.2:23464")
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
+	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer, make(chan string, 1))
 
 	testCases := []struct {
 		agentState             member.Status
@@ -74,7 +74,7 @@ func TestLeave(t *testing.T) {
 	conf.Role = member.Auditor
 	conf.BindAddr = "127.0.0.1:12346"
 	metricsServer := metrics.NewServer("127.0.0.2:13445")
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
+	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer, make(chan string, 1))
 
 	testCases := []struct {
 		agentState  member.Status
@@ -123,7 +123,7 @@ func TestShutdown(t *testing.T) {
 	conf.Role = member.Auditor
 	conf.BindAddr = "127.0.0.1:12347"
 	metricsServer := metrics.NewServer("127.0.0.2:43512")
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
+	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer, make(chan string, 1))
 
 	testCases := []struct {
 		agentState  member.Status

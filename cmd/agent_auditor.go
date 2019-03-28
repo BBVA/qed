@@ -43,23 +43,21 @@ func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 
 			auditorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
 			auditorConfig.PubUrls = v.GetStringSlice("agent.pub_urls")
-			auditorConfig.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
 
 			markSliceStringRequired(auditorConfig.QEDUrls, "qedUrls")
 			markSliceStringRequired(auditorConfig.PubUrls, "pubUrls")
-			markSliceStringRequired(auditorConfig.AlertsUrls, "alertsUrls")
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
 			config.Role = member.Auditor
 			auditorConfig.APIKey = ctx.apiKey
-
-			auditor, err := auditor.NewAuditor(*auditorConfig)
+			alertsCh := make(chan string, 100)
+			auditor, err := auditor.NewAuditor(*auditorConfig, alertsCh)
 			if err != nil {
 				log.Fatalf("Failed to start the QED monitor: %v", err)
 			}
 			metricsServer := metrics.NewServer(config.MetricsAddr)
-			agent, err := gossip.NewAgent(&config, []gossip.Processor{auditor}, metricsServer)
+			agent, err := gossip.NewAgent(&config, []gossip.Processor{auditor}, metricsServer, alertsCh)
 			if err != nil {
 				log.Fatalf("Failed to start the QED auditor: %v", err)
 			}
@@ -78,10 +76,10 @@ func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun f
 	f := cmd.Flags()
 	f.StringSliceVarP(&auditorConfig.QEDUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
 	f.StringSliceVarP(&auditorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of store servers ([host]:port), through which an auditor can make queries")
-	f.StringSliceVarP(&auditorConfig.AlertsUrls, "alertsUrls", "", []string{}, "Comma-delimited list of alerts servers ([host]:port), through which an auditor can make queries")
+
 	// Lookups
 	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
 	v.BindPFlag("agent.pub_urls", f.Lookup("pubUrls"))
-	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
+
 	return cmd
 }

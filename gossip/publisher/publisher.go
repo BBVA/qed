@@ -18,6 +18,7 @@ package publisher
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -56,10 +57,8 @@ var (
 
 type Config struct {
 	PubUrls               []string
-	AlertsUrls            []string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
-	MetricsAddr           string
 }
 
 func DefaultConfig() *Config {
@@ -82,6 +81,7 @@ type Publisher struct {
 	processed *freecache.Cache
 
 	taskCh          chan Task
+	alertsCh        chan string
 	quitCh          chan bool
 	executionTicker *time.Ticker
 }
@@ -90,13 +90,14 @@ type Task interface {
 	Do()
 }
 
-func NewPublisher(conf Config) (*Publisher, error) {
+func NewPublisher(conf Config, alertsCh chan string) (*Publisher, error) {
 	QedPublisherInstancesCount.Inc()
 	publisher := Publisher{
 		store:     &http.Client{},
 		conf:      conf,
 		processed: freecache.NewCache(1 << 20),
 		taskCh:    make(chan Task, 100),
+		alertsCh:  alertsCh,
 		quitCh:    make(chan bool),
 	}
 
@@ -140,10 +141,11 @@ func (p *Publisher) Process(b *protocol.BatchSnapshots) {
 	batch.TTL = b.TTL
 
 	task := &PublishTask{
-		store:  p.store,
-		pubUrl: p.conf.PubUrls[0],
-		taskCh: p.taskCh,
-		batch:  &batch,
+		store:    p.store,
+		pubUrl:   p.conf.PubUrls[0],
+		taskCh:   p.taskCh,
+		alertsCh: p.alertsCh,
+		batch:    &batch,
 	}
 	p.taskCh <- task
 }
@@ -164,7 +166,6 @@ func (p *Publisher) Shutdown() {
 	QedPublisherInstancesCount.Dec()
 
 	p.executionTicker.Stop()
-	p.quitCh <- true
 	close(p.quitCh)
 	close(p.taskCh)
 	log.Debugf("Publisher stopped.")
@@ -189,21 +190,24 @@ func (p Publisher) dispatchTasks() {
 }
 
 type PublishTask struct {
-	store  *http.Client
-	pubUrl string
-	batch  *protocol.BatchSnapshots
-	taskCh chan Task
+	store    *http.Client
+	pubUrl   string
+	batch    *protocol.BatchSnapshots
+	taskCh   chan Task
+	alertsCh chan string
 }
 
 func (t PublishTask) Do() {
 	log.Debugf("Publisher is going to execute task: %+v", t)
 	buf, err := t.batch.Encode()
 	if err != nil {
+		t.alertsCh <- fmt.Sprintf("Publisher had an error marshalling: %s\n", err.Error())
 		log.Debug("Publisher had an error marshalling: %s\n", err.Error())
 		return
 	}
 	resp, err := t.store.Post(t.pubUrl+"/batch", "application/json", bytes.NewBuffer(buf))
 	if err != nil {
+		t.alertsCh <- fmt.Sprintf("Publisher had an error saving batch in snapStore: %v", err)
 		log.Infof("Publisher had an error saving batch in snapStore: %v", err)
 		t.taskCh <- t
 		return
@@ -211,7 +215,7 @@ func (t PublishTask) Do() {
 	defer resp.Body.Close()
 	_, err = io.Copy(ioutil.Discard, resp.Body)
 	if err != nil {
+		t.alertsCh <- fmt.Sprintf("Publisher had an error getting response from snapStore saving a batch: %v", err)
 		log.Infof("Publisher had an error getting response from snapStore saving a batch: %v", err)
 	}
 }
-

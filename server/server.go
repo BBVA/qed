@@ -129,8 +129,8 @@ func NewServer(conf *Config) (*Server, error) {
 	config.BindAddr = conf.GossipAddr
 	config.Role = member.Server
 	config.NodeName = conf.NodeID
-
-	server.agent, err = gossip.NewAgent(config, nil, server.metricsServer)
+	alertsCh := make(chan string, 100)
+	server.agent, err = gossip.NewAgent(config, nil, server.metricsServer, alertsCh)
 	if err != nil {
 		return nil, err
 	}
@@ -205,10 +205,8 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	go func() {
-		log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
-		s.metricsServer.Start()
-	}()
+	log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
+	s.metricsServer.Start()
 
 	if s.conf.EnableTLS {
 		go func() {

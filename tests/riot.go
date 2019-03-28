@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/imdario/mergo"
 	"github.com/prometheus/client_golang/prometheus"
@@ -191,14 +192,17 @@ func (riot *Riot) Start(APIMode bool) {
 	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
 
 	if APIMode {
+		log.Debug("	* Starting riot server server")
 		riot.Serve()
 	} else {
+		log.Debug("	* Starting cli job")
 		riot.RunOnce()
 	}
 
 }
 
 func (riot *Riot) RunOnce() {
+	log.Debugf("runOnce(): creating new attack with config %+v", riot.Config)
 	newAttack(riot.Config)
 }
 
@@ -275,12 +279,15 @@ func newAttack(conf Config) {
 	cConf.Endpoints = []string{conf.Endpoint}
 	cConf.APIKey = conf.APIKey
 	cConf.Insecure = conf.Insecure
+	cConf.DiscoveryTimeout = 1 * time.Second
+	cConf.HealthCheckTimeout = 1 * time.Second
 
+	log.Debugf("newAttack(): creating qed client")
 	client, err := client.NewHTTPClientFromConfig(cConf)
 	if err != nil {
 		panic(err)
 	}
-
+	log.Debugf("newAttack(): creating attack")
 	attack := Attack{
 		client:         client,
 		config:         conf,
@@ -292,6 +299,7 @@ func newAttack(conf Config) {
 		panic(err)
 	}
 
+	log.Debugf("newAttack(): running attack")
 	attack.Run()
 }
 

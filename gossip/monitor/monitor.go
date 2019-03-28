@@ -17,11 +17,8 @@
 package monitor
 
 import (
-	"bytes"
 	"crypto/tls"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -71,7 +68,6 @@ type Config struct {
 	APIKey                string
 	TaskExecutionInterval time.Duration
 	MaxInFlightTasks      int
-	MetricsAddr           string
 }
 
 func DefaultConfig() *Config {
@@ -86,6 +82,7 @@ type Monitor struct {
 	conf            *Config
 	taskCh          chan Task
 	quitCh          chan bool
+	alertsCh        chan string
 	executionTicker *time.Ticker
 }
 
@@ -93,7 +90,7 @@ type Task interface {
 	Do()
 }
 
-func NewMonitor(conf *Config) (*Monitor, error) {
+func NewMonitor(conf Config, alertsCh chan string) (*Monitor, error) {
 	QedMonitorInstancesCount.Inc()
 	// QED client
 	transport := http.DefaultTransport.(*http.Transport)
@@ -109,10 +106,11 @@ func NewMonitor(conf *Config) (*Monitor, error) {
 		return nil, errors.Wrap(err, "Cannot start http client: ")
 	}
 	monitor := Monitor{
-		client: qed,
-		conf:   conf,
-		taskCh: make(chan Task, 100),
-		quitCh: make(chan bool),
+		client:   qed,
+		conf:     &conf,
+		taskCh:   make(chan Task, 100),
+		quitCh:   make(chan bool),
+		alertsCh: alertsCh,
 	}
 
 	monitor.executionTicker = time.NewTicker(conf.TaskExecutionInterval)
@@ -146,7 +144,7 @@ func (m Monitor) Process(b *protocol.BatchSnapshots) {
 
 	task := QueryTask{
 		client:        m.client,
-		alertsUrl:     m.conf.AlertsUrls[0],
+		alertsCh:      m.alertsCh,
 		Start:         first.Version,
 		End:           last.Version,
 		StartSnapshot: *first,
@@ -202,24 +200,10 @@ func (m Monitor) dispatchTasks() {
 
 type QueryTask struct {
 	client                     *client.HTTPClient
-	alertsUrl                  string
+	alertsCh                   chan string
 	taskCh                     chan Task
 	Start, End                 uint64
 	StartSnapshot, EndSnapshot protocol.Snapshot
-}
-
-func (q QueryTask) sendAlert(msg string) {
-	resp, err := http.Post(q.alertsUrl+"/alert", "application/json", bytes.NewBufferString(msg))
-	if err != nil {
-		log.Infof("Monitor had an error saving batch in alertStore (task re-enqueued): %v", err)
-		q.taskCh <- q
-		return
-	}
-	defer resp.Body.Close()
-	_, err = io.Copy(ioutil.Discard, resp.Body)
-	if err != nil {
-		log.Infof("Monitor had an error from alertStore saving a batch: %v", err)
-	}
 }
 
 func (q QueryTask) Do() {
@@ -232,7 +216,7 @@ func (q QueryTask) Do() {
 	}
 	ok := q.client.VerifyIncremental(resp, &q.StartSnapshot, &q.EndSnapshot, hashing.NewSha256Hasher())
 	if !ok {
-		q.sendAlert(fmt.Sprintf("Monitor is unable to verify incremental proof from %d to %d", q.StartSnapshot.Version, q.EndSnapshot.Version))
+		q.alertsCh <- fmt.Sprintf("Monitor is unable to verify incremental proof from %d to %d", q.StartSnapshot.Version, q.EndSnapshot.Version)
 		log.Infof("Monitor is unable to verify incremental proof from %d to %d", q.StartSnapshot.Version, q.EndSnapshot.Version)
 	}
 	log.Debugf("Monitor verified a consistency proof between versions %d and %d: %v\n", q.Start, q.End, ok)

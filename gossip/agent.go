@@ -16,8 +16,13 @@
 package gossip
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"math/rand"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
@@ -50,22 +55,28 @@ type Agent struct {
 
 	processed  *freecache.Cache
 	processors []Processor
+	lag        *Lag
 
-	In   chan *hashedBatch
-	Out  chan *protocol.BatchSnapshots
+	In     chan *hashedBatch
+	Out    chan *protocol.BatchSnapshots
+	Alerts chan string
+
 	quit chan bool
 }
 
-func NewAgent(conf *Config, p []Processor, m *metrics.Server) (agent *Agent, err error) {
+func NewAgent(conf *Config, p []Processor, m *metrics.Server, alertsCh chan string) (agent *Agent, err error) {
 	log.Infof("New agent %s\n", conf.NodeName)
+	lag := NewLag()
 	agent = &Agent{
 		config:        conf,
 		metricsServer: m,
 		Topology:      NewTopology(),
-		processors:    p,
+		processors:    append(p, lag),
 		processed:     freecache.NewCache(1 << 20),
+		lag:           lag,
 		In:            make(chan *hashedBatch, 1<<16),
 		Out:           make(chan *protocol.BatchSnapshots, 1<<16),
+		Alerts:        alertsCh,
 		quit:          make(chan bool),
 	}
 
@@ -138,9 +149,9 @@ func (a *Agent) start() {
 		p.RegisterMetrics(a.metricsServer)
 	}
 
-	go func() {
-		a.metricsServer.Start()
-	}()
+	a.metricsServer.Start()
+
+	a.lag.Start(1 * time.Second)
 
 	for {
 		select {
@@ -149,17 +160,39 @@ func (a *Agent) start() {
 			if err == nil {
 				continue
 			}
+
 			a.processed.Set(hashedBatch.digest, []byte{0x0}, 0)
 
 			for _, p := range a.processors {
 				go p.Process(hashedBatch.batch)
 			}
-			a.ChTimedSend(hashedBatch.batch, a.Out)
-		case b := <-a.Out:
-			go a.send(b)
+
+			if a.lag.Get() > 2*a.lag.Snapshots.Rate() {
+				log.Infof("We're lagging behind, do not retransmit the batch: %v", a.lag.Lag.Get())
+			} else {
+				a.ChTimedSend(hashedBatch.batch, a.Out)
+			}
+		case batch := <-a.Out:
+			go a.send(batch)
+		case alert := <-a.Alerts:
+			a.sendAlert(alert)
 		case <-a.quit:
 			return
 		}
+	}
+}
+
+func (a *Agent) sendAlert(msg string) {
+	alertsUrl := a.config.AlertsUrls[rand.Intn(len(a.config.AlertsUrls))]
+	resp, err := http.Post(alertsUrl+"/alert", "application/json", bytes.NewBufferString(msg))
+	if err != nil {
+		log.Infof("Agent is unable to send an alert because %v. We were trying to alert about %s", err, msg)
+		return
+	}
+	defer resp.Body.Close()
+	_, err = io.Copy(ioutil.Discard, resp.Body)
+	if err != nil {
+		log.Infof("Monitor had an error from alertStore saving a batch: %v", err)
 	}
 }
 
@@ -194,7 +227,7 @@ func (a *Agent) route(src *member.Peer) []*memberlist.Node {
 	return dst
 }
 
-// Join asks the Agent instance to join.
+// Join asks the Agent instance to join its peers
 func (a *Agent) Join(addrs []string) (int, error) {
 	if a.State() != member.Alive {
 		return 0, fmt.Errorf("Agent can't join after Leave or Shutdown")
@@ -263,6 +296,7 @@ func (a *Agent) Shutdown() error {
 	defer a.stateLock.Unlock()
 
 	a.metricsServer.Shutdown()
+	a.lag.Stop()
 
 	if a.Self.Status == member.Shutdown {
 		return nil

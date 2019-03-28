@@ -108,6 +108,7 @@ func NewHTTPClientFromConfig(conf *Config) (*HTTPClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("client(): creating new client with options: %v", options)
 	return NewHTTPClient(options...)
 }
 
@@ -136,20 +137,24 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 			return nil, err
 		}
 	}
-
+	log.Debugf("client(): options configured")
 	// configure retrier
 	client.setRetrier(client.maxRetries)
 
 	// Initial topology assignment
 	if client.discoveryEnabled {
 		// try to discover the cluster topology initially
+		log.Debugf("client(): trying to get topology")
 		if err := client.discover(); err != nil {
 			log.Infof("Unable to get QED topology, we will try it later: %v", err)
 		}
 	}
 
+	log.Debugf("client(): got topology")
+
 	if client.healthcheckEnabled {
 		// perform an initial healthcheck
+		log.Debugf("client(): performing initial healthcheck")
 		client.healthCheck(client.healthcheckTimeout)
 	}
 

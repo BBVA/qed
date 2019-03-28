@@ -162,6 +162,7 @@ func (s Sender) sender(batch *protocol.BatchSnapshots) {
 
 		err := s.agent.Memberlist().SendReliable(dst, msg)
 		if err != nil {
+			s.agent.Alerts <- fmt.Sprintf("Sender failed send message to %+v because: %v", peer, err)
 			log.Infof("Failed send message to %+v because: %v", peer, err)
 		}
 	}

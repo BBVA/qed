@@ -104,7 +104,7 @@ func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Re
 	return resp, err
 }
 
-func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) *gossip.Agent {
+func newAgent(id int, name string, role member.Type, p gossip.Processor, alertsCh chan string, t *testing.T) *gossip.Agent {
 	agentConf := gossip.DefaultConfig()
 	agentConf.NodeName = fmt.Sprintf("%s%d", name, id)
 
@@ -125,7 +125,7 @@ func newAgent(id int, name string, role member.Type, p gossip.Processor, t *test
 	agentConf.AlertsUrls = []string{AlertsURL}
 	agentConf.Role = role
 	metricsServer := metrics.NewServer(agentConf.MetricsAddr)
-	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p}, metricsServer)
+	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p}, metricsServer, alertsCh)
 	if err != nil {
 		t.Fatalf("Failed to start AGENT %s: %v", name, err)
 	}
@@ -137,21 +137,20 @@ func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var au *auditor.Auditor
 	var agent *gossip.Agent
 	var err error
-
+	alertsCh := make(chan string, 1)
 	before := func(t *testing.T) {
 		auditorConf := auditor.DefaultConfig()
 		auditorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:710%d", id)
 		auditorConf.QEDUrls = []string{QEDUrl}
 		auditorConf.PubUrls = []string{StoreURL}
-		auditorConf.AlertsUrls = []string{AlertsURL}
 		auditorConf.APIKey = APIKey
 
-		au, err = auditor.NewAuditor(*auditorConf)
+		au, err = auditor.NewAuditor(*auditorConf, alertsCh)
 		if err != nil {
 			t.Fatalf("Unable to create a new auditor: %v", err)
 		}
 
-		agent = newAgent(id, "auditor", member.Auditor, au, t)
+		agent = newAgent(id, "auditor", member.Auditor, au, alertsCh, t)
 	}
 
 	after := func(t *testing.T) {
@@ -174,20 +173,20 @@ func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var mn *monitor.Monitor
 	var agent *gossip.Agent
 	var err error
+	alertsCh := make(chan string, 1)
 
 	before := func(t *testing.T) {
 		monitorConf := monitor.DefaultConfig()
-		monitorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:720%d", id)
 		monitorConf.QEDUrls = []string{QEDUrl}
 		monitorConf.AlertsUrls = []string{AlertsURL}
 		monitorConf.APIKey = APIKey
 
-		mn, err = monitor.NewMonitor(monitorConf)
+		mn, err = monitor.NewMonitor(*monitorConf, alertsCh)
 		if err != nil {
 			t.Fatalf("Unable to create a new monitor: %v", err)
 		}
 
-		agent = newAgent(id, "monitor", member.Monitor, mn, t)
+		agent = newAgent(id, "monitor", member.Monitor, mn, alertsCh, t)
 	}
 
 	after := func(t *testing.T) {
@@ -211,17 +210,17 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	var agent *gossip.Agent
 	var err error
 
+	alertsCh := make(chan string, 1)
 	before := func(t *testing.T) {
 		conf := publisher.DefaultConfig()
-		conf.MetricsAddr = fmt.Sprintf("127.0.0.1:730%d", id)
 		conf.PubUrls = []string{StoreURL}
 
-		pu, err = publisher.NewPublisher(*conf)
+		pu, err = publisher.NewPublisher(*conf, alertsCh)
 		if err != nil {
 			t.Fatalf("Unable to create a new publisher: %v", err)
 		}
 
-		agent = newAgent(id, "publisher", member.Publisher, pu, t)
+		agent = newAgent(id, "publisher", member.Publisher, pu, alertsCh, t)
 	}
 
 	after := func(t *testing.T) {
