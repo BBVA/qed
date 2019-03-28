@@ -140,13 +140,3 @@ log_stream_name = {{ hostvars[inventory_hostname]['tags.Name'] }}
 {% endif %}
 initial_position = start_of_file
 log_group_name = /var/log/messages
-
-[/var/tmp/qed]
-datetime_format = %b %d %H:%M:%S
-file = /var/qed/qed.log
-buffer_duration = 5000
-{% if 'type_aws_instance' in group_names %}
-log_stream_name = {{ hostvars[inventory_hostname]['tags.Name'] }}
-{% endif %}
-initial_position = start_of_file
-log_group_name = qed

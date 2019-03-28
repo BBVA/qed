@@ -67,7 +67,7 @@ module "inmemory-storage" {
 
 module "agent-publisher" {
   source = "./modules/agent"
-  count  = 2
+  count  = 1
 
   role                   = "publisher"
   name                   = "agent-publisher"
@@ -82,7 +82,7 @@ module "agent-publisher" {
 
 module "agent-monitor" {
   source = "./modules/agent"
-  count  = 2
+  count  = 1
 
   role                   = "monitor"
   name                   = "agent-monitor"
@@ -97,7 +97,7 @@ module "agent-monitor" {
 
 module "agent-auditor" {
   source = "./modules/agent"
-  count  = 2
+  count  = 1
 
   role                   = "auditor"
   name                   = "agent-auditor"

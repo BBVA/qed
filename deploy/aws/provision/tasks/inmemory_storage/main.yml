@@ -28,3 +28,26 @@
     mode: 0775
   with_items:
     - storage-start.sh
+    - storage-stop.sh
+
+- name: Install Storage systemd service unit file
+  template:
+    dest: /etc/systemd/system/{{ item }}
+    src: ../../templates/{{ item }}.j2
+  with_items:
+    - storage.service
+  register: storage_unit
+
+- name: Enable and run Storage service
+  systemd:
+    name: storage
+    state: started
+    enabled: yes
+    daemon_reload: yes
+
+- name: Restart Storage
+  service:
+    name: storage
+    state: restarted
+    daemon_reload: yes
+  when: storage_unit.changed
