@@ -43,8 +43,11 @@ extern rocksdb_statistics_t* rocksdb_create_statistics();
 
 /* Options */
 
+extern void rocksdb_options_set_atomic_flush(
+    rocksdb_options_t*, unsigned char);
+
 extern void rocksdb_options_set_statistics(
-    rocksdb_options_t* opt, 
+    rocksdb_options_t* opts, 
     rocksdb_statistics_t* stats);
 
 /* Statistics */

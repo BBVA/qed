@@ -32,6 +32,11 @@ struct rocksdb_statistics_t { std::shared_ptr<Statistics> rep; };
 struct rocksdb_histogram_data_t { rocksdb::HistogramData* rep; };
 struct rocksdb_options_t { Options rep; };
 
+void rocksdb_options_set_atomic_flush(
+    rocksdb_options_t* opts, unsigned char value) {
+    opts->rep.atomic_flush = value;
+}
+
 rocksdb_statistics_t* rocksdb_create_statistics() {
     rocksdb_statistics_t* result = new rocksdb_statistics_t;
     result->rep = rocksdb::CreateDBStatistics();
