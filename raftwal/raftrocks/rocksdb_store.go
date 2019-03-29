@@ -102,7 +102,7 @@ func New(options Options) (*RocksDBStore, error) {
 	// log store options
 	logBbto := rocksdb.NewDefaultBlockBasedTableOptions()
 	logBbto.SetBlockSize(32 * 1024)
-	logCache := rocksdb.NewLRUCache(512 * 1024 * 1024)
+	logCache := rocksdb.NewDefaultLRUCache(512 * 1024 * 1024)
 	logBbto.SetBlockCache(logCache)
 	logOpts := rocksdb.NewDefaultOptions()
 	logOpts.SetUseFsync(!options.NoSync)

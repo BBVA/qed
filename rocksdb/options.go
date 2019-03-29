@@ -40,6 +40,7 @@ type Options struct {
 	c *C.rocksdb_options_t
 
 	// Hold references for GC.
+	env  *Env
 	bbto *BlockBasedTableOptions
 }
 
@@ -53,6 +54,14 @@ func NewDefaultOptions() *Options {
 // Default: false
 func (o *Options) SetCreateIfMissing(value bool) {
 	C.rocksdb_options_set_create_if_missing(o.c, boolToUchar(value))
+}
+
+// SetEnv sets the specified object to interact with the environment,
+// e.g. to read/write files, schedule background work, etc.
+// Default: DefaultEnv
+func (o *Options) SetEnv(value *Env) {
+	o.env = value
+	C.rocksdb_options_set_env(o.c, value.c)
 }
 
 // IncreaseParallelism sets the level of parallelism.
@@ -395,9 +404,13 @@ func (o *Options) SetStatistics(s *Statistics) {
 // Destroy deallocates the Options object.
 func (o *Options) Destroy() {
 	C.rocksdb_options_destroy(o.c)
+	if o.env != nil {
+		o.env.Destroy()
+	}
 	if o.bbto != nil {
 		o.bbto.Destroy()
 	}
 	o.c = nil
+	o.env = nil
 	o.bbto = nil
 }

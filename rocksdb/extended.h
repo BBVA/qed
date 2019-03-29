@@ -50,6 +50,11 @@ extern void rocksdb_options_set_statistics(
     rocksdb_options_t* opts, 
     rocksdb_statistics_t* stats);
 
+/* Cache */
+
+extern rocksdb_cache_t* rocksdb_cache_create_lru_with_ratio(
+    size_t capacity, double hi_pri_pool_ratio);
+
 /* Statistics */
 
 typedef enum {
