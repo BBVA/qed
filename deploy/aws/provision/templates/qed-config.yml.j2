@@ -63,6 +63,12 @@ agent:
 {% for host in groups['name_qed-0'] %}
     - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
 {% endfor %}
+{% if 'role_auditor' in group_names %}
+  QEDUrls:
+{% for host in groups['name_qed-0'] %}
+    - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
+{% endfor %}
+{% endif %}
   server_urls:
 {% for host in groups['name_qed-1'] %}
     - "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
