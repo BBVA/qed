@@ -34,7 +34,7 @@ func TestStart(t *testing.T) {
 	)
 
 	scenario("Test availability of qed server", func() {
-		let("Query metrics endpoint", func(t *testing.T) {
+		let("Query info endpoint", func(t *testing.T) {
 			var resp *http.Response
 			var err error
 			retry(3, 1*time.Second, func() error {
