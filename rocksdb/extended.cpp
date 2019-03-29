@@ -24,6 +24,8 @@ using rocksdb::Statistics;
 using rocksdb::HistogramData;
 using rocksdb::StatsLevel;
 using rocksdb::Options;
+using rocksdb::Cache;
+using rocksdb::NewLRUCache;
 using std::shared_ptr;
 
 extern "C" {
@@ -31,10 +33,18 @@ extern "C" {
 struct rocksdb_statistics_t { std::shared_ptr<Statistics> rep; };
 struct rocksdb_histogram_data_t { rocksdb::HistogramData* rep; };
 struct rocksdb_options_t { Options rep; };
+struct rocksdb_cache_t { std::shared_ptr<Cache> rep; };
 
 void rocksdb_options_set_atomic_flush(
     rocksdb_options_t* opts, unsigned char value) {
     opts->rep.atomic_flush = value;
+}
+
+rocksdb_cache_t* rocksdb_cache_create_lru_with_ratio(
+    size_t capacity, double hi_pri_pool_ratio) {
+    rocksdb_cache_t* c = new rocksdb_cache_t;
+    c->rep = NewLRUCache(capacity, -1, false, hi_pri_pool_ratio);
+    return c;
 }
 
 rocksdb_statistics_t* rocksdb_create_statistics() {

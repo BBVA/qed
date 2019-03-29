@@ -50,6 +50,9 @@ type RocksDBStore struct {
 	// per column family options
 	cfOpts []*rocksdb.Options
 
+	// block cache
+	blockCache *rocksdb.Cache
+
 	// read/write options
 	ro *rocksdb.ReadOptions
 	wo *rocksdb.WriteOptions
@@ -74,11 +77,18 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 		storage.FSMStateTable.String(),
 	}
 
+	// env
+	env := rocksdb.NewDefaultEnv()
+	env.SetBackgroundThreads(4)
+	env.SetHighPriorityBackgroundThreads(4)
+
 	// global options
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
-	globalOpts.IncreaseParallelism(4)
+	//globalOpts.SetMaxOpenFiles()
+	globalOpts.SetEnv(env)
+	blockCache := rocksdb.NewDefaultLRUCache(512 * 1024 * 1024) // 512MB
 	var stats *rocksdb.Statistics
 	if opts.EnableStatistics {
 		stats = rocksdb.NewStatistics()
@@ -88,9 +98,9 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	// Per column family options
 	cfOpts := []*rocksdb.Options{
 		rocksdb.NewDefaultOptions(),
-		getIndexTableOpts(),
-		getHyperCacheTableOpts(),
-		getHistoryCacheTableOpts(),
+		getIndexTableOpts(blockCache),
+		getHyperCacheTableOpts(blockCache),
+		getHistoryCacheTableOpts(blockCache),
 		getFsmStateTableOpts(),
 	}
 
@@ -109,6 +119,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 		db:             db,
 		stats:          stats,
 		cfHandles:      cfHandles,
+		blockCache:     blockCache,
 		checkPointPath: checkPointPath,
 		checkpoints:    make(map[uint64]string),
 		globalOpts:     globalOpts,
@@ -124,70 +135,185 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	return store, nil
 }
 
-func getIndexTableOpts() *rocksdb.Options {
-	// index table is append-only so we have to optimize for
-	// read amplification
+// The index table is insert-only without updates so we have
+// to optimize for an IO-bound and write-once workload.
+func getIndexTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 
-	// TODO change this!!!
+	// This table performs both Get() and total order iterations.
 
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
+	bbto.SetBlockCache(blockCache)
+	// increase block size to 16KB
+	bbto.SetBlockSize(16 * 1024)
+
 	opts := rocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCompression(rocksdb.SnappyCompression)
-	// in normal mode, by default, we try to minimize space amplification,
-	// so we set:
-	//
-	// L0 size = 64MBytes * 2 (min_write_buffer_number_to_merge) * \
-	//              8 (level0_file_num_compaction_trigger)
-	//         = 1GBytes
-	// L1 size close to L0, 1GBytes, max_bytes_for_level_base = 1GBytes,
-	//   max_bytes_for_level_multiplier = 2
-	// L2 size is 2G, L3 is 4G, L4 is 8G, L5 16G...
-	//
-	opts.SetWriteBufferSize(64 * 1024 * 1024)
+
+	// We use level style compaction with high concurrency.
+	// Memtable size is 64MB and the total number of level 0
+	// files is 8. This means compaction is triggered when L0
+	// grows to 512MB. L1 size is 512MB and every level is 8 times
+	// larger than the previous one. L2 is 4GB, L3 is 32GB,
+	// L4 is 256GB, L5 is 2TB (note that given a 40B key-value
+	// pair, 2TB can contain up to around 51 billion)
+
+	// L0 size = 64MB * 1 (min_write_buffer_number_to_merge) * \
+	// 				8 (level0_file_num_compaction_trigger)
+	// 		   = 512MB
+	// L1 size = 64MB (target_file_base) * 8 (target_file_size_multiplier)
+	//		   = 512MB = max_bytes_for_level_base
+	// L2 size = 64MB (target_file_base) * 8^2 (target_file_size_multiplier)
+	// 		   = 4GB = 512 (max_bytes_for_level_base) * 8 (max_bytes_for_level_multiplier)
+	// L2 size = 64MB (target_file_base) * 8^3 (target_file_size_multiplier)
+	// 		   = 32GB = 512 (max_bytes_for_level_base) * 8^2 (max_bytes_for_level_multiplier)
+	// ...
+	opts.SetWriteBufferSize(64 * 1024 * 1024) // 64MB
+	opts.SetMaxWriteBufferNumber(3)
+	opts.SetMinWriteBufferNumberToMerge(1)
+	opts.SetLevel0FileNumCompactionTrigger(8)
+	opts.SetLevel0SlowdownWritesTrigger(17)
+	opts.SetLevel0StopWritesTrigger(24)
+	opts.SetTargetFileSizeBase(64 * 1024 * 1024) // 64MB
+	opts.SetTargetFileSizeMultiplier(8)
+	opts.SetMaxBytesForLevelBase(512 * 1024 * 1024 * 1024) // 512MB
+	opts.SetMaxBytesForLevelMultiplier(8)
+	opts.SetNumLevels(5)
+
+	// io parallelism
+	opts.SetMaxBackgroundCompactions(4)
+	opts.SetMaxBackgroundFlushes(1)
+	return opts
+}
+
+// The hyper table has the more varied behavior. It receives
+// a mixed workload of point lookups and write/updates.
+// The values are higher than the ones inserted in other tables (~1KB).
+func getHyperCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
+
+	// Keys in this table are positions in the hyper tree and
+	// values are batches of at most 31 hashes of 32B.
+	// We try to keep hot keys at the lowest levels of the LSM
+	// tree. Hot keys corresponds with those batches at the
+	// highest levels of the hyper tree, which are more frequently
+	// touched on every operation.
+
+	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
+	bbto.SetBlockCache(blockCache)
+	// increase block size to 16KB
+	bbto.SetBlockSize(16 * 1024)
+
+	opts := rocksdb.NewDefaultOptions()
+	opts.SetBlockBasedTableFactory(bbto)
+	opts.SetCompression(rocksdb.SnappyCompression)
+
+	// We use level style compaction with high concurrency.
+	// Memtable size is 128MB and the total number of level 0
+	// files is 8. This means compaction is triggered when L0
+	// grows to 1GB. L1 size is 1GB and every level is 8 times
+	// larger than the previous one. L2 is 8GB, L3 is 64GB,
+	// L4 is 512GB, L5 is 8TB (note that given a ~1KB uncompressed
+	// key-value pair, 8TB can contain up to around 8 billion)
+
+	// L0 size = 64MB * 1 (min_write_buffer_number_to_merge) * \
+	// 				8 (level0_file_num_compaction_trigger)
+	// 		   = 512MB
+	// L1 size = 64MB (target_file_base) * 8 (target_file_size_multiplier)
+	//		   = 512MB = max_bytes_for_level_base
+	// L2 size = 64MB (target_file_base) * 8^2 (target_file_size_multiplier)
+	// 		   = 4GB = 512 (max_bytes_for_level_base) * 8 (max_bytes_for_level_multiplier)
+	// L2 size = 64MB (target_file_base) * 8^3 (target_file_size_multiplier)
+	// 		   = 32GB = 512 (max_bytes_for_level_base) * 8^2 (max_bytes_for_level_multiplier)
+	// ...
+	opts.SetWriteBufferSize(128 * 1024 * 1024) // 128MB
 	opts.SetMaxWriteBufferNumber(5)
 	opts.SetMinWriteBufferNumberToMerge(2)
 	opts.SetLevel0FileNumCompactionTrigger(8)
-	// MaxBytesForLevelBase is the total size of L1, should be close to
-	// the size of L0
-	opts.SetMaxBytesForLevelBase(1 * 1024 * 1024 * 1024)
-	opts.SetMaxBytesForLevelMultiplier(2)
-	// files in L1 will have TargetFileSizeBase bytes
-	opts.SetTargetFileSizeBase(64 * 1024 * 1024)
-	opts.SetTargetFileSizeMultiplier(10)
+	opts.SetLevel0SlowdownWritesTrigger(17)
+	opts.SetLevel0StopWritesTrigger(24)
+	opts.SetTargetFileSizeBase(128 * 1024 * 1024) // 128MB
+	opts.SetTargetFileSizeMultiplier(8)
+	opts.SetMaxBytesForLevelBase(1024 * 1024 * 1024 * 1024) // 1GB
+	opts.SetMaxBytesForLevelMultiplier(8)
+	opts.SetNumLevels(7)
+
 	// io parallelism
-	opts.SetMaxBackgroundCompactions(2)
-	opts.SetMaxBackgroundFlushes(2)
+	opts.SetMaxBackgroundCompactions(4)
+	opts.SetMaxBackgroundFlushes(1)
 	return opts
 }
 
-func getHyperCacheTableOpts() *rocksdb.Options {
+// The history table is insert-only without updates so we have
+// to optimize for an IO-bound and write-once workload.
+func getHistoryCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
+	// This table performs both Get() and total order iterations.
+
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
-	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
+	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10)) // TODO consider full filters instead of block filters
+	bbto.SetBlockCache(blockCache)
+	// increase block size to 16KB
+	bbto.SetBlockSize(16 * 1024)
+
 	opts := rocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCompression(rocksdb.SnappyCompression)
+
+	// We use level style compaction with high concurrency.
+	// Memtable size is 64MB and the total number of level 0
+	// files is 8. This means compaction is triggered when L0
+	// grows to 512MB. L1 size is 512MB and every level is 8 times
+	// larger than the previous one. L2 is 4GB, L3 is 32GB,
+	// L4 is 256GB, L5 is 2TB (note that given a 42B key-value
+	// pair, 2TB can contain up to around 51 billion)
+
+	// L0 size = 64MB * 1 (min_write_buffer_number_to_merge) * \
+	// 				8 (level0_file_num_compaction_trigger)
+	// 		   = 512MB
+	// L1 size = 64MB (target_file_base) * 8 (target_file_size_multiplier)
+	//		   = 512MB = max_bytes_for_level_base
+	// L2 size = 64MB (target_file_base) * 8^2 (target_file_size_multiplier)
+	// 		   = 4GB = 512 (max_bytes_for_level_base) * 8 (max_bytes_for_level_multiplier)
+	// L2 size = 64MB (target_file_base) * 8^3 (target_file_size_multiplier)
+	// 		   = 32GB = 512 (max_bytes_for_level_base) * 8^2 (max_bytes_for_level_multiplier)
+	// ...
+	opts.SetWriteBufferSize(64 * 1024 * 1024) // 64MB
+	opts.SetMaxWriteBufferNumber(3)
+	opts.SetMinWriteBufferNumberToMerge(1)
+	opts.SetLevel0FileNumCompactionTrigger(8)
+	opts.SetLevel0SlowdownWritesTrigger(17)
+	opts.SetLevel0StopWritesTrigger(24)
+	opts.SetTargetFileSizeBase(64 * 1024 * 1024) // 64MB
+	opts.SetTargetFileSizeMultiplier(8)
+	opts.SetMaxBytesForLevelBase(512 * 1024 * 1024 * 1024) // 512MB
+	opts.SetMaxBytesForLevelMultiplier(8)
+	opts.SetNumLevels(5)
+
+	// io parallelism
+	opts.SetMaxBackgroundCompactions(4)
+	opts.SetMaxBackgroundFlushes(1)
 	return opts
 }
 
-func getHistoryCacheTableOpts() *rocksdb.Options {
-	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
-	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
-	opts := rocksdb.NewDefaultOptions()
-	opts.SetBlockBasedTableFactory(bbto)
-	opts.SetCompression(rocksdb.SnappyCompression)
-	return opts
-}
-
+// The FSM state table receives an update-only workload
+// (only one point lookup when recovering), so we
+// try to optimize for an IO-bound workload and multiple updates
+// on the same key.
 func getFsmStateTableOpts() *rocksdb.Options {
+
 	// FSM state contains only one key that is updated on every
 	// add event operation. We should try to reduce write and
 	// space amplification by keeping a lower number of levels.
+
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
+	// decrease block size to 1KB
+	bbto.SetBlockSize(1024)
+
 	opts := rocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCompression(rocksdb.SnappyCompression)
+
 	// we try to reduce write and space amplification, so we:
 	//   * set a low size for the in-memory write buffers
 	//   * reduce the number of write buffers
@@ -196,6 +322,8 @@ func getFsmStateTableOpts() *rocksdb.Options {
 	opts.SetWriteBufferSize(4 * 1024 * 1024)
 	opts.SetMaxWriteBufferNumber(3)
 	opts.SetMinWriteBufferNumberToMerge(2)
+
+	// io parallelism
 	opts.SetMaxBackgroundCompactions(1)
 	opts.SetMaxBackgroundFlushes(1)
 	return opts
@@ -312,6 +440,10 @@ func (s *RocksDBStore) Close() error {
 
 	if s.db != nil {
 		s.db.Close()
+	}
+
+	if s.blockCache != nil {
+		s.blockCache.Destroy()
 	}
 
 	if s.stats != nil {

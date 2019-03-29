@@ -17,11 +17,21 @@
 package rocks
 
 import (
+	"context"
+	"fmt"
+	"log"
+	rnd "math/rand"
 	"net/http"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/bbva/qed/hashing"
 
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
+	"github.com/bbva/qed/util"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -30,22 +40,54 @@ func BenchmarkMutateOnlyIndex(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(PrometheusCollectors()...)
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	go http.ListenAndServe(":2112", nil)
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
 
 	b.N = 10000000
 	b.ResetTimer()
 
+	hasher := hashing.NewFakeSha256Hasher()
 	for i := 0; i < b.N; i++ {
 		store.Mutate([]*storage.Mutation{
 			{
 				Table: storage.IndexTable,
-				Key:   rand.Bytes(32),
-				Value: rand.Bytes(8),
+				Key:   hasher.Do([]byte(fmt.Sprintf("test%d", i))),
+				Value: util.Uint64AsBytes(uint64(i)),
 			},
 		})
+	}
+
+}
+
+func BenchmarkQueryOnlyIndex(b *testing.B) {
+	store, closeF := openRocksDBStore(b)
+	defer closeF()
+
+	N := 10000000
+	b.N = N
+	hasher := hashing.NewFakeSha256Hasher()
+
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
+
+	// populate storage
+	for i := 0; i < b.N; i++ {
+		store.Mutate([]*storage.Mutation{
+			{
+				Table: storage.IndexTable,
+				Key:   hasher.Do([]byte(fmt.Sprintf("test%d", i))),
+				Value: util.Uint64AsBytes(uint64(i)),
+			},
+		})
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		index := rnd.Intn(N)
+		key := hasher.Do([]byte(fmt.Sprintf("test%d", index)))
+		_, err := store.Get(storage.IndexTable, key)
+		require.NoError(b, err)
 	}
 
 }
@@ -54,22 +96,60 @@ func BenchmarkMutateOnlyHyper(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(PrometheusCollectors()...)
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	go http.ListenAndServe(":2112", nil)
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
 
 	b.N = 10000000
 	b.ResetTimer()
 
+	hasher := hashing.NewFakeSha256Hasher()
+	value := rand.Bytes(1024)
 	for i := 0; i < b.N; i++ {
+		key := util.Uint16AsBytes(uint16(rnd.Intn(10)))
+		key = append(key, hasher.Do([]byte(fmt.Sprintf("test%d", rnd.Intn(10000))))...)
 		store.Mutate([]*storage.Mutation{
 			{
 				Table: storage.HyperCacheTable,
-				Key:   rand.Bytes(34),
-				Value: rand.Bytes(1024),
+				Key:   key,
+				Value: value,
 			},
 		})
+	}
+
+}
+
+func BenchmarkQueryOnlyHyper(b *testing.B) {
+	store, closeF := openRocksDBStore(b)
+	defer closeF()
+
+	N := 10000000
+	b.N = N
+	hasher := hashing.NewFakeSha256Hasher()
+
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
+
+	// populate storage
+	value := rand.Bytes(1024)
+	for i := 0; i < b.N; i++ {
+		key := []byte{0x0, 0x0}
+		key = append(key, hasher.Do([]byte(fmt.Sprintf("test%d", rnd.Intn(10000))))...)
+		store.Mutate([]*storage.Mutation{
+			{
+				Table: storage.HyperCacheTable,
+				Key:   key,
+				Value: value,
+			},
+		})
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		key := []byte{0x0, 0x0}
+		key = append(key, hasher.Do([]byte(fmt.Sprintf("test%d", rnd.Intn(1000))))...)
+		_, err := store.Get(storage.HyperCacheTable, key)
+		require.NoError(b, err)
 	}
 
 }
@@ -78,22 +158,59 @@ func BenchmarkMutateOnlyHistory(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(PrometheusCollectors()...)
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	go http.ListenAndServe(":2112", nil)
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
 
 	b.N = 10000000
 	b.ResetTimer()
 
+	hasher := hashing.NewFakeSha256Hasher()
 	for i := 0; i < b.N; i++ {
+		key := util.Uint64AsBytes(uint64(i))
+		key = append(key, []byte{0x0, 0x0}...)
 		store.Mutate([]*storage.Mutation{
 			{
 				Table: storage.HistoryCacheTable,
-				Key:   rand.Bytes(34),
-				Value: rand.Bytes(32),
+				Key:   key,
+				Value: hasher.Do([]byte(fmt.Sprintf("test%d", i))),
 			},
 		})
+	}
+
+}
+
+func BenchmarkQueryOnlyHistory(b *testing.B) {
+	store, closeF := openRocksDBStore(b)
+	defer closeF()
+
+	N := 10000000
+	b.N = N
+	hasher := hashing.NewFakeSha256Hasher()
+
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
+
+	// populate storage
+	for i := 0; i < b.N; i++ {
+		key := util.Uint64AsBytes(uint64(i))
+		key = append(key, []byte{0x0, 0x0}...)
+		store.Mutate([]*storage.Mutation{
+			{
+				Table: storage.HistoryCacheTable,
+				Key:   key,
+				Value: hasher.Do([]byte(fmt.Sprintf("test%d", i))),
+			},
+		})
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		index := rnd.Intn(N)
+		key := util.Uint64AsBytes(uint64(index))
+		key = append(key, []byte{0x0, 0x0}...)
+		_, err := store.Get(storage.HistoryCacheTable, key)
+		require.NoError(b, err)
 	}
 
 }
@@ -102,10 +219,8 @@ func BenchmarkMutateOnlyFSMState(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(PrometheusCollectors()...)
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	go http.ListenAndServe(":2112", nil)
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
 
 	b.N = 1000000
 	b.ResetTimer()
@@ -115,9 +230,39 @@ func BenchmarkMutateOnlyFSMState(b *testing.B) {
 			{
 				Table: storage.FSMStateTable,
 				Key:   storage.FSMStateTableKey,
-				Value: rand.Bytes(128),
+				Value: rand.Bytes(24),
 			},
 		})
+	}
+
+}
+
+func BenchmarkQueryOnlyFSMState(b *testing.B) {
+	store, closeF := openRocksDBStore(b)
+	defer closeF()
+
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
+
+	N := 1000000
+	b.N = N
+
+	// populate storage
+	for i := 0; i < b.N; i++ {
+		store.Mutate([]*storage.Mutation{
+			{
+				Table: storage.FSMStateTable,
+				Key:   storage.FSMStateTableKey,
+				Value: rand.Bytes(24),
+			},
+		})
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		_, err := store.Get(storage.FSMStateTable, storage.FSMStateTableKey)
+		require.NoError(b, err)
 	}
 
 }
@@ -126,37 +271,58 @@ func BenchmarkMutateAllTables(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	reg := prometheus.NewRegistry()
-	reg.MustRegister(PrometheusCollectors()...)
-	http.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	go http.ListenAndServe(":2112", nil)
+	srvCloseF := startMetricsServer()
+	defer srvCloseF()
 
-	b.N = 10000000
+	hasher := hashing.NewFakeSha256Hasher()
+	b.N = 1000000
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		key := hasher.Do([]byte(fmt.Sprintf("test%d", i)))
+		index := util.Uint64AsBytes(uint64(i))
+		historyKey := append(index, []byte{0x0, 0x0}...)
+		hyperKey := []byte{0x0, 0x0}
+		hyperKey = append(hyperKey, util.Uint64AsBytes(uint64(rnd.Intn(1000)))...)
 		store.Mutate([]*storage.Mutation{
 			{
 				Table: storage.IndexTable,
-				Key:   rand.Bytes(128),
-				Value: []byte("Value"),
+				Key:   key,
+				Value: index,
 			},
 			{
 				Table: storage.HyperCacheTable,
-				Key:   rand.Bytes(128),
-				Value: []byte("Value"),
+				Key:   hyperKey,
+				Value: rand.Bytes(1024),
 			},
 			{
 				Table: storage.HistoryCacheTable,
-				Key:   rand.Bytes(128),
-				Value: []byte("Value"),
+				Key:   historyKey,
+				Value: key,
 			},
 			{
 				Table: storage.FSMStateTable,
 				Key:   storage.FSMStateTableKey,
-				Value: rand.Bytes(128),
+				Value: rand.Bytes(24),
 			},
 		})
 	}
 
+}
+
+func startMetricsServer() func() {
+	reg := prometheus.NewRegistry()
+	reg.MustRegister(PrometheusCollectors()...)
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	srv := &http.Server{Addr: ":2112", Handler: mux}
+	go srv.ListenAndServe()
+	closeF := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}
+	return closeF
 }
