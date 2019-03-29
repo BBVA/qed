@@ -100,14 +100,23 @@ type Config struct {
 	MemberlistConfig *memberlist.Config
 
 	// Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts
-	AlertsUrls []string
+	AlertsServiceUrls []string
+
+	// QED API Key
+	APIKey string
+
+	// QED endpoint list
+	QEDUrls []string
+
+	// SnapshotStoreUrls contains the http endpoints of the snapshot store
+	SnapshotStoreUrls []string
 
 	// Timeout enqueuing elements on a channel
 	TimeoutQueues time.Duration
 
 	// Interval to send out messages to other agents
 	ProcessInterval time.Duration
-	
+
 	// Address to bind the metrics endpoint
 	MetricsAddr string
 }
