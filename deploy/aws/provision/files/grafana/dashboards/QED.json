@@ -15,7 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "iteration": 1553782676664,
+  "id": 3,
+  "iteration": 1553863181459,
   "links": [],
   "panels": [
     {
@@ -1198,7 +1199,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_monitor_batches_received_total{job=~\"Agent-Monitor.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_monitor_batches_received_total{job=~\"Monitor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1206,7 +1207,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(rate(qed_auditor_batches_received_total{job=~\"Agent-Auditor.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_auditor_batches_received_total{job=~\"Auditor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1214,7 +1215,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(rate(qed_publisher_batches_received_total{job=~\"Agent-Publisher.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_publisher_batches_received_total{job=~\"Publisher.*\"}[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -1222,7 +1223,7 @@
           "refId": "C"
         },
         {
-          "expr": "qed_monitor_batches_received_total{job=~\"Agent-Monitor.*\"}",
+          "expr": "qed_monitor_batches_received_total{job=~\"Monitor.*\"}",
           "format": "time_series",
           "hide": true,
           "intervalFactor": 1,
@@ -1308,21 +1309,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(qed_monitor_batches_process_seconds{job=~\"Agent-Monitor.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_monitor_batches_process_seconds{job=~\"Monitor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(qed_auditor_batches_process_seconds{job=~\"Agent-Auditor.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_auditor_batches_process_seconds{job=~\"Auditor.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
           "refId": "B"
         },
         {
-          "expr": "sum(rate(qed_publisher_batches_process_seconds{job=~\"Agent-Publisher.*\"}[$interval])) by (job)",
+          "expr": "sum(rate(qed_publisher_batches_process_seconds{job=~\"Publisher.*\"}[$interval])) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{job}}",
@@ -1612,86 +1613,6 @@
       ],
       "thresholds": "",
       "title": "Snapshots retrieved",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "delta"
-    },
-    {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 15,
-        "y": 41
-      },
-      "id": 35,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "sum(qed_store_alerts_generated_total)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{job}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": "",
-      "title": "Alerts",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
