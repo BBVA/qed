@@ -95,6 +95,7 @@
     - dashboards/dashboard.yml
     - dashboards/Host.json
     - dashboards/QED.json
+    - dashboards/Storage.json
   register: grafana_config
 
 - name: Restart Grafana
