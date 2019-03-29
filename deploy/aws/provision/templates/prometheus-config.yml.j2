@@ -23,57 +23,57 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 {% for host in groups['role_qed'] %}
-  - job_name: 'Qed{{loop.index}}-Metrics'
+  - job_name: 'Qed{{loop.index0}}'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8600']
-  - job_name: 'Qed{{loop.index}}-HostMetrics'
+  - job_name: 'Qed{{loop.index0}}-Host'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
 {% endfor %}
 {% for host in groups['role_publisher'] %}
-  - job_name: 'Agent-Publisher{{loop.index}}-Metrics'
+  - job_name: 'Publisher{{loop.index0}}'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:18300']
-  - job_name: 'Agent-Publisher{{loop.index}}-HostMetrics'
+  - job_name: 'Publisher{{loop.index0}}-Host'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
 {% endfor %}
 {% for host in groups['role_monitor'] %}
-  - job_name: 'Agent-Monitor{{loop.index}}-Metrics'
+  - job_name: 'Monitor{{loop.index0}}'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:18200']
-  - job_name: 'Agent-Monitor{{loop.index}}-HostMetrics'
+  - job_name: 'Monitor{{loop.index0}}-Host'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
 {% endfor %}
 {% for host in groups['role_auditor'] %}
-  - job_name: 'Agent-Auditor{{loop.index}}-Metrics'
+  - job_name: 'Auditor{{loop.index0}}'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:18100']
-  - job_name: 'Agent-Auditor{{loop.index}}-HostMetrics'
+  - job_name: 'Auditor{{loop.index0}}-Host'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
 {% endfor %}
 {% for host in groups['role_riot'] %}
-  - job_name: 'Riot{{loop.index}}-HostMetrics'
+  - job_name: 'Riot{{loop.index0}}-Host'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
 {% endfor %}
 {% for host in groups['role_storage'] %}
-  - job_name: 'Storage{{loop.index}}-Metrics'
+  - job_name: 'Store{{loop.index0}}'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:18888']
-  - job_name: 'Storage{{loop.index}}-HostMetrics'
+  - job_name: 'Store{{loop.index0}}-Host'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
