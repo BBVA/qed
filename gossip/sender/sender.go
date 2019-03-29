@@ -99,10 +99,7 @@ func (s Sender) RegisterMetrics(srv *metrics.Server) {
 		QedSenderInstancesCount,
 		QedSenderBatchesSentTotal,
 	}
-
-	for _, m := range metrics {
-		srv.Register(m)
-	}
+	srv.Register(metrics)
 }
 
 func (s Sender) newBatch() *protocol.BatchSnapshots {

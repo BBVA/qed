@@ -120,9 +120,10 @@ func NewServer(conf *Config) (*Server, error) {
 
 	// create metrics server and register default qed metrics
 	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
-	for _, m := range metrics.DefaultMetrics {
-		server.metricsServer.Register(m)
-	}
+	server.metricsServer.Register(metrics.DefaultMetrics)
+	server.metricsServer.Register(rocks.PrometheusCollectors())
+	// server.metricsServer.Register(raft.PrometheusCollectors())
+	// server.metricsServer.Register(balloon.PrometheusCollectors())
 
 	// Create gossip agent
 	config := gossip.DefaultConfig()
