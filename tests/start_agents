@@ -31,6 +31,7 @@ do
 		--join $qedGossipEndpoint \
 		--qedUrls $qedHTTPEndpoint  \
 		--pubUrls $snapshotStoreEndpoint \
+		--metrics localhost:1810$i \
 		--node auditor$i &
 done 
 
@@ -44,7 +45,7 @@ do
 		--bind 127.0.0.1:820$i  \
 		--join $qedGossipEndpoint \
 		--qedUrls $qedHTTPEndpoint  \
-		--pubUrls $snapshotStoreEndpoint \
+		--metrics localhost:1820$i \
 		--node monitor$i &
 done 
 
@@ -58,5 +59,6 @@ do
 		--bind 127.0.0.1:830$i  \
 		--join $qedGossipEndpoint \
 		--pubUrls $snapshotStoreEndpoint \
+		--metrics localhost:1830$i \
 		--node publisher$i &
 done 
