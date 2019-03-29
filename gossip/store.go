@@ -2,6 +2,13 @@ package gossip
 
 import (
 	"bytes"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"math/rand"
+	"net"
+	"net/http"
+	"time"
 
 	"github.com/bbva/qed/protocol"
 
@@ -9,10 +16,106 @@ import (
 	"github.com/google/btree"
 )
 
-type LocalStore interface {
-	Put(version uint64, snapshot protocol.Snapshot) error
-	GetRange(start, end uint64) ([]protocol.Snapshot, error)
+type SnapshotStore interface {
+	PutBatch(b *protocol.BatchSnapshots) error
+	PutSnapshot(version uint64, snapshot *protocol.SignedSnapshot) error
+	GetRange(start, end uint64) ([]protocol.SignedSnapshot, error)
+	GetSnapshot(version uint64) (*protocol.SignedSnapshot, error)
 	DeleteRange(start, end uint64) error
+}
+
+// Implements access to a snapshot store in an http rest
+// service.
+// The http client used has 200 ms timeout when connecting and reading
+// from the store.
+type RestSnapshotStore struct {
+	endpoints []string
+	client    *http.Client
+}
+
+// Returns a new RestSnapshotStore client
+func NewRestSnapshotStore(endpoints []string) *RestSnapshotStore {
+	client := &http.Client{
+		Transport: &http.Transport{
+			Dial: func(netw, addr string) (net.Conn, error) {
+				// timeout calling the server
+				conn, err := net.DialTimeout(netw, addr, 200*time.Millisecond)
+				if err != nil {
+					return nil, err
+				}
+				// timeout reading from the connection
+				conn.SetDeadline(time.Now().Add(200 * time.Millisecond))
+				return conn, nil
+			},
+		}}
+
+	return &RestSnapshotStore{
+		endpoints: endpoints,
+		client:    client,
+	}
+}
+
+// Stores a batch int he store
+func (r *RestSnapshotStore) PutBatch(b *protocol.BatchSnapshots) error {
+	buf, err := b.Encode()
+	if err != nil {
+		return err
+	}
+	n := len(r.endpoints)
+	server := r.endpoints[0]
+	if n > 1 {
+		server = r.endpoints[rand.Intn(n)]
+	}
+	resp, err := r.client.Post(server+"/batch", "application/json", bytes.NewBuffer(buf))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, err = io.Copy(ioutil.Discard, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *RestSnapshotStore) PutSnapshot(version uint64, snapshot *protocol.SignedSnapshot) error {
+	panic("not implemented")
+}
+
+func (r *RestSnapshotStore) GetRange(start uint64, end uint64) ([]protocol.SignedSnapshot, error) {
+	panic("not implemented")
+}
+
+func (r *RestSnapshotStore) GetSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
+	n := len(r.endpoints)
+	server := r.endpoints[0]
+	if n > 1 {
+		server = r.endpoints[rand.Intn(n)]
+	}
+	resp, err := r.client.Get(fmt.Sprintf("%s/snapshot?v=%d", server, version))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Error getting snapshot from the store. Status: %d", resp.StatusCode)
+	}
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var s protocol.SignedSnapshot
+	err = s.Decode(buf)
+	if err != nil {
+		return nil, fmt.Errorf("Error decoding signed snapshot %d codec", s.Snapshot.Version)
+	}
+	return &s, nil
+}
+
+func (r *RestSnapshotStore) DeleteRange(start uint64, end uint64) error {
+	panic("not implemented")
 }
 
 type BPlusTreeStore struct {
@@ -27,7 +130,7 @@ func (p StoreItem) Less(b btree.Item) bool {
 	return bytes.Compare(p.Key, b.(StoreItem).Key) < 0
 }
 
-func (s *BPlusTreeStore) Put(version uint64, snapshot protocol.Snapshot) error {
+func (s *BPlusTreeStore) PutSnapshot(version uint64, snapshot protocol.Snapshot) error {
 	encoded, err := snapshot.Encode()
 	if err != nil {
 		return err

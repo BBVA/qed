@@ -16,11 +16,19 @@
 package gossip
 
 import (
+	"bytes"
+	"context"
+	"crypto/tls"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"math/rand"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
+	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
@@ -28,45 +36,131 @@ import (
 	"github.com/bbva/qed/protocol"
 	"github.com/coocood/freecache"
 	"github.com/hashicorp/memberlist"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
+// hashedBatch contains a the received
+// batch from the gossip network, and also
+// a digest of its contents to univocally
+// identify it.
 type hashedBatch struct {
 	batch  *protocol.BatchSnapshots
 	digest hashing.Digest
 }
 
+// Agent exposes the necesary API to interact with
+// the gossip network, the snapshot store, the
+// QED log and the alerts store to the processors.
 type Agent struct {
-	config *Config
-	Self   *member.Peer
-
-	metricsServer *metrics.Server
-
-	memberlist *memberlist.Memberlist
-	broadcasts *memberlist.TransmitLimitedQueue
-
-	Topology *Topology
-
+	// stateLock is used to protect critical information
+	// from cocurrent access from the gossip
+	// network
 	stateLock sync.Mutex
 
-	processed  *freecache.Cache
-	processors []Processor
+	// config stores parameters from command line
+	// interface
+	config *Config
 
-	In   chan *hashedBatch
-	Out  chan *protocol.BatchSnapshots
-	quit chan bool
+	// Self stores the peer information corresponding to
+	// this agent instance. It is used to make routing
+	// decissions.
+	self *member.Peer
+
+	// metricsServer exposes an HTTP service with
+	// all the its metrics and also its processors
+	// metrics.
+	metrics *metrics.Server
+
+	// gossip gives access to the
+	// memberlist API to interact with the network
+	// and its members
+	gossip *memberlist.Memberlist
+
+	// broadcasts gives access to the
+	// broadcast gossip API
+	broadcasts *memberlist.TransmitLimitedQueue
+
+	// Topology holds the network topology
+	// as this agent instance sees it.
+	topology *Topology
+
+	// taskManager is in charge of tasks execution.
+	tasks *TasksManager
+
+	// processed cache contains a reference to the last
+	// messages sent to processors. This is used to
+	// deduplicate messages coming from the network.
+	// which has been already processed.
+	processed *freecache.Cache
+
+	// processors enqueue tasks to be executed by
+	// the tasks manager. They need to create
+	// the context for each task to be able to execute.
+	processors map[string]Processor
+
+	// In channel receives hashed batches from the gossip
+	// network to be processed by the agent
+	inCh chan *hashedBatch
+
+	// Out channel enqueue the batches to be forwarded to
+	// other gossip agents
+	outCh chan *protocol.BatchSnapshots
+
+	// alerts channel enqueue the alerts messages to be sent
+	// to the alerting service
+	alertsCh chan string
+
+	// quitCh channels signal the graceful shutdown
+	// of the agent
+	quitCh chan bool
+
+	// timeout signals when the default timeout has passed
+	// to end an enqueue operation
+	timeout *time.Ticker
+
+	// qeq client
+	qed *client.HTTPClient
+
+	// store client
+	snapshotStore SnapshotStore
 }
 
-func NewAgent(conf *Config, p []Processor, m *metrics.Server) (agent *Agent, err error) {
+// NewAgent returns a configured and started agent or error if
+// it cannot be created.
+// On return, the agent is already connected to the gossip network
+// but it will not process any information until start is called.
+// It will though enqueue request as soon as it is created. When those
+// queues are full, messages will start to be dropped silently.
+func NewAgent(conf *Config, processors map[string]Processor, m *metrics.Server) (agent *Agent, err error) {
 	log.Infof("New agent %s\n", conf.NodeName)
+
+	transport := http.DefaultTransport.(*http.Transport)
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
+	httpClient := http.DefaultClient
+	httpClient.Transport = transport
+	qed, err := client.NewHTTPClient(
+		client.SetHttpClient(httpClient),
+		client.SetURLs(conf.QEDUrls[0], conf.QEDUrls[1:]...),
+		client.SetAPIKey(conf.APIKey),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	agent = &Agent{
 		config:        conf,
-		metricsServer: m,
-		Topology:      NewTopology(),
-		processors:    p,
+		metrics:       m,
+		topology:      NewTopology(),
+		processors:    processors,
 		processed:     freecache.NewCache(1 << 20),
-		In:            make(chan *hashedBatch, 1<<16),
-		Out:           make(chan *protocol.BatchSnapshots, 1<<16),
-		quit:          make(chan bool),
+		tasks:         NewTasksManager(200*time.Millisecond, 10, 100*time.Millisecond),
+		inCh:          make(chan *hashedBatch, 1<<16),
+		outCh:         make(chan *protocol.BatchSnapshots, 1<<16),
+		alertsCh:      make(chan string, 100),
+		timeout:       time.NewTicker(conf.TimeoutQueues),
+		quitCh:        make(chan bool),
+		qed:           qed,
+		snapshotStore: NewRestSnapshotStore(conf.SnapshotStoreUrls),
 	}
 
 	bindIP, bindPort, err := conf.AddrParts(conf.BindAddr)
@@ -90,80 +184,221 @@ func NewAgent(conf *Config, p []Processor, m *metrics.Server) (agent *Agent, err
 	conf.MemberlistConfig.AdvertisePort = advertisePort
 	conf.MemberlistConfig.Name = conf.NodeName
 	conf.MemberlistConfig.Logger = log.GetLogger()
+
 	// Configure delegates
 	conf.MemberlistConfig.Delegate = newAgentDelegate(agent)
 	conf.MemberlistConfig.Events = &eventDelegate{agent}
-	agent.Self = member.NewPeer(conf.NodeName, advertiseIP, uint16(advertisePort), conf.Role)
 
-	agent.memberlist, err = memberlist.Create(conf.MemberlistConfig)
+	agent.self = member.NewPeer(conf.NodeName, advertiseIP, uint16(advertisePort), conf.Role)
+
+	agent.gossip, err = memberlist.Create(conf.MemberlistConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	// Print local member info
-	agent.Self = member.ParsePeer(agent.memberlist.LocalNode())
-	log.Infof("Local member %+v", agent.Self)
+	agent.self = member.ParsePeer(agent.gossip.LocalNode())
+	log.Infof("Local member %+v", agent.self)
 
 	// Set broadcast queue
 	agent.broadcasts = &memberlist.TransmitLimitedQueue{
 		NumNodes: func() int {
-			return agent.memberlist.NumMembers()
+			return agent.gossip.NumMembers()
 		},
 		RetransmitMult: 2,
 	}
 
-	if p != nil {
-		go agent.start()
+	// register metrics of each processor
+	for _, p := range processors {
+		agent.RegisterMetrics(p.Metrics())
 	}
 
 	return agent, nil
 }
 
-// Send a batch into a queue channel with the agent TimeoutQueues timeout.
-func (a *Agent) ChTimedSend(batch *protocol.BatchSnapshots, ch chan *protocol.BatchSnapshots) {
+// Enables the processing engines of the
+// agent
+func (a *Agent) Start() {
+	a.metrics.Start()
+	a.processor()
+	a.alerter()
+}
+
+// Register a new processor into the agent, to add some tasks per batch
+// to be executed by the task manager.
+func (a *Agent) RegisterProcessor(name string, p Processor) {
+	a.stateLock.Lock()
+	defer a.stateLock.Unlock()
+	a.processors[name] = p
+	a.RegisterMetrics(p.Metrics())
+}
+
+// Deregister a processor per name. It will not fail if the
+// processor does not exist.
+func (a *Agent) DeregisterProcessor(name string) {
+	a.stateLock.Lock()
+	defer a.stateLock.Unlock()
+	delete(a.processors, name)
+}
+
+// Enqueue a hashed batch in the input channel
+// or returns a timeout error
+func (a *Agent) HashedBatch(h *hashedBatch) error {
 	for {
 		select {
-		case <-time.After(a.config.TimeoutQueues):
-			log.Infof("Agent timed out enqueueing batch in out channel")
-			return
-		case ch <- batch:
-			return
+		case <-a.timeout.C:
+			return ChTimedOut
+		case a.inCh <- h:
+			return nil
 		}
 	}
 }
 
-func (a *Agent) start() {
+// Enqueue a task into the task manager
+// or return a timeout error
+func (a *Agent) Task(t Task) error {
+	return a.tasks.Add(t)
+}
 
-	for _, p := range a.processors {
-		p.RegisterMetrics(a.metricsServer)
+// Returns the agent qued client already
+// configured
+func (a *Agent) Qued() *client.HTTPClient {
+	return a.qed
+}
+
+// returns a snapshot store instance already
+// configured
+func (a *Agent) SnapshotStore() SnapshotStore {
+	return a.snapshotStore
+}
+
+// Register a slice of collectors in the agent metrics server
+func (a *Agent) RegisterMetrics(cs []prometheus.Collector) {
+	for _, c := range cs {
+		a.metrics.Register(c)
 	}
+}
+
+// Alert enqueue a message into the alerts
+// queue to be sent by the agent to the alerting
+// service
+func (a *Agent) Alert(msg string) error {
+	for {
+		select {
+		case <-a.timeout.C:
+			return ChTimedOut
+		case a.alertsCh <- msg:
+			return nil
+		}
+	}
+}
+
+// alerters posts using the defult http client an alert message
+// to a random url selected from the configuration list of urls.
+//
+// The connection timeout is 200 ms and the response read
+// timeout is another 200 ms
+//
+// The alerter will end its goroutines when the agent quit channel
+// is closed.
+func (a *Agent) alerter() {
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			Dial: func(netw, addr string) (net.Conn, error) {
+				// timeout calling the server
+				conn, err := net.DialTimeout(netw, addr, 200*time.Millisecond)
+				if err != nil {
+					return nil, err
+				}
+				// timeout reading from the connection
+				conn.SetDeadline(time.Now().Add(200 * time.Millisecond))
+				return conn, nil
+			},
+		}}
 
 	go func() {
-		a.metricsServer.Start()
-	}()
+		for {
+			select {
+			case msg := <-a.alertsCh:
+				n := len(a.config.AlertsServiceUrls)
+				server := a.config.AlertsServiceUrls[0]
+				if n > 1 {
+					server = a.config.AlertsServiceUrls[rand.Intn(n)]
+				}
 
-	for {
-		select {
-		case hashedBatch := <-a.In:
-			_, err := a.processed.Get(hashedBatch.digest)
-			if err == nil {
-				continue
+				resp, err := client.Post(server, "application/json", bytes.NewBufferString(msg))
+				if err != nil {
+					log.Infof("Agent had an error sending the alert %v because %v ", msg, err)
+					continue
+				}
+				defer resp.Body.Close()
+				_, err = io.Copy(ioutil.Discard, resp.Body)
+				if err != nil {
+					log.Infof("Agent had the error %v when reading the response from the alert %v ", err, msg)
+				}
+			case <-a.quitCh:
+				return
 			}
-			a.processed.Set(hashedBatch.digest, []byte{0x0}, 0)
-
-			for _, p := range a.processors {
-				go p.Process(hashedBatch.batch)
-			}
-			a.ChTimedSend(hashedBatch.batch, a.Out)
-		case b := <-a.Out:
-			go a.send(b)
-		case <-a.quit:
-			return
 		}
-	}
+	}()
 }
 
-func (a *Agent) send(batch *protocol.BatchSnapshots) {
+// Deduplicates received hashed batches,
+// launch processors to generate the needed tasks
+// and enqueue the batch to be forwarded by the gossip
+// network.
+//
+// Processors are launched on separated goroutines and
+// there is no limit on how many processor are enqueing tasks
+// at any given moment.
+//
+// The processor will end when the general quitCh from the agent
+// is closed.
+func (a *Agent) processor() {
+	go func() {
+		for {
+			select {
+			case hashedBatch := <-a.inCh:
+				// batches are idenfified by its digest. If a batch is already
+				// processed, we do not process it again, and we do not retransmit it
+				// again
+				_, err := a.processed.Get(hashedBatch.digest)
+				if err == nil {
+					continue
+				}
+				a.processed.Set(hashedBatch.digest, []byte{0x0}, 0)
+
+				// each batch is sent to all the agent processors which
+				// will generate the tasks to be executed.
+				ctx := context.WithValue(context.Background(), "batch", hashedBatch.batch)
+				for _, p := range a.processors {
+					p.Process(a, ctx)
+				}
+
+				// we do not wait for the processors to finish to enqueue
+				// the batch into the out queue
+				for {
+					select {
+					case <-a.timeout.C:
+						log.Infof("Agent timed out enqueuing batch in out channel")
+					case a.outCh <- hashedBatch.batch:
+					}
+				}
+			case b := <-a.outCh:
+				// as soon as we have a batch ready for retransmission, we try to send
+				// it after applying all the routing contraints
+				go a.Send(b)
+			case <-a.quitCh:
+				return
+			}
+		}
+	}()
+}
+
+// Sends a batch using the gossip network reliable transport
+// to  other nodes based on the routing policy applied
+func (a *Agent) Send(batch *protocol.BatchSnapshots) {
 
 	if batch.TTL <= 0 {
 		return
@@ -171,47 +406,54 @@ func (a *Agent) send(batch *protocol.BatchSnapshots) {
 
 	batch.TTL -= 1
 	from := batch.From
-	batch.From = a.Self
+	batch.From = a.self
 	msg, _ := batch.Encode()
 	for _, dst := range a.route(from) {
 		log.Debugf("Sending batch to %+v\n", dst.Name)
-		a.memberlist.SendReliable(dst, msg)
+		a.gossip.SendReliable(dst, msg)
 	}
 }
 
+// Returns the list of nodes to which a batch can be sent
+// given the source of the communication and the internal
+// agent topology.
 func (a *Agent) route(src *member.Peer) []*memberlist.Node {
 	var excluded PeerList
 
 	dst := make([]*memberlist.Node, 0)
 
 	excluded.L = append(excluded.L, src)
-	excluded.L = append(excluded.L, a.Self)
+	excluded.L = append(excluded.L, a.self)
 
-	peers := a.Topology.Each(1, &excluded)
+	peers := a.topology.Each(1, &excluded)
 	for _, p := range peers.L {
 		dst = append(dst, p.Node())
 	}
 	return dst
 }
 
-// Join asks the Agent instance to join.
+// Join asks the Agent instance to join
+// the nodes with the give addrs addresses.
 func (a *Agent) Join(addrs []string) (int, error) {
 	if a.State() != member.Alive {
 		return 0, fmt.Errorf("Agent can't join after Leave or Shutdown")
 	}
 
 	if len(addrs) > 0 {
-		return a.memberlist.Join(addrs)
+		return a.gossip.Join(addrs)
 	}
 
 	return 0, nil
 }
 
+// Leave ask the agent to leave the gossip
+// network gracefully, communicating to others
+// this agent want to leave
 func (a *Agent) Leave() error {
 
 	// Check the current state
 	a.stateLock.Lock()
-	switch a.Self.Status {
+	switch a.self.Status {
 	case member.Left:
 		a.stateLock.Unlock()
 		return nil
@@ -222,12 +464,12 @@ func (a *Agent) Leave() error {
 		a.stateLock.Unlock()
 		return fmt.Errorf("Leave called after Shutdown")
 	default:
-		a.Self.Status = member.Leaving
+		a.self.Status = member.Leaving
 		a.stateLock.Unlock()
 	}
 
 	// Attempt the memberlist leave
-	err := a.memberlist.Leave(a.config.BroadcastTimeout)
+	err := a.gossip.Leave(a.config.BroadcastTimeout)
 	if err != nil {
 		return err
 	}
@@ -241,8 +483,8 @@ func (a *Agent) Leave() error {
 
 	// Transition to Left only if we not already shutdown
 	a.stateLock.Lock()
-	if a.Self.Status != member.Shutdown {
-		a.Self.Status = member.Left
+	if a.self.Status != member.Shutdown {
+		a.self.Status = member.Left
 	}
 	a.stateLock.Unlock()
 	return nil
@@ -262,40 +504,48 @@ func (a *Agent) Shutdown() error {
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
 
-	a.metricsServer.Shutdown()
+	a.metrics.Shutdown()
 
-	if a.Self.Status == member.Shutdown {
+	if a.self.Status == member.Shutdown {
 		return nil
 	}
 
-	if a.Self.Status != member.Left {
+	if a.self.Status != member.Left {
 		log.Info("agent: Shutdown without a Leave")
 	}
 
-	a.Self.Status = member.Shutdown
-	err := a.memberlist.Shutdown()
+	a.self.Status = member.Shutdown
+	err := a.gossip.Shutdown()
 	if err != nil {
 		return err
 	}
-
+	close(a.quitCh)
 	return nil
 }
 
+// Returns the memberlist object to manage the gossip api
+// directly
 func (a *Agent) Memberlist() *memberlist.Memberlist {
-	return a.memberlist
+	return a.gossip
 }
 
+// Returns the broadcast facility to manage broadcasts messages
+// directly
 func (a *Agent) Broadcasts() *memberlist.TransmitLimitedQueue {
 	return a.broadcasts
 }
 
+// Returns this agent IP address and port
 func (a *Agent) GetAddrPort() (net.IP, uint16) {
-	n := a.memberlist.LocalNode()
+	n := a.gossip.LocalNode()
 	return n.Addr, n.Port
 }
 
+// Returns this agent status. This can be used to
+// check if we should stop doing something based
+// on the state of the agent in the gossip network.
 func (a *Agent) State() member.Status {
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
-	return a.Self.Status
+	return a.self.Status
 }
