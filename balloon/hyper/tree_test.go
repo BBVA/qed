@@ -294,7 +294,7 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 
 	hasher := hashing.NewSha256Hasher()
-	freeCache := cache.NewFreeCache(2000 * (1 << 20))
+	freeCache := cache.NewFreeCache(CacheSize)
 
 	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
@@ -303,7 +303,7 @@ func BenchmarkAdd(b *testing.B) {
 	go http.ListenAndServe(":2112", nil)
 
 	b.ResetTimer()
-	b.N = 200000000
+	b.N = 10000000
 	for i := 0; i < b.N; i++ {
 		index := make([]byte, 8)
 		binary.LittleEndian.PutUint64(index, uint64(i))

@@ -16,7 +16,8 @@
 
 package rocksdb
 
-// #include <rocksdb/c.h>
+// #include "rocksdb/c.h"
+// #include "extended.h"
 import "C"
 
 // Cache is a cache used to store data read from data in memory.
@@ -24,10 +25,32 @@ type Cache struct {
 	c *C.rocksdb_cache_t
 }
 
-// NewLRUCache creates a new LRU Cache object with the given capacity.
-func NewLRUCache(capacity int) *Cache {
+// NewDefaultLRUCache create a new LRU cache with a fixed size capacity.
+// num_shard_bits = -1 means it is automatically determined: every shard
+// will be at least 512KB and number of shard bits will not exceed 6.
+// strict_capacity_limit = false
+// high_pri_pool_ration = 0.0
+func NewDefaultLRUCache(capacity int) *Cache {
 	return &Cache{
 		c: C.rocksdb_cache_create_lru(C.size_t(capacity)),
+	}
+}
+
+// NewLRUCache creates a new LRU cache with a fixed size capacity
+// and high priority pool ration. The cache is sharded
+// to 2^num_shard_bits shards, by hash of the key. The total capacity
+// is divided and evenly assigned to each shard. If strict_capacity_limit
+// is set, insert to the cache will fail when cache is full. User can also
+// set percentage of the cache reserves for high priority entries via
+// high_pri_pool_pct.
+// num_shard_bits = -1 means it is automatically determined: every shard
+// will be at least 512KB and number of shard bits will not exceed 6.
+func NewLRUCache(capacity int, highPriorityPoolRatio float64) *Cache {
+	return &Cache{
+		c: C.rocksdb_cache_create_lru_with_ratio(
+			C.size_t(capacity),
+			C.double(highPriorityPoolRatio),
+		),
 	}
 }
 
