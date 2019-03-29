@@ -45,10 +45,10 @@ func PrometheusCollectors() []prometheus.Collector {
 }
 
 // namespace is the leading part of all published metrics for the Storage service.
-const namespace = "storage"
+const namespace = "qed_storage"
 
-const blockCacheSubsystem = "" // sub-system associated with metrics for block cache.
-const ioSubsystem = "io"       // sub-system associated with metrics for I/O.
+const blockCacheSubsystem = "block" // sub-system associated with metrics for block cache.
+const ioSubsystem = "io"            // sub-system associated with metrics for I/O.
 
 type rocksDBMetrics struct {
 	*blockCacheMetrics
@@ -75,7 +75,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics) *blockCacheMetrics {
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Subsystem: blockCacheSubsystem,
-				Name:      "block_cache_miss",
+				Name:      "cache_miss",
 				Help:      "Total block cache misses.",
 			},
 			extractMetric(stats, rocksdb.TickerBlockCacheMiss),
@@ -84,7 +84,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics) *blockCacheMetrics {
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Subsystem: blockCacheSubsystem,
-				Name:      "block_cache_hit",
+				Name:      "cache_hit",
 				Help:      "Total block cache hits.",
 			},
 			extractMetric(stats, rocksdb.TickerBlockCacheHit),

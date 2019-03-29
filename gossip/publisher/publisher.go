@@ -112,10 +112,7 @@ func (p Publisher) RegisterMetrics(srv *metrics.Server) {
 		QedPublisherBatchesReceivedTotal,
 		QedPublisherBatchesProcessSeconds,
 	}
-
-	for _, m := range metrics {
-		srv.Register(m)
-	}
+	srv.Register(metrics)
 }
 
 func (p *Publisher) Process(b *protocol.BatchSnapshots) {
@@ -127,7 +124,7 @@ func (p *Publisher) Process(b *protocol.BatchSnapshots) {
 	for _, signedSnap := range b.Snapshots {
 		_, err := p.processed.Get(signedSnap.Signature)
 		if err != nil {
-			p.processed.Set(signedSnap.Signature, []byte{0x0}, 0)
+			_ = p.processed.Set(signedSnap.Signature, []byte{0x0}, 0)
 			batch.Snapshots = append(batch.Snapshots, signedSnap)
 		}
 	}
@@ -214,4 +211,3 @@ func (t PublishTask) Do() {
 		log.Infof("Publisher had an error getting response from snapStore saving a batch: %v", err)
 	}
 }
-

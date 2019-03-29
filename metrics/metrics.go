@@ -78,11 +78,12 @@ func (m Server) Shutdown() {
 
 // Register a prometheus collector in the prometheus registry used
 // by the metrics server.
-func (m Server) Register(metric prometheus.Collector) {
-	if err := m.registry.Register(metric); err != nil {
-		log.Infof("metric not registered:", err)
-	} else {
-		log.Infof("metric registered.")
+func (m Server) Register(collectors []prometheus.Collector) {
+	for _, c := range collectors {
+		if err := m.registry.Register(c); err != nil {
+			log.Infof("metric not registered:", err)
+		} else {
+			log.Infof("metric registered.")
+		}
 	}
 }
-
