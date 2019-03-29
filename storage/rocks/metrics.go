@@ -138,6 +138,6 @@ func (m *ioMetrics) PrometheusCollectors() []prometheus.Collector {
 
 func extractMetric(stats *rocksdb.Statistics, ticker rocksdb.TickerType) func() float64 {
 	return func() float64 {
-		return float64(stats.GetTickerCount(ticker))
+		return float64(stats.GetAndResetTickerCount(ticker))
 	}
 }
