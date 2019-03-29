@@ -270,8 +270,6 @@ func (s *Server) Stop() error {
 	log.Debugf("Metrics enabled: stopping server...")
 	s.metricsServer.Shutdown()
 
-	log.Debugf("Done.\n")
-
 	log.Debugf("Stopping MGMT server...")
 	if err := s.mgmtServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
 		log.Error(err)

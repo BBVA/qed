@@ -449,6 +449,8 @@ func (s *RocksDBStore) Close() error {
 	if s.stats != nil {
 		s.stats.Destroy()
 	}
+	rms = nil
+
 	if s.globalOpts != nil {
 		s.globalOpts.Destroy()
 	}
