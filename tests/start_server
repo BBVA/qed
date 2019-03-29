@@ -78,7 +78,7 @@ then
 else
     echo '>>>> Starting cluster mode...'
     leader
-    sleep 2
+    sleep 5
     echo '>>>> Starting followers'
     for i in $(seq 1 $CLUSTER_SIZE); do
         follower ${i}
