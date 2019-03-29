@@ -15,15 +15,6 @@
 */
 package gossip
 
-import (
-	"context"
+import "errors"
 
-	"github.com/prometheus/client_golang/prometheus"
-)
-
-// A processor enqueues tasks to be executed by the agent task manager
-type Processor interface {
-	Process(a *Agent, ctx context.Context)
-	Metrics() []prometheus.Collector
-}
-
+var ChTimedOut error = errors.New("Timeout sending data to channel")

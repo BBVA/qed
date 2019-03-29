@@ -37,14 +37,14 @@ type eventDelegate struct {
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
 	peer := member.ParsePeer(n)
 	peer.Status = member.Alive
-	e.agent.Topology.Update(peer)
+	e.agent.topology.Update(peer)
 	log.Debugf("member joined: %+v ", peer)
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 	peer := member.ParsePeer(n)
-	e.agent.Topology.Delete(peer)
+	e.agent.topology.Delete(peer)
 	log.Debugf("member left:  %+v", peer)
 }
 
@@ -53,7 +53,7 @@ func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
 	// ignore
 	peer := member.ParsePeer(n)
-	e.agent.Topology.Update(peer)
+	e.agent.topology.Update(peer)
 	log.Debugf("member updated: %+v ", peer)
 }
 
@@ -71,7 +71,7 @@ func newAgentDelegate(agent *Agent) *agentDelegate {
 // when broadcasting an alive message. It's length is limited to
 // the given byte size. This metadata is available in the Node structure.
 func (d *agentDelegate) NodeMeta(limit int) []byte {
-	meta, err := d.agent.Self.Meta.Encode()
+	meta, err := d.agent.self.Meta.Encode()
 	if err != nil {
 		log.Fatalf("Unable to encode node metadata: %v", err)
 	}
@@ -101,7 +101,7 @@ func (d *agentDelegate) NotifyMsg(msg []byte) {
 	// hashs the snaapshots to deduplicate processing inside the agent
 	hash := hashing.NewSha256Hasher().Do(*tmp["Snapshots"])
 	log.Debugf("Notifying batch %v\n", hash)
-	d.agent.In <- &hashedBatch{&batch, hash}
+	d.agent.inCh <- &hashedBatch{&batch, hash}
 }
 
 // GetBroadcasts is called when user data messages can be broadcast.
