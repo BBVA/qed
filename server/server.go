@@ -53,6 +53,7 @@ type Server struct {
 	httpServer         *http.Server
 	mgmtServer         *http.Server
 	raftBalloon        *raftwal.RaftBalloon
+	metrics            *serverMetrics
 	metricsServer      *metrics.Server
 	prometheusRegistry *prometheus.Registry
 	signer             sign.Signer
@@ -119,8 +120,9 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// create metrics server and register default qed metrics
+	server.metrics = newServerMetrics()
 	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
-	server.metricsServer.MustRegister(metrics.DefaultMetrics...)
+	server.RegisterMetrics(server.metricsServer)
 	store.RegisterMetrics(server.metricsServer)
 	// server.metricsServer.Register(raft.PrometheusCollectors())
 	// server.metricsServer.Register(balloon.PrometheusCollectors())
@@ -195,7 +197,7 @@ func join(joinAddr, raftAddr, nodeID string, metadata map[string]string) error {
 
 // Start will start the server in a non-blockable fashion.
 func (s *Server) Start() error {
-	metrics.QedInstancesCount.Inc()
+	s.metrics.Instances.Inc()
 	log.Infof("Starting QED server %s\n", s.conf.NodeID)
 
 	metadata := map[string]string{}
@@ -264,7 +266,7 @@ func (s *Server) Start() error {
 
 // Stop will close all the channels from the mux servers.
 func (s *Server) Stop() error {
-	metrics.QedInstancesCount.Dec()
+	s.metrics.Instances.Dec()
 	log.Infof("\nShutting down QED server %s", s.conf.NodeID)
 
 	log.Debugf("Metrics enabled: stopping server...")
@@ -301,6 +303,13 @@ func (s *Server) Stop() error {
 
 	log.Debugf("Done. Exiting...\n")
 	return nil
+}
+
+func (s *Server) RegisterMetrics(registry metrics.Registry) {
+	if registry != nil {
+		registry.MustRegister(s.metrics.collectors()...)
+		registry.MustRegister(metrics.DefaultMetrics...) // TODO: remove this!!!
+	}
 }
 
 func newTLSServer(addr string, mux *http.ServeMux) *http.Server {

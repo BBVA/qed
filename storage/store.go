@@ -102,7 +102,7 @@ type ManagedStore interface {
 	Backup(w io.Writer, until uint64) error
 	Snapshot() (uint64, error)
 	Load(r io.Reader) error
-	RegisterMetrics(metrics.Registry)
+	metrics.Registerer
 }
 
 type Mutation struct {
