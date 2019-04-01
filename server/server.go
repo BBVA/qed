@@ -120,8 +120,8 @@ func NewServer(conf *Config) (*Server, error) {
 
 	// create metrics server and register default qed metrics
 	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
-	server.metricsServer.Register(metrics.DefaultMetrics)
-	store.RegisterMetrics(server.metricsServer.Register)
+	server.metricsServer.MustRegister(metrics.DefaultMetrics...)
+	store.RegisterMetrics(server.metricsServer)
 	// server.metricsServer.Register(raft.PrometheusCollectors())
 	// server.metricsServer.Register(balloon.PrometheusCollectors())
 

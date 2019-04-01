@@ -131,7 +131,7 @@ func (a Auditor) RegisterMetrics(srv *metrics.Server) {
 		QedAuditorBatchesReceivedTotal,
 		QedAuditorGetMembershipProofErrTotal,
 	}
-	srv.Register(metrics)
+	srv.MustRegister(metrics...)
 }
 
 func (a Auditor) runTaskDispatcher() {
