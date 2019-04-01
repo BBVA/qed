@@ -45,5 +45,6 @@ resource "aws_instance" "inmemory-storage" {
   tags {
     Name = "qed-${var.name}"
     Role = "${var.role}"
+    DAM_OnOff = "NO"
   }
 }
