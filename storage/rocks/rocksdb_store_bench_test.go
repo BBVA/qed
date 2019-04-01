@@ -36,62 +36,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func BenchmarkMutateOnlyIndex(b *testing.B) {
-	store, closeF := openRocksDBStore(b)
-	defer closeF()
-
-	srvCloseF := startMetricsServer(store)
-	defer srvCloseF()
-
-	b.N = 10000000
-	b.ResetTimer()
-
-	hasher := hashing.NewFakeSha256Hasher()
-	for i := 0; i < b.N; i++ {
-		store.Mutate([]*storage.Mutation{
-			{
-				Table: storage.IndexTable,
-				Key:   hasher.Do([]byte(fmt.Sprintf("test%d", i))),
-				Value: util.Uint64AsBytes(uint64(i)),
-			},
-		})
-	}
-
-}
-
-func BenchmarkQueryOnlyIndex(b *testing.B) {
-	store, closeF := openRocksDBStore(b)
-	defer closeF()
-
-	N := 10000000
-	b.N = N
-	hasher := hashing.NewFakeSha256Hasher()
-
-	srvCloseF := startMetricsServer(store)
-	defer srvCloseF()
-
-	// populate storage
-	for i := 0; i < b.N; i++ {
-		store.Mutate([]*storage.Mutation{
-			{
-				Table: storage.IndexTable,
-				Key:   hasher.Do([]byte(fmt.Sprintf("test%d", i))),
-				Value: util.Uint64AsBytes(uint64(i)),
-			},
-		})
-	}
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		index := rnd.Intn(N)
-		key := hasher.Do([]byte(fmt.Sprintf("test%d", index)))
-		_, err := store.Get(storage.IndexTable, key)
-		require.NoError(b, err)
-	}
-
-}
-
 func BenchmarkMutateOnlyHyper(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
@@ -285,11 +229,6 @@ func BenchmarkMutateAllTables(b *testing.B) {
 		hyperKey := []byte{0x0, 0x0}
 		hyperKey = append(hyperKey, util.Uint64AsBytes(uint64(rnd.Intn(1000)))...)
 		store.Mutate([]*storage.Mutation{
-			{
-				Table: storage.IndexTable,
-				Key:   key,
-				Value: index,
-			},
 			{
 				Table: storage.HyperCacheTable,
 				Key:   hyperKey,

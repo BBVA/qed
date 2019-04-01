@@ -75,7 +75,6 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 
 	cfNames := []string{
 		storage.DefaultTable.String(),
-		storage.IndexTable.String(),
 		storage.HyperCacheTable.String(),
 		storage.HistoryCacheTable.String(),
 		storage.FSMStateTable.String(),
@@ -102,7 +101,6 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	// Per column family options
 	cfOpts := []*rocksdb.Options{
 		rocksdb.NewDefaultOptions(),
-		getIndexTableOpts(blockCache),
 		getHyperCacheTableOpts(blockCache),
 		getHistoryCacheTableOpts(blockCache),
 		getFsmStateTableOpts(),
@@ -137,58 +135,6 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	}
 
 	return store, nil
-}
-
-// The index table is insert-only without updates so we have
-// to optimize for an IO-bound and write-once workload.
-func getIndexTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
-
-	// This table performs both Get() and total order iterations.
-
-	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
-	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
-	bbto.SetBlockCache(blockCache)
-	// increase block size to 16KB
-	bbto.SetBlockSize(16 * 1024)
-
-	opts := rocksdb.NewDefaultOptions()
-	opts.SetBlockBasedTableFactory(bbto)
-	opts.SetCompression(rocksdb.SnappyCompression)
-
-	// We use level style compaction with high concurrency.
-	// Memtable size is 64MB and the total number of level 0
-	// files is 8. This means compaction is triggered when L0
-	// grows to 512MB. L1 size is 512MB and every level is 8 times
-	// larger than the previous one. L2 is 4GB, L3 is 32GB,
-	// L4 is 256GB, L5 is 2TB (note that given a 40B key-value
-	// pair, 2TB can contain up to around 51 billion)
-
-	// L0 size = 64MB * 1 (min_write_buffer_number_to_merge) * \
-	// 				8 (level0_file_num_compaction_trigger)
-	// 		   = 512MB
-	// L1 size = 64MB (target_file_base) * 8 (target_file_size_multiplier)
-	//		   = 512MB = max_bytes_for_level_base
-	// L2 size = 64MB (target_file_base) * 8^2 (target_file_size_multiplier)
-	// 		   = 4GB = 512 (max_bytes_for_level_base) * 8 (max_bytes_for_level_multiplier)
-	// L2 size = 64MB (target_file_base) * 8^3 (target_file_size_multiplier)
-	// 		   = 32GB = 512 (max_bytes_for_level_base) * 8^2 (max_bytes_for_level_multiplier)
-	// ...
-	opts.SetWriteBufferSize(64 * 1024 * 1024) // 64MB
-	opts.SetMaxWriteBufferNumber(3)
-	opts.SetMinWriteBufferNumberToMerge(1)
-	opts.SetLevel0FileNumCompactionTrigger(8)
-	opts.SetLevel0SlowdownWritesTrigger(17)
-	opts.SetLevel0StopWritesTrigger(24)
-	opts.SetTargetFileSizeBase(64 * 1024 * 1024) // 64MB
-	opts.SetTargetFileSizeMultiplier(8)
-	opts.SetMaxBytesForLevelBase(512 * 1024 * 1024 * 1024) // 512MB
-	opts.SetMaxBytesForLevelMultiplier(8)
-	opts.SetNumLevels(5)
-
-	// io parallelism
-	opts.SetMaxBackgroundCompactions(4)
-	opts.SetMaxBackgroundFlushes(1)
-	return opts
 }
 
 // The hyper table has the more varied behavior. It receives
@@ -512,7 +458,6 @@ func (s *RocksDBStore) Backup(w io.Writer, id uint64) error {
 
 	tables := []storage.Table{
 		storage.DefaultTable,
-		storage.IndexTable,
 		storage.HyperCacheTable,
 		storage.HistoryCacheTable,
 		storage.FSMStateTable,

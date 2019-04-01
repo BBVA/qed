@@ -18,6 +18,7 @@ package balloon
 
 import (
 	"fmt"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
@@ -198,44 +198,6 @@ func TestCacheWarmingUp(t *testing.T) {
 	}
 }
 
-func TestTamperAndVerify(t *testing.T) {
-	log.SetLogger("TestTamperAndVerify", log.SILENT)
-
-	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.2")
-	defer closeF()
-
-	b, err := NewBalloon(store, hashing.NewSha256Hasher)
-	assert.NoError(t, err)
-
-	event := hashing.Digest("Never knows best")
-	eventDigest := b.hasher.Do(event)
-
-	snapshot, mutations, err := b.Add(event)
-	store.Mutate(mutations)
-
-	memProof, err := b.QueryMembership(event, snapshot.Version)
-	assert.NoError(t, err)
-	assert.True(t, memProof.Verify(event, snapshot), "The proof should verify correctly")
-
-	original, err := store.Get(storage.IndexTable, eventDigest)
-	assert.NoError(t, err)
-
-	tpBytes := util.Uint64AsBytes(^uint64(0))
-
-	assert.NoError(t, store.Mutate(
-		[]*storage.Mutation{
-			{storage.IndexTable, eventDigest, tpBytes},
-		},
-	), "store add returned non nil value")
-
-	tampered, _ := store.Get(storage.IndexTable, eventDigest)
-	assert.Equal(t, tpBytes, tampered.Value, "Tamper unsuccessful")
-	assert.NotEqual(t, original.Value, tampered.Value, "Tamper unsuccessful")
-
-	_, err = b.QueryMembership(event, snapshot.Version)
-	require.Error(t, err)
-}
-
 func TestGenIncrementalAndVerify(t *testing.T) {
 	log.SetLogger("TestGenIncrementalAndVerify", log.SILENT)
 
@@ -318,7 +280,7 @@ func BenchmarkAddRocksDB(b *testing.B) {
 	require.NoError(b, err)
 
 	b.ResetTimer()
-	b.N = 100000
+	b.N = 1000000
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
 		_, mutations, _ := balloon.Add(event)
@@ -337,7 +299,7 @@ func BenchmarkQueryRocksDB(b *testing.B) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
-	b.N = 100000
+	b.N = 1000000
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
 		events = append(events, event)
@@ -347,7 +309,40 @@ func BenchmarkQueryRocksDB(b *testing.B) {
 
 	b.ResetTimer()
 	for i, e := range events {
-		balloon.QueryMembership(e, uint64(i))
+		_, err := balloon.QueryMembership(e, uint64(i))
+		require.NoError(b, err)
 	}
+
+}
+
+func BenchmarkQueryRocksDBParallel(b *testing.B) {
+	var events [][]byte
+	log.SetLogger("BenchmarkQueryRocksDB", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/ballon_bench.db")
+	defer closeF()
+
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(b, err)
+
+	b.N = 1000000
+	for i := 0; i < b.N; i++ {
+		event := rand.Bytes(128)
+		events = append(events, event)
+		_, mutations, _ := balloon.Add(event)
+		store.Mutate(mutations)
+	}
+
+	b.ResetTimer()
+	n := int64(-1)
+	b.SetParallelism(100)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			i := atomic.AddInt64(&n, 1)
+			event := events[i]
+			_, err := balloon.QueryMembership(event, uint64(i))
+			require.NoError(b, err)
+		}
+	})
 
 }

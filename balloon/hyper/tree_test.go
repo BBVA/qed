@@ -76,6 +76,7 @@ func TestProveMembership(t *testing.T) {
 	testCases := []struct {
 		addedKeys         map[uint64]hashing.Digest
 		expectedAuditPath AuditPath
+		expectedValue     []byte
 	}{
 		{
 			addedKeys: map[uint64]hashing.Digest{
@@ -87,6 +88,7 @@ func TestProveMembership(t *testing.T) {
 				"0x20|5": hashing.Digest{0x0},
 				"0x10|4": hashing.Digest{0x0},
 			},
+			expectedValue: []byte{0x0},
 		},
 		{
 			addedKeys: map[uint64]hashing.Digest{
@@ -104,6 +106,7 @@ func TestProveMembership(t *testing.T) {
 				"0x02|1": hashing.Digest{0x2},
 				"0x01|0": hashing.Digest{0x1},
 			},
+			expectedValue: []byte{0x0},
 		},
 	}
 
@@ -122,12 +125,10 @@ func TestProveMembership(t *testing.T) {
 			require.NoErrorf(t, err, "This should not fail for index %d", i)
 		}
 
-		leaf, err := store.Get(storage.IndexTable, searchedDigest)
-		require.NoErrorf(t, err, "No leaf with digest %v", err)
-
-		proof, err := tree.QueryMembership(leaf.Key, leaf.Value)
-		require.NoErrorf(t, err, "Error adding to the tree: %v for index %d", err, i)
-		assert.Equalf(t, c.expectedAuditPath, proof.AuditPath, "Incorrect audit path for index %d", i)
+		proof, err := tree.QueryMembership(searchedDigest)
+		require.NoErrorf(t, err, "Error adding to the tree: %v for case %d", err, i)
+		assert.Equalf(t, c.expectedValue, proof.Value, "Incorrect value for case %d", i)
+		assert.Equalf(t, c.expectedAuditPath, proof.AuditPath, "Incorrect audit path for case %d", i)
 	}
 
 }
@@ -155,16 +156,14 @@ func TestAddAndVerify(t *testing.T) {
 		tree := NewHyperTree(c.hasherF, store, simpleCache)
 
 		key := hasher.Do(hashing.Digest("a test event"))
-		valueBytes := util.Uint64AsBytes(value)
+		valueBytes := util.Uint64AsPaddedBytes(value, len(key))
+		valueBytes = valueBytes[len(valueBytes)-len(key):] // adjust to the key size
 
 		rootHash, mutations, err := tree.Add(key, value)
 		require.NoErrorf(t, err, "Add operation should not fail for index %d", i)
 		tree.store.Mutate(mutations)
 
-		leaf, err := store.Get(storage.IndexTable, key)
-		require.NoErrorf(t, err, "No leaf with key %d: %v", key, err)
-
-		proof, err := tree.QueryMembership(leaf.Key, leaf.Value)
+		proof, err := tree.QueryMembership(key)
 		require.Nilf(t, err, "The membership query should not fail for index %d", i)
 		assert.Equalf(t, valueBytes, proof.Value, "Incorrect actual value for index %d", i)
 
@@ -200,31 +199,6 @@ func TestDeterministicAdd(t *testing.T) {
 		_, m2, _ := tree2.Add(eventDigest, version)
 		store2.Mutate(m2)
 	}
-
-	// check index store equality
-	reader11 := store1.GetAll(storage.IndexTable)
-	reader21 := store2.GetAll(storage.IndexTable)
-	defer reader11.Close()
-	defer reader21.Close()
-	buff11 := make([]*storage.KVPair, 0)
-	buff21 := make([]*storage.KVPair, 0)
-	for {
-		b := make([]*storage.KVPair, 100)
-		n, err := reader11.Read(b)
-		if err != nil || n == 0 {
-			break
-		}
-		buff11 = append(buff11, b...)
-	}
-	for {
-		b := make([]*storage.KVPair, 100)
-		n, err := reader21.Read(b)
-		if err != nil || n == 0 {
-			break
-		}
-		buff21 = append(buff21, b...)
-	}
-	require.Equalf(t, buff11, buff21, "The stored indexes should be equal")
 
 	// check cache store equality
 	reader12 := store1.GetAll(storage.HyperCacheTable)
@@ -303,7 +277,7 @@ func BenchmarkAdd(b *testing.B) {
 	go http.ListenAndServe(":2112", nil)
 
 	b.ResetTimer()
-	b.N = 10000000
+	b.N = 1000000
 	for i := 0; i < b.N; i++ {
 		index := make([]byte, 8)
 		binary.LittleEndian.PutUint64(index, uint64(i))
