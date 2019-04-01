@@ -99,7 +99,9 @@
   register: grafana_config
 
 - name: Restart Grafana
-  service:
+  systemd:
     name: grafana-server
     state: restarted
+    enabled: yes
+    daemon_reload: yes
   when: grafana_config.changed
