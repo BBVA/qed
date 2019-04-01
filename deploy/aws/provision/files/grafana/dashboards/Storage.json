@@ -202,7 +202,7 @@
       }
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 18,
   "style": "dark",
   "tags": [],
@@ -210,8 +210,8 @@
     "list": []
   },
   "time": {
-    "from": "2019-03-29T15:39:50.327Z",
-    "to": "2019-03-29T21:41:56.121Z"
+    "from": "now-15m",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [

@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "iteration": 1554107924022,
+  "iteration": 1554125247186,
   "links": [],
   "panels": [
     {
@@ -1624,7 +1624,7 @@
       "valueName": "delta"
     }
   ],
-  "refresh": false,
+  "refresh": "10s",
   "schemaVersion": 18,
   "style": "dark",
   "tags": [],
@@ -1681,8 +1681,8 @@
     ]
   },
   "time": {
-    "from": "2019-03-29T15:31:20.122Z",
-    "to": "2019-03-29T21:45:23.497Z"
+    "from": "now-15m",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
