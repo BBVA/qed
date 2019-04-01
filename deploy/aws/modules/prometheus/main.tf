@@ -52,5 +52,6 @@ resource "aws_instance" "prometheus" {
   tags {
     Name = "qed-prometheus"
     Role = "${var.role}"
+    DAM_OnOff = "NO"
   }
 }

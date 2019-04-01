@@ -52,5 +52,6 @@ resource "aws_instance" "qed-server" {
   tags {
     Name = "${format("${var.name}-%01d", count.index)}"
     Role = "${var.role}"
+    DAM_OnOff = "NO"
   }
 }
