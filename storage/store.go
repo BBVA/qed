@@ -19,6 +19,8 @@ package storage
 import (
 	"errors"
 	"io"
+
+	metrics "github.com/bbva/qed/metrics"
 )
 
 // Table groups related key-value pairs under a
@@ -100,6 +102,7 @@ type ManagedStore interface {
 	Backup(w io.Writer, until uint64) error
 	Snapshot() (uint64, error)
 	Load(r io.Reader) error
+	RegisterMetrics(metrics.Registry)
 }
 
 type Mutation struct {

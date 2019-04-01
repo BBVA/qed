@@ -29,6 +29,7 @@ import (
 	"github.com/dgraph-io/badger/y"
 
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
 )
 
@@ -381,4 +382,8 @@ func (b *BadgerStore) runVlogGC(db *b.DB, threshold int64) {
 			runGC()
 		}
 	}
+}
+
+func (b *BadgerStore) RegisterMetrics(registry metrics.Registry) {
+	// not implemented
 }

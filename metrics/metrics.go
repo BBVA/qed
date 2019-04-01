@@ -42,6 +42,12 @@ func init() {
 	Balloon = expvar.NewMap("Qed_balloon_stats")
 }
 
+// Registry defines the interface of the prometheus metrics registry
+type Registry interface {
+	Register(prometheus.Collector) error
+	MustRegister(...prometheus.Collector)
+}
+
 // A metrics server holds the http API and the prometheus registry
 // which provides access to the registered metrics.
 type Server struct {
@@ -76,9 +82,17 @@ func (m Server) Shutdown() {
 	m.server.Shutdown(ctx)
 }
 
-// Register a prometheus collector in the prometheus registry used
+// Register registers a prometheus collector in the prometheus registry used
 // by the metrics server.
-func (m Server) Register(collectors []prometheus.Collector) {
+func (m Server) Register(collector prometheus.Collector) {
+	if err := m.registry.Register(collector); err != nil {
+		log.Infof("metric not registered:", err)
+	}
+}
+
+// MustRegister registers multiple prometheus collectors in the prometheus registry used
+// by the metrics server.
+func (m Server) MustRegister(collectors ...prometheus.Collector) {
 	for _, c := range collectors {
 		if err := m.registry.Register(c); err != nil {
 			log.Infof("metric not registered:", err)
