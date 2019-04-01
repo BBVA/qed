@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "iteration": 1554125247186,
+  "iteration": 1554125967496,
   "links": [],
   "panels": [
     {
@@ -1522,7 +1522,7 @@
       "tableColumn": "Value",
       "targets": [
         {
-          "expr": "sum(qed_store_snapshots_stored_total)",
+          "expr": "sum(qed_store_events_stored_total)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
@@ -1624,7 +1624,7 @@
       "valueName": "delta"
     }
   ],
-  "refresh": "10s",
+  "refresh": false,
   "schemaVersion": 18,
   "style": "dark",
   "tags": [],
