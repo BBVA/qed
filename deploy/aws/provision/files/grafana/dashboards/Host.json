@@ -16,8 +16,7 @@
   "editable": true,
   "gnetId": 179,
   "graphTooltip": 1,
-  "id": 2,
-  "iteration": 1553864453675,
+  "iteration": 1554108012691,
   "links": [],
   "panels": [
     {
@@ -940,7 +939,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(node_network_receive_bytes_total) by (job)",
+          "expr": "sum(rate(node_network_receive_bytes_total[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "2m",
@@ -949,7 +948,7 @@
           "refId": "A"
         },
         {
-          "expr": "- sum(node_network_transmit_bytes_total) by (job)",
+          "expr": "- sum(rate(node_network_transmit_bytes_total[$interval])) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "2m",
@@ -1000,7 +999,7 @@
       }
     }
   ],
-  "refresh": "10s",
+  "refresh": false,
   "schemaVersion": 18,
   "style": "dark",
   "tags": [
@@ -1080,8 +1079,8 @@
     ]
   },
   "time": {
-    "from": "now-30m",
-    "to": "now"
+    "from": "2019-03-29T15:46:32.123Z",
+    "to": "2019-03-29T21:40:52.763Z"
   },
   "timepicker": {
     "refresh_intervals": [

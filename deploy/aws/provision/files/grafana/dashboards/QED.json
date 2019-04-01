@@ -15,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "id": 3,
-  "iteration": 1553863181459,
+  "iteration": 1554107924022,
   "links": [],
   "panels": [
     {
@@ -473,7 +472,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "ops",
           "label": "requests",
           "logBase": 1,
           "max": null,
@@ -558,7 +557,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "reqps",
           "label": "requests",
           "logBase": 1,
           "max": null,
@@ -643,7 +642,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "reqps",
           "label": "requests",
           "logBase": 1,
           "max": null,
@@ -1350,7 +1349,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "s",
           "label": "seconds",
           "logBase": 1,
           "max": null,
@@ -1625,7 +1624,7 @@
       "valueName": "delta"
     }
   ],
-  "refresh": "5s",
+  "refresh": false,
   "schemaVersion": 18,
   "style": "dark",
   "tags": [],
@@ -1682,8 +1681,8 @@
     ]
   },
   "time": {
-    "from": "now-1h",
-    "to": "now"
+    "from": "2019-03-29T15:31:20.122Z",
+    "to": "2019-03-29T21:45:23.497Z"
   },
   "timepicker": {
     "refresh_intervals": [
