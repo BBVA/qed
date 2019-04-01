@@ -61,10 +61,6 @@ agent:
 {% for host in groups['name_qed-0'] %}
     - "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400"
 {% endfor %}
-{% if 'role_auditor' in group_names %}
-  pub_urls:
-    - "{% for host in groups['role_qed'] %}http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800{% if not loop.last %},{% endif %}{% endfor %}"
-{% endif %}
   server_urls:
     - "{% for host in groups['role_qed'] %}http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800{% if not loop.last %},{% endif %}{% endfor %}"
 {% for host in groups['role_storage'] %}

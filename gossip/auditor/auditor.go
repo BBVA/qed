@@ -106,6 +106,7 @@ func NewAuditor(conf Config) (*Auditor, error) {
 		client.SetHttpClient(httpClient),
 		client.SetURLs(conf.QEDUrls[0], conf.QEDUrls[1:]...),
 		client.SetAPIKey(conf.APIKey),
+		client.SetReadPreference(client.Any),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Cannot start http client: ")
