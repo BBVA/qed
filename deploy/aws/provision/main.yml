@@ -24,6 +24,8 @@
   tasks:
     - include: tasks/common/build.yml
     - include: tasks/common/config.yml
+  tags:
+    - install
 
 - hosts: all
   remote_user: ec2-user
@@ -42,6 +44,8 @@
         search_regex: OpenSSH
       delegate_to: localhost
       retries: 2
+  tags:
+    - install
 
 - hosts: all
   remote_user: ec2-user
@@ -50,6 +54,7 @@
     - name: Gather facts
       setup:
   tags:
+    - install
     - prometheus
 
 - hosts: type_aws_instance
@@ -59,7 +64,8 @@
     - vars.yml
   tasks:
     - include: tasks/common/main.yml
-
+  tags:
+    - install
 
 - hosts: all
   remote_user: ec2-user
@@ -68,6 +74,8 @@
     - vars.yml
   tasks:
     - include: tasks/qed/main.yml
+  tags:
+    - install
 
 - hosts: riot
   remote_user: ec2-user
@@ -76,6 +84,8 @@
     - vars.yml
   tasks:
     - include: tasks/riot/main.yml
+  tags:
+    - install
 
 - hosts: inmemory-storage
   remote_user: ec2-user
@@ -84,6 +94,8 @@
     - vars.yml
   tasks:
     - include: tasks/inmemory_storage/main.yml
+  tags:
+    - install
 
 - hosts: prometheus
   remote_user: ec2-user
@@ -99,104 +111,5 @@
         daemon_reload: yes
         state: restarted
   tags:
-    - prometheus
-
-- hosts: role_qed
-  remote_user: ec2-user
-  gather_facts: true
-  serial: 1
-  become: true
-  vars_files:
-    - vars.yml
-  tasks:
-    - name: Restart all services
-      systemd:
-        name: "{{ item }}"
-        state: restarted
-      with_items:
-        - qed
-        - exporter
-    - name: wait for raised api port
-      wait_for:
-        port: 8800
-        host: "{{ansible_hostname}}"
-    - name: wait for raised mgmt port
-      wait_for:
-        port: 8700
-        host: "{{ansible_hostname}}"
-    - name: wait for raised metrics port
-      wait_for:
-        port: 8600
-        host: "{{ansible_hostname}}"
-
-  tags:
-    - start-qed
-
-- hosts: role_auditor, role_monitor, role_publisher
-  remote_user: ec2-user
-  become: true
-  vars_files:
-    - vars.yml
-  tasks:
-    - name: Restart all services
-      systemd:
-        name: "{{ item }}"
-        state: restarted
-      with_items:
-        - qed
-        - exporter
-  tags:
-    - start-agents
-
-- hosts: inmemory-storage
-  remote_user: ec2-user
-  become: true
-  vars_files:
-    - vars.yml
-  tasks:
-    - name: Start all services
-      systemd:
-        name: "{{ item }}"
-        state: started
-      with_items:
-        - storage
-        - exporter
-  tags:
-    - start-storage
-
-- hosts: riot
-  remote_user: ec2-user
-  become: true
-  vars_files:
-    - vars.yml
-  tasks:
-    - name: Restart all services
-      systemd:
-        name: "{{ item }}"
-        state: restarted
-      with_items:
-        - riot
-        - exporter
-    - name: wait for raised riot port
-      wait_for:
-        port: 7700
-        host: "{{ansible_hostname}}"
-  tags:
-    - start-storage
-
-- hosts: prometheus
-  remote_user: ec2-user
-  become: true
-  vars_files:
-    - vars.yml
-  tasks:
-    - name: Start all services
-      systemd:
-        name: "{{ item }}"
-        state: started
-      with_items:
-        - prometheus
-        - exporter
-  tags:
-    - start-prometheus
+    - install
     - prometheus
