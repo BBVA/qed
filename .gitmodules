@@ -1,11 +1,14 @@
 [submodule "github.com/facebook/rocksdb"]
 	path = c-deps/rocksdb
 	url = https://github.com/facebook/rocksdb.git
+	ignore = dirty
 	
 [submodule "github.com/google/snappy"]
 	path = c-deps/snappy
 	url = https://github.com/google/snappy.git
+	ignore = dirty
 
 [submodule "github.com/jemalloc/jemalloc"]
 	path = c-deps/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
+	ignore = dirty
