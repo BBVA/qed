@@ -40,7 +40,7 @@ func BenchmarkMutateOnlyIndex(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	b.N = 10000000
@@ -67,7 +67,7 @@ func BenchmarkQueryOnlyIndex(b *testing.B) {
 	b.N = N
 	hasher := hashing.NewFakeSha256Hasher()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	// populate storage
@@ -96,7 +96,7 @@ func BenchmarkMutateOnlyHyper(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	b.N = 10000000
@@ -126,7 +126,7 @@ func BenchmarkQueryOnlyHyper(b *testing.B) {
 	b.N = N
 	hasher := hashing.NewFakeSha256Hasher()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	// populate storage
@@ -158,7 +158,7 @@ func BenchmarkMutateOnlyHistory(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	b.N = 10000000
@@ -187,7 +187,7 @@ func BenchmarkQueryOnlyHistory(b *testing.B) {
 	b.N = N
 	hasher := hashing.NewFakeSha256Hasher()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	// populate storage
@@ -219,7 +219,7 @@ func BenchmarkMutateOnlyFSMState(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	b.N = 1000000
@@ -241,7 +241,7 @@ func BenchmarkQueryOnlyFSMState(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	N := 1000000
@@ -271,7 +271,7 @@ func BenchmarkMutateAllTables(b *testing.B) {
 	store, closeF := openRocksDBStore(b)
 	defer closeF()
 
-	srvCloseF := startMetricsServer()
+	srvCloseF := startMetricsServer(store)
 	defer srvCloseF()
 
 	hasher := hashing.NewFakeSha256Hasher()
@@ -310,9 +310,9 @@ func BenchmarkMutateAllTables(b *testing.B) {
 
 }
 
-func startMetricsServer() func() {
+func startMetricsServer(store *RocksDBStore) func() {
 	reg := prometheus.NewRegistry()
-	reg.MustRegister(PrometheusCollectors()...)
+	store.RegisterMetrics(reg)
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	srv := &http.Server{Addr: ":2112", Handler: mux}

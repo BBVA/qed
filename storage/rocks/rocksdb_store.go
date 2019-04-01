@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/rocksdb"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/pb"
@@ -56,6 +57,9 @@ type RocksDBStore struct {
 	// read/write options
 	ro *rocksdb.ReadOptions
 	wo *rocksdb.WriteOptions
+
+	// metrics
+	metrics *rocksDBMetrics
 }
 
 type Options struct {
@@ -128,8 +132,8 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 		ro:             rocksdb.NewDefaultReadOptions(),
 	}
 
-	if rms == nil && stats != nil {
-		rms = newRocksDBMetrics(stats)
+	if stats != nil {
+		store.metrics = newRocksDBMetrics(stats)
 	}
 
 	return store, nil
@@ -449,7 +453,6 @@ func (s *RocksDBStore) Close() error {
 	if s.stats != nil {
 		s.stats.Destroy()
 	}
-	rms = nil
 
 	if s.globalOpts != nil {
 		s.globalOpts.Destroy()
@@ -602,6 +605,12 @@ func (s *RocksDBStore) Load(r io.Reader) error {
 	}
 
 	return nil
+}
+
+func (s *RocksDBStore) RegisterMetrics(registry metrics.Registry) {
+	if registry != nil {
+		registry.MustRegister(s.metrics.collectors()...)
+	}
 }
 
 func writeTo(entry *pb.KVPair, w io.Writer) error {
