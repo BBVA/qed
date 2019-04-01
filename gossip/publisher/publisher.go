@@ -112,7 +112,7 @@ func (p Publisher) RegisterMetrics(srv *metrics.Server) {
 		QedPublisherBatchesReceivedTotal,
 		QedPublisherBatchesProcessSeconds,
 	}
-	srv.Register(metrics)
+	srv.MustRegister(metrics...)
 }
 
 func (p *Publisher) Process(b *protocol.BatchSnapshots) {

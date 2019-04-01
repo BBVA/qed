@@ -128,7 +128,7 @@ func (m Monitor) RegisterMetrics(srv *metrics.Server) {
 		QedMonitorBatchesProcessSeconds,
 		QedMonitorGetIncrementalProofErrTotal,
 	}
-	srv.Register(metrics)
+	srv.MustRegister(metrics...)
 }
 
 func (m Monitor) Process(b *protocol.BatchSnapshots) {
