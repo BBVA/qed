@@ -48,6 +48,10 @@ type Registry interface {
 	MustRegister(...prometheus.Collector)
 }
 
+type Registerer interface {
+	RegisterMetrics(Registry)
+}
+
 // A metrics server holds the http API and the prometheus registry
 // which provides access to the registered metrics.
 type Server struct {

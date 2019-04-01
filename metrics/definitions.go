@@ -21,12 +21,6 @@ import (
 )
 
 var (
-	QedInstancesCount = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "qed_instances_count",
-			Help: "Number of QED servers currently running",
-		},
-	)
 
 	// API
 
@@ -127,7 +121,6 @@ var (
 	// PROMETHEUS
 
 	DefaultMetrics = []prometheus.Collector{
-		QedInstancesCount,
 		QedAPIHealthcheckRequestsTotal,
 
 		QedBalloonAddDurationSeconds,
@@ -141,4 +134,3 @@ var (
 		QedBalloonIncrementalTotal,
 	}
 )
-
