@@ -39,7 +39,7 @@ func TestPassThroughCache(t *testing.T) {
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
-	table := storage.IndexTable
+	table := storage.HistoryCacheTable
 	cache := NewPassThroughCache(table, store)
 
 	for i, c := range testCases {
