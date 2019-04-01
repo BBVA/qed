@@ -61,6 +61,10 @@ func pruneToFind(index []byte, batches batchLoader) *operationsStack {
 			// regardless if the key of the shortcut matches the searched index
 			// we must stop traversing because there are no more leaves below
 			ops.Push(getProvidedHash(pos, iBatch, batch)) // not collected
+			k, v := batch.GetLeafKVAt(iBatch)
+			if bytes.Equal(k, index) {
+				ops.Push(collectValue(pos, v)) // collect value if the key matches the queried index
+			}
 			return
 		}
 

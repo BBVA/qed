@@ -39,7 +39,7 @@ func TestMutate(t *testing.T) {
 		key, value    []byte
 		expectedError error
 	}{
-		{"Mutate Key=Value", storage.IndexTable, []byte("Key"), []byte("Value"), nil},
+		{"Mutate Key=Value", storage.HistoryCacheTable, []byte("Key"), []byte("Value"), nil},
 	}
 
 	for _, test := range tests {
@@ -61,8 +61,8 @@ func TestGetExistentKey(t *testing.T) {
 		key, value    []byte
 		expectedError error
 	}{
-		{storage.IndexTable, []byte("Key1"), []byte("Value1"), nil},
-		{storage.IndexTable, []byte("Key2"), []byte("Value2"), nil},
+		{storage.HistoryCacheTable, []byte("Key1"), []byte("Value1"), nil},
+		{storage.HistoryCacheTable, []byte("Key2"), []byte("Value2"), nil},
 		{storage.HyperCacheTable, []byte("Key3"), []byte("Value3"), nil},
 		{storage.HyperCacheTable, []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
 	}
@@ -108,7 +108,7 @@ func TestGetRange(t *testing.T) {
 		{0, 20, 10},
 	}
 
-	table := storage.IndexTable
+	table := storage.HistoryCacheTable
 	for i := 10; i < 50; i++ {
 		store.Mutate([]*storage.Mutation{
 			{table, []byte{byte(i)}, []byte("Value")},
@@ -174,7 +174,7 @@ func TestGetLast(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	tables := []storage.Table{storage.IndexTable, storage.HistoryCacheTable, storage.HyperCacheTable}
+	tables := []storage.Table{storage.HistoryCacheTable, storage.HyperCacheTable}
 	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
@@ -198,7 +198,7 @@ func TestBackupLoad(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	tables := []storage.Table{storage.IndexTable, storage.HistoryCacheTable, storage.HyperCacheTable}
+	tables := []storage.Table{storage.HistoryCacheTable, storage.HyperCacheTable}
 	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
