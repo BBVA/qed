@@ -59,7 +59,7 @@ type Server struct {
 	signer             sign.Signer
 	sender             *sender.Sender
 	agent              *gossip.Agent
-	agentsQueue        chan *protocol.Snapshot
+	snapshotsCh        chan *protocol.Snapshot
 }
 
 func serverInfo(conf *Config) http.HandlerFunc {
@@ -146,14 +146,14 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// TODO: add queue size to config
-	server.agentsQueue = make(chan *protocol.Snapshot, 2<<16)
+	server.snapshotsCh = make(chan *protocol.Snapshot, 2<<16)
 
 	// Create sender
 	server.sender = sender.NewSender(server.agent, sender.DefaultConfig(), server.signer)
 	server.sender.RegisterMetrics(server.metricsServer)
 
 	// Create RaftBalloon
-	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.agentsQueue)
+	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.snapshotsCh)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		log.Debug("	* Starting QED gossip agent.")
-		s.sender.Start(s.agentsQueue)
+		s.sender.Start(s.snapshotsCh)
 	}()
 
 	util.AwaitTermSignal(s.Stop)
@@ -293,7 +293,7 @@ func (s *Server) Stop() error {
 
 	log.Debugf("Closing QED sender...")
 	s.sender.Stop()
-	close(s.agentsQueue)
+	close(s.snapshotsCh)
 
 	log.Debugf("Stopping QED agent...")
 	if err := s.agent.Shutdown(); err != nil {

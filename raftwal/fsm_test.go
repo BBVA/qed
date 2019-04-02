@@ -8,16 +8,19 @@ import (
 	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/protocol"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/raftwal/commands"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 )
 
 func TestApply(t *testing.T) {
+
+	log.SetLogger("TestApply", log.SILENT)
+
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	// happy path
@@ -39,10 +42,13 @@ func TestApply(t *testing.T) {
 }
 
 func TestSnapshot(t *testing.T) {
+
+	log.SetLogger("TestSnapshot", log.SILENT)
+
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	fsm.Apply(newRaftLog(0, 0))
@@ -63,20 +69,26 @@ func (f *fakeRC) Close() error {
 }
 
 func TestRestore(t *testing.T) {
+
+	log.SetLogger("TestRestore", log.SILENT)
+
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	assert.NoError(t, fsm.Restore(&fakeRC{}))
 }
 
 func TestAddAndRestoreSnapshot(t *testing.T) {
+
+	log.SetLogger("TestAddAndRestoreSnapshot", log.SILENT)
+
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	fsm.Apply(newRaftLog(0, 0))
@@ -108,7 +120,7 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	defer close2F()
 
 	// New FSMStore
-	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher, make(chan *protocol.Snapshot, 100))
+	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	err = fsm2.Restore(r)
