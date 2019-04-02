@@ -76,6 +76,7 @@ func TestPruneToFind(t *testing.T) {
 				{innerHashCode, pos(0, 5)},
 				{collectHashCode, pos(16, 4)},
 				{getDefaultHashCode, pos(16, 4)},
+				{collectValueCode, pos(0, 4)},
 				{getProvidedHashCode, pos(0, 4)}, // we stop traversing at the shortcut (index=0)
 			},
 		},
@@ -177,6 +178,7 @@ func TestPruneToFind(t *testing.T) {
 				{collectHashCode, pos(2, 1)},
 				{getDefaultHashCode, pos(2, 1)},
 				{innerHashCode, pos(0, 1)},
+				{collectValueCode, pos(1, 0)},
 				{getProvidedHashCode, pos(1, 0)}, // shortcut found but not collected
 				{collectHashCode, pos(0, 0)},
 				{getProvidedHashCode, pos(0, 0)}, // we take the hash of the index=0 position from the batch
@@ -264,6 +266,7 @@ func TestPruneToFind(t *testing.T) {
 				{getDefaultHashCode, pos(16, 4)},
 				{innerHashCode, pos(0, 4)},
 				{innerHashCode, pos(8, 3)},
+				{collectValueCode, pos(12, 2)},
 				{getProvidedHashCode, pos(12, 2)}, // found shortcut index=12
 				{collectHashCode, pos(8, 2)},
 				{getProvidedHashCode, pos(8, 2)}, // shortcut index=8

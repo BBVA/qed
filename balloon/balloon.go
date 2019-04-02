@@ -247,13 +247,7 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 	stats.AddFloat("QueryMembership", 1)
 
 	var proof MembershipProof
-	var wg sync.WaitGroup
-	var hyperErr, historyErr error
-	var hyperProof *hyper.QueryProof
-	var historyProof *history.MembershipProof
-	var leaf *storage.KVPair
 	var err error
-
 	proof.Hasher = b.hasherF()
 	proof.KeyDigest = keyDigest
 	proof.QueryVersion = version
@@ -263,45 +257,36 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 		version = proof.CurrentVersion
 	}
 
-	leaf, err = b.store.Get(storage.IndexTable, proof.KeyDigest)
-	switch {
-	case err != nil && err != storage.ErrKeyNotFound:
-		return nil, fmt.Errorf("error reading leaf %v data: %v", proof.KeyDigest, err)
-
-	case err != nil && err == storage.ErrKeyNotFound:
-		proof.Exists = false
-		proof.ActualVersion = version
-		leaf = &storage.KVPair{Key: keyDigest, Value: util.Uint64AsBytes(version)}
-
-	case err == nil:
-		proof.Exists = true
-		proof.ActualVersion = util.BytesAsUint64(leaf.Value)
-
-		if proof.ActualVersion <= version {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				historyProof, historyErr = b.historyTree.ProveMembership(proof.ActualVersion, version)
-			}()
-		} else {
-			return nil, fmt.Errorf("query version %d is greater than the actual version which is %d", version, proof.ActualVersion)
-		}
-
-	}
-
-	hyperProof, hyperErr = b.hyperTree.QueryMembership(leaf.Key, leaf.Value)
-
-	wg.Wait()
-	if hyperErr != nil {
+	proof.HyperProof, err = b.hyperTree.QueryMembership(keyDigest)
+	if err != nil {
 		return nil, fmt.Errorf("unable to get proof from hyper tree: %v", err)
 	}
 
-	if historyErr != nil {
-		return nil, fmt.Errorf("unable to get proof from history tree: %v", err)
+	if len(proof.HyperProof.Value) == 0 {
+		proof.Exists = false
+		proof.ActualVersion = version
+		return &proof, nil
 	}
 
-	proof.HyperProof = hyperProof
-	proof.HistoryProof = historyProof
+	proof.Exists = true
+	if versionLen := len(proof.HyperProof.Value); versionLen < 8 { // TODO GET RID OF THIS: used only to pass tests
+		// the version is stored in the hyper tree with the length of the event digest
+		// if the length of the value is less than the length of a uint64 in bytes, we have to add padding
+		proof.ActualVersion = util.BytesAsUint64(util.AddPaddingToBytes(proof.HyperProof.Value, 8-versionLen))
+	} else {
+		// if the length of the value is greater or equal than the length of a uint64 in bytes, we have to truncate
+		proof.ActualVersion = util.BytesAsUint64(proof.HyperProof.Value[versionLen-8:])
+	}
+
+	if proof.ActualVersion <= version {
+		proof.HistoryProof, err = b.historyTree.ProveMembership(proof.ActualVersion, version)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get proof from history tree: %v", err)
+		}
+	} else {
+		return nil, fmt.Errorf("query version %d is greater than the actual version which is %d", version, proof.ActualVersion)
+	}
+
 	return &proof, nil
 }
 

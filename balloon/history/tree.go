@@ -19,7 +19,6 @@ package history
 import (
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
@@ -48,7 +47,7 @@ func NewHistoryTree(hasherF func() hashing.Hasher, store storage.Store, cacheSiz
 
 func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
 
-	log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
+	// log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
 
 	// build a visitable pruned tree and then visit it to generate the root hash
 	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryCacheTable)
@@ -59,7 +58,7 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 
 func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, error) {
 
-	log.Debugf("Proving membership for index %d with version %d", index, version)
+	//log.Debugf("Proving membership for index %d with version %d", index, version)
 
 	// build a visitable pruned tree and then visit it to collect the audit path
 	visitor := newAuditPathVisitor(t.hasherF(), t.readCache)
@@ -75,7 +74,7 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 
 func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, error) {
 
-	log.Debugf("Proving consistency between versions %d and %d", start, end)
+	//log.Debugf("Proving consistency between versions %d and %d", start, end)
 
 	// build a visitable pruned tree and then visit it to collect the audit path
 	visitor := newAuditPathVisitor(t.hasherF(), t.readCache)
