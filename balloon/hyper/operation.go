@@ -29,6 +29,7 @@ type pruningContext struct {
 	DefaultHashes []hashing.Digest
 	Mutations     []*storage.Mutation
 	AuditPath     AuditPath
+	Value         []byte
 }
 
 type operationCode int
@@ -42,6 +43,7 @@ const (
 	getProvidedHashCode
 	putInCacheCode
 	mutateBatchCode
+	collectValueCode
 	collectHashCode
 	getFromPathCode
 	useHashCode
@@ -141,6 +143,18 @@ func mutateBatch(pos position, batch *batchNode) *operation {
 		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
 			hash := ops.Pop().Interpret(ops, c)
 			c.Mutations = append(c.Mutations, storage.NewMutation(storage.HyperCacheTable, pos.Bytes(), batch.Serialize()))
+			return hash
+		},
+	}
+}
+
+func collectValue(pos position, value []byte) *operation {
+	return &operation{
+		Code: collectValueCode,
+		Pos:  pos,
+		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
+			hash := ops.Pop().Interpret(ops, c)
+			c.Value = value
 			return hash
 		},
 	}
