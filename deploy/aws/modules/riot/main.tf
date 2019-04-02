@@ -45,6 +45,7 @@ resource "aws_instance" "riot" {
   tags {
     Name = "qed-riot"
     Role = "${var.role}"
-    DAM_OnOff = "NO"    
+    DAM_OnOff = "NO"
+    Workspace = "${terraform.workspace}"
   }
 }

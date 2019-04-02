@@ -23,7 +23,7 @@ resource "aws_vpc" "qed" {
   cidr_block           = "${var.vpc_cidr}"
 
   tags = {
-    Name = "QED"
+    Name = "QED-${terraform.workspace}"
   }
 }
 
@@ -33,7 +33,7 @@ resource "aws_subnet" "qed" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "QED"
+    Name = "QED-${terraform.workspace}"
   }
 }
 
@@ -41,7 +41,7 @@ resource "aws_internet_gateway" "qed" {
   vpc_id = "${aws_vpc.qed.id}"
 
   tags = {
-    Name = "QED"
+    Name = "QED-${terraform.workspace}"
   }
 }
 
@@ -56,7 +56,7 @@ resource "aws_vpc_dhcp_options" "qed" {
   domain_name_servers = ["AmazonProvidedDNS"]
 
   tags = {
-    Name = "QED"
+    Name = "QED-${terraform.workspace}"
   }
 }
 
@@ -65,12 +65,12 @@ resource "aws_vpc_dhcp_options_association" "qed" {
   dhcp_options_id = "${aws_vpc_dhcp_options.qed.id}"
 }
 
-data "aws_cloudwatch_log_group" "qed" {
-  name = "qed"
+resource "aws_cloudwatch_log_group" "qed" {
+  name = "qed-${terraform.workspace}"
 }
 
 resource "aws_iam_role" "qed" {
-  name = "qed"
+  name = "qed-${terraform.workspace}"
 
   assume_role_policy = <<EOF
 {
@@ -95,14 +95,14 @@ resource "aws_iam_role_policy_attachment" "qed" {
 }
 
 resource "aws_flow_log" "qed" {
-  log_destination = "${data.aws_cloudwatch_log_group.qed.arn}"
+  log_destination = "${aws_cloudwatch_log_group.qed.arn}"
   iam_role_arn    = "${aws_iam_role.qed.arn}"
   vpc_id          = "${aws_vpc.qed.id}"
   traffic_type    = "ALL"
 }
 
 resource "aws_key_pair" "qed" {
-  key_name   = "qed"
+  key_name   = "qed-${terraform.workspace}"
   public_key = "${file("${var.keypath}.pub")}"
 }
 
@@ -110,7 +110,7 @@ module "security_group" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "2.11.0"
 
-  name        = "qed"
+  name        = "qed-${terraform.workspace}"
   description = "Security group for QED usage"
   vpc_id      = "${aws_vpc.qed.id}"
 
@@ -180,7 +180,7 @@ module "prometheus_security_group" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "2.11.0"
 
-  name        = "prometheus"
+  name        = "prometheus-${terraform.workspace}"
   description = "Security group for Prometheus/Grafana usage"
   vpc_id      = "${aws_vpc.qed.id}"
 

@@ -24,7 +24,7 @@ data "aws_iam_policy_document" "CloudWatchLogsFullAccess-assume-role-policy" {
 }
 
 resource "aws_iam_role" "CloudWatchLogsFullAccess" {
-  name               = "CloudWatchLogsFullAccess"
+  name               = "CloudWatchLogsFullAccess-${terraform.workspace}"
   assume_role_policy = "${data.aws_iam_policy_document.CloudWatchLogsFullAccess-assume-role-policy.json}"
 }
 
@@ -34,7 +34,7 @@ resource "aws_iam_role_policy_attachment" "CloudWatchLogsFullAccess-attach" {
 }
 
 resource "aws_iam_instance_profile" "qed-profile" {
-  name = "qed-profile"
+  name = "qed-profile-${terraform.workspace}"
   role = "${aws_iam_role.CloudWatchLogsFullAccess.name}"
 }
 

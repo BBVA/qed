@@ -46,5 +46,6 @@ resource "aws_instance" "inmemory-storage" {
     Name = "qed-${var.name}"
     Role = "${var.role}"
     DAM_OnOff = "NO"
+    Workspace = "${terraform.workspace}"
   }
 }
