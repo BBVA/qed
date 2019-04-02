@@ -5,8 +5,8 @@
 [![GoReport](https://goreportcard.com/badge/github.com/bbva/qed)](https://goreportcard.com/report/github.com/bbva/qed)
 [![GoDoc](https://godoc.org/github.com/bbva/qed?status.svg)](https://godoc.org/github.com/bbva/qed)
 
-<p align="center"><a href="https://en.wikipedia.org/wiki/Q.E.D."><img width="45%" src="./qed_logo.png" alt="Quod Erat Demonstrandum"/><br/>(quod erat demonstrandum)</a></p>
-<p align="center"><img width="70%" src="./qed_whiteboard.png" alt="Whiteboard depicting a use case for qed"/></p>
+<p align="center"><a href="https://en.wikipedia.org/wiki/Q.E.D."><img width="45%" src="./docs/images/qed_logo.png" alt="Quod Erat Demonstrandum"/><br/>(quod erat demonstrandum)</a></p>
+<p align="center"><img width="70%" src="./docs/images/qed_whiteboard.png" alt="Whiteboard depicting a use case for qed"/></p>
 
 
 ## Overview
