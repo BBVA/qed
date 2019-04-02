@@ -93,20 +93,14 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 
 	rh := ops.Pop().Interpret(ops, ctx)
 
-	// create a mutation for the new leaf
-	leafMutation := storage.NewMutation(storage.IndexTable, eventDigest, versionAsBytes)
-
-	// collect mutations
-	mutations := append(ctx.Mutations, leafMutation)
-
-	return rh, mutations, nil
+	return rh, ctx.Mutations, nil
 }
 
-func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) (proof *QueryProof, err error) {
+func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryProof, err error) {
 	t.Lock()
 	defer t.Unlock()
 
-	//log.Debugf("Proving membership for index %d with version %d", eventDigest, version)
+	//log.Debugf("Proving membership for index %d", eventDigest)
 
 	// build a stack of operations and then interpret it to generate the audit path
 	ops := pruneToFind(eventDigest, t.batchLoader)
@@ -119,7 +113,8 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest, version []byte) 
 
 	ops.Pop().Interpret(ops, ctx)
 
-	return NewQueryProof(eventDigest, version, ctx.AuditPath, t.hasherF()), nil
+	// ctx.Value is nil if the digest does not exist
+	return NewQueryProof(eventDigest, ctx.Value, ctx.AuditPath, t.hasherF()), nil
 }
 
 func (t *HyperTree) RebuildCache() {

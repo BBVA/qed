@@ -54,7 +54,7 @@ func NewQueryProof(key, value []byte, auditPath AuditPath, hasher hashing.Hasher
 // false otherwise.
 func (p QueryProof) Verify(key []byte, expectedRootHash hashing.Digest) (valid bool) {
 
-	log.Debugf("Verifying query proof for key %d", p.Key)
+	log.Debugf("Verifying query proof for key %x", p.Key)
 
 	if len(p.AuditPath) == 0 {
 		// an empty audit path (empty tree) shows non-membersip for any key
