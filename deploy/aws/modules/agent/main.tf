@@ -46,5 +46,6 @@ resource "aws_instance" "qed-agent" {
     Name = "${format("${var.name}-%01d", count.index)}"
     Role = "${var.role}"
     DAM_OnOff = "NO"
+    Workspace = "${terraform.workspace}"
   }
 }
