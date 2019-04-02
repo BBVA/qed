@@ -24,8 +24,6 @@ import (
 	"io"
 	"sync"
 
-	"github.com/bbva/qed/protocol"
-
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
@@ -51,8 +49,6 @@ type BalloonFSM struct {
 	balloon *balloon.Balloon
 	state   *fsmState
 
-	agentsQueue chan *protocol.Snapshot
-
 	metaMu sync.RWMutex
 	meta   map[string]map[string]string
 
@@ -74,7 +70,7 @@ func loadState(s storage.ManagedStore) (*fsmState, error) {
 	return &state, err
 }
 
-func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher, agentsQueue chan *protocol.Snapshot) (*BalloonFSM, error) {
+func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
 
 	b, err := balloon.NewBalloon(store, hasherF)
 	if err != nil {
@@ -87,12 +83,11 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher, ag
 	}
 
 	return &BalloonFSM{
-		hasherF:     hasherF,
-		store:       store,
-		balloon:     b,
-		state:       state,
-		agentsQueue: agentsQueue,
-		meta:        make(map[string]map[string]string),
+		hasherF: hasherF,
+		store:   store,
+		balloon: b,
+		state:   state,
+		meta:    make(map[string]map[string]string),
 	}, nil
 }
 
@@ -261,14 +256,6 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 		return &fsmAddResponse{error: err}
 	}
 	fsm.state = state
-
-	//Send snapshot to gossip agents
-	fsm.agentsQueue <- &protocol.Snapshot{
-		HistoryDigest: snapshot.HistoryDigest,
-		HyperDigest:   snapshot.HyperDigest,
-		Version:       snapshot.Version,
-		EventDigest:   snapshot.EventDigest,
-	}
 
 	return &fsmAddResponse{snapshot: snapshot}
 }

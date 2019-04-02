@@ -87,12 +87,13 @@ type RaftBalloon struct {
 	wg     sync.WaitGroup
 	done   chan struct{}
 
-	fsm *BalloonFSM // balloon's finite state machine
+	fsm         *BalloonFSM             // balloon's finite state machine
+	snapshotsCh chan *protocol.Snapshot // channel to publish snapshots
 
 }
 
 // NewRaftBalloon returns a new RaftBalloon.
-func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, agentsQueue chan *protocol.Snapshot) (*RaftBalloon, error) {
+func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot) (*RaftBalloon, error) {
 
 	// Create the log store and stable store
 	rocksStore, err := raftrocks.New(raftrocks.Options{Path: path + "/wal", NoSync: true})
@@ -110,17 +111,18 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, agentsQue
 	// }
 
 	// Instantiate balloon FSM
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher, agentsQueue)
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
 	if err != nil {
 		return nil, fmt.Errorf("new balloon fsm: %s", err)
 	}
 
 	rb := &RaftBalloon{
-		path: path,
-		addr: addr,
-		id:   id,
-		done: make(chan struct{}),
-		fsm:  fsm,
+		path:        path,
+		addr:        addr,
+		id:          id,
+		done:        make(chan struct{}),
+		fsm:         fsm,
+		snapshotsCh: snapshotsCh,
 	}
 
 	rb.store.db = store
@@ -367,7 +369,17 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*fsmAddResponse).snapshot, nil
+	snapshot := resp.(*fsmAddResponse).snapshot
+
+	//Send snapshot to the snapshot channel
+	b.snapshotsCh <- &protocol.Snapshot{ // TODO move this to an upper layer (shard manager?)
+		HistoryDigest: snapshot.HistoryDigest,
+		HyperDigest:   snapshot.HyperDigest,
+		Version:       snapshot.Version,
+		EventDigest:   snapshot.EventDigest,
+	}
+
+	return snapshot, nil
 }
 
 func (b *RaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
