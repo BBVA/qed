@@ -53,5 +53,6 @@ resource "aws_instance" "prometheus" {
     Name = "qed-prometheus"
     Role = "${var.role}"
     DAM_OnOff = "NO"
+    Workspace = "${terraform.workspace}"
   }
 }
