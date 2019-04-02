@@ -93,6 +93,7 @@ func New(options Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
+	globalOpts.SetMaxTotalWalSize(3 * 256 * 1024 * 1024) // write_buffer_size (256MB) * 3
 
 	// stable store options
 	stableBbto := rocksdb.NewDefaultBlockBasedTableOptions()
@@ -132,7 +133,7 @@ func New(options Options) (*RocksDBStore, error) {
 	logOpts.SetLevel0FileNumCompactionTrigger(8)
 	logOpts.SetLevel0SlowdownWritesTrigger(17)
 	logOpts.SetLevel0StopWritesTrigger(24)
-	logOpts.SetMaxWriteBufferNumber(25)
+	logOpts.SetMaxWriteBufferNumber(5)
 	logOpts.SetNumLevels(7)
 	// MaxBytesForLevelBase is the total size of L1, should be close to
 	// the size of L0

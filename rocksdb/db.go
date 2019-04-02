@@ -367,7 +367,7 @@ func (db *DB) NewIteratorCF(ro *ReadOptions, cf *ColumnFamilyHandle) *Iterator {
 	return NewNativeIterator(unsafe.Pointer(cIter))
 }
 
-// Flush triggers a manuel flush for the database.
+// Flush triggers a manual flush for the database.
 func (db *DB) Flush(fo *FlushOptions) error {
 	var cErr *C.char
 	C.rocksdb_flush(db.c, fo.c, &cErr)
