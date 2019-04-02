@@ -32,8 +32,10 @@ func newServerMetrics() *serverMetrics {
 	return &serverMetrics{
 		Instances: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "instances",
-				Help: "Number of QED servers currently running",
+				Namespace: namespace,
+				Subsystem: subsystem,
+				Name:      "instances",
+				Help:      "Number of QED servers currently running",
 			},
 		),
 	}
