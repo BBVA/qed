@@ -1,16 +1,16 @@
 /*
-   Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
+   copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
 
-   Licensed under the Apache License, Version 2.0 (the "License");
+   licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+   you may obtain a copy of the License at
 
        http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
+   unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
+   withouT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   see the License for the specific language governing permissions and
    limitations under the License.
 */
 
@@ -31,6 +31,98 @@ import (
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
 )
+
+const riotHelp = `---
+openapi: 3.0
+info:
+info:
+  title: riot-workloader
+  description: >
+	this program runs as a single workloader (default) or as a server to receive
+	"plans" (Config structs) through a small web API.
+
+servers:
+  - url: http://localhost:7700/
+
+components:
+  schemas:
+    Config:
+      type: object
+      properties:
+		endpoint:
+		  type: string
+		apikey
+		  type: string
+		insecure:
+		  type: bool
+		kind:
+		  type: string
+		  enum: ["add", "membership", "incremental"]
+		offload:
+		  type: bool
+		profiling:
+		  type: bool
+		incrementalDelta:
+		  type: integer
+		  minimum: 0
+		offset:
+		  type: integer
+		  minimum: 0
+		numRequests:
+		  type: integer
+		  minimum: 0
+		maxGoRoutines:
+		  type: integer
+		  minimum: 0
+		clusterSize:
+		  type: integer
+		  minimum: 0
+	Plan:
+		type: array
+		items:
+			type: array
+			items:
+              $ref: '#/components/schemas/Config'
+
+paths:
+  /:
+    get:
+      description: return this help and this openapi documentation.
+      responses:
+        200:
+          description: this help.
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /run:
+    post:
+      summary: Endpoint for receiving a single Config to run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Config'
+			examples:
+			  simple: {"kind": "add"}
+			  advanced: {"kind": "incremental", "insecure":true, "endpoint": "https://qedserver.8800"}
+
+  /plan:
+    post:
+      summary: Endpoint for receiving a Plan to run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Plan'
+			examples:
+			  single_plan:  [[{"kind": "add"}]]
+			  secuential:  [[{"kind": "add"}], [{"kind": "membership"}]]
+			  parallel:  [[{"kind": "add"}, {"kind": "membership"}]]
+`
 
 var (
 	// Client
@@ -140,6 +232,7 @@ func newRiotCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "riot",
 		Short: "Stresser tool for qed server",
+		Long:  riotHelp,
 		PreRun: func(cmd *cobra.Command, args []string) {
 
 			log.SetLogger("Riot", logLevel)
@@ -224,6 +317,9 @@ func (riot *Riot) MergeConf(newConf Config) Config {
 func (riot *Riot) Serve() {
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, riotHelp)
+	})
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		w, r = postReqSanitizer(w, r)
 
