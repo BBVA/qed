@@ -93,7 +93,6 @@ func New(options Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
-	globalOpts.SetMaxTotalWalSize(3 * 256 * 1024 * 1024) // write_buffer_size (256MB) * 3
 
 	// stable store options
 	stableBbto := rocksdb.NewDefaultBlockBasedTableOptions()
