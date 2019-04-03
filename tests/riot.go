@@ -49,40 +49,40 @@ components:
     Config:
       type: object
       properties:
-		endpoint:
-		  type: string
-		apikey
-		  type: string
-		insecure:
-		  type: bool
-		kind:
-		  type: string
-		  enum: ["add", "membership", "incremental"]
-		offload:
-		  type: bool
-		profiling:
-		  type: bool
-		incrementalDelta:
-		  type: integer
-		  minimum: 0
-		offset:
-		  type: integer
-		  minimum: 0
-		numRequests:
-		  type: integer
-		  minimum: 0
-		maxGoRoutines:
-		  type: integer
-		  minimum: 0
-		clusterSize:
-		  type: integer
-		  minimum: 0
-	Plan:
-		type: array
-		items:
+				endpoint:
+					type: string
+				apikey
+					type: string
+				insecure:
+					type: bool
+				kind:
+					type: string
+					enum: ["add", "membership", "incremental"]
+				offload:
+					type: bool
+				profiling:
+					type: bool
+				incrementalDelta:
+					type: integer
+					minimum: 0
+				offset:
+					type: integer
+					minimum: 0
+				numRequests:
+					type: integer
+					minimum: 0
+				maxGoRoutines:
+					type: integer
+					minimum: 0
+				clusterSize:
+					type: integer
+					minimum: 0
+		Plan:
 			type: array
 			items:
-              $ref: '#/components/schemas/Config'
+				type: array
+				items:
+					$ref: '#/components/schemas/Config'
 
 paths:
   /:

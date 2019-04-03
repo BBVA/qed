@@ -43,7 +43,7 @@ module "qed" {
   count  = 3
 
   name                   = "qed"
-  instance_type          = "m5.2xlarge"
+  instance_type          = "c5n.2xlarge"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -56,7 +56,7 @@ module "inmemory-storage" {
   source = "./modules/inmemory_storage"
 
   name                   = "inmemory-storage"
-  instance_type          = "m5.large"
+  instance_type          = "r5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -71,7 +71,7 @@ module "agent-publisher" {
 
   role                   = "publisher"
   name                   = "agent-publisher"
-  instance_type          = "r5.large"
+  instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
