@@ -91,7 +91,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
 	//globalOpts.SetMaxOpenFiles()
 	globalOpts.SetEnv(env)
-	blockCache := rocksdb.NewLRUCache(6*1024*1024*1024, 0.4) // 6GB
+	blockCache := rocksdb.NewLRUCache(8*1024*1024*1024, 0.4) // 8GB
 	var stats *rocksdb.Statistics
 	if opts.EnableStatistics {
 		stats = rocksdb.NewStatistics()
