@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/hashicorp/raft"
-	assert "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/raftwal/commands"
+	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 )
 
@@ -21,23 +22,23 @@ func TestApply(t *testing.T) {
 	defer closeF()
 
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// happy path
 	r := fsm.Apply(newRaftLog(1, 1)).(*fsmAddResponse)
-	assert.Nil(t, r.error)
+	require.Nil(t, r.error)
 
 	// Error: Command already applied
 	r = fsm.Apply(newRaftLog(1, 1)).(*fsmAddResponse)
-	assert.Error(t, r.error)
+	require.Error(t, r.error)
 
 	// happy path
 	r = fsm.Apply(newRaftLog(2, 1)).(*fsmAddResponse)
-	assert.Nil(t, r.error)
+	require.Nil(t, r.error)
 
 	// Error: Command out of order
 	r = fsm.Apply(newRaftLog(1, 1)).(*fsmAddResponse)
-	assert.Error(t, r.error)
+	require.Error(t, r.error)
 
 }
 
@@ -49,13 +50,13 @@ func TestSnapshot(t *testing.T) {
 	defer closeF()
 
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fsm.Apply(newRaftLog(0, 0))
 
 	// happy path
 	_, err = fsm.Snapshot()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 type fakeRC struct{}
@@ -76,9 +77,9 @@ func TestRestore(t *testing.T) {
 	defer closeF()
 
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.NoError(t, fsm.Restore(&fakeRC{}))
+	require.NoError(t, fsm.Restore(&fakeRC{}))
 }
 
 func TestAddAndRestoreSnapshot(t *testing.T) {
@@ -89,12 +90,12 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	defer closeF()
 
 	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fsm.Apply(newRaftLog(0, 0))
 
 	fsmsnap, err := fsm.Snapshot()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	snap := raft.NewInmemSnapshotStore()
 
@@ -109,7 +110,7 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	sink, _ := snap.Create(raft.SnapshotVersionMax, 10, 3, configuration, 2, trans)
 
 	err = fsmsnap.Persist(sink)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// fsm.Close()
 
 	// Read the latest snapshot
@@ -121,18 +122,45 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 
 	// New FSMStore
 	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = fsm2.Restore(r)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Error: Command already applied
 	e := fsm2.Apply(newRaftLog(0, 0)).(*fsmAddResponse)
-	assert.Error(t, e.error)
+	require.Error(t, e.error)
+}
+
+func BenchmarkApplyAdd(b *testing.B) {
+
+	log.SetLogger("BenchmarkApplyAdd", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/fsm_bench.db")
+	defer closeF()
+
+	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	defer fsm.Close()
+	require.NoError(b, err)
+
+	b.ResetTimer()
+	b.N = 2000000
+	for i := 0; i < b.N; i++ {
+		log := newRandomRaftLog(uint64(i), uint64(1))
+		resp := fsm.Apply(log)
+		require.NoError(b, resp.(*fsmAddResponse).error)
+	}
+
 }
 
 func newRaftLog(index, term uint64) *raft.Log {
 	event := []byte("All's right with the world")
+	data, _ := commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{Event: event})
+	return &raft.Log{Index: index, Term: term, Type: raft.LogCommand, Data: data}
+}
+
+func newRandomRaftLog(index, term uint64) *raft.Log {
+	event := rand.Bytes(128)
 	data, _ := commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{Event: event})
 	return &raft.Log{Index: index, Term: term, Type: raft.LogCommand, Data: data}
 }
