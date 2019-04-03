@@ -17,6 +17,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -107,7 +108,8 @@ paths:
               $ref: '#/components/schemas/Config'
 			examples:
 			  simple: {"kind": "add"}
-			  advanced: {"kind": "incremental", "insecure":true, "endpoint": "https://qedserver.8800"}
+				advanced: {"kind": "incremental", "insecure":true, "endpoint": "https://qedserver:8800"}
+				advanced: {"kind": "incremental", "insecure":true, "endpoint": "https://qedserver0:8800,qedserver1:8801"}
 
   /plan:
     post:
@@ -175,7 +177,7 @@ type Riot struct {
 
 type Config struct {
 	// general conf
-	Endpoint string
+	Endpoint []string
 	APIKey   string
 	Insecure bool
 
@@ -259,7 +261,7 @@ func newRiotCommand() *cobra.Command {
 	f.StringVarP(&logLevel, "log", "l", "debug", "Choose between log levels: silent, error, info and debug")
 	f.BoolVar(&APIMode, "api", false, "Raise a HTTP api in port 7700")
 
-	f.StringVar(&riot.Config.Endpoint, "endpoint", "http://localhost:8800", "The endopoint to make the load")
+	f.StringSliceVarP(&riot.Config.Endpoint, "endpoint", "e", []string{"127.0.0.1:8800"}, "The endopoint to make the load")
 	f.StringVarP(&riot.Config.APIKey, "apikey", "k", "my-key", "The key to use qed servers")
 	f.BoolVar(&riot.Config.Insecure, "insecure", false, "Allow self-signed TLS certificates")
 
@@ -367,12 +369,18 @@ func (riot *Riot) Serve() {
 
 func newAttack(conf Config) {
 
-	cConf := client.DefaultConfig()
-	cConf.Endpoints = []string{conf.Endpoint}
-	cConf.APIKey = conf.APIKey
-	cConf.Insecure = conf.Insecure
+	// QED client
+	transport := http.DefaultTransport.(*http.Transport)
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: conf.Insecure}
+	httpClient := http.DefaultClient
+	httpClient.Transport = transport
+	client, err := client.NewHTTPClient(
+		client.SetHttpClient(httpClient),
+		client.SetURLs(conf.Endpoint[0], conf.Endpoint[1:]...),
+		client.SetAPIKey(conf.APIKey),
+		client.SetReadPreference(client.Any),
+	)
 
-	client, err := client.NewHTTPClientFromConfig(cConf)
 	if err != nil {
 		panic(err)
 	}
