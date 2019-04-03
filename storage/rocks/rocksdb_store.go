@@ -91,6 +91,8 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
 	//globalOpts.SetMaxOpenFiles()
 	globalOpts.SetEnv(env)
+	// We build a LRU cache with a high pool ratio of 0.4 (40%). The lower pool
+	// will cache data blocks and the higher will cache index and filters.
 	blockCache := rocksdb.NewLRUCache(8*1024*1024*1024, 0.4) // 8GB
 	var stats *rocksdb.Statistics
 	if opts.EnableStatistics {
@@ -151,7 +153,14 @@ func getHyperCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
+	// In order to have a fine-grained control over the memory usage
+	// we cache SST's index and filters in the block cache. The alternative
+	// would be to leave RocksDB keep those files memory mapped, but
+	// the only way to control memory usage would be through the property
+	// max_open_files.
 	bbto.SetCacheIndexAndFilterBlocks(true)
+	// To avoid filter and index eviction from block cache we pin
+	// those from L0 and move them to the high priority pool.
 	bbto.SetPinL0FilterAndIndexBlocksInCache(true)
 	bbto.SetCacheIndexAndFilterBlocksWithHighPriority(true)
 	bbto.SetBlockCache(blockCache)
@@ -205,6 +214,11 @@ func getHistoryCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10)) // TODO consider full filters instead of block filters
+	// In order to have a fine-grained control over the memory usage
+	// we cache SST's index and filters in the block cache. The alternative
+	// would be to leave RocksDB keep those files memory mapped, but
+	// the only way to control memory usage would be through the property
+	// max_open_files.
 	bbto.SetCacheIndexAndFilterBlocks(true)
 	bbto.SetBlockCache(blockCache)
 	// increase block size to 16KB
@@ -261,6 +275,11 @@ func getFsmStateTableOpts() *rocksdb.Options {
 	// space amplification by keeping a lower number of levels.
 
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
+	// In order to have a fine-grained control over the memory usage
+	// we cache SST's index and filters in the block cache. The alternative
+	// would be to leave RocksDB keep those files memory mapped, but
+	// the only way to control memory usage would be through the property
+	// max_open_files.
 	bbto.SetCacheIndexAndFilterBlocks(true)
 	// decrease block size to 1KB
 	bbto.SetBlockSize(1024)
