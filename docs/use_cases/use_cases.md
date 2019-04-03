@@ -29,13 +29,15 @@ For this example, we will suppose for each dependency we have the following data
     }
 
 The general workflow can comprise the following steps:
- a) develop code, adding dependencies
- b) ensure those dependencies are correct
- c) add the verified dependencies to the QED log
- d) trigger the pipeline to build the software
- e) download the dependencies
- f) generate a QED event for each dependency
- g) verify each generated entry against QED, failing when the event does not verify
+
+
+    a) develop code, adding dependencies
+    b) ensure those dependencies are correct
+    c) add the verified dependencies to the QED log
+    d) trigger the pipeline to build the software
+    e) download the dependencies
+    f) generate a QED event for each dependency
+    g) verify each generated entry against QED, failing when the event does not verify
 
 ### Tampering the dependency repository
 
