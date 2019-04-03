@@ -91,7 +91,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
 	//globalOpts.SetMaxOpenFiles()
 	globalOpts.SetEnv(env)
-	blockCache := rocksdb.NewDefaultLRUCache(6 * 1024 * 1024 * 1024) // 6GB
+	blockCache := rocksdb.NewLRUCache(6*1024*1024*1024, 0.4) // 6GB
 	var stats *rocksdb.Statistics
 	if opts.EnableStatistics {
 		stats = rocksdb.NewStatistics()
@@ -151,6 +151,9 @@ func getHyperCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10))
+	bbto.SetCacheIndexAndFilterBlocks(true)
+	bbto.SetPinL0FilterAndIndexBlocksInCache(true)
+	bbto.SetCacheIndexAndFilterBlocksWithHighPriority(true)
 	bbto.SetBlockCache(blockCache)
 	// increase block size to 16KB
 	bbto.SetBlockSize(16 * 1024)
@@ -202,6 +205,7 @@ func getHistoryCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetFilterPolicy(rocksdb.NewBloomFilterPolicy(10)) // TODO consider full filters instead of block filters
+	bbto.SetCacheIndexAndFilterBlocks(true)
 	bbto.SetBlockCache(blockCache)
 	// increase block size to 16KB
 	bbto.SetBlockSize(16 * 1024)
@@ -257,6 +261,7 @@ func getFsmStateTableOpts() *rocksdb.Options {
 	// space amplification by keeping a lower number of levels.
 
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetCacheIndexAndFilterBlocks(true)
 	// decrease block size to 1KB
 	bbto.SetBlockSize(1024)
 
