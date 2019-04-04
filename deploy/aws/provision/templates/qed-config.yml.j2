@@ -17,6 +17,7 @@
 log: info
 api_key: "terraform_qed"
 path: "/var/qed/"
+profiling: true
 {% if 'role_qed' in group_names %}
 server:
   node_id: "{{ ansible_hostname }}"
