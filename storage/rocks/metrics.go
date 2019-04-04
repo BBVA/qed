@@ -40,9 +40,9 @@ type rocksDBMetrics struct {
 	*compressMetrics
 }
 
-func newRocksDBMetrics(stats *rocksdb.Statistics) *rocksDBMetrics {
+func newRocksDBMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *rocksDBMetrics {
 	return &rocksDBMetrics{
-		blockCacheMetrics:  newBlockCacheMetrics(stats),
+		blockCacheMetrics:  newBlockCacheMetrics(stats, cache),
 		bloomFilterMetrics: newBloomFilterMetrics(stats),
 		memtableMetrics:    newMemtableMetrics(stats),
 		getsMetrics:        newGetsMetrics(stats),
@@ -85,10 +85,12 @@ type blockCacheMetrics struct {
 	DataBytesInsert   prometheus.GaugeFunc
 	BytesRead         prometheus.GaugeFunc
 	BytesWrite        prometheus.GaugeFunc
+	Usage             prometheus.GaugeFunc
+	PinnedUsage       prometheus.GaugeFunc
 }
 
 // newBlockCacheMetrics initialises the prometheus metris for block cache.
-func newBlockCacheMetrics(stats *rocksdb.Statistics) *blockCacheMetrics {
+func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *blockCacheMetrics {
 	return &blockCacheMetrics{
 		Miss: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
@@ -270,6 +272,28 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics) *blockCacheMetrics {
 			},
 			extractMetric(stats, rocksdb.TickerBlockCacheBytesWrite),
 		),
+		Usage: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: blockCacheSubsystem,
+				Name:      "cache_memory_usage",
+				Help:      "Block cache memory usage.",
+			},
+			func() float64 {
+				return float64(cache.GetUsage())
+			},
+		),
+		PinnedUsage: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: blockCacheSubsystem,
+				Name:      "cache_pinned_memory_usage",
+				Help:      "Block cache pinned memory usage.",
+			},
+			func() float64 {
+				return float64(cache.GetPinnedUsage())
+			},
+		),
 	}
 }
 
@@ -296,6 +320,8 @@ func (m *blockCacheMetrics) collectors() []prometheus.Collector {
 		m.DataBytesInsert,
 		m.BytesRead,
 		m.BytesWrite,
+		m.Usage,
+		m.PinnedUsage,
 	}
 }
 
