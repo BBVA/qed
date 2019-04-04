@@ -43,7 +43,7 @@ module "qed" {
   count  = 3
 
   name                   = "qed"
-  instance_type          = "c5n.2xlarge"
+  instance_type          = "z1d.xlarge"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
   volume_size            = "20"
   vpc_security_group_ids = "${module.security_group.this_security_group_id}"
@@ -51,7 +51,6 @@ module "qed" {
   key_name               = "${aws_key_pair.qed.key_name}"
   key_path               = "${var.keypath}"
 }
-
 module "inmemory-storage" {
   source = "./modules/inmemory_storage"
 
