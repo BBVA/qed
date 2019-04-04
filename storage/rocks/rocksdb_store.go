@@ -133,7 +133,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	}
 
 	if stats != nil {
-		store.metrics = newRocksDBMetrics(stats)
+		store.metrics = newRocksDBMetrics(stats, blockCache)
 	}
 
 	return store, nil
@@ -163,8 +163,9 @@ func getHyperCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 	// those from L0 and move them to the high priority pool.
 	bbto.SetPinL0FilterAndIndexBlocksInCache(true)
 	bbto.SetCacheIndexAndFilterBlocksWithHighPriority(true)
-	bbto.SetPinTopLevelIndexAndFilterInCache(true)
+	// activate partition filters
 	bbto.SetPartitionFilters(true)
+	bbto.SetPinTopLevelIndexAndFilterInCache(true)
 	bbto.SetIndexType(rocksdb.KTwoLevelIndexSearchIndexType)
 	bbto.SetBlockCache(blockCache)
 	// increase block size to 16KB
