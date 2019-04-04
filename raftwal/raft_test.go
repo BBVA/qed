@@ -459,39 +459,48 @@ func newNodeBench(b *testing.B, id int) (*RaftBalloon, func()) {
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	err = os.MkdirAll(raftPath, os.FileMode(0755))
 	require.NoError(b, err)
-	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), rocksdb, make(chan *protocol.Snapshot, 10000))
+
+	snapshotsCh := make(chan *protocol.Snapshot, 10000)
+	startSnapshotsDrainer(snapshotsCh)
+	//defer close(snapshotsCh)
+
+	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), rocksdb, snapshotsCh)
 	require.NoError(b, err)
 
 	return r, func() {
-		fmt.Println("Removing node folder")
 		os.RemoveAll(fmt.Sprintf("/var/tmp/raft-test/node%d", id))
 	}
 
+}
+
+func startSnapshotsDrainer(snapshotsCh chan *protocol.Snapshot) {
+	go func() {
+		for range snapshotsCh {
+
+		}
+	}()
 }
 
 func BenchmarkRaftAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkRaftAdd", log.SILENT)
 
-	r, clean := newNodeBench(b, 1)
+	raftNode, clean := newNodeBench(b, 1)
 	defer clean()
 
-	err := r.Open(true, map[string]string{"foo": "bar"})
+	err := raftNode.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(b, err)
 
-	b.ResetTimer()
 	// b.N shoul be eq or greater than 500k to avoid benchmark framework spreding more than one goroutine.
-	b.N = 500000
-	nilCount := 0
-	notNilCount := 0
-	for i := 0; i < b.N; i++ {
-		event := utilrand.Bytes(128)
-		comm, _ := r.Add(event)
-		if comm == nil {
-			nilCount++
-		} else {
-			notNilCount++
+	b.N = 2000000
+	b.ResetTimer()
+	b.SetParallelism(100)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			event := utilrand.Bytes(128)
+			_, err := raftNode.Add(event)
+			require.NoError(b, err)
 		}
-	}
-	fmt.Printf("Nil: %d, Not Nil: %d\n", nilCount, notNilCount)
+	})
+
 }
