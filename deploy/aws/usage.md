@@ -24,9 +24,13 @@ $ terraform workspace new <workspace_name>
 $ terraform select <workspace_name>
 ```
 
-## Deploy
+## Deploy QED cluster with agents, storage, Riot and monitoring
 ```
 $ terraform apply -auto-approve 
+```
+## Deploy QED cluster, Riot and monitoring
+```
+$ terraform apply -target=null_resource.qed-base
 ```
 The AWS Public IP will generated as output at the end.
 
