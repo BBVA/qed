@@ -89,7 +89,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
-	globalOpts.SetMaxOpenFiles(100)
+	//globalOpts.SetMaxOpenFiles(1000)
 	globalOpts.SetEnv(env)
 	// We build a LRU cache with a high pool ratio of 0.4 (40%). The lower pool
 	// will cache data blocks and the higher will cache index and filters.
