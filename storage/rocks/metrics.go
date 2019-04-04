@@ -330,7 +330,7 @@ func newBloomFilterMetrics(stats *rocksdb.Statistics) *bloomFilterMetrics {
 				Namespace: namespace,
 				Subsystem: filterSubsystem,
 				Name:      "full_true_positive",
-				Help:      "Number of times bloom full filter did not avoid reads.",
+				Help:      "Number of times bloom fullfilter did not avoid reads and data actually exist.",
 			},
 			extractMetric(stats, rocksdb.TickerBloomFilterFullTruePositive),
 		),
