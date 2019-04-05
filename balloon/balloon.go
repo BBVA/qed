@@ -182,11 +182,6 @@ func (b *Balloon) RefreshVersion() error {
 
 func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 
-	// Metrics
-	metrics.QedBalloonAddTotal.Inc()
-	//timer := prometheus.NewTimer(metrics.QedBalloonAddDurationSeconds)
-	//defer timer.ObserveDuration()
-
 	// Activate metrics gathering
 	stats := metrics.Balloon
 
@@ -230,21 +225,13 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 		Version:       version,
 	}
 
-	// Increment add hits and version
-	stats.AddFloat("add_hits", 1)
+	// Increment version
 	stats.Set("version", metrics.Uint64ToVar(version))
 
 	return snapshot, mutations, nil
 }
 
 func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
-	// Metrics
-	metrics.QedBalloonDigestMembershipTotal.Inc()
-	//timer := prometheus.NewTimer(metrics.QedBalloonDigestMembershipDurationSeconds)
-	//defer timer.ObserveDuration()
-
-	stats := metrics.Balloon
-	stats.AddFloat("QueryMembership", 1)
 
 	var proof MembershipProof
 	var err error
@@ -296,9 +283,6 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 }
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
-
-	// Metrics
-	metrics.QedBalloonIncrementalTotal.Inc()
 
 	stats := metrics.Balloon
 	stats.AddFloat("QueryConsistency", 1)
