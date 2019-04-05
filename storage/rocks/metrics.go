@@ -18,6 +18,7 @@ package rocks
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/bbva/qed/rocksdb"
 	"github.com/bbva/qed/storage"
@@ -897,7 +898,12 @@ func newPerTableMetrics(table storage.Table, store *RocksDBStore) *perTableMetri
 				Help:      fmt.Sprintf("Number of files at level %d.", i),
 			},
 			func() float64 {
-				return float64(store.db.GetUint64PropertyCF(propName, store.cfHandles[table]))
+				sValue := store.db.GetPropertyCF(propName, store.cfHandles[table])
+				if sValue != "" {
+					value, _ := strconv.ParseFloat(sValue, 64)
+					return value
+				}
+				return 0.0
 			},
 		))
 	}
