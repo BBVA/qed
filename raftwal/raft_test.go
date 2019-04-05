@@ -31,6 +31,7 @@ import (
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/rocks"
+	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	utilrand "github.com/bbva/qed/testutils/rand"
 	"github.com/hashicorp/raft"
 	"github.com/stretchr/testify/require"
@@ -449,11 +450,11 @@ func mustTempDir() string {
 }
 
 func newNodeBench(b *testing.B, id int) (*RaftBalloon, func()) {
-	rocksdbPath := fmt.Sprintf("/var/tmp/raft-test/node%d/rocksdb", id)
+	storePath := fmt.Sprintf("/var/tmp/raft-test/node%d/db", id)
 
-	err := os.MkdirAll(rocksdbPath, os.FileMode(0755))
+	err := os.MkdirAll(storePath, os.FileMode(0755))
 	require.NoError(b, err)
-	rocksdb, err := rocks.NewRocksDBStore(rocksdbPath)
+	store, err := rocks.NewRocksDBStore(storePath)
 	require.NoError(b, err)
 
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
@@ -461,22 +462,28 @@ func newNodeBench(b *testing.B, id int) (*RaftBalloon, func()) {
 	require.NoError(b, err)
 
 	snapshotsCh := make(chan *protocol.Snapshot, 10000)
-	startSnapshotsDrainer(snapshotsCh)
-	//defer close(snapshotsCh)
+	snapshotsDrainer(snapshotsCh)
 
-	r, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), rocksdb, snapshotsCh)
+	node, err := NewRaftBalloon(raftPath, raftAddr(id), fmt.Sprintf("%d", id), store, snapshotsCh)
 	require.NoError(b, err)
 
-	return r, func() {
+	srvCloseF := metrics_utils.StartMetricsServer(node, store)
+
+	return node, func() {
+		srvCloseF()
+		close(snapshotsCh)
 		os.RemoveAll(fmt.Sprintf("/var/tmp/raft-test/node%d", id))
 	}
 
 }
 
-func startSnapshotsDrainer(snapshotsCh chan *protocol.Snapshot) {
+func snapshotsDrainer(snapshotsCh chan *protocol.Snapshot) {
 	go func() {
-		for range snapshotsCh {
-
+		for {
+			_, ok := <-snapshotsCh
+			if !ok {
+				return
+			}
 		}
 	}()
 }
@@ -491,7 +498,7 @@ func BenchmarkRaftAdd(b *testing.B) {
 	err := raftNode.Open(true, map[string]string{"foo": "bar"})
 	require.NoError(b, err)
 
-	// b.N shoul be eq or greater than 500k to avoid benchmark framework spreding more than one goroutine.
+	// b.N shoul be eq or greater than 500k to avoid benchmark framework spreading more than one goroutine.
 	b.N = 2000000
 	b.ResetTimer()
 	b.SetParallelism(100)
