@@ -45,6 +45,8 @@ const (
 func (t table) String() string {
 	var s string
 	switch t {
+	case defaultTable:
+		s = "default"
 	case stableTable:
 		s = "stable"
 	case logTable:
@@ -110,7 +112,7 @@ func New(options Options) (*RocksDBStore, error) {
 	// we need two column families, one for stable store and one for log store:
 	// stable : used for storing key configurations.
 	// log 	  : used for storing logs in a durable fashion.
-	cfNames := []string{"default", stableTable.String(), logTable.String()}
+	cfNames := []string{defaultTable.String(), stableTable.String(), logTable.String()}
 
 	defaultOpts := rocksdb.NewDefaultOptions()
 
