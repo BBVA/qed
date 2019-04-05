@@ -33,30 +33,6 @@ var (
 
 	// BALLOON
 
-	QedBalloonAddDurationSeconds = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "qed_balloon_add_duration_seconds",
-			Help: "Duration of the add operation.",
-		},
-	)
-	QedBalloonMembershipDurationSeconds = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "qed_balloon_membership_duration_seconds",
-			Help: "Duration of the membership queries.",
-		},
-	)
-	QedBalloonDigestMembershipDurationSeconds = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "qed_balloon_digest_membership_duration_seconds",
-			Help: "Duration of the membership by digest queries.",
-		},
-	)
-	QedBalloonIncrementalDurationSeconds = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Name: "qed_balloon_incremental_duration_seconds",
-			Help: "Duration of the incremental queries.",
-		},
-	)
 	QedBalloonAddTotal = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "qed_balloon_add_total",
@@ -86,11 +62,6 @@ var (
 
 	DefaultMetrics = []prometheus.Collector{
 		QedAPIHealthcheckRequestsTotal,
-
-		QedBalloonAddDurationSeconds,
-		QedBalloonMembershipDurationSeconds,
-		QedBalloonDigestMembershipDurationSeconds,
-		QedBalloonIncrementalDurationSeconds,
 
 		QedBalloonAddTotal,
 		QedBalloonMembershipTotal,
