@@ -26,6 +26,7 @@ import (
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
@@ -225,50 +226,6 @@ func TestGenIncrementalAndVerify(t *testing.T) {
 	assert.True(t, correct, "Unable to verify incremental proof")
 }
 
-func BenchmarkAddBadger(b *testing.B) {
-
-	log.SetLogger("BenchmarkAddBadger", log.SILENT)
-
-	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/balloon_bench.db")
-	defer closeF()
-
-	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
-	require.NoError(b, err)
-
-	b.ResetTimer()
-	b.N = 100000
-	for i := 0; i < b.N; i++ {
-		event := rand.Bytes(128)
-		_, mutations, _ := balloon.Add(event)
-		store.Mutate(mutations)
-	}
-
-}
-
-func BenchmarkQueryBadger(b *testing.B) {
-	var events [][]byte
-	log.SetLogger("BenchmarkAddBadger", log.SILENT)
-
-	store, closeF := storage_utils.OpenBadgerStore(b, "/var/tmp/ballon_bench.db")
-	defer closeF()
-
-	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
-	require.NoError(b, err)
-
-	b.N = 100000
-	for i := 0; i < b.N; i++ {
-		event := rand.Bytes(128)
-		events = append(events, event)
-		_, mutations, _ := balloon.Add(event)
-		store.Mutate(mutations)
-	}
-
-	b.ResetTimer()
-	for i, e := range events {
-		balloon.QueryMembership(e, uint64(i))
-	}
-
-}
 func BenchmarkAddRocksDB(b *testing.B) {
 
 	log.SetLogger("BenchmarkAddRocksDB", log.SILENT)
@@ -279,12 +236,18 @@ func BenchmarkAddRocksDB(b *testing.B) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
+	balloonMetrics := metrics_utils.CustomRegister(AddTotal)
+	srvCloseF := metrics_utils.StartMetricsServer(balloonMetrics, store)
+	defer srvCloseF()
+
 	b.ResetTimer()
-	b.N = 1000000
+	b.N = 2000000
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
-		_, mutations, _ := balloon.Add(event)
-		store.Mutate(mutations)
+		_, mutations, err := balloon.Add(event)
+		require.NoError(b, err)
+		require.NoError(b, store.Mutate(mutations))
+		AddTotal.Inc()
 	}
 
 }
