@@ -15,7 +15,7 @@
   "description": "Process status published by Go Prometheus client library, e.g. memory used, fds open, GC details",
   "editable": true,
   "gnetId": 240,
-  "graphTooltip": 0,
+  "graphTooltip": 2,
   "id": 3,
   "iteration": 1549537628902,
   "links": [],
