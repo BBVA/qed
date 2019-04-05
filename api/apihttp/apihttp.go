@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 )
@@ -43,8 +42,6 @@ type HealthCheckResponse struct {
 // If everything is alright, the HTTP response will have a 204 status code
 // and no body.
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
-
-	metrics.QedAPIHealthcheckRequestsTotal.Inc()
 
 	// Make sure we can only be called with an HTTP POST request.
 	if r.Method != "HEAD" {
