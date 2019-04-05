@@ -17,15 +17,18 @@
 package hyper
 
 import (
+	"context"
 	"encoding/binary"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
+	"github.com/bbva/qed/storage/rocks"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
@@ -272,9 +275,8 @@ func BenchmarkAdd(b *testing.B) {
 
 	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
-	prometheus.MustRegister(metrics.QedHyperAddTotal)
-	http.Handle("/metrics", promhttp.Handler())
-	go http.ListenAndServe(":2112", nil)
+	srvCloseF := startMetricsServer(store)
+	defer srvCloseF()
 
 	b.ResetTimer()
 	b.N = 1000000
@@ -283,9 +285,27 @@ func BenchmarkAdd(b *testing.B) {
 		binary.LittleEndian.PutUint64(index, uint64(i))
 		elem := append(rand.Bytes(32), index...)
 		_, mutations, err := tree.Add(hasher.Do(elem), uint64(i))
-		if err != nil {
-			b.Fatal(err)
-		}
-		store.Mutate(mutations)
+		require.NoError(b, err)
+		require.NoError(b, store.Mutate(mutations))
+		metrics.QedHyperAddTotal.Inc()
 	}
+
+}
+
+func startMetricsServer(store *rocks.RocksDBStore) func() {
+	reg := prometheus.NewRegistry()
+	reg.Register(metrics.QedHyperAddTotal)
+	store.RegisterMetrics(reg)
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	srv := &http.Server{Addr: ":2112", Handler: mux}
+	go srv.ListenAndServe()
+	closeF := func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Fatal(err)
+		}
+	}
+	return closeF
 }
