@@ -26,6 +26,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/raftwal/raftrocks"
@@ -90,13 +91,14 @@ type RaftBalloon struct {
 	fsm         *BalloonFSM             // balloon's finite state machine
 	snapshotsCh chan *protocol.Snapshot // channel to publish snapshots
 
+	metrics *raftBalloonMetrics
 }
 
 // NewRaftBalloon returns a new RaftBalloon.
 func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot) (*RaftBalloon, error) {
 
 	// Create the log store and stable store
-	rocksStore, err := raftrocks.New(raftrocks.Options{Path: path + "/wal", NoSync: true})
+	rocksStore, err := raftrocks.New(raftrocks.Options{Path: path + "/wal", NoSync: true, EnableStatistics: true})
 	if err != nil {
 		return nil, fmt.Errorf("cannot create a new rocksdb log store: %s", err)
 	}
@@ -128,6 +130,7 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, snapshots
 	rb.store.db = store
 	rb.store.log = logStore
 	rb.store.rocksStore = rocksStore
+	rb.metrics = newRaftBalloonMetrics(rb)
 
 	return rb, nil
 }
@@ -233,9 +236,11 @@ func (b *RaftBalloon) Close(wait bool) error {
 
 	b.store.rocksStore = nil
 	b.store.log = nil
+	b.metrics = nil
 
 	// Close FSM
 	b.fsm.Close()
+	b.fsm = nil
 
 	// close database
 	if err := b.store.db.Close(); err != nil {
@@ -369,6 +374,7 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
+	b.metrics.Adds.Inc()
 	snapshot := resp.(*fsmAddResponse).snapshot
 
 	//Send snapshot to the snapshot channel
@@ -383,14 +389,17 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 }
 
 func (b *RaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
+	b.metrics.DigestMembershipQueries.Inc()
 	return b.fsm.QueryDigestMembership(keyDigest, version)
 }
 
 func (b *RaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
+	b.metrics.MembershipQueries.Inc()
 	return b.fsm.QueryMembership(event, version)
 }
 
 func (b *RaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
+	b.metrics.IncrementalQueries.Inc()
 	return b.fsm.QueryConsistency(start, end)
 }
 
@@ -466,4 +475,11 @@ func (b *RaftBalloon) Info() map[string]interface{} {
 	m["leaderID"], _ = b.LeaderID()
 	m["meta"] = b.fsm.meta
 	return m
+}
+
+func (b *RaftBalloon) RegisterMetrics(registry metrics.Registry) {
+	if registry != nil {
+		b.store.rocksStore.RegisterMetrics(registry)
+	}
+	registry.MustRegister(b.metrics.collectors()...)
 }

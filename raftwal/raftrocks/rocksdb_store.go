@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 
+	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/rocksdb"
 	"github.com/bbva/qed/util"
 	"github.com/hashicorp/go-msgpack/codec"
@@ -31,10 +32,28 @@ var (
 	ErrKeyNotFound = errors.New("not found")
 )
 
+// table groups related key-value pairs under a
+// consistent space.
+type table uint32
+
 const (
-	stableCF string = "stable"
-	logCF    string = "log"
+	defaultTable table = iota
+	stableTable
+	logTable
 )
+
+func (t table) String() string {
+	var s string
+	switch t {
+	case defaultTable:
+		s = "default"
+	case stableTable:
+		s = "stable"
+	case logTable:
+		s = "log"
+	}
+	return s
+}
 
 // RocksDBStore provides access to RocksDB for Raft to store and retrieve
 // log entries. It also provides key/value storage, and can be used as
@@ -43,12 +62,14 @@ type RocksDBStore struct {
 	// db is the underlying handle to the db.
 	db *rocksdb.DB
 
+	stats *rocksdb.Statistics
+
 	// The path to the RocksDB database directory.
-	path           string
-	ro             *rocksdb.ReadOptions
-	wo             *rocksdb.WriteOptions
-	stableCFHandle *rocksdb.ColumnFamilyHandle
-	logCFHandle    *rocksdb.ColumnFamilyHandle
+	path string
+	ro   *rocksdb.ReadOptions
+	wo   *rocksdb.WriteOptions
+	// column family handlers
+	cfHandles rocksdb.ColumnFamilyHandles
 
 	// global options
 	globalOpts *rocksdb.Options
@@ -56,9 +77,13 @@ type RocksDBStore struct {
 	stableBbto *rocksdb.BlockBasedTableOptions
 	stableOpts *rocksdb.Options
 	// log options
-	logBbto  *rocksdb.BlockBasedTableOptions
-	logOpts  *rocksdb.Options
-	logCache *rocksdb.Cache
+	logBbto *rocksdb.BlockBasedTableOptions
+	logOpts *rocksdb.Options
+	// block cache
+	blockCache *rocksdb.Cache
+
+	// metrics
+	metrics *rocksDBMetrics
 }
 
 // Options contains all the configuration used to open the RocksDB instance.
@@ -71,6 +96,8 @@ type Options struct {
 	// write to the log. This is unsafe, so it should be used
 	// with caution.
 	NoSync bool
+
+	EnableStatistics bool
 }
 
 // NewRocksDBStore takes a file path and returns a connected Raft backend.
@@ -85,7 +112,7 @@ func New(options Options) (*RocksDBStore, error) {
 	// we need two column families, one for stable store and one for log store:
 	// stable : used for storing key configurations.
 	// log 	  : used for storing logs in a durable fashion.
-	cfNames := []string{stableCF, logCF, "default"}
+	cfNames := []string{defaultTable.String(), stableTable.String(), logTable.String()}
 
 	defaultOpts := rocksdb.NewDefaultOptions()
 
@@ -93,6 +120,12 @@ func New(options Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
+	blockCache := rocksdb.NewDefaultLRUCache(512 * 1024 * 1024)
+	var stats *rocksdb.Statistics
+	if options.EnableStatistics {
+		stats = rocksdb.NewStatistics()
+		globalOpts.SetStatistics(stats)
+	}
 
 	// stable store options
 	stableBbto := rocksdb.NewDefaultBlockBasedTableOptions()
@@ -103,8 +136,7 @@ func New(options Options) (*RocksDBStore, error) {
 	logBbto := rocksdb.NewDefaultBlockBasedTableOptions()
 	logBbto.SetBlockSize(32 * 1024)
 	logBbto.SetCacheIndexAndFilterBlocks(true)
-	logCache := rocksdb.NewDefaultLRUCache(512 * 1024 * 1024)
-	logBbto.SetBlockCache(logCache)
+	logBbto.SetBlockCache(blockCache)
 	logOpts := rocksdb.NewDefaultOptions()
 	logOpts.SetUseFsync(!options.NoSync)
 	// dio := directIOSupported(options.Path)
@@ -146,7 +178,7 @@ func New(options Options) (*RocksDBStore, error) {
 	logOpts.SetMaxBackgroundCompactions(2)
 	logOpts.SetMaxBackgroundFlushes(2)
 
-	cfOpts := []*rocksdb.Options{stableOpts, logOpts, defaultOpts}
+	cfOpts := []*rocksdb.Options{defaultOpts, stableOpts, logOpts}
 	db, cfHandles, err := rocksdb.OpenDBColumnFamilies(options.Path, globalOpts, cfNames, cfOpts)
 	if err != nil {
 		return nil, err
@@ -158,29 +190,32 @@ func New(options Options) (*RocksDBStore, error) {
 	ro := rocksdb.NewDefaultReadOptions()
 	ro.SetFillCache(false)
 
-	return &RocksDBStore{
-		db:             db,
-		path:           options.Path,
-		stableCFHandle: cfHandles[0],
-		logCFHandle:    cfHandles[1],
-		stableBbto:     stableBbto,
-		stableOpts:     stableOpts,
-		logBbto:        logBbto,
-		logOpts:        logOpts,
-		logCache:       logCache,
-		globalOpts:     globalOpts,
-		ro:             ro,
-		wo:             wo,
-	}, nil
+	store := &RocksDBStore{
+		db:         db,
+		stats:      stats,
+		path:       options.Path,
+		cfHandles:  cfHandles,
+		stableBbto: stableBbto,
+		stableOpts: stableOpts,
+		logBbto:    logBbto,
+		logOpts:    logOpts,
+		blockCache: blockCache,
+		globalOpts: globalOpts,
+		ro:         ro,
+		wo:         wo,
+	}
+
+	if stats != nil {
+		store.metrics = newRocksDBMetrics(store)
+	}
+
+	return store, nil
 }
 
 // Close is used to gracefully close the DB connection.
 func (s *RocksDBStore) Close() error {
-	if s.stableCFHandle != nil {
-		s.stableCFHandle.Destroy()
-	}
-	if s.logCFHandle != nil {
-		s.logCFHandle.Destroy()
+	for _, cf := range s.cfHandles {
+		cf.Destroy()
 	}
 	if s.db != nil {
 		s.db.Close()
@@ -191,14 +226,17 @@ func (s *RocksDBStore) Close() error {
 	if s.stableOpts != nil {
 		s.stableOpts.Destroy()
 	}
-	if s.logCache != nil {
-		s.logCache.Destroy()
+	if s.blockCache != nil {
+		s.blockCache.Destroy()
 	}
 	if s.logBbto != nil {
 		s.logBbto.Destroy()
 	}
 	if s.logOpts != nil {
 		s.logOpts.Destroy()
+	}
+	if s.stats != nil {
+		s.stats.Destroy()
 	}
 	if s.wo != nil {
 		s.wo.Destroy()
@@ -212,7 +250,7 @@ func (s *RocksDBStore) Close() error {
 
 // FirstIndex returns the first known index from the Raft log.
 func (s *RocksDBStore) FirstIndex() (uint64, error) {
-	it := s.db.NewIteratorCF(rocksdb.NewDefaultReadOptions(), s.logCFHandle)
+	it := s.db.NewIteratorCF(rocksdb.NewDefaultReadOptions(), s.cfHandles[logTable])
 	defer it.Close()
 	it.SeekToFirst()
 	if it.Valid() {
@@ -227,7 +265,7 @@ func (s *RocksDBStore) FirstIndex() (uint64, error) {
 
 // LastIndex returns the last known index from the Raft log.
 func (s *RocksDBStore) LastIndex() (uint64, error) {
-	it := s.db.NewIteratorCF(rocksdb.NewDefaultReadOptions(), s.logCFHandle)
+	it := s.db.NewIteratorCF(rocksdb.NewDefaultReadOptions(), s.cfHandles[logTable])
 	defer it.Close()
 	it.SeekToLast()
 	if it.Valid() {
@@ -242,7 +280,7 @@ func (s *RocksDBStore) LastIndex() (uint64, error) {
 
 // GetLog gets a log entry at a given index.
 func (s *RocksDBStore) GetLog(index uint64, log *raft.Log) error {
-	val, err := s.db.GetBytesCF(s.ro, s.logCFHandle, util.Uint64AsBytes(index))
+	val, err := s.db.GetBytesCF(s.ro, s.cfHandles[logTable], util.Uint64AsBytes(index))
 	if err != nil {
 		return err
 	}
@@ -258,7 +296,7 @@ func (s *RocksDBStore) StoreLog(log *raft.Log) error {
 	if err != nil {
 		return err
 	}
-	return s.db.PutCF(s.wo, s.logCFHandle, util.Uint64AsBytes(log.Index), val.Bytes())
+	return s.db.PutCF(s.wo, s.cfHandles[logTable], util.Uint64AsBytes(log.Index), val.Bytes())
 }
 
 // StoreLogs stores a set of raft logs.
@@ -270,7 +308,7 @@ func (s *RocksDBStore) StoreLogs(logs []*raft.Log) error {
 		if err != nil {
 			return err
 		}
-		batch.PutCF(s.logCFHandle, key, val.Bytes())
+		batch.PutCF(s.cfHandles[logTable], key, val.Bytes())
 	}
 	return s.db.Write(s.wo, batch)
 }
@@ -278,13 +316,13 @@ func (s *RocksDBStore) StoreLogs(logs []*raft.Log) error {
 // DeleteRange deletes logs within a given range inclusively.
 func (s *RocksDBStore) DeleteRange(min, max uint64) error {
 	batch := rocksdb.NewWriteBatch()
-	batch.DeleteRangeCF(s.logCFHandle, util.Uint64AsBytes(min), util.Uint64AsBytes(max+1))
+	batch.DeleteRangeCF(s.cfHandles[logTable], util.Uint64AsBytes(min), util.Uint64AsBytes(max+1))
 	return s.db.Write(s.wo, batch)
 }
 
 // Set is used to set a key/value set outside of the raft log.
 func (s *RocksDBStore) Set(key []byte, val []byte) error {
-	if err := s.db.PutCF(s.wo, s.stableCFHandle, key, val); err != nil {
+	if err := s.db.PutCF(s.wo, s.cfHandles[stableTable], key, val); err != nil {
 		return err
 	}
 	return nil
@@ -292,7 +330,7 @@ func (s *RocksDBStore) Set(key []byte, val []byte) error {
 
 // Get is used to retrieve a value from the k/v store by key
 func (s *RocksDBStore) Get(key []byte) ([]byte, error) {
-	val, err := s.db.GetBytesCF(s.ro, s.stableCFHandle, key)
+	val, err := s.db.GetBytesCF(s.ro, s.cfHandles[stableTable], key)
 	if err != nil {
 		return nil, err
 	}
@@ -314,6 +352,12 @@ func (s *RocksDBStore) GetUint64(key []byte) (uint64, error) {
 		return 0, err
 	}
 	return util.BytesAsUint64(val), nil
+}
+
+func (s *RocksDBStore) RegisterMetrics(registry metrics.Registry) {
+	if registry != nil {
+		registry.MustRegister(s.metrics.collectors()...)
+	}
 }
 
 // Decode reverses the encode operation on a byte slice input
