@@ -133,7 +133,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	}
 
 	if stats != nil {
-		store.metrics = newRocksDBMetrics(stats, blockCache)
+		store.metrics = newRocksDBMetrics(store)
 	}
 
 	return store, nil
