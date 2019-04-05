@@ -82,27 +82,6 @@ var (
 		},
 	)
 
-	// HISTORY TREE
-
-	QedHistoryAddTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_history_add_total",
-			Help: "Number of the events added to the history tree.",
-		},
-	)
-	QedHistoryMembershipTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_history_membership_total",
-			Help: "Number of membership queries",
-		},
-	)
-	QedHistoryConsistencyTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_history_consistency_total",
-			Help: "Number of consistency queries",
-		},
-	)
-
 	// PROMETHEUS
 
 	DefaultMetrics = []prometheus.Collector{
