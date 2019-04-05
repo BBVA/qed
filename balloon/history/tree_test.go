@@ -22,6 +22,7 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/bplus"
+	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/stretchr/testify/assert"
@@ -478,11 +479,17 @@ func BenchmarkAdd(b *testing.B) {
 
 	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 300)
 
+	historyMetrics := metrics_utils.CustomRegister(AddTotal)
+	srvCloseF := metrics_utils.StartMetricsServer(historyMetrics, store)
+	defer srvCloseF()
+
 	b.N = 100000
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
 		key := rand.Bytes(64)
-		_, mutations, _ := tree.Add(key, i)
-		store.Mutate(mutations)
+		_, mutations, err := tree.Add(key, i)
+		require.NoError(b, err)
+		require.NoError(b, store.Mutate(mutations))
+		AddTotal.Inc()
 	}
 }
