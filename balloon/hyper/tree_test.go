@@ -17,23 +17,17 @@
 package hyper
 
 import (
-	"context"
 	"encoding/binary"
-	"net/http"
 	"testing"
-	"time"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
-	"github.com/bbva/qed/storage/rocks"
+	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	"github.com/bbva/qed/util"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -272,14 +266,14 @@ func BenchmarkAdd(b *testing.B) {
 
 	hasher := hashing.NewSha256Hasher()
 	freeCache := cache.NewFreeCache(CacheSize)
-
 	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
-	srvCloseF := startMetricsServer(store)
+	hyperMetrics := metrics_utils.CustomRegister(AddTotal)
+	srvCloseF := metrics_utils.StartMetricsServer(hyperMetrics, store)
 	defer srvCloseF()
 
 	b.ResetTimer()
-	b.N = 1000000
+	b.N = 2000000
 	for i := 0; i < b.N; i++ {
 		index := make([]byte, 8)
 		binary.LittleEndian.PutUint64(index, uint64(i))
@@ -287,25 +281,7 @@ func BenchmarkAdd(b *testing.B) {
 		_, mutations, err := tree.Add(hasher.Do(elem), uint64(i))
 		require.NoError(b, err)
 		require.NoError(b, store.Mutate(mutations))
-		metrics.QedHyperAddTotal.Inc()
+		AddTotal.Inc()
 	}
 
-}
-
-func startMetricsServer(store *rocks.RocksDBStore) func() {
-	reg := prometheus.NewRegistry()
-	reg.Register(metrics.QedHyperAddTotal)
-	store.RegisterMetrics(reg)
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	srv := &http.Server{Addr: ":2112", Handler: mux}
-	go srv.ListenAndServe()
-	closeF := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
-		if err := srv.Shutdown(ctx); err != nil {
-			log.Fatal(err)
-		}
-	}
-	return closeF
 }

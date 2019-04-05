@@ -82,21 +82,6 @@ var (
 		},
 	)
 
-	// HYPER TREE
-
-	QedHyperAddTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_hyper_add_total",
-			Help: "Number of the events added to the hyper tree.",
-		},
-	)
-	QedHyperMembershipTotal = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "qed_hyper_membership_total",
-			Help: "Number of membership queries",
-		},
-	)
-
 	// HISTORY TREE
 
 	QedHistoryAddTotal = prometheus.NewCounter(
