@@ -16,7 +16,8 @@
 
 package rocksdb
 
-// #include <rocksdb/c.h>
+// #include "rocksdb/c.h"
+// #include	"extended.h"
 // #include <stdlib.h>
 import "C"
 import (
@@ -376,4 +377,40 @@ func (db *DB) Flush(fo *FlushOptions) error {
 		return errors.New(C.GoString(cErr))
 	}
 	return nil
+}
+
+// GetProperty returns the value of a database property.
+func (db *DB) GetProperty(propName string) string {
+	cProp := C.CString(propName)
+	defer C.free(unsafe.Pointer(cProp))
+	cValue := C.rocksdb_property_value(db.c, cProp)
+	defer C.free(unsafe.Pointer(cValue))
+	return C.GoString(cValue)
+}
+
+// GetPropertyCF returns the value of a database property.
+func (db *DB) GetPropertyCF(propName string, cf *ColumnFamilyHandle) string {
+	cProp := C.CString(propName)
+	defer C.free(unsafe.Pointer(cProp))
+	cValue := C.rocksdb_property_value_cf(db.c, cf.c, cProp)
+	defer C.free(unsafe.Pointer(cValue))
+	return C.GoString(cValue)
+}
+
+// GetUint64Property returns the value of a database property.
+func (db *DB) GetUint64Property(propName string) uint64 {
+	cProp := C.CString(propName)
+	defer C.free(unsafe.Pointer(cProp))
+	var cValue C.uint64_t
+	C.rocksdb_property_int(db.c, cProp, &cValue)
+	return uint64(cValue)
+}
+
+// GetUint64PropertyCF returns the value of a database property.
+func (db *DB) GetUint64PropertyCF(propName string, cf *ColumnFamilyHandle) uint64 {
+	cProp := C.CString(propName)
+	defer C.free(unsafe.Pointer(cProp))
+	var cValue C.uint64_t
+	C.rocksdb_property_int_cf(db.c, cf.c, cProp, &cValue)
+	return uint64(cValue)
 }

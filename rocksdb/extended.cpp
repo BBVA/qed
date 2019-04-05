@@ -17,23 +17,30 @@
 #include "extended.h"
 
 #include "rocksdb/c.h"
+//#include "rocksdb/slice.h"
+#include "rocksdb/db.h"
 #include "rocksdb/statistics.h"
 #include "rocksdb/options.h"
 
+using rocksdb::DB;
+using rocksdb::ColumnFamilyHandle;
 using rocksdb::Statistics;
 using rocksdb::HistogramData;
 using rocksdb::StatsLevel;
 using rocksdb::Options;
 using rocksdb::Cache;
 using rocksdb::NewLRUCache;
+using rocksdb::Slice;
 using std::shared_ptr;
 
 extern "C" {
 
+struct rocksdb_t { DB* rep; };
 struct rocksdb_statistics_t { std::shared_ptr<Statistics> rep; };
 struct rocksdb_histogram_data_t { rocksdb::HistogramData* rep; };
 struct rocksdb_options_t { Options rep; };
 struct rocksdb_cache_t { std::shared_ptr<Cache> rep; };
+struct rocksdb_column_family_handle_t  { ColumnFamilyHandle* rep; };
 
 void rocksdb_options_set_atomic_flush(
     rocksdb_options_t* opts, unsigned char value) {
@@ -51,6 +58,16 @@ rocksdb_statistics_t* rocksdb_create_statistics() {
     rocksdb_statistics_t* result = new rocksdb_statistics_t;
     result->rep = rocksdb::CreateDBStatistics();
     return result;
+}
+
+int rocksdb_property_int_cf(
+    rocksdb_t* db, rocksdb_column_family_handle_t* column_family,
+    const char* propname, uint64_t *out_val) {
+    if (db->rep->GetIntProperty(column_family->rep, Slice(propname), out_val)) {
+        return 0;
+    } else {
+        return -1;
+    }
 }
 
 void rocksdb_options_set_statistics(
