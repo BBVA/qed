@@ -119,13 +119,8 @@ func NewServer(conf *Config) (*Server, error) {
 		return nil, err
 	}
 
-	// create metrics server and register default qed metrics
-	server.metrics = newServerMetrics()
+	// Create metrics server
 	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
-	server.RegisterMetrics(server.metricsServer)
-	store.RegisterMetrics(server.metricsServer)
-	// server.metricsServer.Register(raft.PrometheusCollectors())
-	// server.metricsServer.Register(balloon.PrometheusCollectors())
 
 	// Create gossip agent
 	config := gossip.DefaultConfig()
@@ -150,7 +145,6 @@ func NewServer(conf *Config) (*Server, error) {
 
 	// Create sender
 	server.sender = sender.NewSender(server.agent, sender.DefaultConfig(), server.signer)
-	server.sender.RegisterMetrics(server.metricsServer)
 
 	// Create RaftBalloon
 	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.snapshotsCh)
@@ -171,6 +165,13 @@ func NewServer(conf *Config) (*Server, error) {
 	// Create management endpoints
 	mgmtMux := mgmthttp.NewMgmtHttp(server.raftBalloon)
 	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux)
+
+	// register qed metrics
+	server.metrics = newServerMetrics()
+	server.RegisterMetrics(server.metricsServer)
+	store.RegisterMetrics(server.metricsServer)
+	server.raftBalloon.RegisterMetrics(server.metricsServer)
+	server.sender.RegisterMetrics(server.metricsServer)
 
 	return server, nil
 }
@@ -308,7 +309,6 @@ func (s *Server) Stop() error {
 func (s *Server) RegisterMetrics(registry metrics.Registry) {
 	if registry != nil {
 		registry.MustRegister(s.metrics.collectors()...)
-		registry.MustRegister(metrics.DefaultMetrics...) // TODO: remove this!!!
 	}
 }
 
