@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	CacheSize int = (1118481) * ((31 * 33) + 34) // (2^0+2^4 + 2^8 + 2^12 + 2^16 + 2^20) batches * batchSize (31 nodes * 33 bytes + 34 bytes from key)
+	//CacheSize int = (1118481) * ((31 * 33) + 34) // (2^0+2^4 + 2^8 + 2^12 + 2^16 + 2^20) batches * batchSize (31 nodes * 33 bytes + 34 bytes from key)
+	CacheSize int = (2000000) * ((31 * 33) + 34)
 )
 
 type HyperTree struct {
@@ -74,9 +75,6 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
 	t.Lock()
 	defer t.Unlock()
-
-	// metrics
-	//metrics.QedHyperAddTotal.Inc()
 
 	//log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
 
