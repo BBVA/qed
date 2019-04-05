@@ -119,6 +119,9 @@ func NewServer(conf *Config) (*Server, error) {
 		return nil, err
 	}
 
+	// Create metrics server
+	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
+
 	// Create gossip agent
 	config := gossip.DefaultConfig()
 	config.BindAddr = conf.GossipAddr
@@ -142,7 +145,6 @@ func NewServer(conf *Config) (*Server, error) {
 
 	// Create sender
 	server.sender = sender.NewSender(server.agent, sender.DefaultConfig(), server.signer)
-	server.sender.RegisterMetrics(server.metricsServer)
 
 	// Create RaftBalloon
 	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.snapshotsCh)
@@ -164,12 +166,12 @@ func NewServer(conf *Config) (*Server, error) {
 	mgmtMux := mgmthttp.NewMgmtHttp(server.raftBalloon)
 	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux)
 
-	// create metrics server and register qed metrics
+	// register qed metrics
 	server.metrics = newServerMetrics()
-	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
 	server.RegisterMetrics(server.metricsServer)
 	store.RegisterMetrics(server.metricsServer)
-	raftBalloon.RegiterMetrics(server.metricsServer)
+	server.raftBalloon.RegisterMetrics(server.metricsServer)
+	server.sender.RegisterMetrics(server.metricsServer)
 
 	return server, nil
 }
