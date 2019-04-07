@@ -21,7 +21,6 @@ import (
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/protocol"
-	"github.com/coocood/freecache"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -50,7 +49,6 @@ var (
 )
 
 type Publisher struct {
-	processed *freecache.Cache
 }
 
 func (p Publisher) Metrics() []prometheus.Collector {
@@ -61,22 +59,22 @@ func (p Publisher) Metrics() []prometheus.Collector {
 	}
 }
 
-func (p *Publisher) Process(a *gossip.Agent, ctx context.Context) error {
+func (p Publisher) New(ctx context.Context) Task {
 	QedPublisherBatchesReceivedTotal.Inc()
 
-	store := a.SnapshotStore()
+	a := ctx.Value("agent").(gossip.Agent)
 	b := ctx.Value("batch").(*protocol.BatchSnapshots)
 
-	a.Task(func() error {
+	return func() error {
 		timer := prometheus.NewTimer(QedPublisherBatchesProcessSeconds)
 		defer timer.ObserveDuration()
 
 		var batch protocol.BatchSnapshots
 
 		for _, signedSnap := range b.Snapshots {
-			_, err := p.processed.Get(signedSnap.Signature)
+			_, err := a.Cache.Get(signedSnap.Signature)
 			if err != nil {
-				p.processed.Set(signedSnap.Signature, []byte{0x0}, 0)
+				a.Cache.Set(signedSnap.Signature, []byte{0x0}, 0)
 				batch.Snapshots = append(batch.Snapshots, signedSnap)
 			}
 		}
@@ -87,7 +85,6 @@ func (p *Publisher) Process(a *gossip.Agent, ctx context.Context) error {
 		batch.From = b.From
 		batch.TTL = b.TTL
 
-		return store.PutBatch(&batch)
-	})
+		return a.SnapshotStore.PutBatch(&batch)
+	}
 }
-

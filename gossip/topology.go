@@ -16,136 +16,64 @@
 package gossip
 
 import (
-	"math/rand"
 	"sync"
-
-	"github.com/bbva/qed/gossip/member"
 )
 
-type PeerList struct {
-	L []*member.Peer
-}
-
-type Filter func(m *member.Peer) bool
-
-func (l *PeerList) Filter(f Filter) *PeerList {
-	var b PeerList
-	b.L = make([]*member.Peer, 0)
-	for _, x := range l.L {
-		if f(x) {
-			b.L = append(b.L, x)
-		}
-	}
-
-	return &b
-}
-
-func (l *PeerList) Exclude(list *PeerList) *PeerList {
-	if list == nil {
-		return l
-	}
-	return l.Filter(func(p *member.Peer) bool {
-		for _, x := range list.L {
-			if x.Name == p.Name {
-				return false
-			}
-		}
-		return true
-	})
-}
-
-func (l PeerList) All() PeerList {
-	return l
-}
-
-func (l *PeerList) Shuffle() *PeerList {
-	rand.Shuffle(len(l.L), func(i, j int) {
-		l.L[i], l.L[j] = l.L[j], l.L[i]
-	})
-	return l
-}
-
-func (l *PeerList) Update(m *member.Peer) {
-	for i, e := range l.L {
-		if e.Name == m.Name {
-			l.L[i] = m
-			return
-		}
-	}
-	l.L = append(l.L, m)
-}
-
-func (l *PeerList) Delete(m *member.Peer) {
-	for i, e := range l.L {
-		if e.Name == m.Name {
-			copy(l.L[i:], l.L[i+1:])
-			l.L[len(l.L)-1] = nil
-			l.L = l.L[:len(l.L)-1]
-			return
-		}
-	}
-}
-
-func (l PeerList) Size() int {
-	return len(l.L)
-}
-
+// Hold the gossip network information as this node sees it.
+// This information can be used to route messages to other nodes.
 type Topology struct {
-	m []PeerList
+	m map[string]*PeerList
 	sync.Mutex
 }
 
+// Returns a new empty topology
 func NewTopology() *Topology {
-	m := make([]PeerList, member.Unknown)
-	for i := member.Auditor; i < member.Unknown; i++ {
-		m[i] = PeerList{
-			L: make([]*member.Peer, 0),
-		}
-	}
+	m := make(map[string]*PeerList)
 	return &Topology{
 		m: m,
 	}
 }
 
-func (t *Topology) Update(p *member.Peer) error {
+// Updates the topology with the peer
+// information
+func (t *Topology) Update(p *Peer) error {
 	t.Lock()
 	defer t.Unlock()
-	t.m[p.Meta.Role].Update(p)
+	l, ok := t.m[p.Meta.Role]
+	if !ok {
+		t.m[p.Meta.Role] = NewPeerList()
+		l = t.m[p.Meta.Role]
+	}
+
+	l.Update(p)
 	return nil
 }
 
-func (t *Topology) Delete(p *member.Peer) error {
+// Deletes a peer from the topology
+func (t *Topology) Delete(p *Peer) error {
 	t.Lock()
 	defer t.Unlock()
-	t.m[p.Meta.Role].Delete(p)
+	l := t.m[p.Meta.Role]
+	l.Delete(p)
+
 	return nil
 }
 
-func (t *Topology) Get(kind member.Type) PeerList {
+// Returns a list of peers of a given kind
+func (t *Topology) Get(kind string) *PeerList {
 	t.Lock()
 	defer t.Unlock()
 	return t.m[kind]
 }
 
-func (t *Topology) Each(n int, exclude *PeerList) *PeerList {
-	var b PeerList
+// Returns a peer list of each kind with n elements on each kind,
+// Each list is built excluding all the nodes in the list l, shuffling the result,
+// and taking the n elements from the head of the list.
+func (t *Topology) Each(n int, l *PeerList) *PeerList {
+	var p PeerList
 
-	auditors := t.m[member.Auditor].Exclude(exclude).Shuffle()
-	monitors := t.m[member.Monitor].Exclude(exclude).Shuffle()
-	publishers := t.m[member.Publisher].Exclude(exclude).Shuffle()
-
-	if len(auditors.L) > n {
-		auditors.L = auditors.L[:n]
+	for _, list := range t.m {
+		p.Append(list.Exclude(l).Shuffle().Take(n))
 	}
-	if len(monitors.L) > n {
-		monitors.L = monitors.L[:n]
-	}
-	if len(publishers.L) > n {
-		publishers.L = publishers.L[:n]
-	}
-	b.L = append(b.L, auditors.L...)
-	b.L = append(b.L, monitors.L...)
-	b.L = append(b.L, publishers.L...)
-
-	return &b
+	return &p
 }

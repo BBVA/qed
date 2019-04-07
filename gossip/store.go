@@ -33,18 +33,29 @@ type RestSnapshotStore struct {
 	client    *http.Client
 }
 
+type RestSnapshotStoreConfig struct {
+	Servers      []string
+	QueueTimeout time.Duration
+	DialTimeout  time.Duration
+	ReadTimeout  time.Duration
+}
+
+func NewRestSnapshotStoreFromConfig(c *RestSnapshotStoreConfig) *RestSnapshotStore {
+	return NewRestSnapshotStore(c.Servers, c.QueueTimeout, c.DialTimeout, c.ReadTimeout)
+}
+
 // Returns a new RestSnapshotStore client
-func NewRestSnapshotStore(endpoints []string) *RestSnapshotStore {
+func NewRestSnapshotStore(endpoints []string, dialTimeout, readTimeout, queueTimeout time.Duration) *RestSnapshotStore {
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(netw, addr string) (net.Conn, error) {
 				// timeout calling the server
-				conn, err := net.DialTimeout(netw, addr, 200*time.Millisecond)
+				conn, err := net.DialTimeout(netw, addr, dialTimeout)
 				if err != nil {
 					return nil, err
 				}
 				// timeout reading from the connection
-				conn.SetDeadline(time.Now().Add(200 * time.Millisecond))
+				conn.SetDeadline(time.Now().Add(readTimeout))
 				return conn, nil
 			},
 		}}
