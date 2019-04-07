@@ -18,87 +18,21 @@
 package cmd
 
 import (
-	"net/http"
+	"context"
 	_ "net/http/pprof" // this will enable the default profiling capabilities
 
-	"github.com/bbva/qed/log"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	v "github.com/spf13/viper"
 )
 
-// NewRootCommand is the main Parser for the qed cli.
-func NewRootCommand(args []string) *cobra.Command {
-	ctx := &cmdContext{}
+// Context key type to be used when adding values to context
+// as per documentation:
+//	https://golang.org/pkg/context/#example_WithValue
+type k string
 
-	cmd := &cobra.Command{
-		Use:   "qed",
-		Short: "QED is a client for the verifiable log server",
-		// TraverseChildren: true,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			if ctx.configFile != "" {
-				v.SetConfigFile(ctx.configFile)
-			} else {
-				v.SetConfigName("config")
-				v.AddConfigPath(ctx.path)
-				v.AddConfigPath(".")
-			}
-
-			if !ctx.disableConfig {
-				// read in environment variables that match.
-				// ex: `QED_API_KEY=environ-key`
-				v.SetEnvPrefix("QED")
-				v.AutomaticEnv()
-
-				err := v.ReadInConfig()
-				if _, ok := err.(v.ConfigFileNotFoundError); err != nil && !ok {
-					log.Error("Can't read config file.", err)
-				}
-
-				// Runtime Binding
-				ctx.logLevel = v.GetString("log")
-				ctx.apiKey = v.GetString("api_key")
-				ctx.path, err = homedir.Expand(v.GetString("path"))
-				if err != nil {
-					log.Fatalf("Can't expand global path: %v", err)
-				}
-
-			}
-
-			ctx.profiling = v.GetBool("profiling")
-			if ctx.profiling {
-				go func() {
-					if err := http.ListenAndServe("0.0.0.0:6060", nil); err != http.ErrServerClosed {
-						log.Errorf("Can't start profiling HTTP server: %s", err)
-					}
-				}()
-
-			}
-
-			markStringRequired(ctx.apiKey, "apikey")
-
-		},
-	}
-
-	f := cmd.PersistentFlags()
-	f.StringVarP(&ctx.configFile, "config-file", "c", "", "Qed config file")
-	f.BoolVarP(&ctx.disableConfig, "no-conf", "n", false, "Disable config file loading")
-	f.StringVarP(&ctx.logLevel, "log", "l", "error", "Choose between log levels: silent, error, info and debug")
-	f.StringVarP(&ctx.apiKey, "apikey", "k", "", "Server api key")
-	f.StringVarP(&ctx.path, "path", "p", "/var/tmp/qed", "Qed root path for storage configuration and credentials")
-	f.BoolVarP(&ctx.profiling, "profiling", "f", false, "Allow a pprof url (localhost:6060) for profiling purposes")
-
-	// Lookups
-	v.BindPFlag("log", f.Lookup("log"))
-	v.BindPFlag("api_key", f.Lookup("apikey"))
-	v.BindPFlag("path", f.Lookup("path"))
-	v.BindPFlag("profiling", f.Lookup("profiling"))
-
-	cmd.AddCommand(
-		newStartCommand(ctx),
-		newClientCommand(ctx),
-		newAgentCommand(ctx, args),
-	)
-
-	return cmd
+var Root *cobra.Command = &cobra.Command{
+	Use:   "qed",
+	Short: "QED system",
+	Long:  "QED implements an authenticated data structure as an append-only log. This command exposes the QED components. Please refer to QED manual to learn about QED architecture and its components",
 }
+
+var Ctx context.Context = context.WithValue(context.Background(), k("version"), "alpha")

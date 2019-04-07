@@ -17,33 +17,33 @@
 package cmd
 
 import (
-	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/gossip"
+	"context"
+
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/server"
+	"github.com/octago/sflags/gen/gpflag"
+	"github.com/spf13/cobra"
 )
 
-type cmdContext struct {
-	apiKey, logLevel, configFile, path string
-	disableConfig, profiling           bool
+var serverCmd *cobra.Command = &cobra.Command{
+	Use:              "server",
+	Short:            "Provices access to the QED log server commands",
+	TraverseChildren: true,
 }
 
-type clientContext struct {
-	config *client.Config
-	client *client.HTTPClient
+var serverCtx context.Context = configServer()
+
+func init() {
+	Root.AddCommand(serverCmd)
 }
 
-type agentContext struct {
-	config *gossip.Config
-}
+func configServer() context.Context {
 
-func markStringRequired(value, name string) {
-	if value == "" {
-		log.Fatalf("Argument `%s` is required", name)
+	conf := server.DefaultConfig()
+
+	err := gpflag.ParseTo(conf, serverCmd.PersistentFlags())
+	if err != nil {
+		log.Fatalf("err: %v", err)
 	}
-}
-
-func markSliceStringRequired(value []string, name string) {
-	if len(value) == 0 {
-		log.Fatalf("Argument `%s` is required", name)
-	}
+	return context.WithValue(Ctx, k("server.config"), conf)
 }
