@@ -19,43 +19,54 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/log"
 	"github.com/spf13/cobra"
 )
 
-func newAddCommand(ctx *clientContext, clientPreRun func(*cobra.Command, []string)) *cobra.Command {
+var clientAddCmd *cobra.Command = &cobra.Command{
+	Use:   "add",
+	Short: "Add a QED event to the QED log",
+	RunE:  runClientAdd,
+}
 
-	var key string
+var clientAddEvent string
 
-	cmd := &cobra.Command{
-		Use:   "add",
-		Short: "Add an event",
-		Long:  `Add an event to the authenticated data structure`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			// WARN: PersitentPreRun can't be nested and we're using it in
-			// cmd/root so inbetween preRuns must be curried.
-			clientPreRun(cmd, args)
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("\nAdding key [ %s ]\n", key)
-			// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
-			cmd.SilenceUsage = true
-			snapshot, err := ctx.client.Add(key)
-			if err != nil {
-				return err
-			}
+func init() {
 
-			fmt.Printf("\nReceived snapshot with values:\n\n")
-			fmt.Printf(" EventDigest: %x\n", snapshot.EventDigest)
-			fmt.Printf(" HyperDigest: %x\n", snapshot.HyperDigest)
-			fmt.Printf(" HistoryDigest: %x\n", snapshot.HistoryDigest)
-			fmt.Printf(" Version: %d\n\n", snapshot.Version)
+	clientAddCmd.Flags().StringVar(&clientAddEvent, "event", "", "Event to append to QED")
+	clientAddCmd.MarkFlagRequired("clientAddEvent")
 
-			return nil
-		},
+	clientCmd.AddCommand(clientAddCmd)
+}
+
+func runClientAdd(cmd *cobra.Command, args []string) error {
+	// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
+	if clientAddEvent == "" {
+		return fmt.Errorf("Event must not be empty!")
 	}
 
-	cmd.Flags().StringVar(&key, "key", "", "Key to add")
-	cmd.MarkFlagRequired("key")
+	cmd.SilenceUsage = true
 
-	return cmd
+	config := clientCtx.Value(k("client.config")).(*client.Config)
+	log.SetLogger("client", config.Log)
+
+	client, err := client.NewHTTPClientFromConfig(config)
+	if err != nil {
+		return err
+	}
+
+	snapshot, err := client.Add(clientAddEvent)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("\nReceived snapshot with values:\n\n")
+	fmt.Printf(" EventDigest: %x\n", snapshot.EventDigest)
+	fmt.Printf(" HyperDigest: %x\n", snapshot.HyperDigest)
+	fmt.Printf(" HistoryDigest: %x\n", snapshot.HistoryDigest)
+	fmt.Printf(" Version: %d\n\n", snapshot.Version)
+
+	return nil
 }
+
