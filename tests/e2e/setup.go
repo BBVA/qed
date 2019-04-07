@@ -29,12 +29,6 @@ import (
 	"time"
 
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/gossip/auditor"
-	"github.com/bbva/qed/gossip/member"
-	"github.com/bbva/qed/gossip/monitor"
-	"github.com/bbva/qed/gossip/publisher"
-	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/scope"
 	"github.com/pkg/errors"
@@ -104,6 +98,7 @@ func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Re
 	return resp, err
 }
 
+/*
 func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) *gossip.Agent {
 	agentConf := gossip.DefaultConfig()
 	agentConf.NodeName = fmt.Sprintf("%s%d", name, id)
@@ -239,6 +234,7 @@ func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
 	}
 	return before, after
 }
+*/
 
 func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
 	var s *Service
