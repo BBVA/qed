@@ -23,6 +23,9 @@ import (
 )
 
 type Config struct {
+	//Log level
+	Log string
+
 	// Unique identifier to allow connections
 	APIKey string
 
@@ -77,6 +80,7 @@ func DefaultConfig() *Config {
 	currentDir := getCurrentDir()
 
 	return &Config{
+		Log:               "info",
 		APIKey:            "",
 		NodeID:            hostname,
 		HTTPAddr:          "127.0.0.1:8800",
