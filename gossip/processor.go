@@ -16,14 +16,124 @@
 package gossip
 
 import (
+	"bytes"
 	"context"
 
+	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
+	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// A processor enqueues tasks to be executed by the agent task manager
+// A processor mission is to translate from
+// and to the gossip network []byte type to
+// whatever has semantic sense.
+//
+// Also it should enqueue tasks in the agent task
+// manager.
 type Processor interface {
-	Process(a *Agent, ctx context.Context)
+	Start()
+	Stop()
 	Metrics() []prometheus.Collector
 }
 
+// Reads agents in queue, and generates a
+// *protocol.BatchSnapshots queue.
+// It also calls the tasks factories and enqueue
+// the generated tasks in the agent task manager.
+type BatchProcessor struct {
+	mh      *codec.MsgpackHandle
+	a       *Agent
+	tf      []TaskFactory
+	metrics []prometheus.Collector
+	quitCh  chan bool
+	ctx     context.Context
+	id      int
+}
+
+func NewBatchProcessor(a *Agent, tf []TaskFactory) *BatchProcessor {
+	b := &BatchProcessor{
+		mh:     &codec.MsgpackHandle{},
+		a:      a,
+		tf:     tf,
+		quitCh: make(chan bool),
+		ctx:    context.WithValue(context.Background(), "agent", a),
+	}
+
+	// register all tasks metrics
+	for _, t := range tf {
+		b.metrics = append(b.metrics, t.Metrics()...)
+	}
+
+	return b
+}
+
+func (d *BatchProcessor) Stop() {
+	close(d.quitCh)
+}
+
+func (d *BatchProcessor) Metrics() []prometheus.Collector {
+	return d.metrics
+}
+
+// This function requires the cache of the agent to be defined, and will return
+// false if the cache is not present in the agent
+func (d *BatchProcessor) wasProcessed(b *protocol.BatchSnapshots) bool {
+	if d.a.Cache == nil {
+		return false
+	}
+
+	var buf bytes.Buffer
+	err := codec.NewEncoder(&buf, d.mh).Encode(b.Snapshots)
+	if err != nil {
+		log.Infof("Error encoding batchsnapshots to calculate its digest. Dropping batch.")
+		return false
+	}
+	digest := hashing.NewSha256Hasher().Do(buf.Bytes())
+	// batch already processed, discard it
+	_, err = d.a.Cache.Get(digest)
+	if err == nil {
+		return true
+	}
+	d.a.Cache.Set(digest, []byte{0x0}, 0)
+	return false
+}
+
+func (d *BatchProcessor) Subscribe(id int, ch <-chan *Message) {
+	d.id = id
+	go func() {
+		for {
+			select {
+			case msg := <-ch:
+				// if the message is not a batch, ignore it
+				if msg.Kind != BatchMessageType {
+					log.Debugf("BatchProcessor got an unknown message from agent")
+					continue
+				}
+
+				batch := new(protocol.BatchSnapshots)
+				err := batch.Decode(msg.Payload)
+				if err != nil {
+					log.Infof("BatchProcessor unable to decode batch!. Dropping message.")
+					continue
+				}
+
+				if d.wasProcessed(batch) {
+					log.Debugf("BatchProcessor got an already  processed message from agent")
+					continue
+				}
+
+				ctx := context.WithValue(d.ctx, "batch", batch)
+				for _, t := range d.tf {
+					log.Debugf("Batch processor creating a new task")
+					d.a.Tasks.Add(t.New(ctx))
+				}
+
+				d.a.Out.Publish(msg)
+			case <-d.quitCh:
+				return
+			}
+		}
+	}()
+}

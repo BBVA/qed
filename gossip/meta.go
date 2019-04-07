@@ -13,7 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-package member
+package gossip
 
 import (
 	"bytes"
@@ -22,8 +22,9 @@ import (
 	"github.com/hashicorp/go-msgpack/codec"
 )
 
+// Agent metadata
 type Meta struct {
-	Role Type
+	Role string
 }
 
 func (a *Meta) Encode() ([]byte, error) {

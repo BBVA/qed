@@ -1,0 +1,101 @@
+/*
+   Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+package monitor
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+var (
+	QedMonitorInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_monitor_instances_count",
+			Help: "Number of monitor agents running.",
+		},
+	)
+
+	QedMonitorBatchesReceivedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_monitor_batches_received_total",
+			Help: "Number of batches received by monitors.",
+		},
+	)
+
+	QedMonitorBatchesProcessSeconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_monitor_batches_process_seconds",
+			Help: "Duration of Monitor batch processing",
+		},
+	)
+
+	QedMonitorGetIncrementalProofErrTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_monitor_get_incremental_proof_err_total",
+			Help: "Number of errors trying to get incremental proofs by monitors.",
+		},
+	)
+)
+
+type Monitor struct{}
+
+func (m Monitor) Metrics() []prometheus.Collector {
+	return []prometheus.Collector{
+		QedMonitorInstancesCount,
+		QedMonitorBatchesReceivedTotal,
+		QedMonitorBatchesProcessSeconds,
+		QedMonitorGetIncrementalProofErrTotal,
+	}
+}
+
+// b *protocol.BatchSnapshots)
+func (m Monitor) Process(agent *gossip.Agent, ctx context.Context) error {
+	QedMonitorBatchesReceivedTotal.Inc()
+	
+	qed := agent.Qed()
+	b := ctx.Value("batch").(*protocol.BatchSnapshots)
+
+	return agent.Task(func() error {
+		timer := prometheus.NewTimer(QedMonitorBatchesProcessSeconds)
+		defer timer.ObserveDuration()
+
+		first := b.Snapshots[0].Snapshot
+		last := b.Snapshots[len(b.Snapshots)-1].Snapshot
+
+		resp, err := qed.Incremental(first.Version, last.Version)
+		if err != nil {
+			QedMonitorGetIncrementalProofErrTotal.Inc()
+			log.Infof("Monitor is unable to get incremental proof from QED server: %s", err.Error())
+			return err
+		}
+		ok := qed.VerifyIncremental(resp, first, last, hashing.NewSha256Hasher())
+		if !ok {
+			agent.Alert(fmt.Sprintf("Monitor is unable to verify incremental proof from %d to %d", first.Version, last.Version))
+			log.Infof("Monitor is unable to verify incremental proof from %d to %d", first.Version, last.Version)
+		}
+		log.Debugf("Monitor verified a consistency proof between versions %d and %d: %v\n", first.Version, last.Version, ok)
+		return nil
+	})
+}
+
