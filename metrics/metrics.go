@@ -74,9 +74,11 @@ func NewServer(addr string) *Server {
 
 // Listens on the configured address and blocks until shutdown is called.
 func (m Server) Start() {
-	if err := m.server.ListenAndServe(); err != http.ErrServerClosed {
-		log.Errorf("Can't start metrics HTTP server: %s", err)
-	}
+	go func() {
+		if err := m.server.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start metrics HTTP server: %s", err)
+		}
+	}()
 }
 
 // Shutdown gracefully shutdowns metrics http server waiting 5 seconds for
