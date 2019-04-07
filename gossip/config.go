@@ -19,7 +19,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/bbva/qed/gossip/member"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -37,16 +36,20 @@ func DefaultConfig() *Config {
 		LeavePropagateDelay: 0,
 		TimeoutQueues:       200 * time.Millisecond,
 		ProcessInterval:     1 * time.Second,
+		CacheSize:           1 << 20,
+		MaxSenders:          10,
 	}
 }
 
 // Config is the configuration for creating an Agent instance
 type Config struct {
+	Log string
+
 	// The name of this node. This must be unique in the cluster. If this
 	// is not set, Auditor will set it to the hostname of the running machine.
 	NodeName string
 
-	Role member.Type
+	Role string
 
 	// BindAddr is the address that the Auditor agent's communication ports
 	// will bind to. Auditor will use this address to bind to for both TCP
@@ -54,10 +57,14 @@ type Config struct {
 	// port will be used.
 	BindAddr string
 
-	// AdvertiseAddr is the address that the Auditor agent will advertise to
+	// AdvertiseAddr is the address agent will advertise to
 	// other members of the cluster. Can be used for basic NAT traversal
 	// where both the internal ip:port and external ip:port are known.
 	AdvertiseAddr string
+
+	// MetricsAddr is the address where the metrics server will expose its
+	// API to enable mterics collectors retrieve them
+	MetricsAddr string
 
 	// LeaveOnTerm controls if the Auditor does a graceful leave when receiving
 	// the TERM signal. Defaults false. This can be changed on reload.
@@ -99,26 +106,18 @@ type Config struct {
 	//
 	MemberlistConfig *memberlist.Config
 
-	// Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts
-	AlertsServiceUrls []string
-
-	// QED API Key
-	APIKey string
-
-	// QED endpoint list
-	QEDUrls []string
-
-	// SnapshotStoreUrls contains the http endpoints of the snapshot store
-	SnapshotStoreUrls []string
-
 	// Timeout enqueuing elements on a channel
 	TimeoutQueues time.Duration
 
 	// Interval to send out messages to other agents
 	ProcessInterval time.Duration
 
-	// Address to bind the metrics endpoint
-	MetricsAddr string
+	// Maximum number of concurrent senders
+	MaxSenders int
+
+	// Cache size in bytes to store agent temporal objects.
+	// This cache will evict old objects by default
+	CacheSize int
 }
 
 // AddrParts returns the parts of the BindAddr that should be

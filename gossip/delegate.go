@@ -16,12 +16,7 @@
 package gossip
 
 import (
-	"encoding/json"
-
-	"github.com/bbva/qed/gossip/member"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/protocol"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -35,15 +30,15 @@ type eventDelegate struct {
 
 // NotifyJoin is invoked when a node is detected to have joined.
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
-	peer := member.ParsePeer(n)
-	peer.Status = member.Alive
+	peer := ParsePeer(n)
+	peer.Status = AgentStatusAlive
 	e.agent.topology.Update(peer)
 	log.Debugf("member joined: %+v ", peer)
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
-	peer := member.ParsePeer(n)
+	peer := ParsePeer(n)
 	e.agent.topology.Delete(peer)
 	log.Debugf("member left:  %+v", peer)
 }
@@ -52,7 +47,7 @@ func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 // updated, usually involving the meta data.
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
 	// ignore
-	peer := member.ParsePeer(n)
+	peer := ParsePeer(n)
 	e.agent.topology.Update(peer)
 	log.Debugf("member updated: %+v ", peer)
 }
@@ -71,7 +66,7 @@ func newAgentDelegate(agent *Agent) *agentDelegate {
 // when broadcasting an alive message. It's length is limited to
 // the given byte size. This metadata is available in the Node structure.
 func (d *agentDelegate) NodeMeta(limit int) []byte {
-	meta, err := d.agent.self.Meta.Encode()
+	meta, err := d.agent.Self.Meta.Encode()
 	if err != nil {
 		log.Fatalf("Unable to encode node metadata: %v", err)
 	}
@@ -83,25 +78,13 @@ func (d *agentDelegate) NodeMeta(limit int) []byte {
 // so would block the entire UDP packet receive loop. Additionally, the byte
 // slice may be modified after the call returns, so it should be copied if needed
 func (d *agentDelegate) NotifyMsg(msg []byte) {
-	var batch protocol.BatchSnapshots
-
-	var tmp map[string]*json.RawMessage
-	err := json.Unmarshal(msg, &tmp)
+	m := &Message{}
+	err := m.Decode(msg)
 	if err != nil {
-		log.Errorf("Unable to decode message: %v", err)
-		return
+		log.Infof("Agent Deletage unable to decode gossip message!: %v", err)
 	}
-
-	err = batch.Decode(msg)
-	if err != nil {
-		log.Errorf("Unable to decode message: %v", err)
-		return
-	}
-
-	// hashs the snaapshots to deduplicate processing inside the agent
-	hash := hashing.NewSha256Hasher().Do(*tmp["Snapshots"])
-	log.Debugf("Notifying batch %v\n", hash)
-	d.agent.inCh <- &hashedBatch{&batch, hash}
+	log.Debugf("agent payload: %+v", m.Payload)
+	d.agent.In.Publish(m)
 }
 
 // GetBroadcasts is called when user data messages can be broadcast.

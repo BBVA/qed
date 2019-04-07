@@ -47,10 +47,10 @@ var (
 
 type Sender struct {
 	agent  *gossip.Agent
-	config *Config
 	signer sign.Signer
-	out    chan *protocol.BatchSnapshots
-	quit   chan bool
+	config *Config
+	outCh  chan *protocol.BatchSnapshots
+	quitCh chan bool
 }
 
 type Config struct {
@@ -77,10 +77,9 @@ func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
 	QedSenderInstancesCount.Inc()
 	return &Sender{
 		agent:  a,
-		config: c,
 		signer: s,
-		out:    make(chan *protocol.BatchSnapshots, 1<<16),
-		quit:   make(chan bool),
+		outCh:  make(chan *protocol.BatchSnapshots, 1<<16),
+		quitCh: make(chan bool),
 	}
 }
 
@@ -89,9 +88,8 @@ func NewSender(a *gossip.Agent, c *Config, s sign.Signer) *Sender {
 func (s Sender) Start(ch chan *protocol.Snapshot) {
 	for i := 0; i < s.config.NumSenders; i++ {
 		log.Debugf("starting sender %d", i)
-		go s.batcherSender(i, ch, s.quit)
+		go s.batcher(i, ch)
 	}
-	<-s.quit
 }
 
 func (s Sender) RegisterMetrics(srv *metrics.Server) {
@@ -105,7 +103,7 @@ func (s Sender) RegisterMetrics(srv *metrics.Server) {
 func (s Sender) newBatch() *protocol.BatchSnapshots {
 	return &protocol.BatchSnapshots{
 		TTL:       s.config.TTL,
-		From:      s.agent.Self,
+		From:      s.agent.Self(),
 		Snapshots: make([]*protocol.SignedSnapshot, 0),
 	}
 }
@@ -114,14 +112,14 @@ func (s Sender) newBatch() *protocol.BatchSnapshots {
 // to other members of the gossip network.
 // If the out queue is full,  we drop the current batch and pray other sender will
 // send the batches to the gossip network.
-func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool) {
+func (s Sender) batcher(id int, ch chan *protocol.Snapshot) {
 	batch := s.newBatch()
 
 	for {
 		select {
 		case snap := <-ch:
 			if len(batch.Snapshots) == s.config.BatchSize {
-				s.agent.ChTimedSend(batch, s.out)
+				s.agent.Out(batch)
 				batch = s.newBatch()
 			}
 			ss, err := s.doSign(snap)
@@ -129,45 +127,24 @@ func (s Sender) batcherSender(id int, ch chan *protocol.Snapshot, quit chan bool
 				log.Errorf("Failed signing message: %v", err)
 			}
 			batch.Snapshots = append(batch.Snapshots, ss)
-		case b := <-s.out:
-			go s.sender(b)
+		case b := <-s.outCh:
+			s.agent.Send(b)
 		case <-time.After(s.config.SendTimer):
 			// send whatever we have on each tick, do not wait
 			// to have complete batches
 			if len(batch.Snapshots) > 0 {
-				s.agent.ChTimedSend(batch, s.out)
+				s.agent.Out(batch)
 				batch = s.newBatch()
 			}
-		case <-quit:
+		case <-s.quitCh:
 			return
 		}
 	}
 }
 
-// Send a batch to the peers it selects based on the gossip
-// network topology.
-// Do not retry sending to faulty agents, and pray other
-// sender will.
-func (s Sender) sender(batch *protocol.BatchSnapshots) {
-	msg, _ := batch.Encode()
-	peers := s.agent.Topology.Each(s.config.EachN, nil)
-	for _, peer := range peers.L {
-		QedSenderBatchesSentTotal.Inc()
-		dst := peer.Node()
-
-		log.Debugf("Sending batch %+v to node %+v\n", batch, dst.Name)
-
-		err := s.agent.Memberlist().SendReliable(dst, msg)
-		if err != nil {
-			log.Infof("Failed send message to %+v because: %v", peer, err)
-		}
-	}
-	log.Debugf("Sent batch %+v to nodes %+v\n", batch, peers.L)
-}
-
 func (s Sender) Stop() {
 	QedSenderInstancesCount.Dec()
-	close(s.quit)
+	close(s.quitCh)
 }
 
 func (s *Sender) doSign(snapshot *protocol.Snapshot) (*protocol.SignedSnapshot, error) {

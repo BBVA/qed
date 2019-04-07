@@ -13,30 +13,25 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-package member
+package gossip
 
-// Status is the state of the Agent instance.
-type Status int32
+import (
+	"testing"
+	"time"
 
-const (
-	Alive Status = iota
-	Leaving
-	Left
-	Shutdown
-	Failed
+	"github.com/stretchr/testify/require"
 )
 
-func (s Status) String() string {
-	switch s {
-	case Alive:
-		return "alive"
-	case Leaving:
-		return "leaving"
-	case Left:
-		return "left"
-	case Shutdown:
-		return "shutdown"
-	default:
-		return "failed"
-	}
+func TestRunLen(t *testing.T) {
+	tm := NewDefaultTasksManager(100*time.Millisecond, 100*time.Millisecond, 1)
+	tm.Start()
+	executions := 0
+	tm.Add(func() error {
+		executions++
+		return nil
+	})
+	time.Sleep(1 * time.Second)
+	require.Equal(t, 0, tm.Len(), "Pending tasks must be 0")
+	tm.Stop()
+	require.Equal(t, 1, executions, "Executions must be 1")
 }
