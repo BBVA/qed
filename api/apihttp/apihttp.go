@@ -253,13 +253,13 @@ func Incremental(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		// Wait for the response
 		proof, err := balloon.QueryConsistency(request.Start, request.End)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		out, err := json.Marshal(protocol.ToIncrementalResponse(proof))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
