@@ -35,7 +35,7 @@ var clientAddEvent string
 func init() {
 
 	clientAddCmd.Flags().StringVar(&clientAddEvent, "event", "", "Event to append to QED")
-	clientAddCmd.MarkFlagRequired("clientAddEvent")
+	clientAddCmd.MarkFlagRequired("event")
 
 	clientCmd.AddCommand(clientAddCmd)
 }
