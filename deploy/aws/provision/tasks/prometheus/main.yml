@@ -97,6 +97,7 @@
     - dashboards/QED.json
     - dashboards/Storage.json
     - dashboards/Cache.json
+    - dashboards/RocksDBTables.json
   register: grafana_config
 
 - name: Restart Grafana
