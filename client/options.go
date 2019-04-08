@@ -38,6 +38,7 @@ func configToOptions(conf *Config) ([]HTTPClientOptionF, error) {
 			SetDiscoveryTimeout(conf.DiscoveryTimeout),
 			SetHealthchecks(conf.EnableHealthChecks),
 			SetHealthCheckTimeout(conf.HealthCheckTimeout),
+			SetAttemptToReviveEndpoints(conf.AttemptToReviveEndpoints),
 		}
 		if len(conf.Endpoints) > 0 {
 			options = append(options, SetURLs(conf.Endpoints[0], conf.Endpoints[1:]...))
