@@ -49,10 +49,10 @@ func init() {
 }
 
 type membershipParams struct {
-	Version     uint64
-	Verify      bool
-	Event       string
-	EventDigest string
+	Version     uint64 `desc:"Version for the membership proof"`
+	Verify      bool   `desc:"Set to enable proof verification process"`
+	Event       string `desc:"QED event to build the proof"`
+	EventDigest string `desc:"QED event digest to build the proof"`
 }
 
 func configClientMembership() context.Context {

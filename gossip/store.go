@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 
 	"github.com/bbva/qed/util"
@@ -34,10 +35,10 @@ type RestSnapshotStore struct {
 }
 
 type RestSnapshotStoreConfig struct {
-	Servers      []string
-	QueueTimeout time.Duration
-	DialTimeout  time.Duration
-	ReadTimeout  time.Duration
+	Servers      []string      `desc:"REST snapshot store service endpoint list http://ip1:port1,http://ip2:port2... "`
+	QueueTimeout time.Duration `desc:"Timeout enqueuing elements on a channel"`
+	DialTimeout  time.Duration `desc:"Timeout dialing the REST snapshot store service"`
+	ReadTimeout  time.Duration `desc:"Timeout reading the REST snapshot store service response"`
 }
 
 func NewRestSnapshotStoreFromConfig(c *RestSnapshotStoreConfig) *RestSnapshotStore {
@@ -73,6 +74,9 @@ func (r *RestSnapshotStore) PutBatch(b *protocol.BatchSnapshots) error {
 		return err
 	}
 	n := len(r.endpoints)
+	if n == 0 {
+		log.Errorf("No endpoints configured for snapshot store!")
+	}
 	server := r.endpoints[0]
 	if n > 1 {
 		server = r.endpoints[rand.Intn(n)]
