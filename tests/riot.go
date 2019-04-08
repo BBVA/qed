@@ -379,6 +379,7 @@ func newAttack(conf Config) {
 		client.SetURLs(conf.Endpoint[0], conf.Endpoint[1:]...),
 		client.SetAPIKey(conf.APIKey),
 		client.SetReadPreference(client.Any),
+		client.SetAttemptToReviveEndpoints(true),
 	)
 
 	if err != nil {

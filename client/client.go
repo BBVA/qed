@@ -336,8 +336,7 @@ func (c *HTTPClient) healthCheck(timeout time.Duration) {
 		// the goroutines execute the health-check HTTP request and sets status
 		go func(endpointURL string) {
 
-			// Run a GET request against QED with a timeout
-			// TODO it should be a HEAD instead of a GET
+			// Run a HEAD request against QED with a timeout
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
 
