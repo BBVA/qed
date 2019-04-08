@@ -136,7 +136,7 @@ datetime_format = %b %d %H:%M:%S
 file = /var/log/messages
 buffer_duration = 5000
 {% if 'type_aws_instance' in group_names %}
-log_stream_name = {{ hostvars[inventory_hostname]['tags.Name'] }}
+log_stream_name = {{ hostvars[inventory_hostname]['tags.Name'] }}-{{ hostvars[inventory_hostname]['tags.Workspace'] }}
 {% endif %}
 initial_position = start_of_file
 log_group_name = /var/log/messages
