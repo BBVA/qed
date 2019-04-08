@@ -133,22 +133,27 @@ type Config struct {
 	// HealthCheckTimeout is the timeout in seconds the healthcheck waits for a response
 	// from a QED server.
 	HealthCheckTimeout time.Duration
+
+	// AttemptToReviveEndpoints sets if dead endpoints will be marked alive again after a
+	// round-robin round. This way, they will be picked up in the next try.
+	AttemptToReviveEndpoints bool
 }
 
 // DefaultConfig creates a Config structures with default values.
 func DefaultConfig() *Config {
 	return &Config{
-		Endpoints:               []string{"127.0.0.1:8800"},
-		APIKey:                  "my-key",
-		Insecure:                DefaultInsecure,
-		Timeout:                 DefaultTimeout,
-		DialTimeout:             DefaultDialTimeout,
-		HandshakeTimeout:        DefaultHandshakeTimeout,
-		ReadPreference:          Primary,
-		MaxRetries:              DefaultMaxRetries,
-		EnableTopologyDiscovery: DefaultTopologyDiscoveryEnabled,
-		EnableHealthChecks:      DefaultHealthCheckEnabled,
-		DiscoveryTimeout:        DefaultTopologyDiscoveryTimeout,
-		HealthCheckTimeout:      DefaultHealthCheckTimeout,
+		Endpoints:                []string{"127.0.0.1:8800"},
+		APIKey:                   "my-key",
+		Insecure:                 DefaultInsecure,
+		Timeout:                  DefaultTimeout,
+		DialTimeout:              DefaultDialTimeout,
+		HandshakeTimeout:         DefaultHandshakeTimeout,
+		ReadPreference:           Primary,
+		MaxRetries:               DefaultMaxRetries,
+		EnableTopologyDiscovery:  DefaultTopologyDiscoveryEnabled,
+		EnableHealthChecks:       DefaultHealthCheckEnabled,
+		DiscoveryTimeout:         DefaultTopologyDiscoveryTimeout,
+		HealthCheckTimeout:       DefaultHealthCheckTimeout,
+		AttemptToReviveEndpoints: false,
 	}
 }

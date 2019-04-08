@@ -105,6 +105,7 @@ func NewMonitor(conf *Config) (*Monitor, error) {
 		client.SetURLs(conf.QEDUrls[0], conf.QEDUrls[1:]...),
 		client.SetAPIKey(conf.APIKey),
 		client.SetReadPreference(client.Any),
+		client.SetAttemptToReviveEndpoints(true),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "Cannot start http client: ")
