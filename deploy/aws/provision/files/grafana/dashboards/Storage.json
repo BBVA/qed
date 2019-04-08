@@ -156,7 +156,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_useful) by (job)",
+          "expr": "sum(qed_storage_filter_useful) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -165,7 +165,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_full_positive) by (job)",
+          "expr": "sum(qed_storage_filter_full_positive) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -174,7 +174,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_block_full_true_positive) by (job)",
+          "expr": "sum(qed_storage_filter_full_true_positive) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -358,7 +358,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_cache_memory_usage) by (job)",
+          "expr": "sum(qed_storage_block_cache_memory_usage) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -367,7 +367,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_cache_pinned_memory_usage) by (job)",
+          "expr": "sum(qed_storage_block_cache_pinned_memory_usage) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1226,7 +1226,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_io_compact_write_bytes_bytes) by (job)",
+          "expr": "sum(qed_storage_io_compact_write_bytes) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
