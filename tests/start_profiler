@@ -15,6 +15,8 @@
 # limitations under the License.
 
 echo "export PROFILING_RATE_HZ=30 (in seconds) env variable to set the default profiling delay. Default profiling rate is 30. Output: results/cpu|mem.pb.gz"
+IP=$1
+: ${IP:=127.0.0.1}
 
 check_profiling() {
     while ps ux | grep [p]prof > /dev/null
@@ -27,15 +29,15 @@ check_profiling() {
 
 profiler_cmd() {
     ELAPSED=0
-    while curl -s -X POST http://localhost:8800/health-check 2>&1 > /dev/null ; do
-        (BALLOON_VERSION=$(curl -s http://localhost:6060/debug/vars | awk -F '"version": ' '/balloon_stats/ {print $2}' | tr -d '},')
+    while curl -s -X POST http://${IP}:8800/healthcheck -H "Api-Key: "test_key"" 2>&1 > /dev/null ; do
+        (BALLOON_VERSION=$(curl -s http://${IP}:6060/debug/vars | awk -F '"version": ' '/balloon_stats/ {print $2}' | tr -d '},')
         # Avoid empty version because preload process is not already started...
         : ${BALLOON_VERSION:=0}
-        go tool pprof -proto -sample_index=alloc_objects -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-objects.pb.gz http://localhost:6060/debug/pprof/heap
-        go tool pprof -proto -sample_index=alloc_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-space-top.pb.gz http://localhost:6060/debug/pprof/heap
-        go tool pprof -proto -sample_index=inuse_objects -output results/$(date +%s)-${BALLOON_VERSION}-mem-inuse-objects.pb.gz http://localhost:6060/debug/pprof/heap
-        go tool pprof -proto -sample_index=inuse_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-inuse-space-top.pb.gz http://localhost:6060/debug/pprof/heap
-        go tool pprof -proto -seconds 100 -output results/$(date +%s)-${BALLOON_VERSION}-cpu-profile.pb.gz http://localhost:6060) 2>&1 > /dev/null
+        go tool pprof -proto -sample_index=alloc_objects -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-objects.pb.gz http://${IP}:6060/debug/pprof/heap
+        go tool pprof -proto -sample_index=alloc_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-alloc-space-top.pb.gz http://${IP}:6060/debug/pprof/heap
+        go tool pprof -proto -sample_index=inuse_objects -output results/$(date +%s)-${BALLOON_VERSION}-mem-inuse-objects.pb.gz http://${IP}:6060/debug/pprof/heap
+        go tool pprof -proto -sample_index=inuse_space -output results/$(date +%s)-${BALLOON_VERSION}-mem-inuse-space-top.pb.gz http://${IP}:6060/debug/pprof/heap
+        go tool pprof -proto -seconds 60 -output results/$(date +%s)-${BALLOON_VERSION}-cpu-profile.pb.gz http://${IP}:6060) 2>&1 > /dev/null
         sleep $PROFILING_RATE_HZ
     done
 }
@@ -43,5 +45,6 @@ profiler_cmd() {
 : ${PROFILING_RATE_HZ:=30}
 mkdir -p results
 echo "PROFILING_RATE_HZ=${PROFILING_RATE_HZ}s"
+echo "IP=$IP"
 profiler_cmd
 check_profiling
