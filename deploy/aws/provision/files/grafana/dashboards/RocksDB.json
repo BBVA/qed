@@ -15,7 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "id": 5,
+  "id": 7,
+  "iteration": 1554727786862,
   "links": [],
   "panels": [
     {
@@ -45,10 +46,12 @@
       "links": [
         {
           "dashboard": "Cache Data, Filter, Index",
+          "includeVars": true,
+          "params": "",
           "targetBlank": true,
           "title": "Cache Data, Filter, Index",
           "type": "dashboard",
-          "url": "/d/gD89ti6mZ/cache"
+          "url": "/d/gD89ti6mZ/cache-data-filter-index"
         }
       ],
       "nullPointMode": "null",
@@ -62,7 +65,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_hit) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_hit) by (job)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -70,7 +73,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_miss) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_miss) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "miss_{{job}}",
@@ -156,7 +159,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_filter_useful) by (job)",
+          "expr": "sum(qed_[[instance]]_filter_useful) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -165,7 +168,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_filter_full_positive) by (job)",
+          "expr": "sum(qed_[[instance]]_filter_full_positive) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -174,7 +177,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_filter_full_true_positive) by (job)",
+          "expr": "sum(qed_[[instance]]_filter_full_true_positive) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -262,7 +265,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_add) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_add) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -271,7 +274,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_add_failures) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_add_failures) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -358,7 +361,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_memory_usage) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_memory_usage) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -367,7 +370,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_pinned_memory_usage) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_pinned_memory_usage) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -455,7 +458,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_bytes_read) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_bytes_read) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -464,7 +467,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_bytes_write) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_bytes_write) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -552,7 +555,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_memtable_hit) by (job)",
+          "expr": "sum(qed_[[instance]]_memtable_hit) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -561,7 +564,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_memtable_miss) by (job)",
+          "expr": "sum(qed_[[instance]]_memtable_miss) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -649,7 +652,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_io_keys_read) by (job)",
+          "expr": "sum(qed_[[instance]]_io_keys_read) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -658,7 +661,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_io_keys_written) by (job)",
+          "expr": "sum(qed_[[instance]]_io_keys_written) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -667,7 +670,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_io_keys_updated) by (job)",
+          "expr": "sum(qed_[[instance]]_io_keys_updated) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -755,7 +758,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_get_hits_l0) by (job)",
+          "expr": "sum(qed_[[instance]]_get_hits_l0) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -764,7 +767,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_get_hits_l1) by (job)",
+          "expr": "sum(qed_[[instance]]_get_hits_l1) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -773,7 +776,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_get_hits_l2_up) by (job)",
+          "expr": "sum(qed_[[instance]]_get_hits_l2_up) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -861,7 +864,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_io_stall_micros) by (job)",
+          "expr": "sum(qed_[[instance]]_io_stall_micros) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -947,7 +950,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_io_bytes_read) by (job)",
+          "expr": "sum(qed_[[instance]]_io_bytes_read) by (job)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -955,7 +958,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_io_bytes_written) by (job)",
+          "expr": "sum(qed_[[instance]]_io_bytes_written) by (job)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "write_{{job}}",
@@ -1041,7 +1044,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_io_wal_files_synced) by (job)",
+          "expr": "sum(qed_[[instance]]_io_wal_files_synced) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1129,7 +1132,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_io_wal_file_bytes) by (job)",
+          "expr": "sum(qed_[[instance]]_io_wal_file_bytes) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1217,7 +1220,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_io_compact_read_bytes) by (job)",
+          "expr": "sum(qed_[[instance]]_io_compact_read_bytes) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1226,7 +1229,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_io_compact_write_bytes) by (job)",
+          "expr": "sum(qed_[[instance]]_io_compact_write_bytes) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1235,7 +1238,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_io_compact_flush_bytes) by (job)",
+          "expr": "sum(qed_[[instance]]_io_compact_flush_bytes) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1323,7 +1326,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_compress_block_compressed) by (job)",
+          "expr": "sum(qed_[[instance]]_compress_block_compressed) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1332,7 +1335,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_compress_block_decompressed) by (job)",
+          "expr": "sum(qed_[[instance]]_compress_block_decompressed) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1341,7 +1344,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_compress_block_not_compressed) by (job)",
+          "expr": "sum(qed_[[instance]]_compress_block_not_compressed) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -1584,7 +1587,36 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "storage",
+          "value": "storage"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Instance",
+        "multi": false,
+        "name": "instance",
+        "options": [
+          {
+            "selected": true,
+            "text": "storage",
+            "value": "storage"
+          },
+          {
+            "selected": false,
+            "text": "wal",
+            "value": "wal"
+          }
+        ],
+        "query": "storage, wal",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
   },
   "time": {
     "from": "now-15m",
@@ -1616,7 +1648,7 @@
     ]
   },
   "timezone": "",
-  "title": "Storage",
-  "uid": "j5kzAB6iz",
-  "version": 32
+  "title": "RocksDB",
+  "uid": "j3KzCD6iz",
+  "version": 2
 }

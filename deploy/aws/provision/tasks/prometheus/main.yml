@@ -95,7 +95,7 @@
     - dashboards/dashboard.yml
     - dashboards/Host.json
     - dashboards/QED.json
-    - dashboards/Storage.json
+    - dashboards/RocksDB.json
     - dashboards/Cache.json
     - dashboards/RocksDBTables.json
   register: grafana_config

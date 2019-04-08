@@ -16,7 +16,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "id": 4,
+  "id": 1,
   "links": [],
   "panels": [
     {
@@ -57,7 +57,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_data_hit) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_data_hit) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -66,7 +66,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_data_miss) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_data_miss) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -74,7 +74,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_block_cache_data_add) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_data_add) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -161,7 +161,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_data_bytes_insert) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_data_bytes_insert) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -249,7 +249,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_filter_hit) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_filter_hit) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -258,7 +258,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_filter_miss) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_filter_miss) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -266,7 +266,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_block_cache_filter_add) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_filter_add) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -353,7 +353,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_filter_bytes_insert) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_filter_bytes_insert) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -362,7 +362,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_filter_bytes_evict) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_filter_bytes_evict) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -450,7 +450,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_index_hit) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_index_hit) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -459,7 +459,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_index_miss) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_index_miss) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -467,7 +467,7 @@
           "refId": "B"
         },
         {
-          "expr": "sum(qed_storage_block_cache_index_add) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_index_add) by (job)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -554,7 +554,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_storage_block_cache_index_bytes_insert) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_index_bytes_insert) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -563,7 +563,7 @@
           "refId": "A"
         },
         {
-          "expr": "sum(qed_storage_block_cache_index_bytes_evict) by (job)",
+          "expr": "sum(qed_[[instance]]_block_cache_index_bytes_evict) by (job)",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -619,7 +619,35 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "text": "storage",
+          "value": "storage"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Instance",
+        "multi": false,
+        "name": "instance",
+        "options": [
+          {
+            "selected": true,
+            "text": "storage",
+            "value": "storage"
+          },
+          {
+            "selected": false,
+            "text": "wal",
+            "value": "wal"
+          }
+        ],
+        "query": "storage, wal",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
   },
   "time": {
     "from": "now-15m",
@@ -653,5 +681,5 @@
   "timezone": "",
   "title": "Cache Data, Filter, Index",
   "uid": "gD89ti6mZ",
-  "version": 15
+  "version": 1
 }
