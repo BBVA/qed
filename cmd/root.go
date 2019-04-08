@@ -68,7 +68,7 @@ func NewRootCommand(args []string) *cobra.Command {
 			ctx.profiling = v.GetBool("profiling")
 			if ctx.profiling {
 				go func() {
-					if err := http.ListenAndServe("127.0.0.1:6060", nil); err != http.ErrServerClosed {
+					if err := http.ListenAndServe("0.0.0.0:6060", nil); err != http.ErrServerClosed {
 						log.Errorf("Can't start profiling HTTP server: %s", err)
 					}
 				}()
