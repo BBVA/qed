@@ -36,14 +36,6 @@ func NewRootCommand(args []string) *cobra.Command {
 		Short: "QED is a client for the verifiable log server",
 		// TraverseChildren: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			if ctx.profiling {
-				go func() {
-					if err := http.ListenAndServe("127.0.0.1:6060", nil); err != http.ErrServerClosed {
-						log.Errorf("Can't start profiling HTTP server: %s", err)
-					}
-				}()
-
-			}
 			if ctx.configFile != "" {
 				v.SetConfigFile(ctx.configFile)
 			} else {
@@ -70,6 +62,16 @@ func NewRootCommand(args []string) *cobra.Command {
 				if err != nil {
 					log.Fatalf("Can't expand global path: %v", err)
 				}
+
+			}
+
+			ctx.profiling = v.GetBool("profiling")
+			if ctx.profiling {
+				go func() {
+					if err := http.ListenAndServe("127.0.0.1:6060", nil); err != http.ErrServerClosed {
+						log.Errorf("Can't start profiling HTTP server: %s", err)
+					}
+				}()
 
 			}
 
