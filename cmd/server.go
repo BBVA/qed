@@ -26,8 +26,10 @@ import (
 )
 
 var serverCmd *cobra.Command = &cobra.Command{
-	Use:              "server",
-	Short:            "Provices access to the QED log server commands",
+	Use:   "server",
+	Short: "Provices access to the QED log server commands",
+	Long: `QED serves provides a REST API to the QED Log. The API is documented
+elsewhere.`,
 	TraverseChildren: true,
 }
 

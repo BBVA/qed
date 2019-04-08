@@ -38,10 +38,10 @@ type Notifier interface {
 }
 
 type DefaultNotifierConfig struct {
-	Servers      []string
-	QueueTimeout time.Duration
-	DialTimeout  time.Duration
-	ReadTimeout  time.Duration
+	Servers      []string      `desc:"Notification service endpoint list http://ip1:port1,http://ip2:port2... "`
+	QueueTimeout time.Duration `desc:"Timeout enqueuing elements on a channel"`
+	DialTimeout  time.Duration `desc:"Timeout dialing the notification service"`
+	ReadTimeout  time.Duration `desc:"Timeout reading the notification service response"`
 }
 
 func NewDefaultNotifierFromConfig(c *DefaultNotifierConfig) *DefaultNotifier {

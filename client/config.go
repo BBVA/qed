@@ -89,46 +89,50 @@ const (
 
 // Config sets the HTTP client configuration
 type Config struct {
+	// Log level
+	Log string `desc:"Set log level to info, error or debug"`
+
 	// Endpoints [host:port,host:port,...] to ask for QED cluster-topology.
-	Endpoints []string
+	Endpoints []string `desc:"REST QED Log service endpoint list http://ip1:port1,http://ip2:port2... "`
 
 	// ApiKey to query the server endpoint.
-	APIKey string
+	APIKey string `desc:"Set API Key to talk to QED Log service"`
 
 	// Insecure enables the verification of the server's certificate chain
 	// and host name, allowing MiTM vector attacks.
-	Insecure bool
+	Insecure bool `desc:"Set it to true to disable the verification of the server's certificate chain"`
 
-	// Timeout is the number of seconds to wait for a request to QED.
-	Timeout time.Duration
+	// Timeout is the time to wait for a request to QED.
+	Timeout time.Duration `desc:"Time to wait for a request to QED"`
 
-	// DialTimeout is the number of seconds to wait for the connection to be established.
-	DialTimeout time.Duration
+	// DialTimeout is the time to wait for the connection to be established.
+	DialTimeout time.Duration `desc:"Time to wait for the connection to be established"`
 
-	// HandshakeTimeout is the number of seconds to wait for a handshake negotiation.
-	HandshakeTimeout time.Duration
+	// HandshakeTimeout is the time to wait for a handshake negotiation.
+	HandshakeTimeout time.Duration `desc:"Time to wait for a handshake negotiation"`
 
 	// Controls how the client will route all queries to members of the cluster.
-	ReadPreference ReadPref
+	ReadPreference ReadPref `flag:"-"`
 
 	// MaxRetries sets the maximum number of retries before giving up
 	// when performing an HTTP request to QED.
-	MaxRetries int
+	MaxRetries int `desc:"Sets the maximum number of retries before giving up"`
 
 	// EnableTopologyDiscovery enables the process of discovering the cluster
 	// topology when requests fail.
-	EnableTopologyDiscovery bool
+	EnableTopologyDiscovery bool `desc:"Enables the process of discovering the cluster topology when requests fail"`
 
 	// EnableHealthChecks enables helthchecks of all endpoints in the current cluster topology.
-	EnableHealthChecks bool
+	EnableHealthChecks bool `desc:"Enables helthchecks of all endpoints in the current cluster topology"`
 
-	// HealthCheckTimeout is the timeout in seconds the healthcheck waits for a response
+	// HealthCheckTimeout is the time the healthcheck waits for a response
 	// from a QED server.
-	HealthCheckTimeout time.Duration
+
+	HealthCheckTimeout time.Duration `desc:"Time the healthcheck waits for a response from QED"`
 
 	// AttemptToReviveEndpoints sets if dead endpoints will be marked alive again after a
 	// round-robin round. This way, they will be picked up in the next try.
-	AttemptToReviveEndpoints bool
+	AttemptToReviveEndpoints bool `desc:"Set if dead endpoints will be marked alive again after a round-robin round"`
 }
 
 // DefaultConfig creates a Config structures with default values.
