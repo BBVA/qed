@@ -46,9 +46,9 @@ func init() {
 }
 
 type incrementalParams struct {
-	Start  uint64
-	End    uint64
-	Verify bool
+	Start  uint64 `desc:"Starting version for the incremental proof"`
+	End    uint64 `desc:"Endind version for the incremental proof"`
+	Verify bool   `desc:"Set to enable proof verification process"`
 }
 
 func configClientIncremental() context.Context {

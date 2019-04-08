@@ -26,22 +26,32 @@ import (
 )
 
 var agentCmd *cobra.Command = &cobra.Command{
-	Use:              "agent",
-	Short:            "Provides access to the QED gossip agents",
+	Use:   "agent",
+	Short: "Provides access to the QED gossip agents",
+	Long: `QED provides standalone agents to help maintain QED security. We have included
+three agents into the distribution:
+	* Monitor agent: checks the lag of the system between the QED Log and the
+	  Snapshot Store as seen by the gossip network
+	* Auditor agent: verifies QED membership proofs of the snapshots received
+	  throught the  gossip network
+	* Publisher agent: publish snapshots to the snapshot store`,
 	TraverseChildren: true,
 }
 
 var agentCtx context.Context = configAgent()
 
 func init() {
+	agentCmd.MarkFlagRequired("bind-addr")
+	agentCmd.MarkFlagRequired("metrics-addr")
+	agentCmd.MarkFlagRequired("node-name")
+	agentCmd.MarkFlagRequired("role")
+	agentCmd.MarkFlagRequired("log")
 	Root.AddCommand(agentCmd)
 }
 
 func configAgent() context.Context {
-
 	conf := gossip.DefaultConfig()
-	a := &struct{ Agent *gossip.Config }{conf}
-	err := gpflag.ParseTo(a, agentCmd.PersistentFlags())
+	err := gpflag.ParseTo(conf, agentCmd.PersistentFlags())
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}

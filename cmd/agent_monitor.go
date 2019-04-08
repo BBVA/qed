@@ -62,8 +62,12 @@ var (
 )
 
 var agentMonitorCmd *cobra.Command = &cobra.Command{
-	Use:              "monitor",
-	Short:            "Provides access to the QED gossip monitor agent",
+	Use:   "monitor",
+	Short: "Provides access to the QED gossip monitor agent",
+	Long: `Stats a QED monitor which process gossip messages measuring
+the lag between the gossip received messages and the contents of the
+snapshotsore. It also executes incremental proof verification against
+some of the snapshots received.`,
 	TraverseChildren: true,
 	RunE:             runAgentMonitor,
 }

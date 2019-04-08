@@ -69,9 +69,9 @@ type TasksManager interface {
 }
 
 type DefaultTasksManagerConfig struct {
-	QueueTimeout time.Duration
-	Interval     time.Duration
-	MaxTasks     int
+	QueueTimeout time.Duration `desc:"Timeout enqueuing elements on a channel"`
+	Interval     time.Duration `desc:"Interval to execute enqueued tasks"`
+	MaxTasks     int           `desc:"Maximum number of concurrent tasks"`
 }
 
 func NewDefaultTasksManagerFromConfig(c *DefaultTasksManagerConfig) *DefaultTasksManager {
