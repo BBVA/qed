@@ -1,1 +1,3 @@
 ---
+# Comment to disable profiling
+qed_profiling: 'true'
