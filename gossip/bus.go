@@ -57,7 +57,7 @@ type MessageBus struct {
 // publish will create a goroutine per message sent, and
 // will not time out.
 //
-func (eb *MessageBus) Publish(msg *Message) {
+func (eb *MessageBus) Publish(msg *Message) error {
 	eb.rm.RLock()
 	defer eb.rm.RUnlock()
 	if chans := eb.pool[msg.Kind]; len(chans) > 0 {
@@ -68,9 +68,10 @@ func (eb *MessageBus) Publish(msg *Message) {
 				s <- msg
 			}
 		}(msg, channels)
-	} else {
-		log.Debugf("Agent message bus publising message: no subscribers for message kind %d ", msg.Kind)
+		return nil
 	}
+	log.Infof("Agent message bus publising message: no subscribers for message kind %d ", msg.Kind)
+	return NoSubscribersFound
 }
 
 // Subscribe add a subscriber to the its correspondant pool.
