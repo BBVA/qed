@@ -18,3 +18,4 @@ package gossip
 import "errors"
 
 var ChTimedOut error = errors.New("Timeout sending data to channel")
+var NoSubscribersFound error = errors.New("No subscribers found")
