@@ -39,20 +39,25 @@ LEADER_CONFIG+=('--raft-addr 127.0.0.1:850${i}')
 LEADER_CONFIG+=('--raft-path /var/tmp/qed${i}/wal')
 
 FOLLOWER_CONFIG=("${LEADER_CONFIG[@]}")
-FOLLOWER_CONFIG+=("--gossip-join-addr 127.0.0.1:8400")
+FOLLOWER_CONFIG+=('--gossip-join-addr 127.0.0.1:8400')
 
 pids=()
 
-mkdir -p /var/tmp/qed0/server.log
+n="$1"
+if [ -z $n ]; then
+	n=0
+fi
+
+mkdir -p /var/tmp/qed-log-0
 leader=$(echo ${LEADER_CONFIG[@]} | i=0 envsubst )
-$QED server start $leader 2>&1 | tee  /var/tmp/qed0/server.log &
+$QED server start $leader 2>&1 | tee  /var/tmp/qed-log-0/server.log &
 pids+=($!)
 sleep 3s
 
-for id in $(seq 1 1 $1); do
+for id in $(seq 1 1 $n); do
 	mkdir -p /var/tmp/qed${id}
 	follower=$(echo ${FOLLOWER_CONFIG[@]} | i=$id envsubst )
-	$QED server start $follower 2>&1 | tee  /var/tmp/qed${id}/server.log &
+	$QED server start $follower 2>&1 | tee  /var/tmp/qed-log-${id}/server.log &
 	pids+=($!)
 	sleep 3s
 done
