@@ -18,6 +18,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/bbva/qed/client"
@@ -81,29 +82,17 @@ func init() {
 
 type monitorConfig struct {
 	Qed      *client.Config
-	Notifier *gossip.DefaultNotifierConfig
+	Notifier *gossip.SimpleNotifierConfig
 	Store    *gossip.RestSnapshotStoreConfig
-	Tasks    *gossip.DefaultTasksManagerConfig
+	Tasks    *gossip.SimpleTasksManagerConfig
 }
 
 func newMonitorConfig() *monitorConfig {
 	return &monitorConfig{
-		Qed: client.DefaultConfig(),
-		Notifier: &gossip.DefaultNotifierConfig{
-			DialTimeout:  200 * time.Millisecond,
-			QueueTimeout: 100 * time.Millisecond,
-			ReadTimeout:  200 * time.Millisecond,
-		},
-		Store: &gossip.RestSnapshotStoreConfig{
-			DialTimeout:  200 * time.Millisecond,
-			QueueTimeout: 100 * time.Millisecond,
-			ReadTimeout:  200 * time.Millisecond,
-		},
-		Tasks: &gossip.DefaultTasksManagerConfig{
-			QueueTimeout: 100 * time.Millisecond,
-			Interval:     200 * time.Millisecond,
-			MaxTasks:     10,
-		},
+		Qed:      client.DefaultConfig(),
+		Notifier: gossip.DefaultSimpleNotifierConfig(),
+		Store:    gossip.DefaultRestSnapshotStoreConfig(),
+		Tasks:    gossip.DefaultSimpleTasksManagerConfig(),
 	}
 }
 
@@ -125,12 +114,12 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 
 	log.SetLogger("monitor", agentConfig.Log)
 
-	notifier := gossip.NewDefaultNotifierFromConfig(conf.Notifier)
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
 		return err
 	}
-	tm := gossip.NewDefaultTasksManagerFromConfig(conf.Tasks)
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
 
 	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier)
@@ -138,7 +127,10 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{gossip.PrinterFactory{}, incrementalFactory{}})
+	lagf := newLagFactory(1 * time.Second)
+	lagf.start()
+	defer lagf.stop()
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{gossip.PrinterFactory{}, incrementalFactory{}, lagf})
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 
@@ -172,6 +164,7 @@ func (i incrementalFactory) New(ctx context.Context) gossip.Task {
 		resp, err := a.Qed.Incremental(first.Version, last.Version)
 		if err != nil {
 			QedMonitorGetIncrementalProofErrTotal.Inc()
+			a.Notifier.Alert(fmt.Sprintf("Monitor is unable to get incremental proof from QED server: %s", err.Error()))
 			log.Infof("Monitor is unable to get incremental proof from QED server: %s", err.Error())
 			return err
 		}
@@ -185,3 +178,87 @@ func (i incrementalFactory) New(ctx context.Context) gossip.Task {
 	}
 }
 
+type lagFactory struct {
+	lastVersion uint64
+	rate        uint64
+	counter     uint64
+	ticker      *time.Ticker
+	quit        chan struct{}
+}
+
+func newLagFactory(t time.Duration) *lagFactory {
+	return &lagFactory{
+		ticker: time.NewTicker(t),
+		quit:   make(chan struct{}),
+	}
+}
+
+func (l *lagFactory) stop() {
+	close(l.quit)
+}
+
+func (l *lagFactory) start() {
+	go func() {
+		for {
+			select {
+			case <-l.ticker.C:
+				c := atomic.SwapUint64(&l.counter, 0)
+				atomic.StoreUint64(&l.rate, c)
+			case <-l.quit:
+				l.ticker.Stop()
+				return
+			}
+		}
+	}()
+}
+
+func (l lagFactory) Metrics() []prometheus.Collector {
+	return []prometheus.Collector{}
+}
+
+func (l *lagFactory) New(ctx context.Context) gossip.Task {
+	a := ctx.Value("agent").(*gossip.Agent)
+	b := ctx.Value("batch").(*protocol.BatchSnapshots)
+
+	counter := atomic.AddUint64(&l.counter, uint64(len(b.Snapshots)))
+	lastVersion := atomic.LoadUint64(&l.lastVersion)
+
+	return func() error {
+		timer := prometheus.NewTimer(QedMonitorBatchesProcessSeconds)
+		defer timer.ObserveDuration()
+
+		last := b.Snapshots[len(b.Snapshots)-1].Snapshot
+		localLag := uint64(0)
+
+		if lastVersion < last.Version {
+			localLag = last.Version - lastVersion
+			atomic.StoreUint64(&l.lastVersion, last.Version)
+		}
+
+		rate := atomic.LoadUint64(&l.rate)
+
+		if localLag > rate {
+			log.Infof("Gossip lag %d > Rate %d", localLag, rate)
+		}
+
+		count, err := a.SnapshotStore.Count()
+		if err != nil {
+			return err
+		}
+
+		storeLag := uint64(0)
+		if lastVersion > count {
+			storeLag = lastVersion - count
+		}
+
+		if storeLag > rate {
+			err := a.Notifier.Alert(fmt.Sprintf("Lag between gossip and snapshot store: %d", storeLag))
+			if err != nil {
+				log.Infof("LagTask had an error sending a notification: %v", err)
+			}
+			log.Infof("Lag between gossip and snapshot store: last seen version %d - store count %d  = %d", lastVersion, count, storeLag)
+		}
+		log.Infof("Lag status: Rate: %d Counter: %d, Local Lag: %d Store Lag: %d", rate, counter, localLag, storeLag)
+		return nil
+	}
+}

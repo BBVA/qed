@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/bbva/qed/log"
@@ -23,30 +24,40 @@ type SnapshotStore interface {
 	GetRange(start, end uint64) ([]protocol.SignedSnapshot, error)
 	GetSnapshot(version uint64) (*protocol.SignedSnapshot, error)
 	DeleteRange(start, end uint64) error
+	Count() (uint64, error)
 }
 
-// Implements access to a snapshot store in an http rest
-// service.
-// The http client used has 200 ms timeout when connecting and reading
-// from the store.
+// Implements access to a snapshot store
+// in a http rest service.
+// The process of sending the notifications is
+// asynchronous, so a start and stop method is
 type RestSnapshotStore struct {
-	endpoints []string
-	client    *http.Client
+	endpoint []string
+	client   *http.Client
 }
 
+//RestSnapshotStore configuration object used to parse
+//cli options and to build the SimpleNotifier instance
 type RestSnapshotStoreConfig struct {
-	Servers      []string      `desc:"REST snapshot store service endpoint list http://ip1:port1,http://ip2:port2... "`
-	QueueTimeout time.Duration `desc:"Timeout enqueuing elements on a channel"`
-	DialTimeout  time.Duration `desc:"Timeout dialing the REST snapshot store service"`
-	ReadTimeout  time.Duration `desc:"Timeout reading the REST snapshot store service response"`
+	Endpoint    []string      `desc:"REST snapshot store service endpoint list http://ip1:port1/path1,http://ip2:port2/path2... "`
+	DialTimeout time.Duration `desc:"Timeout dialing the REST snapshot store service"`
+	ReadTimeout time.Duration `desc:"Timeout reading the REST snapshot store service response"`
 }
 
 func NewRestSnapshotStoreFromConfig(c *RestSnapshotStoreConfig) *RestSnapshotStore {
-	return NewRestSnapshotStore(c.Servers, c.QueueTimeout, c.DialTimeout, c.ReadTimeout)
+	return NewRestSnapshotStore(c.Endpoint, c.DialTimeout, c.ReadTimeout)
+}
+
+func DefaultRestSnapshotStoreConfig() *RestSnapshotStoreConfig {
+	return &RestSnapshotStoreConfig{
+		DialTimeout: 200 * time.Millisecond,
+		ReadTimeout: 200 * time.Millisecond,
+	}
+
 }
 
 // Returns a new RestSnapshotStore client
-func NewRestSnapshotStore(endpoints []string, dialTimeout, readTimeout, queueTimeout time.Duration) *RestSnapshotStore {
+func NewRestSnapshotStore(endpoint []string, dialTimeout, readTimeout time.Duration) *RestSnapshotStore {
 	client := &http.Client{
 		Transport: &http.Transport{
 			Dial: func(netw, addr string) (net.Conn, error) {
@@ -62,8 +73,8 @@ func NewRestSnapshotStore(endpoints []string, dialTimeout, readTimeout, queueTim
 		}}
 
 	return &RestSnapshotStore{
-		endpoints: endpoints,
-		client:    client,
+		endpoint: endpoint,
+		client:   client,
 	}
 }
 
@@ -73,15 +84,15 @@ func (r *RestSnapshotStore) PutBatch(b *protocol.BatchSnapshots) error {
 	if err != nil {
 		return err
 	}
-	n := len(r.endpoints)
+	n := len(r.endpoint)
 	if n == 0 {
-		log.Errorf("No endpoints configured for snapshot store!")
+		log.Errorf("No endpoint configured for snapshot store!")
 	}
-	server := r.endpoints[0]
+	url := r.endpoint[0]
 	if n > 1 {
-		server = r.endpoints[rand.Intn(n)]
+		url = r.endpoint[rand.Intn(n)]
 	}
-	resp, err := r.client.Post(server+"/batch", "application/json", bytes.NewBuffer(buf))
+	resp, err := r.client.Post(url+"/batch", "application/json", bytes.NewBuffer(buf))
 	if err != nil {
 		return err
 	}
@@ -103,14 +114,14 @@ func (r *RestSnapshotStore) GetRange(start uint64, end uint64) ([]protocol.Signe
 }
 
 func (r *RestSnapshotStore) GetSnapshot(version uint64) (*protocol.SignedSnapshot, error) {
-	n := len(r.endpoints)
-	server := r.endpoints[0]
+	n := len(r.endpoint)
+	url := r.endpoint[0]
 	if n > 1 {
-		server = r.endpoints[rand.Intn(n)]
+		url = r.endpoint[rand.Intn(n)]
 	}
-	resp, err := r.client.Get(fmt.Sprintf("%s/snapshot?v=%d", server, version))
+	resp, err := r.client.Get(fmt.Sprintf("%s/snapshot?v=%d", url, version))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error getting snapshot %d from store because %v", version, err)
 	}
 
 	defer resp.Body.Close()
@@ -133,6 +144,33 @@ func (r *RestSnapshotStore) DeleteRange(start uint64, end uint64) error {
 	panic("not implemented")
 }
 
+func (r *RestSnapshotStore) Count() (uint64, error) {
+	n := len(r.endpoint)
+	url := r.endpoint[0]
+	if n > 1 {
+		url = r.endpoint[rand.Intn(n)]
+	}
+	resp, err := r.client.Get(url + "/count")
+	if err != nil {
+		return 0, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("Error getting snapshot from the store. Status: %d", resp.StatusCode)
+	}
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, err
+	}
+	count, err := strconv.ParseUint(string(buf), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("Error parsin store response: got %d", resp.StatusCode)
+	}
+
+	return count, nil
+}
+
 type BPlusTreeStore struct {
 	db *btree.BTree
 }
@@ -143,6 +181,10 @@ type StoreItem struct {
 
 func (p StoreItem) Less(b btree.Item) bool {
 	return bytes.Compare(p.Key, b.(StoreItem).Key) < 0
+}
+
+func (s *BPlusTreeStore) Count() (uint64, error) {
+	panic("not implemented")
 }
 
 func (s *BPlusTreeStore) PutSnapshot(version uint64, snapshot protocol.Snapshot) error {
