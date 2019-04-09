@@ -374,10 +374,6 @@ func (c *HTTPClient) healthCheck(timeout time.Duration) {
 // by the preceding discovery process (if discovery is enabled).
 func (c *HTTPClient) discover() error {
 
-	if !c.discoveryEnabled {
-		return nil
-	}
-
 	for {
 
 		e, err := c.topology.NextReadEndpoint(Any)
@@ -387,30 +383,22 @@ func (c *HTTPClient) discover() error {
 
 		body, err := c.doReq("GET", e, "/info/shards", nil)
 		if err == nil {
-			info := make(map[string]interface{})
-			err = json.Unmarshal(body, &info)
+			var shards protocol.Shards
+			err = json.Unmarshal(body, &shards)
 			if err != nil {
 				return err
 			}
 
-			clusterMeta := info["meta"].(map[string]interface{})
-			primaryID := info["leaderID"].(string)
-			scheme := info["URIScheme"].(string)
-
-			var prim string
+			var primary string
 			secondaries := make([]string, 0)
-			for id, nodeMeta := range clusterMeta {
-				for k, address := range nodeMeta.(map[string]interface{}) {
-					if k == "HTTPAddr" {
-						if id == primaryID {
-							prim = scheme + address.(string)
-						} else {
-							secondaries = append(secondaries, scheme+address.(string))
-						}
-					}
+			for id, shard := range shards.Shards {
+				if id == shards.LeaderId {
+					primary = fmt.Sprintf("%s://%s", shards.URIScheme, shard.HTTPAddr)
+				} else {
+					secondaries = append(secondaries, fmt.Sprintf("%s://%s", shards.URIScheme, shard.HTTPAddr))
 				}
 			}
-			c.topology.Update(prim, secondaries...)
+			c.topology.Update(primary, secondaries...)
 			break
 		}
 	}

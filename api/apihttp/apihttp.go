@@ -19,6 +19,7 @@ package apihttp
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -351,15 +352,29 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 
 		var scheme string
 		if r.TLS != nil {
-			scheme = "https://"
+			scheme = "https"
 		} else {
-			scheme = "http://"
+			scheme = "http"
 		}
 
 		info := balloon.Info()
-		info["URIScheme"] = scheme
+		details := make(map[string]protocol.ShardDetail)
+		for k, v := range info["meta"].(map[string]map[string]string) {
+			fmt.Println(k, v)
+			details[k] = protocol.ShardDetail{
+				NodeId:   k,
+				HTTPAddr: v["HTTPAddr"],
+			}
+		}
 
-		out, err := json.Marshal(info)
+		shards := &protocol.Shards{
+			NodeId:    info["nodeID"].(string),
+			LeaderId:  info["leaderID"].(string),
+			URIScheme: protocol.Scheme(scheme),
+			Shards:    details,
+		}
+
+		out, err := json.Marshal(shards)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
