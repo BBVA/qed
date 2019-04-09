@@ -37,52 +37,54 @@ type Notifier interface {
 	Stop()
 }
 
-type DefaultNotifierConfig struct {
-	Servers      []string      `desc:"Notification service endpoint list http://ip1:port1,http://ip2:port2... "`
-	QueueTimeout time.Duration `desc:"Timeout enqueuing elements on a channel"`
-	DialTimeout  time.Duration `desc:"Timeout dialing the notification service"`
-	ReadTimeout  time.Duration `desc:"Timeout reading the notification service response"`
+//SimpleNotifier configuration object used to parse
+//cli options and to build the SimpleNotifier instance
+type SimpleNotifierConfig struct {
+	Endpoint    []string      `desc:"Notification service endpoint list http://ip1:port1/path1,http://ip2:port2/path2... "`
+	QueueSize   int           `desc:"Notifications queue size"`
+	DialTimeout time.Duration `desc:"Timeout dialing the notification service"`
+	ReadTimeout time.Duration `desc:"Timeout reading the notification service response"`
 }
 
-func NewDefaultNotifierFromConfig(c *DefaultNotifierConfig) *DefaultNotifier {
-	return NewDefaultNotifier(c.Servers, c.QueueTimeout, c.DialTimeout, c.ReadTimeout)
+// Returns the default configuration for the SimpleNotifier
+func DefaultSimpleNotifierConfig() *SimpleNotifierConfig {
+	return &SimpleNotifierConfig{
+		QueueSize:   10,
+		DialTimeout: 200 * time.Millisecond,
+		ReadTimeout: 200 * time.Millisecond,
+	}
+}
+
+// Returns a SimpleNotifier pointer configured with configuration c.
+func NewSimpleNotifierFromConfig(c *SimpleNotifierConfig) *SimpleNotifier {
+	return NewSimpleNotifier(c.Endpoint, c.QueueSize, c.DialTimeout, c.ReadTimeout)
 }
 
 // Implements the default notification service
 // client using an HTTP API:
 //
 // This notifier posts the msg contents to
-// the specified servers.
-type DefaultNotifier struct {
-	client   *http.Client
-	servers  []string
-	timeout  *time.Ticker
-	alertsCh chan string
-	quitCh   chan bool
+// the specified endpoint.
+type SimpleNotifier struct {
+	client        *http.Client
+	endpoint      []string
+	notifications chan string
+	quitCh        chan bool
 }
 
 // Returns a new default notififier client configured
-// to post messages to the servers provided.
+// to post messages to the endpoint provided.
 // To use the default timeouts of 200ms set them to 0:
 //   queueTimeout is the time to wait for the queue to accept a new message
 //   dialTimeout is the time to wait for dial to the notifications server
 //   readTimeout is the time to wait for the notifications server response
-func NewDefaultNotifier(servers []string, queueTimeout, dialTimeout, readTimeout time.Duration) *DefaultNotifier {
-	d := DefaultNotifier{
-		alertsCh: make(chan string, 10),
-		quitCh:   make(chan bool),
-		servers:  servers,
+func NewSimpleNotifier(endpoint []string, size int, dialTimeout, readTimeout time.Duration) *SimpleNotifier {
+	d := SimpleNotifier{
+		notifications: make(chan string, size),
+		quitCh:        make(chan bool),
+		endpoint:      endpoint,
 	}
-	if queueTimeout == 0 {
-		queueTimeout = 200 * time.Millisecond
-	}
-	if dialTimeout == 0 {
-		dialTimeout = 200 * time.Millisecond
-	}
-	if readTimeout == 0 {
-		readTimeout = 200 * time.Millisecond
-	}
-	d.timeout = time.NewTicker(queueTimeout)
+
 	d.client = &http.Client{
 		Transport: &http.Transport{
 			Dial: func(netw, addr string) (net.Conn, error) {
@@ -100,34 +102,28 @@ func NewDefaultNotifier(servers []string, queueTimeout, dialTimeout, readTimeout
 	return &d
 }
 
-// Alert enqueue a message into the alerts
-// queue to be sent
-func (n *DefaultNotifier) Alert(msg string) error {
-	for {
-		select {
-		case <-n.timeout.C:
-			return ChTimedOut
-		case n.alertsCh <- msg:
-			return nil
-		}
-	}
+// Alert enqueue a message into the notifications
+// queue to be sent. It will block if the notifications
+// queue is full.
+func (n *SimpleNotifier) Alert(msg string) error {
+	n.notifications <- msg
+	return nil
 }
 
 // Starts a process which send notifications
 //  to a random url selected from the configuration list of urls.
-//
-func (n *DefaultNotifier) Start() {
+func (n *SimpleNotifier) Start() {
 	go func() {
 		for {
 			select {
-			case msg := <-n.alertsCh:
-				i := len(n.servers)
-				server := n.servers[0]
+			case msg := <-n.notifications:
+				i := len(n.endpoint)
+				url := n.endpoint[0]
 				if i > 1 {
-					server = n.servers[rand.Intn(i)]
+					url = n.endpoint[rand.Intn(i)]
 				}
 
-				resp, err := n.client.Post(server, "application/json", bytes.NewBufferString(msg))
+				resp, err := n.client.Post(url, "application/json", bytes.NewBufferString(msg))
 				if err != nil {
 					log.Infof("Agent had an error sending the alert %v because %v ", msg, err)
 					continue
@@ -145,6 +141,6 @@ func (n *DefaultNotifier) Start() {
 }
 
 // Makes the notifications process to end
-func (n *DefaultNotifier) Stop() {
+func (n *SimpleNotifier) Stop() {
 	close(n.quitCh)
 }
