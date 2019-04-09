@@ -92,16 +92,16 @@ type Agent struct {
 	// of the agent
 	quitCh chan bool
 
-	// client to a running QED
+	// Client to a running QED
 	Qed *client.HTTPClient
 
-	//client to a notification service
+	//Client to a notification service
 	Notifier Notifier
 
-	// client to a snapshot store service
+	// Client to a snapshot store service
 	SnapshotStore SnapshotStore
 
-	//client to a task manager service
+	//Client to a task manager service
 	Tasks TasksManager
 }
 
