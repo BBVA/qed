@@ -45,7 +45,6 @@ type HTTPClient struct {
 	healthcheckEnabled bool
 	healthcheckTimeout time.Duration
 	discoveryEnabled   bool
-	discoveryTimeout   time.Duration
 
 	mu                sync.RWMutex // guards the next block
 	running           bool
@@ -91,7 +90,6 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, e
 		healthcheckEnabled: false,
 		healthcheckTimeout: off,
 		discoveryEnabled:   false,
-		discoveryTimeout:   off,
 		readPreference:     Primary,
 		maxRetries:         0,
 		retrier:            NewNoRequestRetrier(httpClient),
@@ -125,7 +123,6 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 		healthcheckEnabled: DefaultHealthCheckEnabled,
 		healthcheckTimeout: DefaultHealthCheckTimeout,
 		discoveryEnabled:   DefaultTopologyDiscoveryEnabled,
-		discoveryTimeout:   DefaultTopologyDiscoveryTimeout,
 		readPreference:     Primary,
 		maxRetries:         DefaultMaxRetries,
 	}

@@ -83,10 +83,6 @@ const (
 	// DefaultTopologyDiscoveryEnabled specifies if the discoverer is enabled by default.
 	DefaultTopologyDiscoveryEnabled = true
 
-	// DefaultTopologyDiscoveryTimeout specifies the time the discoverer waits for
-	// a response from QED.
-	DefaultTopologyDiscoveryTimeout = 2 * time.Second
-
 	// off is used to disable timeouts.
 	off = -1 * time.Second
 )
@@ -123,10 +119,6 @@ type Config struct {
 	// topology when requests fail.
 	EnableTopologyDiscovery bool
 
-	// DiscoveryTimeout is the timeout in seconds the discoverer waits for a response
-	// from a QED server.
-	DiscoveryTimeout time.Duration
-
 	// EnableHealthChecks enables helthchecks of all endpoints in the current cluster topology.
 	EnableHealthChecks bool
 
@@ -152,7 +144,6 @@ func DefaultConfig() *Config {
 		MaxRetries:               DefaultMaxRetries,
 		EnableTopologyDiscovery:  DefaultTopologyDiscoveryEnabled,
 		EnableHealthChecks:       DefaultHealthCheckEnabled,
-		DiscoveryTimeout:         DefaultTopologyDiscoveryTimeout,
 		HealthCheckTimeout:       DefaultHealthCheckTimeout,
 		AttemptToReviveEndpoints: false,
 	}

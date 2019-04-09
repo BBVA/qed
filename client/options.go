@@ -35,7 +35,6 @@ func configToOptions(conf *Config) ([]HTTPClientOptionF, error) {
 			SetReadPreference(conf.ReadPreference),
 			SetMaxRetries(conf.MaxRetries),
 			SetTopologyDiscovery(conf.EnableTopologyDiscovery),
-			SetDiscoveryTimeout(conf.DiscoveryTimeout),
 			SetHealthchecks(conf.EnableHealthChecks),
 			SetHealthCheckTimeout(conf.HealthCheckTimeout),
 			SetAttemptToReviveEndpoints(conf.AttemptToReviveEndpoints),
@@ -122,13 +121,6 @@ func SetMaxRetries(retries int) HTTPClientOptionF {
 func SetTopologyDiscovery(enable bool) HTTPClientOptionF {
 	return func(c *HTTPClient) error {
 		c.discoveryEnabled = enable
-		return nil
-	}
-}
-
-func SetDiscoveryTimeout(seconds time.Duration) HTTPClientOptionF {
-	return func(c *HTTPClient) error {
-		c.discoveryTimeout = seconds
 		return nil
 	}
 }
