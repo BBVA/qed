@@ -25,11 +25,11 @@ AGENT_CONFIG+=('--start-join 127.0.0.1:8400')
 
 # Notifier options
 NOTIFIER_CONFIG=()
-NOTIFIER_CONFIG+=('--notifier-servers http://127.0.0.1:8888')
+NOTIFIER_CONFIG+=('--notifier-endpoint http://127.0.0.1:8888/alert')
 
 # Snapshot store options
 STORE_CONFIG=()
-STORE_CONFIG+=('--store-servers http://127.0.0.1:8888')
+STORE_CONFIG+=('--store-endpoint http://127.0.0.1:8888')
 
 # Task manager options
 TASKS_CONFIG=()
@@ -41,16 +41,16 @@ QED_CONFIG+=("--qed-endpoints http://127.0.0.1:8800")
 
 
 MONITOR_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" "${QED_CONFIG[@]}")
-MONITOR_CONFIG+=("--role monitor")
-MONITOR_CONFIG+=("--node-name monitor${i}")
+MONITOR_CONFIG+=('--role monitor')
+MONITOR_CONFIG+=('--node-name monitor${i}')
 
 PUBLISHER_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" )
-PUBLISHER_CONFIG+=("--role publisher")
-PUBLISHER_CONFIG+=("--node-name publisher${i}")
+PUBLISHER_CONFIG+=('--role publisher')
+PUBLISHER_CONFIG+=('--node-name publisher${i}')
 
-AUDITOR_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" )
-AUDITOR_CONFIG+=("--role auditor")
-AUDITOR_CONFIG+=("--node-name auditor${i}")
+AUDITOR_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" "${QED_CONFIG[@]}")
+AUDITOR_CONFIG+=('--role auditor')
+AUDITOR_CONFIG+=('--node-name auditor${i}')
 
 start() {
 	local type="$1"
@@ -72,7 +72,8 @@ start() {
 	    ;;
 	esac
 	echo CONFIG $conf
-	$QED agent $type $conf &
+	mkdir -p /var/tmp/qed-$type-$id/
+	$QED agent $type $conf 2>&1 | tee  /var/tmp/qed-$type-$id/agent.log &
 	pids+=($!)
 }
 

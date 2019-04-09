@@ -16,11 +16,10 @@
 
 # Starts a local test setup
 
-xterm -hold -e "go run test_service.go" &
+xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/testutils/notifierstore.go" &
 
 xterm -hold -e "bash start_server" &
 
 sleep 3s
 
-xterm -hold -e "bash start_agent monitor publisher" &
-
+xterm -hold -e "bash start_agent monitor publisher auditor" &
