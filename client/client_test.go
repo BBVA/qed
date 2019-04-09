@@ -203,7 +203,7 @@ func TestCallAnyAllFail(t *testing.T) {
 
 func TestHealthCheck(t *testing.T) {
 
-	log.SetLogger("TestHealthCheck", log.INFO)
+	log.SetLogger("TestHealthCheck", log.SILENT)
 
 	var numRequests int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
@@ -241,6 +241,122 @@ func TestHealthCheck(t *testing.T) {
 	client.healthCheck(5 * time.Second)
 	time.Sleep(1 * time.Second)
 	require.True(t, client.topology.HasActiveEndpoint())
+}
+
+func TestManualDiscoveryPrimaryLost(t *testing.T) {
+
+	log.SetLogger("TestDiscoverPrimaryLost", log.SILENT)
+
+	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.Host == "primary.foo" {
+			return buildResponse(http.StatusInternalServerError, "Internal server error"), nil
+		}
+		if req.Host == "secondary1.foo" && req.URL.Path == "/info/shards" {
+			info := protocol.Shards{
+				NodeId:    "secondary1",
+				LeaderId:  "primary2",
+				URIScheme: "http",
+				Shards: map[string]protocol.ShardDetail{
+					"primary2": protocol.ShardDetail{
+						NodeId:   "primary2",
+						HTTPAddr: "primary2.foo",
+					},
+					"secondary1": protocol.ShardDetail{
+						NodeId:   "secondary1",
+						HTTPAddr: "secondary1.foo",
+					},
+				},
+			}
+			body, _ := json.Marshal(info)
+			return buildResponse(http.StatusOK, string(body)), nil
+		}
+		if req.Host == "primary2.foo" {
+			return buildResponse(http.StatusOK, string(req.Host)), nil
+		}
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(httpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary.foo", "http://secondary1.foo", "http://primary2.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(1),
+		SetTopologyDiscovery(false),
+		SetHealthchecks(false),
+	)
+	require.NoError(t, err)
+
+	// force all endpoints to get marked as dead
+	_, err = client.callPrimary("GET", "/events", nil)
+	require.Error(t, err)
+	require.False(t, client.topology.HasActivePrimary())
+
+	// try to discovery a new primary endpoint
+	client.discover()
+	require.True(t, client.topology.HasActivePrimary())
+	resp, err := client.callPrimary("GET", "/events", nil)
+	require.NoError(t, err)
+	require.Equal(t, "primary2.foo", string(resp))
+}
+
+func TestAutoDiscoveryPrimaryLost(t *testing.T) {
+
+	log.SetLogger("TestDiscoverPrimaryLost", log.SILENT)
+
+	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.Host == "primary.foo" {
+			return buildResponse(http.StatusInternalServerError, "Internal server error"), nil
+		}
+		if req.Host == "secondary1.foo" && req.URL.Path == "/info/shards" {
+			info := protocol.Shards{
+				NodeId:    "secondary1",
+				LeaderId:  "primary2",
+				URIScheme: "http",
+				Shards: map[string]protocol.ShardDetail{
+					"primary2": protocol.ShardDetail{
+						NodeId:   "primary2",
+						HTTPAddr: "primary2.foo",
+					},
+					"secondary1": protocol.ShardDetail{
+						NodeId:   "secondary1",
+						HTTPAddr: "secondary1.foo",
+					},
+				},
+			}
+			body, _ := json.Marshal(info)
+			return buildResponse(http.StatusOK, string(body)), nil
+		}
+		if req.Host == "primary2.foo" {
+			return buildResponse(http.StatusOK, string(req.Host)), nil
+		}
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(httpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary.foo", "http://secondary1.foo", "http://primary2.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(1),
+		SetTopologyDiscovery(true),
+		SetHealthchecks(false),
+	)
+	require.NoError(t, err)
+
+	resp, err := client.callPrimary("GET", "/events", nil)
+	require.NoError(t, err)
+	require.True(t, client.topology.HasActivePrimary())
+	require.Equal(t, "primary2.foo", string(resp))
+
+}
+
+func buildResponse(status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Body:       ioutil.NopCloser(bytes.NewBufferString(body)),
+		Header:     make(http.Header),
+	}
 }
 
 func TestAddSuccess(t *testing.T) {
