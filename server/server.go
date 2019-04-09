@@ -134,7 +134,7 @@ func NewServer(conf *Config) (*Server, error) {
 	server.snapshotsCh = make(chan *protocol.Snapshot, 1<<16)
 
 	// Create sender
-	server.sender = NewSender(server.agent, server.signer, 100, 2, 3)
+	server.sender = NewSender(server.agent, server.signer, 500, 2, 3)
 
 	// Create RaftBalloon
 	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.snapshotsCh)
