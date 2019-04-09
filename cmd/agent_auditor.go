@@ -17,20 +17,176 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
+	"github.com/bbva/qed/util"
+	"github.com/octago/sflags/gen/gpflag"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 )
 
-func newAgentAuditorCommand(ctx context.Context, args []string) *cobra.Command {
-
-	cmd := &cobra.Command{
-		Use:   "auditor",
-		Short: "Start a QED auditor",
-		Long:  `Start a QED auditor that reacts to snapshot batches propagated by QED servers and periodically executes membership queries to verify the inclusion of events`,
-		Run: func(cmd *cobra.Command, args []string) {
-
+var (
+	QedAuditorInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_auditor_instances_count",
+			Help: "Number of auditor agents running.",
 		},
+	)
+
+	QedAuditorBatchesProcessSeconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_auditor_batches_process_seconds",
+			Help: "Duration of Auditor batch processing",
+		},
+	)
+
+	QedAuditorBatchesReceivedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_auditor_batches_received_total",
+			Help: "Number of batches received by auditors.",
+		},
+	)
+
+	QedAuditorGetMembershipProofErrTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_auditor_get_membership_proof_err_total",
+			Help: "Number of errors trying to get membership proofs by auditors.",
+		},
+	)
+)
+
+var agentAuditorCmd = &cobra.Command{
+	Use:   "auditor",
+	Short: "Provides access to the QED gossip auditor agent",
+	Long: `Start a QED auditor that reacts to snapshot batches propagated
+by QED servers and periodically executes membership queries to verify
+the inclusion of events`,
+	RunE: runAgentAuditor,
+}
+
+var agentAuditorCtx context.Context
+
+func init() {
+	agentAuditorCtx = configAuditor()
+	agentCmd.AddCommand(agentAuditorCmd)
+}
+
+type auditorConfig struct {
+	Qed      *client.Config
+	Notifier *gossip.SimpleNotifierConfig
+	Store    *gossip.RestSnapshotStoreConfig
+	Tasks    *gossip.SimpleTasksManagerConfig
+}
+
+func newAuditorConfig() *auditorConfig {
+	return &auditorConfig{
+		Qed:      client.DefaultConfig(),
+		Notifier: gossip.DefaultSimpleNotifierConfig(),
+		Store:    gossip.DefaultRestSnapshotStoreConfig(),
+		Tasks:    gossip.DefaultSimpleTasksManagerConfig(),
+	}
+}
+
+func configAuditor() context.Context {
+	conf := newAuditorConfig()
+	err := gpflag.ParseTo(conf, agentAuditorCmd.PersistentFlags())
+	if err != nil {
+		log.Fatalf("err: %v", err)
 	}
 
-	return cmd
+	ctx := context.WithValue(agentCtx, k("auditor.config"), conf)
+
+	return ctx
+}
+
+func runAgentAuditor(cmd *cobra.Command, args []string) error {
+	agentConfig := agentAuditorCtx.Value(k("agent.config")).(*gossip.Config)
+	conf := agentAuditorCtx.Value(k("auditor.config")).(*auditorConfig)
+
+	log.SetLogger("auditor", agentConfig.Log)
+
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
+	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
+	if err != nil {
+		return err
+	}
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
+	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
+
+	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier)
+	if err != nil {
+		return err
+	}
+
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{gossip.PrinterFactory{}, membershipFactory{}})
+	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
+	defer bp.Stop()
+
+	agent.Start()
+	util.AwaitTermSignal(agent.Shutdown)
+	return nil
+}
+
+type membershipFactory struct{}
+
+func (m membershipFactory) Metrics() []prometheus.Collector {
+	return []prometheus.Collector{
+		QedAuditorInstancesCount,
+		QedAuditorBatchesProcessSeconds,
+		QedAuditorBatchesReceivedTotal,
+		QedAuditorGetMembershipProofErrTotal,
+	}
+}
+
+func (i membershipFactory) New(ctx context.Context) gossip.Task {
+	a := ctx.Value("agent").(*gossip.Agent)
+	b := ctx.Value("batch").(*protocol.BatchSnapshots)
+
+	s := b.Snapshots[0]
+
+	return func() error {
+		timer := prometheus.NewTimer(QedAuditorBatchesProcessSeconds)
+		defer timer.ObserveDuration()
+
+		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, s.Snapshot.Version)
+		if err != nil {
+			log.Infof("Auditor is unable to get membership proof from QED server: %v", err)
+
+			switch fmt.Sprintf("%T", err) {
+			case "*errors.errorString":
+				a.Notifier.Alert(fmt.Sprintf("Auditor is unable to get membership proof from QED server: %v", err))
+			default:
+				QedAuditorGetMembershipProofErrTotal.Inc()
+			}
+
+			return err
+		}
+
+		storedSnap, err := a.SnapshotStore.GetSnapshot(proof.CurrentVersion)
+		if err != nil {
+			log.Infof("Unable to get snapshot from storage: %v", err)
+			return err
+		}
+
+		checkSnap := &protocol.Snapshot{
+			HistoryDigest: s.Snapshot.HistoryDigest,
+			HyperDigest:   storedSnap.Snapshot.HyperDigest,
+			Version:       s.Snapshot.Version,
+			EventDigest:   s.Snapshot.EventDigest,
+		}
+
+		ok := a.Qed.DigestVerify(proof, checkSnap, hashing.NewSha256Hasher)
+		if !ok {
+			a.Notifier.Alert(fmt.Sprintf("Unable to verify snapshot %v", s.Snapshot))
+			log.Infof("Unable to verify snapshot %v", s.Snapshot)
+		}
+
+		log.Infof("MembershipTask.Do(): Snapshot %v has been verified by QED", s.Snapshot)
+		return nil
+	}
 }

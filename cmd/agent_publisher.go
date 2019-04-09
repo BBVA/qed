@@ -18,7 +18,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
@@ -70,28 +69,16 @@ func init() {
 }
 
 type publisherConfig struct {
-	Notifier *gossip.DefaultNotifierConfig
+	Notifier *gossip.SimpleNotifierConfig
 	Store    *gossip.RestSnapshotStoreConfig
-	Tasks    *gossip.DefaultTasksManagerConfig
+	Tasks    *gossip.SimpleTasksManagerConfig
 }
 
 func newPublisherConfig() *publisherConfig {
 	return &publisherConfig{
-		Notifier: &gossip.DefaultNotifierConfig{
-			DialTimeout:  200 * time.Millisecond,
-			QueueTimeout: 100 * time.Millisecond,
-			ReadTimeout:  200 * time.Millisecond,
-		},
-		Store: &gossip.RestSnapshotStoreConfig{
-			DialTimeout:  200 * time.Millisecond,
-			QueueTimeout: 100 * time.Millisecond,
-			ReadTimeout:  200 * time.Millisecond,
-		},
-		Tasks: &gossip.DefaultTasksManagerConfig{
-			QueueTimeout: 100 * time.Millisecond,
-			Interval:     200 * time.Millisecond,
-			MaxTasks:     10,
-		},
+		Notifier: gossip.DefaultSimpleNotifierConfig(),
+		Store:    gossip.DefaultRestSnapshotStoreConfig(),
+		Tasks:    gossip.DefaultSimpleTasksManagerConfig(),
 	}
 }
 
@@ -113,8 +100,8 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 
 	log.SetLogger("publisher", agentConfig.Log)
 
-	notifier := gossip.NewDefaultNotifierFromConfig(conf.Notifier)
-	tm := gossip.NewDefaultTasksManagerFromConfig(conf.Tasks)
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
 
 	agent, err := gossip.NewDefaultAgent(agentConfig, nil, store, tm, notifier)
@@ -147,7 +134,7 @@ var errorNoSnapshots error = fmt.Errorf("No snapshots were found on this batch!!
 
 func (p publisherFactory) New(ctx context.Context) gossip.Task {
 	QedPublisherBatchesReceivedTotal.Inc()
-
+	fmt.Println("PublisherFactory creating new Task!")
 	a := ctx.Value("agent").(*gossip.Agent)
 	b := ctx.Value("batch").(*protocol.BatchSnapshots)
 
@@ -169,7 +156,7 @@ func (p publisherFactory) New(ctx context.Context) gossip.Task {
 		if len(batch.Snapshots) < 1 {
 			return errorNoSnapshots
 		}
-		log.Debugf("Sending batch to snapshot sotre: ", batch)
+		log.Debugf("Sending batch to snapshot store: %+v", batch)
 		return a.SnapshotStore.PutBatch(batch)
 	}
 }

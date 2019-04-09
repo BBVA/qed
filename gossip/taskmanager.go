@@ -68,42 +68,50 @@ type TasksManager interface {
 	Len() int
 }
 
-type DefaultTasksManagerConfig struct {
-	QueueTimeout time.Duration `desc:"Timeout enqueuing elements on a channel"`
-	Interval     time.Duration `desc:"Interval to execute enqueued tasks"`
-	MaxTasks     int           `desc:"Maximum number of concurrent tasks"`
+//SimpleTasksManager configuration object used to parse
+//cli options and to build the SimpleNotifier instance
+type SimpleTasksManagerConfig struct {
+	Interval time.Duration `desc:"Interval to execute enqueued tasks"`
+	MaxTasks int           `desc:"Maximum number of concurrent tasks"`
 }
 
-func NewDefaultTasksManagerFromConfig(c *DefaultTasksManagerConfig) *DefaultTasksManager {
-	return NewDefaultTasksManager(c.QueueTimeout, c.Interval, c.MaxTasks)
+// Returns the default configuration for the SimpleTasksManager
+func DefaultSimpleTasksManagerConfig() *SimpleTasksManagerConfig {
+	return &SimpleTasksManagerConfig{
+		Interval: 200 * time.Millisecond,
+		MaxTasks: 10,
+	}
 }
 
-// Default implementation of a task manager used
+func NewSimpleTasksManagerFromConfig(c *SimpleTasksManagerConfig) *SimpleTasksManager {
+	return NewSimpleTasksManager(c.Interval, c.MaxTasks)
+}
+
+// Simple implementation of a task manager used
 // by the QED provided agents
-type DefaultTasksManager struct {
-	taskCh         chan Task
-	quitCh         chan bool
-	ticker         *time.Ticker
-	enqueueTimeout *time.Ticker
-	maxTasks       int
+type SimpleTasksManager struct {
+	taskCh   chan Task
+	quitCh   chan bool
+	ticker   *time.Ticker
+	timeout  time.Duration
+	maxTasks int
 }
 
 // NewTasksManager returns a new TasksManager and its task
 // channel. The execution loop will try to execute up to maxTasks tasks
-// each interval.
-func NewDefaultTasksManager(i, t time.Duration, max int) *DefaultTasksManager {
-	return &DefaultTasksManager{
-		taskCh:         make(chan Task, max),
-		quitCh:         make(chan bool),
-		ticker:         time.NewTicker(i),
-		enqueueTimeout: time.NewTicker(t),
-		maxTasks:       max,
+// each interval. Also the channel has maxTasks capacity.
+func NewSimpleTasksManager(i time.Duration, max int) *SimpleTasksManager {
+	return &SimpleTasksManager{
+		taskCh:   make(chan Task, max),
+		quitCh:   make(chan bool),
+		ticker:   time.NewTicker(i),
+		maxTasks: max,
 	}
 }
 
 // Start activates the task dispatcher
 // to execute enqueued tasks
-func (t *DefaultTasksManager) Start() {
+func (t *SimpleTasksManager) Start() {
 	go func() {
 		for {
 			select {
@@ -119,36 +127,28 @@ func (t *DefaultTasksManager) Start() {
 // Stop disables the task dispatcher
 // It does not wait to empty the
 // task queue nor closes the task channel.
-func (t *DefaultTasksManager) Stop() {
+func (t *SimpleTasksManager) Stop() {
 	close(t.quitCh)
 	t.ticker.Stop()
-	t.enqueueTimeout.Stop()
 }
 
 // Add a task to the task manager queue, with the configured timed
-// out. It will block the timeout duration in the worst case and can be
-// called from multiple goroutines.
-func (t *DefaultTasksManager) Add(task Task) error {
-	for {
-		select {
-		case <-t.enqueueTimeout.C:
-			return ChTimedOut
-		case t.taskCh <- task:
-			return nil
-		}
-	}
+// out. It will block until the task is read if the channel is full.
+func (t *SimpleTasksManager) Add(task Task) error {
+	t.taskCh <- task
+	return nil
 }
 
 // Len returns the number of pending tasks
 // enqueued in the tasks channel
-func (t *DefaultTasksManager) Len() int {
+func (t *SimpleTasksManager) Len() int {
 	return len(t.taskCh)
 }
 
 // dispatchTasks dequeues tasks and
 // execute them in different goroutines
 // up to MaxInFlightTasks
-func (t *DefaultTasksManager) dispatchTasks() {
+func (t *SimpleTasksManager) dispatchTasks() {
 	count := 0
 
 	for {
@@ -157,7 +157,7 @@ func (t *DefaultTasksManager) dispatchTasks() {
 			go func() {
 				err := task()
 				if err != nil {
-					log.Infof("Agent task manager got an error from a task: %v", err)
+					log.Infof("Task manager got an error from a task: %v", err)
 				}
 			}()
 			count++
@@ -170,6 +170,9 @@ func (t *DefaultTasksManager) dispatchTasks() {
 	}
 }
 
+// PrinterFactory create tasks than print BatchSnapshots
+// for testing purposes. Its intented to be used with the
+// BatchSnapshot processor
 type PrinterFactory struct {
 }
 
@@ -179,6 +182,7 @@ func (p PrinterFactory) Metrics() []prometheus.Collector {
 
 func (p PrinterFactory) New(ctx context.Context) Task {
 	// a := ctx.Value("agent").(Agent)
+	fmt.Println("PrinterFactory creating new Task!")
 	b := ctx.Value("batch").(*protocol.BatchSnapshots)
 	return func() error {
 		fmt.Printf("Printer Task: agent received batch: %+v\n", b)
