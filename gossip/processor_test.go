@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bbva/qed/protocol"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,16 +38,17 @@ func TestBatchProcessorLoop(t *testing.T) {
 	require.NoError(t, err, "Error creating agent!")
 
 	p := NewBatchProcessor(a, nil)
-	a.In.Subscribe(BatchMessageType, p, 0)
+	a.In.Subscribe(BatchMessageType, p, 1)
 	defer p.Stop()
 
 	a.Out.Subscribe(BatchMessageType, ts, 5)
-
+	batch := &protocol.BatchSnapshots{}
+	buf, _ := batch.Encode()
 	m1 := &Message{
 		Kind:    BatchMessageType,
 		From:    nil,
 		TTL:     0,
-		Payload: nil,
+		Payload: buf,
 	}
 
 	wg.Add(1)
@@ -83,12 +85,13 @@ func TestBatchProcessorWasProcessed(t *testing.T) {
 	defer p.Stop()
 
 	a.Out.Subscribe(BatchMessageType, ts, 5)
-
+	batch := &protocol.BatchSnapshots{}
+	buf, _ := batch.Encode()
 	m1 := &Message{
 		Kind:    BatchMessageType,
 		From:    nil,
 		TTL:     0,
-		Payload: nil,
+		Payload: buf,
 	}
 
 	a.In.Publish(m1)

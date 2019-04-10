@@ -22,31 +22,30 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bbva/qed/protocol"
 	"github.com/stretchr/testify/require"
 )
 
-func storeHandler(called *bool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func TestDefaultStore(t *testing.T) {
+	var called bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			w.Header().Set("Allow", "POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		*called = true
+		called = true
 		w.WriteHeader(http.StatusNoContent)
-	}
-}
+	}))
 
-func TestDefaultStore(t *testing.T) {
-	var called bool
-
-	server := httptest.NewServer(storeHandler(&called))
 	defer server.Close()
-	notificator := NewDefaultNotifier([]string{server.URL}, 0, 0, 0)
+	conf := DefaultRestSnapshotStoreConfig()
+	conf.Endpoint = append(conf.Endpoint, server.URL)
+	store := NewRestSnapshotStoreFromConfig(conf)
 
-	notificator.Start()
-	notificator.Alert("test alert")
+	store.PutBatch(&protocol.BatchSnapshots{})
+
 	time.Sleep(1 * time.Second)
-	notificator.Stop()
-	require.True(t, called, "Server must be called from alerter")
+
+	require.True(t, called, "Server must be called from store")
 }
