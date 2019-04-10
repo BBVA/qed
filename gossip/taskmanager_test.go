@@ -23,7 +23,7 @@ import (
 )
 
 func TestRunLen(t *testing.T) {
-	tm := NewDefaultTasksManager(100*time.Millisecond, 100*time.Millisecond, 1)
+	tm := NewSimpleTasksManager(100*time.Millisecond, 1)
 	tm.Start()
 	executions := 0
 	tm.Add(func() error {

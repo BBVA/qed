@@ -25,28 +25,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func handler(called *bool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func TestDefaultAlert(t *testing.T) {
+	var called bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			w.Header().Set("Allow", "POST")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		*called = true
+		called = true
 		w.WriteHeader(http.StatusNoContent)
-	}
-}
+	}))
 
-func TestDefaultAlert(t *testing.T) {
-	var called bool
-
-	server := httptest.NewServer(handler(&called))
 	defer server.Close()
-	notificator := NewDefaultNotifier([]string{server.URL}, 0, 0, 0)
+	conf := DefaultSimpleNotifierConfig()
+	conf.Endpoint = append(conf.Endpoint, server.URL)
+	notificator := NewSimpleNotifierFromConfig(conf)
 
 	notificator.Start()
+	defer notificator.Stop()
+
 	notificator.Alert("test alert")
 	time.Sleep(1 * time.Second)
-	notificator.Stop()
+
 	require.True(t, called, "Server must be called from alerter")
 }
