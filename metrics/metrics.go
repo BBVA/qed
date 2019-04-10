@@ -84,7 +84,8 @@ func (m Server) Start() {
 // Shutdown gracefully shutdowns metrics http server waiting 5 seconds for
 // connections to be closed.
 func (m Server) Shutdown() {
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	m.server.Shutdown(ctx)
 }
 
