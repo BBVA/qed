@@ -30,6 +30,7 @@ import (
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/server"
+	"github.com/bbva/qed/testutils/notifierstore"
 	"github.com/bbva/qed/testutils/scope"
 	"github.com/pkg/errors"
 )
@@ -98,148 +99,10 @@ func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Re
 	return resp, err
 }
 
-/*
-func newAgent(id int, name string, role member.Type, p gossip.Processor, t *testing.T) *gossip.Agent {
-	agentConf := gossip.DefaultConfig()
-	agentConf.NodeName = fmt.Sprintf("%s%d", name, id)
-
-	switch role {
-	case member.Auditor:
-		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:810%d", id)
-		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:811%d", id)
-	case member.Monitor:
-		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:820%d", id)
-		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:821%d", id)
-	case member.Publisher:
-		agentConf.BindAddr = fmt.Sprintf("127.0.0.1:830%d", id)
-		agentConf.MetricsAddr = fmt.Sprintf("127.0.0.1:831%d", id)
-	}
-
-	agentConf.StartJoin = []string{QEDGossip}
-	agentConf.EnableCompression = true
-	agentConf.AlertsUrls = []string{AlertsURL}
-	agentConf.Role = role
-	metricsServer := metrics.NewServer(agentConf.MetricsAddr)
-	agent, err := gossip.NewAgent(agentConf, []gossip.Processor{p}, metricsServer)
-	if err != nil {
-		t.Fatalf("Failed to start AGENT %s: %v", name, err)
-	}
-	_, _ = agent.Join([]string{QEDGossip})
-	return agent
-}
-
-func setupAuditor(id int, t *testing.T) (scope.TestF, scope.TestF) {
-	var au *auditor.Auditor
-	var agent *gossip.Agent
-	var err error
-
-	before := func(t *testing.T) {
-		auditorConf := auditor.DefaultConfig()
-		auditorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:710%d", id)
-		auditorConf.QEDUrls = []string{QEDUrl}
-		auditorConf.PubUrls = []string{StoreURL}
-		auditorConf.AlertsUrls = []string{AlertsURL}
-		auditorConf.APIKey = APIKey
-
-		au, err = auditor.NewAuditor(*auditorConf)
-		if err != nil {
-			t.Fatalf("Unable to create a new auditor: %v", err)
-		}
-
-		agent = newAgent(id, "auditor", member.Auditor, au, t)
-	}
-
-	after := func(t *testing.T) {
-		if au != nil {
-			au.Shutdown()
-		}
-		err := agent.Leave()
-		if err != nil {
-			t.Fatalf("Unable to shutdown the auditor: %v", err)
-		}
-		err = agent.Shutdown()
-		if err != nil {
-			t.Fatalf("Unable to shutdown the auditor: %v", err)
-		}
-	}
-	return before, after
-}
-
-func setupMonitor(id int, t *testing.T) (scope.TestF, scope.TestF) {
-	var mn *monitor.Monitor
-	var agent *gossip.Agent
-	var err error
-
-	before := func(t *testing.T) {
-		monitorConf := monitor.DefaultConfig()
-		monitorConf.MetricsAddr = fmt.Sprintf("127.0.0.1:720%d", id)
-		monitorConf.QEDUrls = []string{QEDUrl}
-		monitorConf.AlertsUrls = []string{AlertsURL}
-		monitorConf.APIKey = APIKey
-
-		mn, err = monitor.NewMonitor(monitorConf)
-		if err != nil {
-			t.Fatalf("Unable to create a new monitor: %v", err)
-		}
-
-		agent = newAgent(id, "monitor", member.Monitor, mn, t)
-	}
-
-	after := func(t *testing.T) {
-		if mn != nil {
-			mn.Shutdown()
-		}
-		err := agent.Leave()
-		if err != nil {
-			t.Fatalf("Unable to shutdown the monitor: %v", err)
-		}
-		err = agent.Shutdown()
-		if err != nil {
-			t.Fatalf("Unable to shutdown the monitor: %v", err)
-		}
-	}
-	return before, after
-}
-
-func setupPublisher(id int, t *testing.T) (scope.TestF, scope.TestF) {
-	var pu *publisher.Publisher
-	var agent *gossip.Agent
-	var err error
-
-	before := func(t *testing.T) {
-		conf := publisher.DefaultConfig()
-		conf.MetricsAddr = fmt.Sprintf("127.0.0.1:730%d", id)
-		conf.PubUrls = []string{StoreURL}
-
-		pu, err = publisher.NewPublisher(*conf)
-		if err != nil {
-			t.Fatalf("Unable to create a new publisher: %v", err)
-		}
-
-		agent = newAgent(id, "publisher", member.Publisher, pu, t)
-	}
-
-	after := func(t *testing.T) {
-		if pu != nil {
-			pu.Shutdown()
-		}
-		err := agent.Leave()
-		if err != nil {
-			t.Fatalf("Unable to shutdown the publisher: %v", err)
-		}
-		err = agent.Shutdown()
-		if err != nil {
-			t.Fatalf("Unable to shutdown the publisher: %v", err)
-		}
-	}
-	return before, after
-}
-*/
-
 func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
-	var s *Service
+	var s *notifierstore.Service
 	before := func(t *testing.T) {
-		s = NewService()
+		s = notifierstore.NewService()
 		foreground := false
 		s.Start(foreground)
 	}
