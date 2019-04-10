@@ -95,7 +95,6 @@ func (d *BatchProcessor) wasProcessed(b *protocol.BatchSnapshots) bool {
 	// batch already processed, discard it
 	_, err = d.a.Cache.Get(digest)
 	if err == nil {
-		log.Debugf("Batch processor found %v on cache calculated from %v", digest, bb)
 		return true
 	}
 	d.a.Cache.Set(digest, []byte{0x1}, 0)
@@ -122,7 +121,7 @@ func (d *BatchProcessor) Subscribe(id int, ch <-chan *Message) {
 				}
 
 				if d.wasProcessed(batch) {
-					log.Debugf("BatchProcessor got an already  processed message from agent")
+					log.Debugf("BatchProcessor got an already processed message from agent")
 					continue
 				}
 

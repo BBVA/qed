@@ -83,7 +83,6 @@ func (d *agentDelegate) NotifyMsg(msg []byte) {
 	if err != nil {
 		log.Infof("Agent Deletage unable to decode gossip message!: %v", err)
 	}
-	log.Debugf("agent payload: %+v", m.Payload)
 	d.agent.In.Publish(m)
 }
 
