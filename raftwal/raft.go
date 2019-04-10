@@ -364,7 +364,7 @@ func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interf
 }
 
 /*
-	RaftBalloon API implemnts the Ballon API in the RAFT system
+	RaftBalloon API implements the Ballon API in the RAFT system
 
 */
 

@@ -836,7 +836,7 @@ func newPerTableMetrics(table storage.Table, store *RocksDBStore) *perTableMetri
 				Namespace: namespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "total_live_sst_files_size",
-				Help:      "Total size (bytes) of all live SST files that belongs to theh last LSM tree.",
+				Help:      "Total size (bytes) of all live SST files that belongs to the last LSM tree.",
 			},
 			func() float64 {
 				return float64(store.db.GetUint64PropertyCF("rocksdb.live-sst-files-size", store.cfHandles[table]))

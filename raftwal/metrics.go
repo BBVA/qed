@@ -42,7 +42,7 @@ func newRaftBalloonMetrics(b *RaftBalloon) *raftBalloonMetrics {
 				Help:      "Current balloon version.",
 			},
 			func() float64 {
-				return float64(b.fsm.balloon.Version())
+				return float64(b.fsm.balloon.Version() - 1)
 			},
 		),
 		Adds: prometheus.NewCounter(
