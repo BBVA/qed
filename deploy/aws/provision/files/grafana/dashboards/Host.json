@@ -16,7 +16,8 @@
   "editable": true,
   "gnetId": 179,
   "graphTooltip": 2,
-  "iteration": 1554368693970,
+  "id": 8,
+  "iteration": 1554910364728,
   "links": [],
   "panels": [
     {
@@ -917,6 +918,99 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "fill": 1,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "id": 39,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(rate(node_disk_written_bytes_total[30s])) by (job,device)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "written-{{job}}@{{device}}",
+          "refId": "A"
+        },
+        {
+          "expr": "-sum(rate(node_disk_read_bytes_total[30s])) by (job,device)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "read-{{job}}@{{device}}",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Read & Write Throughput",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "Bps",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "10s",
@@ -1030,5 +1124,5 @@
   "timezone": "browser",
   "title": "Hosts Monitoring",
   "uid": "64nrElFmk",
-  "version": 1
+  "version": 3
 }
