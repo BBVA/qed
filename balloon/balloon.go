@@ -288,10 +288,7 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 	stats.AddFloat("QueryConsistency", 1)
 	var proof IncrementalProof
 
-	if start >= b.version ||
-		end >= b.version ||
-		start >= end {
-
+	if start >= b.version || end >= b.version || start > end {
 		return nil, errors.New("unable to process proof from history tree: invalid range")
 	}
 
