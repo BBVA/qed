@@ -115,6 +115,8 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 	log.SetLogger("monitor", agentConfig.Log)
 
 	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
+	conf.Qed.AttemptToReviveEndpoints = true
+	conf.Qed.ReadPreference = client.Any
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
 		return err
