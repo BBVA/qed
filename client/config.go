@@ -138,7 +138,7 @@ type Config struct {
 // DefaultConfig creates a Config structures with default values.
 func DefaultConfig() *Config {
 	return &Config{
-		Endpoints:                []string{"127.0.0.1:8800"},
+		Endpoints:                []string{"http://127.0.0.1:8800"},
 		APIKey:                   "my-key",
 		Insecure:                 DefaultInsecure,
 		Timeout:                  DefaultTimeout,
