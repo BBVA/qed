@@ -16,6 +16,7 @@
 
 # Starts a local test setup
 
+export CGO_LDFLAGS_ALLOW='.*'
 xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/testutils/notifierstore.go" &
 
 xterm -hold -e "bash start_server" &
