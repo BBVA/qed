@@ -37,7 +37,7 @@ func TestStart(t *testing.T) {
 		let("Query info endpoint", func(t *testing.T) {
 			var resp *http.Response
 			var err error
-			retry(3, 1*time.Second, func() error {
+			retry(3, 2*time.Second, func() error {
 				resp, err = doReq("GET", "http://localhost:8800/info", APIKey, nil)
 				return err
 			})
