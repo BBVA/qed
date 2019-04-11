@@ -237,6 +237,10 @@ func (o *Options) SetDbWriteBufferSize(value int) {
 	C.rocksdb_options_set_db_write_buffer_size(o.c, C.size_t(value))
 }
 
+// SetMaxSubCompactions sets the maximum number of threads that will
+// concurrently perform a compaction job by breaking it into multiple,
+// smaller ones that are run simultaneously.
+// Default: 1 (i.e. no subcompactions)
 func (o *Options) SetMaxSubCompactions(value int) {
 	C.rocksdb_options_set_max_subcompactions(o.c, C.uint(value))
 }
