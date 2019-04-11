@@ -50,5 +50,5 @@
     name: qed
     state: restarted
     daemon_reload: yes
-  when: qed_unit.changed or qed_config.changed
+  when: qed_unit.changed 
 
