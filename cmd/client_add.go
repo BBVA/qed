@@ -41,12 +41,10 @@ func init() {
 }
 
 func runClientAdd(cmd *cobra.Command, args []string) error {
-	// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
+
 	if clientAddEvent == "" {
 		return fmt.Errorf("Event must not be empty!")
 	}
-
-	cmd.SilenceUsage = true
 
 	config := clientCtx.Value(k("client.config")).(*client.Config)
 	log.SetLogger("client", config.Log)
@@ -69,4 +67,3 @@ func runClientAdd(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
-
