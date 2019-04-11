@@ -56,7 +56,6 @@ type Sender struct {
 }
 
 func NewSender(a *gossip.Agent, s sign.Signer, size, ttl, n int) *Sender {
-	QedSenderInstancesCount.Inc()
 	return &Sender{
 		agent:      a,
 		Interval:   100 * time.Millisecond,
@@ -71,6 +70,7 @@ func NewSender(a *gossip.Agent, s sign.Signer, size, ttl, n int) *Sender {
 // Start NumSenders concurrent senders and waits for them
 // to finish
 func (s Sender) Start(ch chan *protocol.Snapshot) {
+	QedSenderInstancesCount.Inc()
 	for i := 0; i < s.NumSenders; i++ {
 		log.Debugf("Starting sender %d", i)
 		go s.batcher(i, ch)
@@ -107,11 +107,14 @@ func (s Sender) batcher(id int, ch chan *protocol.Snapshot) {
 					log.Infof("Error encoding batch, dropping it")
 					continue
 				}
+
 				s.agent.Out.Publish(&gossip.Message{
 					Kind:    gossip.BatchMessageType,
 					TTL:     s.TTL,
 					Payload: payload,
 				})
+				QedSenderBatchesSentTotal.Inc()
+
 				batch = s.newBatch()
 			}
 			ss, err := s.doSign(snap)
@@ -133,6 +136,7 @@ func (s Sender) batcher(id int, ch chan *protocol.Snapshot) {
 					TTL:     s.TTL,
 					Payload: payload,
 				})
+				QedSenderBatchesSentTotal.Inc()
 				batch = s.newBatch()
 			}
 		case <-s.quitCh:

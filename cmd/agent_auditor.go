@@ -128,6 +128,9 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 	defer bp.Stop()
 
 	agent.Start()
+
+	QedAuditorInstancesCount.Inc()
+
 	util.AwaitTermSignal(agent.Shutdown)
 	return nil
 }
@@ -148,6 +151,8 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 	b := ctx.Value("batch").(*protocol.BatchSnapshots)
 
 	s := b.Snapshots[0]
+
+	QedAuditorBatchesReceivedTotal.Inc()
 
 	return func() error {
 		timer := prometheus.NewTimer(QedAuditorBatchesProcessSeconds)
