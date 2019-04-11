@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package e2e
+package notifierstore
 
 import (
 	"context"
@@ -156,6 +156,10 @@ func (s *snapStore) Get(version uint64) (*protocol.SignedSnapshot, error) {
 	return &snap, nil
 }
 
+func (s *snapStore) Count() uint64 {
+	return uint64(s.data.EntryCount())
+}
+
 type Service struct {
 	snaps  *snapStore
 	alerts *alertStore
@@ -196,10 +200,12 @@ func (s *Service) Start(foreground bool) {
 	// Snapshot/alert store server.
 	router := http.NewServeMux()
 	router.HandleFunc("/batch", s.postBatchHandler())
+	router.HandleFunc("/count", s.getSnapshotCountHandler())
 	router.HandleFunc("/snapshot", s.getSnapshotHandler())
 	router.HandleFunc("/alert", s.alertHandler())
 
-	s.httpServer = &http.Server{Addr: ":8888", Handler: router}
+	s.httpServer = newHttpServer(":8888", router, log.GetLogger())
+
 	fmt.Println("Starting test service...")
 
 	go func() {
@@ -293,6 +299,22 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 			}
 
 			_, err = w.Write(buf)
+			if err != nil {
+				fmt.Printf("ERROR: %v", err)
+			}
+			return
+		}
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Service) getSnapshotCountHandler() func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			QedStoreSnapshotsRetrievedTotal.Inc()
+			count := s.snaps.Count()
+
+			_, err := w.Write([]byte(fmt.Sprintf("%d", count)))
 			if err != nil {
 				fmt.Printf("ERROR: %v", err)
 			}

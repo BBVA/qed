@@ -19,7 +19,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/bbva/qed/gossip/member"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -37,53 +36,61 @@ func DefaultConfig() *Config {
 		LeavePropagateDelay: 0,
 		TimeoutQueues:       200 * time.Millisecond,
 		ProcessInterval:     1 * time.Second,
+		CacheSize:           1 << 20,
+		MaxSenders:          10,
 	}
 }
 
 // Config is the configuration for creating an Agent instance
 type Config struct {
+	Log string `desc:"Set log level to info, error or debug"`
+
 	// The name of this node. This must be unique in the cluster. If this
 	// is not set, Auditor will set it to the hostname of the running machine.
-	NodeName string
+	NodeName string `desc:"Set gossip name for this agent"`
 
-	Role member.Type
+	Role string `desc:"Set gossip role for this agent routing"`
 
 	// BindAddr is the address that the Auditor agent's communication ports
 	// will bind to. Auditor will use this address to bind to for both TCP
 	// and UDP connections. If no port is present in the address, the default
 	// port will be used.
-	BindAddr string
+	BindAddr string `desc:"Address ip:port to expose gossip protocol"`
 
-	// AdvertiseAddr is the address that the Auditor agent will advertise to
+	// AdvertiseAddr is the address agent will advertise to
 	// other members of the cluster. Can be used for basic NAT traversal
 	// where both the internal ip:port and external ip:port are known.
-	AdvertiseAddr string
+	AdvertiseAddr string `desc:"Address ip:port to advertise in gossip if our bind addr is not reachable from other agents"`
 
-	// LeaveOnTerm controls if the Auditor does a graceful leave when receiving
+	// MetricsAddr is the address where the metrics server will expose its
+	// API to enable mterics collectors retrieve them
+	MetricsAddr string `desc:"Address ip:port to expose metrics"`
+
+	// LeaveOnTerm controls if the agent does a graceful leave when receiving
 	// the TERM signal. Defaults false. This can be changed on reload.
-	LeaveOnTerm bool
+	LeaveOnTerm bool `desc:"Controls if the agent does a graceful leave when receiving the TERM signal"`
 
 	// StartJoin is a list of addresses to attempt to join when the
 	// agent starts. If the agent is unable to communicate with any of these
 	// addresses, then the agent will error and exit.
-	StartJoin []string
+	StartJoin []string `desc:"Address list ip1:port1,ip2:port2... to join other agents and form a gossip network"`
 
 	// EnableCompression specifies whether message compression is enabled
 	// by `github.com/hashicorp/memberlist` when broadcasting events.
-	EnableCompression bool
+	EnableCompression bool `desc:"Specifies whether message compression is enabled when broadcasting events"`
 
 	// BroadcastTimeout is the amount of time to wait for a broadcast
 	// message to be sent to the cluster. Broadcast messages are used for
 	// things like leave messages and force remove messages. If this is not
 	// set, a timeout of 5 seconds will be set.
-	BroadcastTimeout time.Duration
+	BroadcastTimeout time.Duration `desc:"The amount of time to wait for a broadcast message to be sent to the cluster"`
 
 	// LeavePropagateDelay is for our leave (node dead) message to propagate
 	// through the cluster. In particular, we want to stay up long enough to
 	// service any probes from other nodes before they learn about us
 	// leaving and stop probing. Otherwise, we risk getting node failures as
 	// we leave.
-	LeavePropagateDelay time.Duration
+	LeavePropagateDelay time.Duration `desc:"Time for our leave (node dead) message to propagate through the cluster"`
 
 	// MemberlistConfig is the memberlist configuration that Agent will
 	// use to do the underlying membership management and gossip. Some
@@ -97,19 +104,20 @@ type Config struct {
 	//
 	//   * Delegate - Auditor uses a custom delegate.
 	//
-	MemberlistConfig *memberlist.Config
-
-	// Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts
-	AlertsUrls []string
+	MemberlistConfig *memberlist.Config `flag:"-"`
 
 	// Timeout enqueuing elements on a channel
-	TimeoutQueues time.Duration
+	TimeoutQueues time.Duration `desc:"Timeout enqueuing elements on a channel"`
 
 	// Interval to send out messages to other agents
-	ProcessInterval time.Duration
-	
-	// Address to bind the metrics endpoint
-	MetricsAddr string
+	ProcessInterval time.Duration `desc:"Interval to send out messages to other agents"`
+
+	// Maximum number of concurrent senders
+	MaxSenders int `desc:"Maximum number of concurrent senders"`
+
+	// Cache size in bytes to store agent temporal objects.
+	// This cache will evict old objects by default
+	CacheSize int `desc:"Cache size in bytes to store agent temporal objects"`
 }
 
 // AddrParts returns the parts of the BindAddr that should be

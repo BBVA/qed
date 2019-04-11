@@ -14,18 +14,11 @@
    limitations under the License.
 */
 
-// This binary allows client and auditor streaming commands and also manual
-// event insertion and validation against a qed server.
-package main
+package gossip
 
-import (
-	"os"
-
-	"github.com/bbva/qed/cmd"
-)
-
-func main() {
-	if err := cmd.Root.Execute(); err != nil {
-		os.Exit(-1)
-	}
+// Defines the methods required for a cache implementation
+// to be used by the agent and its processors
+type Cache interface {
+	Get(key []byte) (value []byte, err error)
+	Set(key []byte, value []byte, expireSeconds int) (err error)
 }

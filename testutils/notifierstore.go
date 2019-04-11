@@ -1,6 +1,5 @@
 /*
    Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
-
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -14,18 +13,12 @@
    limitations under the License.
 */
 
-// This binary allows client and auditor streaming commands and also manual
-// event insertion and validation against a qed server.
 package main
 
-import (
-	"os"
-
-	"github.com/bbva/qed/cmd"
-)
+import "github.com/bbva/qed/testutils/notifierstore"
 
 func main() {
-	if err := cmd.Root.Execute(); err != nil {
-		os.Exit(-1)
-	}
+	s := notifierstore.NewService()
+	foreground := true
+	s.Start(foreground)
 }
