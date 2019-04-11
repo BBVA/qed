@@ -23,7 +23,6 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/gossip/member"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/util"
 )
@@ -72,8 +71,6 @@ func (b *SignedSnapshot) Decode(msg []byte) error {
 
 type BatchSnapshots struct {
 	Snapshots []*SignedSnapshot
-	TTL       int
-	From      *member.Peer
 }
 
 type Source struct {

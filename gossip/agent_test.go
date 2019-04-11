@@ -21,39 +21,37 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/bbva/qed/gossip/member"
-	"github.com/bbva/qed/metrics"
 )
 
 func TestJoin(t *testing.T) {
 	conf := DefaultConfig()
 	conf.NodeName = "testNode"
-	conf.Role = member.Auditor
+	conf.Role = "auditor"
 	conf.BindAddr = "127.0.0.1:12345"
-	metricsServer := metrics.NewServer("127.0.0.2:23464")
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
+
+	a, _ := NewAgentFromConfig(conf)
+	a.Start()
 
 	testCases := []struct {
-		agentState             member.Status
+		agentState             Status
 		addrs                  []string
 		expectedContactedHosts int
 		expectedErr            error
 	}{
 		{
-			member.Alive,
+			AgentStatusAlive,
 			[]string{},
 			0,
 			nil,
 		},
 		{
-			member.Failed,
+			AgentStatusFailed,
 			[]string{},
 			0,
 			fmt.Errorf("Agent can't join after Leave or Shutdown"),
 		},
 		{
-			member.Alive,
+			AgentStatusAlive,
 			[]string{"127.0.0.1:12345"},
 			1,
 			nil,
@@ -66,45 +64,46 @@ func TestJoin(t *testing.T) {
 		require.Equal(t, c.expectedContactedHosts, result, "Wrong expected contacted hosts in test %d.", i)
 		require.Equal(t, c.expectedErr, err, "Wrong expected error in test %d.", i)
 	}
+	a.Shutdown()
 }
 
 func TestLeave(t *testing.T) {
 	conf := DefaultConfig()
 	conf.NodeName = "testNode"
-	conf.Role = member.Auditor
+	conf.Role = "auditor"
 	conf.BindAddr = "127.0.0.1:12346"
-	metricsServer := metrics.NewServer("127.0.0.2:13445")
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
 
+	a, _ := NewAgentFromConfig(conf)
+	a.Start()
 	testCases := []struct {
-		agentState  member.Status
+		agentState  Status
 		expectedErr error
-		finalStatus member.Status
+		finalStatus Status
 	}{
 		{
-			member.Left,
+			AgentStatusLeft,
 			nil,
-			member.Left,
+			AgentStatusLeft,
 		},
 		{
-			member.Leaving,
+			AgentStatusLeaving,
 			fmt.Errorf("Leave already in progress"),
-			member.Leaving,
+			AgentStatusLeaving,
 		},
 		{
-			member.Shutdown,
+			AgentStatusShutdown,
 			fmt.Errorf("Leave called after Shutdown"),
-			member.Shutdown,
+			AgentStatusShutdown,
 		},
 		{
-			member.Alive,
+			AgentStatusAlive,
 			nil,
-			member.Left,
+			AgentStatusLeft,
 		},
 		{
-			member.Failed,
+			AgentStatusFailed,
 			nil,
-			member.Left,
+			AgentStatusLeft,
 		},
 	}
 
@@ -114,53 +113,5 @@ func TestLeave(t *testing.T) {
 		require.Equal(t, c.expectedErr, err, "Wrong expected error in test %d.", i)
 		require.Equal(t, c.finalStatus, a.Self.Status, "Wrong expected status in test %d.", i)
 	}
-}
-
-func TestShutdown(t *testing.T) {
-
-	conf := DefaultConfig()
-	conf.NodeName = "testNode"
-	conf.Role = member.Auditor
-	conf.BindAddr = "127.0.0.1:12347"
-	metricsServer := metrics.NewServer("127.0.0.2:43512")
-	a, _ := NewAgent(conf, []Processor{FakeProcessor{}}, metricsServer)
-
-	testCases := []struct {
-		agentState  member.Status
-		expectedErr error
-		finalStatus member.Status
-	}{
-		{
-			member.Shutdown,
-			nil,
-			member.Shutdown,
-		},
-		{
-			member.Left,
-			nil,
-			member.Shutdown,
-		},
-		{
-			member.Alive,
-			nil,
-			member.Shutdown,
-		},
-		{
-			member.Failed,
-			nil,
-			member.Shutdown,
-		},
-		{
-			member.Leaving,
-			nil,
-			member.Shutdown,
-		},
-	}
-
-	for i, c := range testCases {
-		a.Self.Status = c.agentState
-		err := a.Shutdown()
-		require.Equal(t, c.expectedErr, err, "Wrong expected error in test %d.", i)
-		require.Equal(t, c.finalStatus, a.Self.Status, "Wrong expected status in test %d.", i)
-	}
+	a.Shutdown()
 }

@@ -3,7 +3,9 @@
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
+
        http://www.apache.org/licenses/LICENSE-2.0
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,73 +16,147 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
-	v "github.com/spf13/viper"
+	"context"
+	"fmt"
 
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/gossip/member"
-	"github.com/bbva/qed/gossip/publisher"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/metrics"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
+	"github.com/octago/sflags/gen/gpflag"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/cobra"
 )
 
-func newAgentPublisherCommand(ctx *cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
-
-	publisherConfig := publisher.DefaultConfig()
-
-	cmd := &cobra.Command{
-		Use:   "publisher",
-		Short: "Start a QED publisher",
-		Long:  `Start a QED publisher that reacts to snapshot batches propagated by QED servers and periodically publishes them to a certain log storage.`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-
-			log.SetLogger("QEDPublisher", ctx.logLevel)
-
-			// WARN: PersitentPreRun can't be nested and we're using it in
-			// cmd/root so inbetween preRuns must be curried.
-			config = agentPreRun(config)
-
-			// Bindings
-			publisherConfig.MetricsAddr = config.BindAddr // TODO: make MetricsAddr configurable
-			publisherConfig.PubUrls = v.GetStringSlice("agent.snapshots_store_urls")
-			publisherConfig.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
-
-			markSliceStringRequired(publisherConfig.PubUrls, "pubUrls")
-			markSliceStringRequired(publisherConfig.AlertsUrls, "alertsUrls")
+var (
+	QedPublisherInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_publisher_instances_count",
+			Help: "Number of publisher agents running.",
 		},
-		Run: func(cmd *cobra.Command, args []string) {
+	)
 
-			config.Role = member.Publisher
-
-			publisher, err := publisher.NewPublisher(*publisherConfig)
-			if err != nil {
-				log.Fatalf("Failed to start the QED publisher: %v", err)
-			}
-			metricsServer := metrics.NewServer(config.MetricsAddr)
-			agent, err := gossip.NewAgent(&config, []gossip.Processor{publisher}, metricsServer)
-			if err != nil {
-				log.Fatalf("Failed to start the QED publisher: %v", err)
-			}
-
-			contacted, err := agent.Join(config.StartJoin)
-			if err != nil {
-				log.Fatalf("Failed to join the cluster: %v", err)
-			}
-			log.Debugf("Number of nodes contacted: %d", contacted)
-
-			defer agent.Shutdown()
-			util.AwaitTermSignal(agent.Leave)
+	QedPublisherBatchesReceivedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_publisher_batches_received_total",
+			Help: "Number of batches received by publishers.",
 		},
+	)
+
+	QedPublisherBatchesProcessSeconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_publisher_batches_process_seconds",
+			Help: "Duration of Publisher batch processing",
+		},
+	)
+)
+
+var agentPublisherCmd *cobra.Command = &cobra.Command{
+	Use:   "publisher",
+	Short: "Provides access to the QED gossip publisher agent",
+	Long: `Start a QED publisher which process gossip messages sending batch
+messages contents to the snapshot storage.`,
+	RunE: runAgentPublisher,
+}
+
+var agentPublisherCtx context.Context
+
+func init() {
+	agentPublisherCtx = configPublisher()
+	agentPublisherCmd.MarkFlagRequired("notifier-servers")
+	agentPublisherCmd.MarkFlagRequired("store-servers")
+	agentCmd.AddCommand(agentPublisherCmd)
+}
+
+type publisherConfig struct {
+	Notifier *gossip.SimpleNotifierConfig
+	Store    *gossip.RestSnapshotStoreConfig
+	Tasks    *gossip.SimpleTasksManagerConfig
+}
+
+func newPublisherConfig() *publisherConfig {
+	return &publisherConfig{
+		Notifier: gossip.DefaultSimpleNotifierConfig(),
+		Store:    gossip.DefaultRestSnapshotStoreConfig(),
+		Tasks:    gossip.DefaultSimpleTasksManagerConfig(),
+	}
+}
+
+func configPublisher() context.Context {
+	conf := newPublisherConfig()
+	err := gpflag.ParseTo(conf, agentPublisherCmd.PersistentFlags())
+	if err != nil {
+		log.Fatalf("err: %v", err)
 	}
 
-	f := cmd.Flags()
-	f.StringSliceVarP(&publisherConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of end-publishers ([host]:port), through which an publisher can send requests")
-	f.StringSliceVarP(&publisherConfig.AlertsUrls, "alertsUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an monitor can publish alerts")
+	ctx := context.WithValue(agentCtx, k("publisher.config"), conf)
 
-	// Lookups
-	v.BindPFlag("agent.snapshots_store_urls", f.Lookup("pubUrls"))
-	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
+	return ctx
+}
 
-	return cmd
+func runAgentPublisher(cmd *cobra.Command, args []string) error {
+	agentConfig := agentCtx.Value(k("agent.config")).(*gossip.Config)
+	conf := agentPublisherCtx.Value(k("publisher.config")).(*publisherConfig)
+
+	log.SetLogger("publisher", agentConfig.Log)
+
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
+	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
+
+	agent, err := gossip.NewDefaultAgent(agentConfig, nil, store, tm, notifier)
+	if err != nil {
+		return err
+	}
+
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{gossip.PrinterFactory{}, publisherFactory{}})
+	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
+	defer bp.Stop()
+
+	agent.Start()
+	util.AwaitTermSignal(agent.Shutdown)
+	return nil
+}
+
+type publisherFactory struct {
+}
+
+func (p publisherFactory) Metrics() []prometheus.Collector {
+	QedPublisherInstancesCount.Inc()
+	return []prometheus.Collector{
+		QedPublisherInstancesCount,
+		QedPublisherBatchesReceivedTotal,
+		QedPublisherBatchesProcessSeconds,
+	}
+}
+
+var errorNoSnapshots error = fmt.Errorf("No snapshots were found on this batch!!")
+
+func (p publisherFactory) New(ctx context.Context) gossip.Task {
+	QedPublisherBatchesReceivedTotal.Inc()
+	fmt.Println("PublisherFactory creating new Task!")
+	a := ctx.Value("agent").(*gossip.Agent)
+	b := ctx.Value("batch").(*protocol.BatchSnapshots)
+
+	return func() error {
+		timer := prometheus.NewTimer(QedPublisherBatchesProcessSeconds)
+		defer timer.ObserveDuration()
+
+		batch := new(protocol.BatchSnapshots)
+		batch.Snapshots = make([]*protocol.SignedSnapshot, 0)
+		for _, signedSnap := range b.Snapshots {
+			_, err := a.Cache.Get(signedSnap.Signature)
+			if err != nil {
+				log.Debugf("PublishingTask: add snapshot to be published")
+				a.Cache.Set(signedSnap.Signature, []byte{0x0}, 0)
+				batch.Snapshots = append(batch.Snapshots, signedSnap)
+			}
+		}
+
+		if len(batch.Snapshots) < 1 {
+			return errorNoSnapshots
+		}
+		log.Debugf("Sending batch to snapshot store: %+v", batch)
+		return a.SnapshotStore.PutBatch(batch)
+	}
 }

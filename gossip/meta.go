@@ -13,37 +13,36 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-
-package cmd
+package gossip
 
 import (
-	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/gossip"
+	"bytes"
+
 	"github.com/bbva/qed/log"
+	"github.com/hashicorp/go-msgpack/codec"
 )
 
-type cmdContext struct {
-	apiKey, logLevel, configFile, path string
-	disableConfig, profiling           bool
+// Agent metadata
+type Meta struct {
+	Role string
 }
 
-type clientContext struct {
-	config *client.Config
-	client *client.HTTPClient
-}
-
-type agentContext struct {
-	config *gossip.Config
-}
-
-func markStringRequired(value, name string) {
-	if value == "" {
-		log.Fatalf("Argument `%s` is required", name)
+func (a *Meta) Encode() ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
+	if err := encoder.Encode(a); err != nil {
+		log.Errorf("Failed to encode agent metadata: %v", err)
+		return nil, err
 	}
+	return buf.Bytes(), nil
 }
 
-func markSliceStringRequired(value []string, name string) {
-	if len(value) == 0 {
-		log.Fatalf("Argument `%s` is required", name)
+func (a *Meta) Decode(buf []byte) error {
+	reader := bytes.NewReader(buf)
+	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
+	if err := decoder.Decode(a); err != nil {
+		log.Errorf("Failed to decode agent metadata: %v", err)
+		return err
 	}
+	return nil
 }

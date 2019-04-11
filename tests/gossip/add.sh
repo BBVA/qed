@@ -1,3 +1,9 @@
 #!/bin/bash
 
-go run $GOPATH/src/github.com/bbva/qed/main.go client add --apikey foo -e http://127.0.0.1:8800 --key key$1
+# client options
+CLIENT_CONFIG=()
+CLIENT_CONFIG+=("--log debug")
+CLIENT_CONFIG+=("--endpoints http://127.0.0.1:8800")
+config=$(echo ${CLIENT_CONFIG[@]} | i=0 envsubst )
+
+go run $GOPATH/src/github.com/bbva/qed/main.go client add $config --event $1
