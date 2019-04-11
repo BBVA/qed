@@ -82,7 +82,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 
 	// env
 	env := rocksdb.NewDefaultEnv()
-	env.SetBackgroundThreads(3)
+	env.SetBackgroundThreads(5)
 	env.SetHighPriorityBackgroundThreads(3)
 
 	// global options
@@ -193,20 +193,20 @@ func getHyperCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 	// L2 size = 64MB (target_file_base) * 8^3 (target_file_size_multiplier)
 	// 		   = 32GB = 512 (max_bytes_for_level_base) * 8^2 (max_bytes_for_level_multiplier)
 	// ...
-	opts.SetWriteBufferSize(64 * 1024 * 1024) // 128MB
+	opts.SetWriteBufferSize(64 * 1024 * 1024) // 64MB
 	opts.SetMaxWriteBufferNumber(3)
 	opts.SetMinWriteBufferNumberToMerge(2)
 	opts.SetLevel0FileNumCompactionTrigger(8)
 	opts.SetLevel0SlowdownWritesTrigger(17)
 	opts.SetLevel0StopWritesTrigger(24)
-	opts.SetTargetFileSizeBase(128 * 1024 * 1024) // 128MB
+	opts.SetTargetFileSizeBase(64 * 1024 * 1024) // 64MB
 	opts.SetTargetFileSizeMultiplier(8)
-	opts.SetMaxBytesForLevelBase(1024 * 1024 * 1024 * 1024) // 1GB
+	opts.SetMaxBytesForLevelBase(512 * 1024 * 1024) // 512MB
 	opts.SetMaxBytesForLevelMultiplier(8)
 	opts.SetNumLevels(7)
 
 	// io parallelism
-	opts.SetMaxBackgroundCompactions(4)
+	opts.SetMaxBackgroundCompactions(8)
 	opts.SetMaxBackgroundFlushes(1)
 	return opts
 }
@@ -258,12 +258,12 @@ func getHistoryCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 	opts.SetLevel0StopWritesTrigger(24)
 	opts.SetTargetFileSizeBase(64 * 1024 * 1024) // 64MB
 	opts.SetTargetFileSizeMultiplier(8)
-	opts.SetMaxBytesForLevelBase(512 * 1024 * 1024 * 1024) // 512MB
+	opts.SetMaxBytesForLevelBase(512 * 1024 * 1024) // 512MB
 	opts.SetMaxBytesForLevelMultiplier(8)
 	opts.SetNumLevels(5)
 
 	// io parallelism
-	opts.SetMaxBackgroundCompactions(4)
+	opts.SetMaxBackgroundCompactions(8)
 	opts.SetMaxBackgroundFlushes(1)
 	return opts
 }
