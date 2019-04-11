@@ -137,6 +137,9 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 	defer bp.Stop()
 
 	agent.Start()
+
+	QedMonitorInstancesCount.Inc()
+
 	util.AwaitTermSignal(agent.Shutdown)
 	return nil
 }
@@ -224,6 +227,8 @@ func (l *lagFactory) New(ctx context.Context) gossip.Task {
 
 	counter := atomic.AddUint64(&l.counter, uint64(len(b.Snapshots)))
 	lastVersion := atomic.LoadUint64(&l.lastVersion)
+
+	QedMonitorBatchesReceivedTotal.Inc()
 
 	return func() error {
 		timer := prometheus.NewTimer(QedMonitorBatchesProcessSeconds)
