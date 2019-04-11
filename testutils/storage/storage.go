@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bbva/qed/storage/badger"
 	"github.com/bbva/qed/storage/bplus"
 	"github.com/bbva/qed/storage/rocks"
 	"github.com/stretchr/testify/require"
@@ -30,22 +29,6 @@ func OpenBPlusTreeStore() (*bplus.BPlusTreeStore, func()) {
 	store := bplus.NewBPlusTreeStore()
 	return store, func() {
 		store.Close()
-	}
-}
-
-func OpenBadgerStore(t require.TestingT, path string) (*badger.BadgerStore, func()) {
-	opts := &badger.Options{
-		Path:       path,
-		ValueLogGC: true,
-	}
-	store, err := badger.NewBadgerStoreOpts(opts)
-	if err != nil {
-		t.Errorf("Error opening badger store: %v", err)
-		t.FailNow()
-	}
-	return store, func() {
-		store.Close()
-		deleteFile(path)
 	}
 }
 
