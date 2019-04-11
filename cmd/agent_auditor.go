@@ -3,7 +3,9 @@
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
+
        http://www.apache.org/licenses/LICENSE-2.0
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,74 +16,182 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
-	v "github.com/spf13/viper"
+	"context"
+	"fmt"
 
+	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/gossip/auditor"
-	"github.com/bbva/qed/gossip/member"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/metrics"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
+	"github.com/octago/sflags/gen/gpflag"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/cobra"
 )
 
-func newAgentAuditorCommand(ctx *cmdContext, config gossip.Config, agentPreRun func(gossip.Config) gossip.Config) *cobra.Command {
-
-	auditorConfig := auditor.DefaultConfig()
-
-	cmd := &cobra.Command{
-		Use:   "auditor",
-		Short: "Start a QED auditor",
-		Long:  `Start a QED auditor that reacts to snapshot batches propagated by QED servers and periodically executes membership queries to verify the inclusion of events`,
-		PreRun: func(cmd *cobra.Command, args []string) {
-
-			log.SetLogger("QEDAuditor", ctx.logLevel)
-
-			// WARN: PersitentPreRun can't be nested and we're using it in cmd/root so inbetween preRuns
-			// must be curried.
-			config = agentPreRun(config)
-
-			auditorConfig.QEDUrls = v.GetStringSlice("agent.server_urls")
-			auditorConfig.PubUrls = v.GetStringSlice("agent.snapshots_store_urls")
-			auditorConfig.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
-
-			markSliceStringRequired(auditorConfig.QEDUrls, "qedUrls")
-			markSliceStringRequired(auditorConfig.PubUrls, "pubUrls")
-			markSliceStringRequired(auditorConfig.AlertsUrls, "alertsUrls")
+var (
+	QedAuditorInstancesCount = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_auditor_instances_count",
+			Help: "Number of auditor agents running.",
 		},
-		Run: func(cmd *cobra.Command, args []string) {
+	)
 
-			config.Role = member.Auditor
-			auditorConfig.APIKey = ctx.apiKey
-
-			auditor, err := auditor.NewAuditor(*auditorConfig)
-			if err != nil {
-				log.Fatalf("Failed to start the QED monitor: %v", err)
-			}
-			metricsServer := metrics.NewServer(config.MetricsAddr)
-			agent, err := gossip.NewAgent(&config, []gossip.Processor{auditor}, metricsServer)
-			if err != nil {
-				log.Fatalf("Failed to start the QED auditor: %v", err)
-			}
-
-			contacted, err := agent.Join(config.StartJoin)
-			if err != nil {
-				log.Fatalf("Failed to join the cluster: %v", err)
-			}
-			log.Debugf("Number of nodes contacted: %d (%v)", contacted, config.StartJoin)
-
-			defer agent.Shutdown()
-			util.AwaitTermSignal(agent.Leave)
+	QedAuditorBatchesProcessSeconds = prometheus.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "qed_auditor_batches_process_seconds",
+			Help: "Duration of Auditor batch processing",
 		},
+	)
+
+	QedAuditorBatchesReceivedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_auditor_batches_received_total",
+			Help: "Number of batches received by auditors.",
+		},
+	)
+
+	QedAuditorGetMembershipProofErrTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "qed_auditor_get_membership_proof_err_total",
+			Help: "Number of errors trying to get membership proofs by auditors.",
+		},
+	)
+)
+
+var agentAuditorCmd = &cobra.Command{
+	Use:   "auditor",
+	Short: "Provides access to the QED gossip auditor agent",
+	Long: `Start a QED auditor that reacts to snapshot batches propagated
+by QED servers and periodically executes membership queries to verify
+the inclusion of events`,
+	RunE: runAgentAuditor,
+}
+
+var agentAuditorCtx context.Context
+
+func init() {
+	agentAuditorCtx = configAuditor()
+	agentCmd.AddCommand(agentAuditorCmd)
+}
+
+type auditorConfig struct {
+	Qed      *client.Config
+	Notifier *gossip.SimpleNotifierConfig
+	Store    *gossip.RestSnapshotStoreConfig
+	Tasks    *gossip.SimpleTasksManagerConfig
+}
+
+func newAuditorConfig() *auditorConfig {
+	return &auditorConfig{
+		Qed:      client.DefaultConfig(),
+		Notifier: gossip.DefaultSimpleNotifierConfig(),
+		Store:    gossip.DefaultRestSnapshotStoreConfig(),
+		Tasks:    gossip.DefaultSimpleTasksManagerConfig(),
+	}
+}
+
+func configAuditor() context.Context {
+	conf := newAuditorConfig()
+	err := gpflag.ParseTo(conf, agentAuditorCmd.PersistentFlags())
+	if err != nil {
+		log.Fatalf("err: %v", err)
 	}
 
-	f := cmd.Flags()
-	f.StringSliceVarP(&auditorConfig.QEDUrls, "qedUrls", "", []string{}, "Comma-delimited list of QED servers ([host]:port), through which an auditor can make queries")
-	f.StringSliceVarP(&auditorConfig.PubUrls, "pubUrls", "", []string{}, "Comma-delimited list of store servers ([host]:port), through which an auditor can make queries")
-	f.StringSliceVarP(&auditorConfig.AlertsUrls, "alertsUrls", "", []string{}, "Comma-delimited list of alerts servers ([host]:port), through which an auditor can make queries")
-	// Lookups
-	v.BindPFlag("agent.server_urls", f.Lookup("qedUrls"))
-	v.BindPFlag("agent.snapshots_store_urls", f.Lookup("pubUrls"))
-	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
-	return cmd
+	ctx := context.WithValue(agentCtx, k("auditor.config"), conf)
+
+	return ctx
+}
+
+func runAgentAuditor(cmd *cobra.Command, args []string) error {
+	agentConfig := agentAuditorCtx.Value(k("agent.config")).(*gossip.Config)
+	conf := agentAuditorCtx.Value(k("auditor.config")).(*auditorConfig)
+
+	log.SetLogger("auditor", agentConfig.Log)
+
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
+	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
+	if err != nil {
+		return err
+	}
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
+	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
+
+	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier)
+	if err != nil {
+		return err
+	}
+
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{gossip.PrinterFactory{}, membershipFactory{}})
+	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
+	defer bp.Stop()
+
+	agent.Start()
+
+	QedAuditorInstancesCount.Inc()
+
+	util.AwaitTermSignal(agent.Shutdown)
+	return nil
+}
+
+type membershipFactory struct{}
+
+func (m membershipFactory) Metrics() []prometheus.Collector {
+	return []prometheus.Collector{
+		QedAuditorInstancesCount,
+		QedAuditorBatchesProcessSeconds,
+		QedAuditorBatchesReceivedTotal,
+		QedAuditorGetMembershipProofErrTotal,
+	}
+}
+
+func (i membershipFactory) New(ctx context.Context) gossip.Task {
+	a := ctx.Value("agent").(*gossip.Agent)
+	b := ctx.Value("batch").(*protocol.BatchSnapshots)
+
+	s := b.Snapshots[0]
+
+	QedAuditorBatchesReceivedTotal.Inc()
+
+	return func() error {
+		timer := prometheus.NewTimer(QedAuditorBatchesProcessSeconds)
+		defer timer.ObserveDuration()
+
+		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, s.Snapshot.Version)
+		if err != nil {
+			log.Infof("Auditor is unable to get membership proof from QED server: %v", err)
+
+			switch fmt.Sprintf("%T", err) {
+			case "*errors.errorString":
+				a.Notifier.Alert(fmt.Sprintf("Auditor is unable to get membership proof from QED server: %v", err))
+			default:
+				QedAuditorGetMembershipProofErrTotal.Inc()
+			}
+
+			return err
+		}
+
+		storedSnap, err := a.SnapshotStore.GetSnapshot(proof.CurrentVersion)
+		if err != nil {
+			log.Infof("Unable to get snapshot from storage: %v", err)
+			return err
+		}
+
+		checkSnap := &protocol.Snapshot{
+			HistoryDigest: s.Snapshot.HistoryDigest,
+			HyperDigest:   storedSnap.Snapshot.HyperDigest,
+			Version:       s.Snapshot.Version,
+			EventDigest:   s.Snapshot.EventDigest,
+		}
+
+		ok := a.Qed.DigestVerify(proof, checkSnap, hashing.NewSha256Hasher)
+		if !ok {
+			a.Notifier.Alert(fmt.Sprintf("Unable to verify snapshot %v", s.Snapshot))
+			log.Infof("Unable to verify snapshot %v", s.Snapshot)
+		}
+
+		log.Infof("MembershipTask.Do(): Snapshot %v has been verified by QED", s.Snapshot)
+		return nil
+	}
 }

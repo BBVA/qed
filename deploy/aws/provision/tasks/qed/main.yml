@@ -20,15 +20,6 @@
   with_items:
     - qed
 
-- name: Create QED config
-  template:
-    dest: /var/qed/{{ item }} 
-    src: ../../templates/qed-{{ item }}.j2
-    force: true
-  with_items:
-    - config.yml
-  register: qed_config
-
 - name: Create QED start|stop script
   template:
     dest: /var/qed/{{ item }} 

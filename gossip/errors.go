@@ -13,30 +13,9 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-package member
+package gossip
 
-// Status is the state of the Agent instance.
-type Status int32
+import "errors"
 
-const (
-	Alive Status = iota
-	Leaving
-	Left
-	Shutdown
-	Failed
-)
-
-func (s Status) String() string {
-	switch s {
-	case Alive:
-		return "alive"
-	case Leaving:
-		return "leaving"
-	case Left:
-		return "left"
-	case Shutdown:
-		return "shutdown"
-	default:
-		return "failed"
-	}
-}
+var ChTimedOut error = errors.New("Timeout sending data to channel")
+var NoSubscribersFound error = errors.New("No subscribers found")

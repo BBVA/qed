@@ -19,10 +19,12 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/octago/sflags v0.2.0
 	github.com/pkg/errors v0.8.0
 	github.com/prometheus/client_golang v0.9.2
 	github.com/prometheus/procfs v0.0.0-20190328153300-af7bedc223fb // indirect
 	github.com/spf13/cobra v0.0.3
+	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.2.2
 	golang.org/x/crypto v0.0.0-20190228161510-8dd112bcdc25

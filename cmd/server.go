@@ -14,25 +14,38 @@
    limitations under the License.
 */
 
-// Package cli implements the command line commands qed and server.
 package cmd
 
 import (
 	"context"
-	_ "net/http/pprof" // this will enable the default profiling capabilities
 
+	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/server"
+	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 )
 
-// Context key type to be used when adding values to context
-// as per documentation:
-//	https://golang.org/pkg/context/#example_WithValue
-type k string
-
-var Root *cobra.Command = &cobra.Command{
-	Use:   "qed",
-	Short: "QED system",
-	Long:  "QED implements an authenticated data structure as an append-only log. This command exposes the QED components. Please refer to QED manual to learn about QED architecture and its components",
+var serverCmd *cobra.Command = &cobra.Command{
+	Use:   "server",
+	Short: "Provices access to the QED log server commands",
+	Long: `QED serves provides a REST API to the QED Log. The API is documented
+elsewhere.`,
+	TraverseChildren: true,
 }
 
-var Ctx context.Context = context.WithValue(context.Background(), k("version"), "alpha")
+var serverCtx context.Context = configServer()
+
+func init() {
+	Root.AddCommand(serverCmd)
+}
+
+func configServer() context.Context {
+
+	conf := server.DefaultConfig()
+
+	err := gpflag.ParseTo(conf, serverCmd.PersistentFlags())
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
+	return context.WithValue(Ctx, k("server.config"), conf)
+}

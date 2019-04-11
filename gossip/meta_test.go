@@ -14,18 +14,22 @@
    limitations under the License.
 */
 
-// This binary allows client and auditor streaming commands and also manual
-// event insertion and validation against a qed server.
-package main
+package gossip
 
 import (
-	"os"
+	"testing"
 
-	"github.com/bbva/qed/cmd"
+	"github.com/stretchr/testify/require"
 )
 
-func main() {
-	if err := cmd.Root.Execute(); err != nil {
-		os.Exit(-1)
-	}
+func TestEncodeDecode(t *testing.T) {
+	var m1, m2 Meta
+
+	m1.Role = "string test"
+
+	buff, err := m1.Encode()
+	require.NoError(t, err, "Error encoding metadata")
+	err = m2.Decode(buff)
+	require.NoError(t, err, "Error decoding metadata")
+	require.Equal(t, m1, m2, "Both metadata must be equals")
 }

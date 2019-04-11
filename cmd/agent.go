@@ -17,76 +17,45 @@
 package cmd
 
 import (
-	"regexp"
-
-	"github.com/spf13/cobra"
-	v "github.com/spf13/viper"
+	"context"
 
 	"github.com/bbva/qed/gossip"
+	"github.com/bbva/qed/log"
+	"github.com/octago/sflags/gen/gpflag"
+	"github.com/spf13/cobra"
 )
 
-func newAgentCommand(cmdCtx *cmdContext, args []string) *cobra.Command {
-
-	config := gossip.DefaultConfig()
-
-	cmd := &cobra.Command{
-		Use:   "agent",
-		Short: "Start a gossip agent for the verifiable log QED",
-	}
-
-	f := cmd.PersistentFlags()
-	f.StringVar(&config.NodeName, "node", "", "Unique name for node. If not set, fallback to hostname")
-	f.StringVar(&config.BindAddr, "bind", "", "Bind address for TCP/UDP gossip on (host:port)")
-	f.StringVar(&config.AdvertiseAddr, "advertise", "", "Address to advertise to cluster")
-	f.StringVar(&config.MetricsAddr, "metrics", "", "Address to bind metrics endpoint")
-	f.StringSliceVar(&config.StartJoin, "join", []string{}, "Comma-delimited list of nodes ([host]:port), through which a cluster can be joined")
-	f.StringSliceVar(&config.AlertsUrls, "alertsUrls", []string{}, "Comma-delimited list of Alert servers ([host]:port), through which an agent can post alerts")
-
-	// Lookups
-	v.BindPFlag("agent.node", f.Lookup("node"))
-	v.BindPFlag("agent.bind", f.Lookup("bind"))
-	v.BindPFlag("agent.advertise", f.Lookup("advertise"))
-	v.BindPFlag("agent.metrics", f.Lookup("metrics"))
-	v.BindPFlag("agent.join", f.Lookup("join"))
-	v.BindPFlag("agent.alerts_urls", f.Lookup("alertsUrls"))
-
-	agentPreRun := func(config gossip.Config) gossip.Config {
-		config.EnableCompression = true
-		config.NodeName = v.GetString("agent.node")
-		config.BindAddr = v.GetString("agent.bind")
-		config.AdvertiseAddr = v.GetString("agent.advertise")
-		config.MetricsAddr = v.GetString("agent.metrics")
-		config.StartJoin = v.GetStringSlice("agent.join")
-		config.AlertsUrls = v.GetStringSlice("agent.alerts_urls")
-
-		markStringRequired(config.NodeName, "node")
-		markStringRequired(config.BindAddr, "bind")
-		markSliceStringRequired(config.StartJoin, "join")
-		markSliceStringRequired(config.AlertsUrls, "alertsUrls")
-
-		return config
-	}
-
-	var kind string
-	re := regexp.MustCompile("^monitor$|^auditor$|^publisher$")
-	for _, arg := range args {
-		if re.MatchString(arg) {
-			kind = arg
-			break
-		}
-	}
-
-	switch kind {
-	case "publisher":
-		cmd.AddCommand(newAgentPublisherCommand(cmdCtx, *config, agentPreRun))
-
-	case "auditor":
-		cmd.AddCommand(newAgentAuditorCommand(cmdCtx, *config, agentPreRun))
-
-	case "monitor":
-		cmd.AddCommand(newAgentMonitorCommand(cmdCtx, *config, agentPreRun))
-	}
-
-	return cmd
-
+var agentCmd *cobra.Command = &cobra.Command{
+	Use:   "agent",
+	Short: "Provides access to the QED gossip agents",
+	Long: `QED provides standalone agents to help maintain QED security. We have included
+three agents into the distribution:
+	* Monitor agent: checks the lag of the system between the QED Log and the
+	  Snapshot Store as seen by the gossip network
+	* Auditor agent: verifies QED membership proofs of the snapshots received
+	  throught the  gossip network
+	* Publisher agent: publish snapshots to the snapshot store`,
+	TraverseChildren: true,
 }
+
+var agentCtx context.Context = configAgent()
+
+func init() {
+	agentCmd.MarkFlagRequired("bind-addr")
+	agentCmd.MarkFlagRequired("metrics-addr")
+	agentCmd.MarkFlagRequired("node-name")
+	agentCmd.MarkFlagRequired("role")
+	agentCmd.MarkFlagRequired("log")
+	Root.AddCommand(agentCmd)
+}
+
+func configAgent() context.Context {
+	conf := gossip.DefaultConfig()
+	err := gpflag.ParseTo(conf, agentCmd.PersistentFlags())
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
+
+	return context.WithValue(Ctx, k("agent.config"), conf)
+}
+
