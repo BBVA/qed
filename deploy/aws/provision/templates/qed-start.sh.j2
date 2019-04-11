@@ -15,18 +15,52 @@
 #}
 #!/bin/bash
 
-ulimit -n 819200
-
 export QED_HOME=/var/qed
 {% if 'role_qed' in group_names %}
-$QED_HOME/qed start
+$QED_HOME/qed server start \
+--log info \
+--api-key key \
+--db-path /var/qed/db \
+--gossip-addr "{{ ansible_eth0.ipv4.address }}:8400" \
+--http-addr "{{ ansible_eth0.ipv4.address }}:8800" \
+--metrics-addr "{{ ansible_eth0.ipv4.address }}:8600" \
+--mgmt-addr "{{ ansible_eth0.ipv4.address }}:8700" \
+--node-id server-{{ansible_hostname}} \
+--private-key-path /var/qed/id_ed25519 \
+--raft-addr "{{ ansible_eth0.ipv4.address }}:8500" \
+{% if groups.role_qed.index(inventory_hostname) != 0  %}
+{% for host in groups['name_qed-0'] %}
+--raft-join-addr "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8700" \
+--gossip-join-addr "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400" \
+{% endfor %}
 {% endif %}
+--raft-path /var/qed/wal
+{% endif %}
+
 {% if 'role_monitor' in group_names %}
-$QED_HOME/qed agent monitor
+$QED_HOME/qed agent monitor \
+--role monitor \
+--node-name monitor-{{ansible_hostname}} \
+--qed-endpoints "{% for host in groups['role_qed'] %}http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800{% if not loop.last %},{% endif %}{% endfor %}" \
 {% endif %}
 {% if 'role_auditor' in group_names %}
-$QED_HOME/qed agent auditor
+$QED_HOME/qed agent auditor \
+--role auditor \
+--node-name auditor-{{ansible_hostname}} \
+--qed-endpoints "{% for host in groups['role_qed'] %}http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800{% if not loop.last %},{% endif %}{% endfor %}" \
 {% endif %}
 {% if 'role_publisher' in group_names %}
-$QED_HOME/qed agent publisher
+$QED_HOME/qed agent publisher \
+--role publisher \
+--node-name publisher-{{ansible_hostname}} \
+{% endif %}
+{% if 'role_monitor' in group_names or 'role_auditor' in group_names or 'role_publisher' in group_names %}
+--bind-addr "{{ ansible_eth0.ipv4.address }}:8100" \
+--metrics-addr "{{ ansible_eth0.ipv4.address }}:18100" \
+--start-join "{% for host in groups['role_qed'] %}{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400{% if not loop.last %},{% endif %}{% endfor %}" \
+{% for host in groups['role_storage'] %}
+--notifier-endpoint http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888 \
+--store-endpoint http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8888 \
+--log info
+{% endfor %}
 {% endif %}
