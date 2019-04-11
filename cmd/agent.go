@@ -41,6 +41,7 @@ three agents into the distribution:
 var agentCtx context.Context = configAgent()
 
 func init() {
+	agentCmd.SilenceUsage = true
 	agentCmd.MarkFlagRequired("bind-addr")
 	agentCmd.MarkFlagRequired("metrics-addr")
 	agentCmd.MarkFlagRequired("node-name")
@@ -58,4 +59,3 @@ func configAgent() context.Context {
 
 	return context.WithValue(Ctx, k("agent.config"), conf)
 }
-

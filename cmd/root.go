@@ -33,6 +33,8 @@ var Root *cobra.Command = &cobra.Command{
 	Use:   "qed",
 	Short: "QED system",
 	Long:  "QED implements an authenticated data structure as an append-only log. This command exposes the QED components. Please refer to QED manual to learn about QED architecture and its components",
+	// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
+	SilenceUsage: true,
 }
 
 var Ctx context.Context = context.WithValue(context.Background(), k("version"), "alpha")
