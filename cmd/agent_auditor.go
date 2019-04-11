@@ -112,6 +112,8 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 
 	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
+	conf.Qed.AttemptToReviveEndpoints = true
+	conf.Qed.ReadPreference = client.Any
 	if err != nil {
 		return err
 	}
