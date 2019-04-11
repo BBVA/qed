@@ -103,6 +103,11 @@ func (d *BatchProcessor) wasProcessed(b *protocol.BatchSnapshots) bool {
 
 func (d *BatchProcessor) Subscribe(id int, ch <-chan *Message) {
 	d.id = id
+
+	if d.a.metrics != nil {
+		d.a.metrics.MustRegister(d.metrics...)
+	}
+
 	go func() {
 		for {
 			select {
