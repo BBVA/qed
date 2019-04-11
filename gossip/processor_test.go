@@ -17,11 +17,16 @@
 package gossip
 
 import (
+	"context"
+	"io/ioutil"
+	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/bbva/qed/protocol"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -102,4 +107,49 @@ func TestBatchProcessorWasProcessed(t *testing.T) {
 	// only one message must be in the output channel as one must be
 	// dropped by the wasProcessed function
 	require.Equal(t, 1, len(ts.ch), "Output queue must be 1, duplicate event must be dropped by processor")
+}
+
+type fakeTaskFactory struct{}
+
+func (f fakeTaskFactory) Metrics() []prometheus.Collector {
+	return []prometheus.Collector{
+		prometheus.NewCounter(prometheus.CounterOpts{Name: "fakeCounterMetric"}),
+	}
+}
+
+func (f fakeTaskFactory) New(c context.Context) Task {
+	return func() error {
+		return nil
+	}
+}
+
+func TestBatchProcessorRegisterMetrics(t *testing.T) {
+
+	conf := DefaultConfig()
+	conf.NodeName = "testNode"
+	conf.Role = "auditor"
+	conf.BindAddr = "127.0.0.1:12345"
+	conf.MetricsAddr = "127.0.0.1:12346"
+
+	a, err := NewAgentFromConfig(conf)
+	require.NoError(t, err, "Error creating agent!")
+	a.Start()
+	defer a.Shutdown()
+	// wait for agent to start
+	// all services
+	time.Sleep(3 * time.Second)
+
+	p := NewBatchProcessor(a, []TaskFactory{&fakeTaskFactory{}})
+	a.In.Subscribe(BatchMessageType, p, 0)
+	defer p.Stop()
+
+	resp, err := http.Get("http://" + conf.MetricsAddr + "/metrics")
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	found := strings.Index(string(body), "fakeCounterMetric")
+
+	require.True(t, found > 0, "Metric not found!")
 }
