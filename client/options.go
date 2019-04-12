@@ -35,8 +35,9 @@ func configToOptions(conf *Config) ([]HTTPClientOptionF, error) {
 			SetReadPreference(conf.ReadPreference),
 			SetMaxRetries(conf.MaxRetries),
 			SetTopologyDiscovery(conf.EnableTopologyDiscovery),
-			SetHealthchecks(conf.EnableHealthChecks),
+			SetHealthChecks(conf.EnableHealthChecks),
 			SetHealthCheckTimeout(conf.HealthCheckTimeout),
+			SetHealthCheckInterval(conf.HealthCheckInterval),
 			SetAttemptToReviveEndpoints(conf.AttemptToReviveEndpoints),
 		}
 		if len(conf.Endpoints) > 0 {
@@ -125,16 +126,23 @@ func SetTopologyDiscovery(enable bool) HTTPClientOptionF {
 	}
 }
 
-func SetHealthchecks(enable bool) HTTPClientOptionF {
+func SetHealthChecks(enable bool) HTTPClientOptionF {
 	return func(c *HTTPClient) error {
-		c.healthcheckEnabled = enable
+		c.healthCheckEnabled = enable
 		return nil
 	}
 }
 
 func SetHealthCheckTimeout(seconds time.Duration) HTTPClientOptionF {
 	return func(c *HTTPClient) error {
-		c.healthcheckTimeout = seconds
+		c.healthCheckTimeout = seconds
+		return nil
+	}
+}
+
+func SetHealthCheckInterval(seconds time.Duration) HTTPClientOptionF {
+	return func(c *HTTPClient) error {
+		c.healthCheckInterval = seconds
 		return nil
 	}
 }
