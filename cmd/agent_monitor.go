@@ -88,8 +88,12 @@ type monitorConfig struct {
 }
 
 func newMonitorConfig() *monitorConfig {
+	conf := client.DefaultConfig()
+	conf.AttemptToReviveEndpoints = true
+	conf.ReadPreference = client.Any
+	conf.MaxRetries = 1
 	return &monitorConfig{
-		Qed:      client.DefaultConfig(),
+		Qed:      conf,
 		Notifier: gossip.DefaultSimpleNotifierConfig(),
 		Store:    gossip.DefaultRestSnapshotStoreConfig(),
 		Tasks:    gossip.DefaultSimpleTasksManagerConfig(),
@@ -115,8 +119,6 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 	log.SetLogger("monitor", agentConfig.Log)
 
 	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
-	conf.Qed.AttemptToReviveEndpoints = true
-	conf.Qed.ReadPreference = client.Any
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
 		return err
