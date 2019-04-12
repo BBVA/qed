@@ -19,6 +19,7 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -62,7 +63,7 @@ func setupClient(t *testing.T, urls []string) *HTTPClient {
 		SetReadPreference(Primary),
 		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
-		SetHealthchecks(false),
+		SetHealthChecks(false),
 	)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "Cannot create http client"))
@@ -91,7 +92,7 @@ func TestCallPrimaryWorking(t *testing.T) {
 		SetReadPreference(PrimaryPreferred),
 		SetMaxRetries(1),
 		SetTopologyDiscovery(false),
-		SetHealthchecks(false),
+		SetHealthChecks(false),
 	)
 	require.NoError(t, err)
 
@@ -122,7 +123,7 @@ func TestCallPrimaryFails(t *testing.T) {
 		SetReadPreference(PrimaryPreferred),
 		SetMaxRetries(1),
 		SetTopologyDiscovery(false),
-		SetHealthchecks(false),
+		SetHealthChecks(false),
 	)
 	require.NoError(t, err)
 
@@ -160,7 +161,7 @@ func TestCallAnyPrimaryFails(t *testing.T) {
 		SetReadPreference(PrimaryPreferred),
 		SetMaxRetries(1),
 		SetTopologyDiscovery(false),
-		SetHealthchecks(false),
+		SetHealthChecks(false),
 	)
 	require.NoError(t, err)
 
@@ -191,7 +192,7 @@ func TestCallAnyAllFail(t *testing.T) {
 		SetReadPreference(PrimaryPreferred),
 		SetMaxRetries(1),
 		SetTopologyDiscovery(false),
-		SetHealthchecks(false),
+		SetHealthChecks(false),
 	)
 	require.NoError(t, err)
 
@@ -228,7 +229,7 @@ func TestHealthCheck(t *testing.T) {
 		SetReadPreference(PrimaryPreferred),
 		SetMaxRetries(1),
 		SetTopologyDiscovery(false),
-		SetHealthchecks(false),
+		SetHealthChecks(false),
 	)
 	require.NoError(t, err)
 
@@ -241,6 +242,55 @@ func TestHealthCheck(t *testing.T) {
 	client.healthCheck(5 * time.Second)
 	time.Sleep(1 * time.Second)
 	require.True(t, client.topology.HasActiveEndpoint())
+}
+
+func TestPeriodicHealthCheck(t *testing.T) {
+
+	log.SetLogger("TestPeriodicHealthCheck", log.INFO)
+
+	var numChecks int
+	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		fmt.Println(req.URL)
+		if req.Method == "HEAD" {
+			numChecks++
+			if numChecks > 3 {
+				return &http.Response{
+					StatusCode: http.StatusNoContent,
+					Header:     make(http.Header),
+				}, nil
+			}
+			return nil, errors.New("Unreachable")
+		}
+		return &http.Response{
+			StatusCode: http.StatusNoContent,
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(httpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary.foo", "http://secondary1.foo", "http://secondary2.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(0),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(true),
+		SetHealthCheckInterval(2*time.Second),
+		SetAttemptToReviveEndpoints(false),
+	)
+	require.NoError(t, err)
+
+	// wait for all endpoints to get marked as dead
+	time.Sleep(2 * time.Second)
+	require.False(t, client.topology.HasActiveEndpoint())
+	_, err = client.callAny("GET", "/events", nil)
+	require.Error(t, err)
+
+	// wait for all endpoints to get marked as alive
+	time.Sleep(1 * time.Second)
+	_, err = client.callAny("GET", "/events", nil)
+	require.NoError(t, err)
+
 }
 
 func TestManualDiscoveryPrimaryLost(t *testing.T) {
@@ -283,7 +333,7 @@ func TestManualDiscoveryPrimaryLost(t *testing.T) {
 		SetReadPreference(PrimaryPreferred),
 		SetMaxRetries(1),
 		SetTopologyDiscovery(false),
-		SetHealthchecks(false),
+		SetHealthChecks(false),
 	)
 	require.NoError(t, err)
 
@@ -340,7 +390,7 @@ func TestAutoDiscoveryPrimaryLost(t *testing.T) {
 		SetReadPreference(PrimaryPreferred),
 		SetMaxRetries(1),
 		SetTopologyDiscovery(true),
-		SetHealthchecks(false),
+		SetHealthChecks(false),
 	)
 	require.NoError(t, err)
 

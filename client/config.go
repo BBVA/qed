@@ -80,6 +80,10 @@ const (
 	// a response from QED.
 	DefaultHealthCheckTimeout = 2 * time.Second
 
+	// DefaultHealthCheckInterval is the default interval between two health checks
+	// of the nodes in the QED cluster.
+	DefaultHealthCheckInterval = 60 * time.Second
+
 	// DefaultTopologyDiscoveryEnabled specifies if the discoverer is enabled by default.
 	DefaultTopologyDiscoveryEnabled = true
 
@@ -127,8 +131,10 @@ type Config struct {
 
 	// HealthCheckTimeout is the time the healthcheck waits for a response
 	// from a QED server.
-
 	HealthCheckTimeout time.Duration `desc:"Time the healthcheck waits for a response from QED"`
+
+	// HealthCheckInterval is the interval between two health checks of the nodes in the QED cluster.
+	HealthCheckInterval time.Duration `desc:"Interval between two health checks of the nodes in the QED cluster"`
 
 	// AttemptToReviveEndpoints sets if dead endpoints will be marked alive again after a
 	// round-robin round. This way, they will be picked up in the next try.
@@ -149,6 +155,7 @@ func DefaultConfig() *Config {
 		EnableTopologyDiscovery:  DefaultTopologyDiscoveryEnabled,
 		EnableHealthChecks:       DefaultHealthCheckEnabled,
 		HealthCheckTimeout:       DefaultHealthCheckTimeout,
+		HealthCheckInterval:      DefaultHealthCheckInterval,
 		AttemptToReviveEndpoints: false,
 	}
 }
