@@ -36,19 +36,20 @@ import (
 
 // HTTPClient is an HTTP QED client.
 type HTTPClient struct {
-	httpClient         *http.Client
-	retrier            RequestRetrier
-	topology           *topology
-	apiKey             string
-	readPreference     ReadPref
-	maxRetries         int
-	healthcheckEnabled bool
-	healthcheckTimeout time.Duration
-	discoveryEnabled   bool
+	httpClient          *http.Client
+	retrier             RequestRetrier
+	topology            *topology
+	apiKey              string
+	readPreference      ReadPref
+	maxRetries          int
+	healthCheckEnabled  bool
+	healthCheckTimeout  time.Duration
+	healthCheckInterval time.Duration
+	discoveryEnabled    bool
 
 	mu                sync.RWMutex // guards the next block
 	running           bool
-	healthcheckStopCh chan bool // notify healthchecker to stop, and notify back
+	healthCheckStopCh chan bool // notify healthchecker to stop, and notify back
 	discoveryStopCh   chan bool // notify sniffer to stop, and notify back
 }
 
@@ -85,14 +86,15 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, e
 	}
 
 	client := &HTTPClient{
-		httpClient:         httpClient,
-		topology:           newTopology(false),
-		healthcheckEnabled: false,
-		healthcheckTimeout: off,
-		discoveryEnabled:   false,
-		readPreference:     Primary,
-		maxRetries:         0,
-		retrier:            NewNoRequestRetrier(httpClient),
+		httpClient:          httpClient,
+		topology:            newTopology(false),
+		healthCheckEnabled:  false,
+		healthCheckTimeout:  off,
+		healthCheckInterval: off,
+		discoveryEnabled:    false,
+		readPreference:      Primary,
+		maxRetries:          0,
+		retrier:             NewNoRequestRetrier(httpClient),
 	}
 
 	client.topology.Update(urls[0], urls[1:]...)
@@ -118,13 +120,16 @@ func NewHTTPClientFromConfig(conf *Config) (*HTTPClient, error) {
 func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 
 	client := &HTTPClient{
-		httpClient:         http.DefaultClient,
-		topology:           newTopology(false),
-		healthcheckEnabled: DefaultHealthCheckEnabled,
-		healthcheckTimeout: DefaultHealthCheckTimeout,
-		discoveryEnabled:   DefaultTopologyDiscoveryEnabled,
-		readPreference:     Primary,
-		maxRetries:         DefaultMaxRetries,
+		httpClient:          http.DefaultClient,
+		topology:            newTopology(false),
+		healthCheckEnabled:  DefaultHealthCheckEnabled,
+		healthCheckTimeout:  DefaultHealthCheckTimeout,
+		healthCheckInterval: DefaultHealthCheckInterval,
+		discoveryEnabled:    DefaultTopologyDiscoveryEnabled,
+		readPreference:      Primary,
+		maxRetries:          DefaultMaxRetries,
+		healthCheckStopCh:   make(chan bool),
+		discoveryStopCh:     make(chan bool),
 	}
 
 	// Run the options on the client
@@ -145,9 +150,9 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 		}
 	}
 
-	if client.healthcheckEnabled {
+	if client.healthCheckEnabled {
 		// perform an initial healthcheck
-		client.healthCheck(client.healthcheckTimeout)
+		client.healthCheck(client.healthCheckTimeout)
 	}
 
 	// Ensure that we have at least one endpoint, the primary, available
@@ -158,11 +163,14 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 	// if t.discoveryEnabled {
 	// 	go t.startDiscoverer() // periodically update cluster information
 	// }
-	// if t.healthcheckEnabled {
-	// 	go c.startHealthChecker() // periodically ping all nodes of the cluster
-	// }
+	if client.healthCheckEnabled {
+		go client.startHealthChecker() // periodically ping all nodes of the cluster
+	}
 
+	client.mu.Lock()
 	client.running = true
+	client.mu.Unlock()
+
 	return client, nil
 }
 
@@ -181,15 +189,18 @@ func (c *HTTPClient) Close() {
 
 	log.Info("Closing QED client...")
 
-	if c.healthcheckEnabled {
-		c.healthcheckStopCh <- true
-		<-c.healthcheckStopCh
+	if c.healthCheckEnabled {
+		c.healthCheckStopCh <- true
+		<-c.healthCheckStopCh
 	}
 
 	if c.discoveryEnabled {
 		c.discoveryStopCh <- true
 		<-c.discoveryStopCh
 	}
+
+	close(c.healthCheckStopCh)
+	close(c.discoveryStopCh)
 
 	c.mu.Lock()
 	if c.topology != nil {
@@ -244,8 +255,8 @@ func (c *HTTPClient) callPrimary(method, path string, data []byte) ([]byte, erro
 		}
 
 		if !retried && endpoint.IsDead() {
-			if c.healthcheckEnabled {
-				c.healthCheck(c.healthcheckTimeout)
+			if c.healthCheckEnabled {
+				c.healthCheck(c.healthCheckTimeout)
 			}
 			retried = true
 			continue
@@ -307,10 +318,14 @@ func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data 
 		return nil, err
 	}
 
+	var bodyBytes []byte
 	if resp.Body != nil {
 		defer resp.Body.Close()
+		bodyBytes, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
 	}
-	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		return nil, fmt.Errorf("Invalid request %v", string(bodyBytes))
@@ -401,6 +416,28 @@ func (c *HTTPClient) discover() error {
 	}
 
 	return nil
+}
+
+// startHealthChecker periodically runs healthcheck.
+func (c *HTTPClient) startHealthChecker() {
+	c.mu.RLock()
+	timeout := c.healthCheckTimeout
+	interval := c.healthCheckInterval
+	c.mu.RUnlock()
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-c.healthCheckStopCh:
+			// we are asked to stop, so we signal back that we're stopping now
+			c.healthCheckStopCh <- true
+			return
+		case <-ticker.C:
+			c.healthCheck(timeout)
+		}
+	}
 }
 
 // Ping will do a healthcheck request to the primary node
