@@ -84,8 +84,12 @@ type auditorConfig struct {
 }
 
 func newAuditorConfig() *auditorConfig {
+	conf := client.DefaultConfig()
+	conf.AttemptToReviveEndpoints = true
+	conf.ReadPreference = client.Any
+	conf.MaxRetries = 1
 	return &auditorConfig{
-		Qed:      client.DefaultConfig(),
+		Qed:      conf,
 		Notifier: gossip.DefaultSimpleNotifierConfig(),
 		Store:    gossip.DefaultRestSnapshotStoreConfig(),
 		Tasks:    gossip.DefaultSimpleTasksManagerConfig(),
@@ -111,8 +115,6 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 	log.SetLogger("auditor", agentConfig.Log)
 
 	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
-	conf.Qed.AttemptToReviveEndpoints = true
-	conf.Qed.ReadPreference = client.Any
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
 		return err
