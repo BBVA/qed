@@ -184,7 +184,7 @@ func getClient(t *testing.T, id int) *client.HTTPClient {
 		client.SetURLs(fmt.Sprintf("http://127.0.0.1:880%d", id)),
 		client.SetAPIKey(APIKey),
 		client.SetTopologyDiscovery(false),
-		client.SetHealthchecks(false),
+		client.SetHealthChecks(false),
 		client.SetMaxRetries(3),
 	)
 	if err != nil {
