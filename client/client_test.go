@@ -246,7 +246,7 @@ func TestHealthCheck(t *testing.T) {
 
 func TestPeriodicHealthCheck(t *testing.T) {
 
-	log.SetLogger("TestPeriodicHealthCheck", log.INFO)
+	log.SetLogger("TestPeriodicHealthCheck", log.SILENT)
 
 	var numChecks int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
