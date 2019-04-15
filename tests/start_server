@@ -49,6 +49,12 @@ if [ -z $n ]; then
 	n=0
 fi
 
+if ! which envsubst
+then
+    echo -e "Please install envsubst. OSX -> brew install gettext ; brew link --force gettext"
+    exit 1
+fi
+
 mkdir -p /var/tmp/qed-log-0
 leader=$(echo ${LEADER_CONFIG[@]} | i=0 envsubst )
 $QED server start $leader 2>&1 | tee  /var/tmp/qed-log-0/server.log &

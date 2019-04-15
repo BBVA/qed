@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if ! which envsubst
+then
+    echo -e "Please install envsubst. OSX -> brew install gettext ; brew link --force gettext"
+    exit 1
+fi
+
 # client options
 CLIENT_CONFIG=()
 CLIENT_CONFIG+=("--log debug")
