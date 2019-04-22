@@ -4,7 +4,7 @@ before:
     - go mod download
 builds:
   - env:
-      - CGO_ENABLED=0
+      - CGO_LDFLAGS_ALLOW=".*"
       - GOOS=linux
       - GO111MODULE=on
     binary: qed
