@@ -98,10 +98,10 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		snapshot := &protocol.Snapshot{
-			response.HistoryDigest,
-			response.HyperDigest,
-			response.Version,
-			response.EventDigest,
+			HistoryDigest: response.HistoryDigest,
+			HyperDigest:   response.HyperDigest,
+			Version:       response.Version,
+			EventDigest:   response.EventDigest,
 		}
 
 		out, err := json.Marshal(snapshot)
@@ -111,10 +111,88 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write(out)
+		_, _ = w.Write(out)
 
 		return
+	}
+}
 
+// AddBulk posts a bulk of events into the system:
+// The http post url is:
+//   POST /events/bulk
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 201 and the body contains:
+//   [
+//		{
+//			"HyperDigest": "mHzXvSE/j7eFmNObvC7PdtQTmd4W0q/FPHmiYEjL0eM=",
+//			"HistoryDigest": "Kpbn+7P4XrZi2hKpdhA7freUicZdUsU6GqmUk0vDJ8A=",
+//			"Version": 1,
+//			"Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
+//		},
+//		{
+//			"HyperDigest": "mHzXvSE/j7eFmNObvC7PdtQTmd4W0q/FPHmiYEjL0eM=",
+//			"HistoryDigest": "reUicZdUsU6GqmUk0vDJ8A=Kpbn+7P4XrZi2hKpdhA7f",
+//			"Version": 2,
+//			"Event": "pcyBteSBmaXJzdCBldmVudAVGhpcyB=="
+//		},
+//		...
+//	]
+func AddBulk(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// Make sure we can only be called with an HTTP POST request.
+		if r.Method != "POST" {
+			w.Header().Set("Allow", "POST")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		if r.Body == nil {
+			http.Error(w, "Please send a request body", http.StatusBadRequest)
+			return
+		}
+
+		var eventBulk [][]byte
+		err := json.NewDecoder(r.Body).Decode(&eventBulk)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Wait for the response
+		response, err := balloon.AddBulk(eventBulk)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		snapshots := []protocol.Snapshot{}
+		for _, s := range response {
+			snapshot := protocol.Snapshot{
+				HistoryDigest: s.HistoryDigest,
+				HyperDigest:   s.HyperDigest,
+				Version:       s.Version,
+				EventDigest:   s.EventDigest,
+			}
+			snapshots = append(snapshots, snapshot)
+		}
+
+		bulkSnapshots := &protocol.BulkSnapshots{
+			Snapshots: snapshots,
+		}
+
+		out, err := json.Marshal(bulkSnapshots)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write(out)
+
+		return
 	}
 }
 
@@ -163,7 +241,7 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write(out)
+		_, _ = w.Write(out)
 		return
 
 	}
@@ -217,7 +295,7 @@ func DigestMembership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write(out)
+		_, _ = w.Write(out)
 		return
 
 	}
@@ -264,7 +342,7 @@ func Incremental(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write(out)
+		_, _ = w.Write(out)
 		return
 
 	}
@@ -296,6 +374,7 @@ func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	api := http.NewServeMux()
 	api.HandleFunc("/healthcheck", AuthHandlerMiddleware(HealthCheckHandler))
 	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
+	api.HandleFunc("/events/bulk", AuthHandlerMiddleware(AddBulk(balloon)))
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))

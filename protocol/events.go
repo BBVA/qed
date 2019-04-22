@@ -55,6 +55,11 @@ type Snapshot struct {
 	EventDigest   hashing.Digest
 }
 
+// BulkSnapshots is the public struct that apihttp.AddBulk Handler call returns.
+type BulkSnapshots struct {
+	Snapshots []Snapshot
+}
+
 type SignedSnapshot struct {
 	Snapshot  *Snapshot
 	Signature []byte

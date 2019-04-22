@@ -53,6 +53,7 @@ var (
 // RaftBalloon is the interface Raft-backed balloons must implement.
 type RaftBalloonApi interface {
 	Add(event []byte) (*balloon.Snapshot, error)
+	AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error)
 	QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
 	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
@@ -386,6 +387,10 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	}
 
 	return snapshot, nil
+}
+
+func (b *RaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
+	return nil, nil
 }
 
 func (b *RaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
