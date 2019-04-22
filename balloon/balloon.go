@@ -73,6 +73,12 @@ type Snapshot struct {
 	Version       uint64
 }
 
+// BulkSnapshot is the struct that has both history and hyper digest and the
+// current version for that rootNode digests.
+type BulkSnapshot struct {
+	Snapshots []Snapshot
+}
+
 type Verifiable interface {
 	Verify(key []byte, expectedDigest hashing.Digest) bool
 }
@@ -222,6 +228,10 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 	}
 
 	return snapshot, mutations, nil
+}
+
+func (b *Balloon) AddBulk(bulk [][]byte) ([]*BulkSnapshot, []*storage.Mutation, error) {
+	return nil, nil, nil
 }
 
 func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
