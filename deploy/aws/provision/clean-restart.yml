@@ -26,6 +26,16 @@
       with_items:
         - /var/qed/db 
         - /var/qed/wal
+  tags:
+    - clean
+
+- hosts: role_qed
+  remote_user: ec2-user
+  gather_facts: true
+  become: true
+  vars_files:
+    - vars.yml
+  tasks:
     - name: Restart all services
       systemd:
         name: "{{ item }}"
