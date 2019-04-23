@@ -376,15 +376,12 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 		return nil, err
 	}
 	b.metrics.Adds.Inc()
+
 	snapshot := resp.(*fsmAddResponse).snapshot
+	p := protocol.Snapshot(*snapshot)
 
 	//Send snapshot to the snapshot channel
-	b.snapshotsCh <- &protocol.Snapshot{ // TODO move this to an upper layer (shard manager?)
-		HistoryDigest: snapshot.HistoryDigest,
-		HyperDigest:   snapshot.HyperDigest,
-		Version:       snapshot.Version,
-		EventDigest:   snapshot.EventDigest,
-	}
+	b.snapshotsCh <- &p // TODO move this to an upper layer (shard manager?)
 
 	return snapshot, nil
 }
