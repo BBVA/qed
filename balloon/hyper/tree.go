@@ -94,17 +94,19 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	return rh, ctx.Mutations, nil
 }
 
-func (t *HyperTree) AddBulk(eventDigests [][]byte, versions []uint64) (hashing.Digest, []*storage.Mutation, error) {
+func (t *HyperTree) AddBulk(eventDigests []hashing.Digest, versions []uint64) (hashing.Digest, []*storage.Mutation, error) {
 	t.Lock()
 	defer t.Unlock()
 
 	versionsAsBytes := make([][]byte, 0)
-	for _, version := range versions {
+	digestsAsBytes := make([][]byte, 0)
+	for i, version := range versions {
 		versionsAsBytes = append(versionsAsBytes, util.Uint64AsBytes(version))
+		digestsAsBytes = append(digestsAsBytes, []byte(eventDigests[i]))
 	}
 
 	// build a stack of operations and then interpret it to generate the root hash
-	ops := pruneToInsertBulk(eventDigests, versionsAsBytes, t.cacheHeightLimit, t.batchLoader)
+	ops := pruneToInsertBulk(digestsAsBytes, versionsAsBytes, t.cacheHeightLimit, t.batchLoader)
 	ctx := &pruningContext{
 		Hasher:        t.hasher,
 		Cache:         t.cache,

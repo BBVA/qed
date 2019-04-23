@@ -54,7 +54,40 @@ func TestAdd(t *testing.T) {
 	}
 
 }
+func TestAddBulk(t *testing.T) {
 
+	log.SetLogger("TestAddBulk", log.SILENT)
+
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
+
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(t, err)
+
+	events := [][]byte{
+		[]byte("The year’s at the spring,"),
+		[]byte("And day's at the morn;"),
+		[]byte("Morning's at seven;"),
+		[]byte("The hill-side’s dew-pearled;"),
+		[]byte("The lark's on the wing;"),
+		[]byte("The snail's on the thorn;"),
+		[]byte("God's in his heaven—"),
+		[]byte("All's right with the world!"),
+	}
+
+	snapshotBulk, mutations, err := balloon.AddBulk(events)
+	store.Mutate(mutations)
+
+	require.NoError(t, err)
+	assert.Truef(t, len(mutations) > 0, "There should be some mutations")
+
+	for i, snapshot := range snapshotBulk.Snapshots {
+		assert.Equalf(t, uint64(i), snapshot.Version, "Wrong version in test %d", i)
+		assert.NotNil(t, snapshot.HyperDigest, "The HyperDigest shouldn't be nil in test %d", i)
+		assert.NotNil(t, snapshot.HistoryDigest, "The HistoryDigest shouldn't be nil in test %d", i)
+	}
+
+}
 func TestQueryMembership(t *testing.T) {
 
 	log.SetLogger("TestQueryMembership", log.SILENT)
