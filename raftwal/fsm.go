@@ -42,6 +42,11 @@ type fsmAddResponse struct {
 	error    error
 }
 
+type fsmAddBulkResponse struct {
+	snapshotBulk *balloon.SnapshotBulk
+	error        error
+}
+
 type BalloonFSM struct {
 	hasherF func() hashing.Hasher
 
@@ -115,7 +120,7 @@ func (s fsmState) shouldApply(f *fsmState) bool {
 		return false
 	}
 
-	if f.BalloonVersion > 0 && s.BalloonVersion != (f.BalloonVersion-1) {
+	if f.BalloonVersion > 0 && s.BalloonVersion >= f.BalloonVersion {
 		panic(fmt.Sprintf("balloonVersion panic! old: %+v, new %+v", s, f))
 	}
 
@@ -140,6 +145,18 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 			return fsm.applyAdd(cmd.Event, newState)
 		}
 		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
+
+	case commands.AddBulkEventCommandType:
+		var cmd commands.AddBulkEventCommand
+		if err := commands.Decode(buf[1:], &cmd); err != nil {
+			return &fsmAddBulkResponse{error: err}
+		}
+		// INFO: after applying a bulk there will be a jump in term version due to balloon version mapping.
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
+		if fsm.state.shouldApply(newState) {
+			return fsm.applyAddBulk(cmd.Events, newState)
+		}
+		return &fsmAddBulkResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 
 	case commands.MetadataSetCommandType:
 		var cmd commands.MetadataSetCommand
@@ -258,6 +275,28 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 	fsm.state = state
 
 	return &fsmAddResponse{snapshot: snapshot}
+}
+
+func (fsm *BalloonFSM) applyAddBulk(events [][]byte, state *fsmState) *fsmAddBulkResponse {
+
+	snapshotBulk, mutations, err := fsm.balloon.AddBulk(events)
+	if err != nil {
+		return &fsmAddBulkResponse{error: err}
+	}
+
+	stateBuff, err := encodeMsgPack(state)
+	if err != nil {
+		return &fsmAddBulkResponse{error: err}
+	}
+
+	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff.Bytes()))
+	err = fsm.store.Mutate(mutations)
+	if err != nil {
+		return &fsmAddBulkResponse{error: err}
+	}
+	fsm.state = state
+
+	return &fsmAddBulkResponse{snapshotBulk: snapshotBulk}
 }
 
 // Decode reverses the encode operation on a byte slice input

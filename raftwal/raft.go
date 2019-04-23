@@ -387,7 +387,23 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 }
 
 func (b *RaftBalloon) AddBulk(bulk [][]byte) (*balloon.SnapshotBulk, error) {
-	return nil, nil
+	cmd := &commands.AddBulkEventCommand{Events: bulk}
+	resp, err := b.raftApply(commands.AddBulkEventCommandType, cmd)
+	if err != nil {
+		return nil, err
+	}
+	b.metrics.Adds.Add(float64(len(bulk)))
+
+	snapshotBulk := resp.(*fsmAddBulkResponse).snapshotBulk
+
+	//Send snapshot to the snapshot channel
+	// TODO move this to an upper layer (shard manager?)
+	for _, s := range snapshotBulk.Snapshots {
+		p := protocol.Snapshot(s)
+		b.snapshotsCh <- &p
+	}
+
+	return snapshotBulk, nil
 }
 
 func (b *RaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
