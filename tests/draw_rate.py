@@ -45,7 +45,7 @@ def main(argv):
         fig.append_trace(trace_rates, 1, 1)
         fig.append_trace(trace_events, 2, 1)
 
-        fig.layout['yaxis1'].update(range=[0, 20000])
+        fig.layout['yaxis1'].update(range=[0, 25000])
         
         plot(fig)
 

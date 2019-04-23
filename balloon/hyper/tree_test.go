@@ -269,11 +269,11 @@ func BenchmarkAdd(b *testing.B) {
 	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
 
 	hyperMetrics := metrics_utils.CustomRegister(AddTotal)
-	srvCloseF := metrics_utils.StartMetricsServer(hyperMetrics, store)
+	srvCloseF := metrics_utils.StartMetricsServer(hyperMetrics) //, store)
 	defer srvCloseF()
 
 	b.ResetTimer()
-	b.N = 2000000
+	b.N = 20000000
 	for i := 0; i < b.N; i++ {
 		index := make([]byte, 8)
 		binary.LittleEndian.PutUint64(index, uint64(i))
@@ -282,6 +282,47 @@ func BenchmarkAdd(b *testing.B) {
 		require.NoError(b, err)
 		require.NoError(b, store.Mutate(mutations))
 		AddTotal.Inc()
+	}
+
+}
+
+func BenchmarkAddBulk(b *testing.B) {
+
+	log.SetLogger("BenchmarkAddBulk", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/hyper_tree_test.db")
+	defer closeF()
+
+	hasher := hashing.NewSha256Hasher()
+	freeCache := cache.NewFreeCache(CacheSize)
+	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
+
+	hyperMetrics := metrics_utils.CustomRegister(AddTotal)
+	srvCloseF := metrics_utils.StartMetricsServer(hyperMetrics) //, store)
+	defer srvCloseF()
+
+	bulkSize := uint64(20)
+	eventDigests := make([][]byte, bulkSize)
+	versions := make([]uint64, bulkSize)
+
+	b.ResetTimer()
+	b.N = 200000000
+	for i := uint64(0); i < uint64(b.N); i++ {
+		idx := i % bulkSize
+
+		index := make([]byte, 8)
+		binary.LittleEndian.PutUint64(index, i)
+		event := append(rand.Bytes(32), index...)
+
+		eventDigests[idx] = hasher.Do(event)
+		versions[idx] = i
+
+		if idx == bulkSize-1 {
+			_, mutations, err := tree.AddBulk(eventDigests, versions)
+			require.NoError(b, err)
+			require.NoError(b, store.Mutate(mutations))
+			AddTotal.Add(float64(bulkSize))
+		}
 	}
 
 }
