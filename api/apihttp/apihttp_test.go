@@ -52,19 +52,22 @@ func (b fakeRaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 		Version:       0}, nil
 }
 
-func (b fakeRaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
-	return []*balloon.Snapshot{
-		&balloon.Snapshot{
-			EventDigest:   hashing.Digest{0x02},
-			HistoryDigest: hashing.Digest{0x00},
-			HyperDigest:   hashing.Digest{0x01},
-			Version:       0},
-		&balloon.Snapshot{
-			EventDigest:   hashing.Digest{0x05},
-			HistoryDigest: hashing.Digest{0x03},
-			HyperDigest:   hashing.Digest{0x04},
-			Version:       1},
-	}, nil
+func (b fakeRaftBalloon) AddBulk(bulk [][]byte) (*balloon.SnapshotBulk, error) {
+	return &balloon.SnapshotBulk{
+		Snapshots: []balloon.Snapshot{
+			{
+				EventDigest:   hashing.Digest{0x02},
+				HistoryDigest: hashing.Digest{0x00},
+				HyperDigest:   hashing.Digest{0x01},
+				Version:       0,
+			},
+			{
+				EventDigest:   hashing.Digest{0x05},
+				HistoryDigest: hashing.Digest{0x03},
+				HyperDigest:   hashing.Digest{0x04},
+				Version:       1,
+			},
+		}}, nil
 }
 
 func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) error {
@@ -187,10 +190,10 @@ func TestAdd(t *testing.T) {
 func TestAddBulk(t *testing.T) {
 	// Create a request to pass to our handler. We pass a message as a data.
 	// If it's nil it will fail.
-	data, _ := json.Marshal([][]byte{
+	data, _ := json.Marshal(protocol.EventBulk{Events: [][]byte{
 		[]byte("this is event 1"),
 		[]byte("this is event 2"),
-	})
+	}})
 
 	req, err := http.NewRequest("POST", "/events/bulk", bytes.NewBuffer(data))
 	if len(data) == 0 {
@@ -212,7 +215,7 @@ func TestAddBulk(t *testing.T) {
 	}
 
 	// Check the body response
-	bs := &protocol.BulkSnapshots{}
+	bs := &protocol.SnapshotBulk{}
 	_ = json.Unmarshal([]byte(rr.Body.String()), bs)
 
 	expectedHyperDigests := [][]byte{[]byte{0x1}, []byte{0x4}}

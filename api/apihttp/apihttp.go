@@ -153,7 +153,7 @@ func AddBulk(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		var eventBulk [][]byte
+		var eventBulk protocol.EventBulk
 		err := json.NewDecoder(r.Body).Decode(&eventBulk)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -161,29 +161,14 @@ func AddBulk(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		response, err := balloon.AddBulk(eventBulk)
+		snapshotBulk, err := balloon.AddBulk(eventBulk.Events)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		snapshots := []protocol.Snapshot{}
-		for _, s := range response {
-			snapshot := protocol.Snapshot{
-				HistoryDigest: s.HistoryDigest,
-				HyperDigest:   s.HyperDigest,
-				Version:       s.Version,
-				EventDigest:   s.EventDigest,
-			}
-			snapshots = append(snapshots, snapshot)
-		}
-
-		bulkSnapshots := &protocol.BulkSnapshots{
-			Snapshots: snapshots,
-		}
-
-		out, err := json.Marshal(bulkSnapshots)
+		out, err := json.Marshal(snapshotBulk)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
