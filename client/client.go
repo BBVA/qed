@@ -468,6 +468,29 @@ func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
 }
 
+// AddBulk will do a request to the server with a post data to store a bulk of new events.
+func (c *HTTPClient) AddBulk(events []string) (*protocol.SnapshotBulk, error) {
+
+	eventBulk := protocol.EventBulk{}
+	for _, e := range events {
+		eventBulk.Events = append(eventBulk.Events, []byte(e))
+	}
+
+	data, _ := json.Marshal(eventBulk)
+	body, err := c.callPrimary("POST", "/events/bulk", data)
+	if err != nil {
+		return nil, err
+	}
+
+	var bs protocol.SnapshotBulk
+	err = json.Unmarshal(body, &bs)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bs, nil
+}
+
 // Membership will ask for a Proof to the server.
 func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
 

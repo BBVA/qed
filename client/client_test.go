@@ -43,6 +43,7 @@ func setupServer(input []byte) (string, func()) {
 
 	mux.HandleFunc("/info/shards", infoHandler(server.URL))
 	mux.HandleFunc("/events", defaultHandler(input))
+	mux.HandleFunc("/events/bulk", defaultHandler(input))
 	mux.HandleFunc("/proofs/membership", defaultHandler(input))
 	mux.HandleFunc("/proofs/incremental", defaultHandler(input))
 	mux.HandleFunc("/proofs/digest-membership", defaultHandler(input))
@@ -429,6 +430,37 @@ func TestAddSuccess(t *testing.T) {
 	snapshot, err := client.Add(event)
 	assert.NoError(t, err)
 	assert.Equal(t, snap, snapshot, "The snapshots should match")
+}
+
+func TestAddBulkSuccess(t *testing.T) {
+
+	log.SetLogger("TestAddBulkSuccess", log.SILENT)
+
+	eventBulk := []string{"This is event 1", "This is event 2"}
+	bulk := &protocol.SnapshotBulk{
+		Snapshots: []protocol.Snapshot{
+			{
+				HistoryDigest: []byte("history"),
+				HyperDigest:   []byte("hyper"),
+				Version:       0,
+				EventDigest:   []byte(eventBulk[0]),
+			},
+			{
+				HistoryDigest: []byte("history"),
+				HyperDigest:   []byte("hyper"),
+				Version:       1,
+				EventDigest:   []byte(eventBulk[1]),
+			},
+		}}
+	input, _ := json.Marshal(bulk)
+
+	serverURL, tearDown := setupServer(input)
+	defer tearDown()
+	client := setupClient(t, []string{serverURL})
+
+	snapshotBulk, err := client.AddBulk(eventBulk)
+	assert.NoError(t, err)
+	assert.Equal(t, bulk, snapshotBulk, "The snapshots should match")
 }
 
 func TestAddWithServerFailure(t *testing.T) {

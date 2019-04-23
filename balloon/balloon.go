@@ -75,7 +75,7 @@ type Snapshot struct {
 
 // BulkSnapshot is the struct that has both history and hyper digest and the
 // current version for that rootNode digests.
-type BulkSnapshot struct {
+type SnapshotBulk struct {
 	Snapshots []Snapshot
 }
 
@@ -230,7 +230,7 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 	return snapshot, mutations, nil
 }
 
-func (b *Balloon) AddBulk(bulk [][]byte) ([]*BulkSnapshot, []*storage.Mutation, error) {
+func (b *Balloon) AddBulk(bulk [][]byte) (*SnapshotBulk, []*storage.Mutation, error) {
 	return nil, nil, nil
 }
 
