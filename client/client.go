@@ -559,14 +559,9 @@ func (c *HTTPClient) Verify(
 ) bool {
 
 	proof := protocol.ToBalloonProof(result, hasherF)
+	balloonSnapshot := balloon.Snapshot(*snap)
 
-	return proof.Verify(snap.EventDigest, &balloon.Snapshot{
-		EventDigest:   snap.EventDigest,
-		HistoryDigest: snap.HistoryDigest,
-		HyperDigest:   snap.HyperDigest,
-		Version:       snap.Version,
-	})
-
+	return proof.Verify(snap.EventDigest, &balloonSnapshot)
 }
 
 // Verify will compute the Proof given in Membership and the snapshot from the
@@ -578,14 +573,9 @@ func (c *HTTPClient) DigestVerify(
 ) bool {
 
 	proof := protocol.ToBalloonProof(result, hasherF)
+	balloonSnapshot := balloon.Snapshot(*snap)
 
-	return proof.DigestVerify(snap.EventDigest, &balloon.Snapshot{
-		EventDigest:   snap.EventDigest,
-		HistoryDigest: snap.HistoryDigest,
-		HyperDigest:   snap.HyperDigest,
-		Version:       snap.Version,
-	})
-
+	return proof.DigestVerify(snap.EventDigest, &balloonSnapshot)
 }
 
 func (c *HTTPClient) VerifyIncremental(
@@ -596,18 +586,11 @@ func (c *HTTPClient) VerifyIncremental(
 
 	proof := protocol.ToIncrementalProof(result, hasher)
 
-	start := &balloon.Snapshot{
-		EventDigest:   startSnapshot.EventDigest,
-		HistoryDigest: startSnapshot.HistoryDigest,
-		HyperDigest:   startSnapshot.HyperDigest,
-		Version:       startSnapshot.Version,
-	}
-	end := &balloon.Snapshot{
-		EventDigest:   endSnapshot.EventDigest,
-		HistoryDigest: endSnapshot.HistoryDigest,
-		HyperDigest:   endSnapshot.HyperDigest,
-		Version:       endSnapshot.Version,
-	}
+	s := balloon.Snapshot(*startSnapshot)
+	start := &s
+
+	e := balloon.Snapshot(*endSnapshot)
+	end := &e
 
 	return proof.Verify(start, end)
 }

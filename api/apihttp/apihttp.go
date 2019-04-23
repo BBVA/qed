@@ -97,14 +97,9 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		snapshot := &protocol.Snapshot{
-			HistoryDigest: response.HistoryDigest,
-			HyperDigest:   response.HyperDigest,
-			Version:       response.Version,
-			EventDigest:   response.EventDigest,
-		}
+		snapshot := protocol.Snapshot(*(response))
 
-		out, err := json.Marshal(snapshot)
+		out, err := json.Marshal(&snapshot)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
