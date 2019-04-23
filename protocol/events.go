@@ -53,10 +53,10 @@ type MembershipDigest struct {
 
 // Snapshot is the public struct that apihttp.Add Handler call returns.
 type Snapshot struct {
+	EventDigest   hashing.Digest
 	HistoryDigest hashing.Digest
 	HyperDigest   hashing.Digest
 	Version       uint64
-	EventDigest   hashing.Digest
 }
 
 // SnapshotBulk is the public struct that apihttp.AddBulk Handler call returns.
