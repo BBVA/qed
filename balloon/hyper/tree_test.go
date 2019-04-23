@@ -302,7 +302,7 @@ func BenchmarkAddBulk(b *testing.B) {
 	defer srvCloseF()
 
 	bulkSize := uint64(20)
-	eventDigests := make([][]byte, bulkSize)
+	eventDigests := make([]hashing.Digest, bulkSize)
 	versions := make([]uint64, bulkSize)
 
 	b.ResetTimer()
