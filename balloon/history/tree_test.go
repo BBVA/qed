@@ -478,18 +478,51 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 
 	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 300)
+	hasher := hashing.NewSha256Hasher()
 
 	historyMetrics := metrics_utils.CustomRegister(AddTotal)
 	srvCloseF := metrics_utils.StartMetricsServer(historyMetrics, store)
 	defer srvCloseF()
 
-	b.N = 100000
+	b.N = 10000000
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
-		key := rand.Bytes(64)
-		_, mutations, err := tree.Add(key, i)
+		_, mutations, err := tree.Add(hasher.Do(rand.Bytes(64)), i)
 		require.NoError(b, err)
 		require.NoError(b, store.Mutate(mutations))
 		AddTotal.Inc()
+	}
+}
+
+func BenchmarkAddBulk(b *testing.B) {
+
+	log.SetLogger("BenchmarkAddBulk", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/history_tree_test.db")
+	defer closeF()
+
+	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 300)
+	hasher := hashing.NewSha256Hasher()
+
+	historyMetrics := metrics_utils.CustomRegister(AddTotal)
+	srvCloseF := metrics_utils.StartMetricsServer(historyMetrics, store)
+	defer srvCloseF()
+
+	bulkSize := uint64(10)
+	eventDigests := make([]hashing.Digest, bulkSize)
+	versions := make([]uint64, bulkSize)
+
+	b.N = 10000000
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		index := i % bulkSize
+		eventDigests[index] = hasher.Do(rand.Bytes(64))
+		versions[index] = i
+		if index == bulkSize-1 {
+			_, mutations, err := tree.AddBulk(eventDigests, versions)
+			require.NoError(b, err)
+			require.NoError(b, store.Mutate(mutations))
+			AddTotal.Add(float64(bulkSize))
+		}
 	}
 }
