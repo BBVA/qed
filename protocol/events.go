@@ -33,6 +33,10 @@ type Event struct {
 	Event []byte
 }
 
+type EventBulk struct {
+	Events [][]byte
+}
+
 // MembershipQuery is the public struct that apihttp.Membership
 // Handler uses to parse the post params.
 type MembershipQuery struct {
@@ -55,8 +59,8 @@ type Snapshot struct {
 	EventDigest   hashing.Digest
 }
 
-// BulkSnapshots is the public struct that apihttp.AddBulk Handler call returns.
-type BulkSnapshots struct {
+// SnapshotBulk is the public struct that apihttp.AddBulk Handler call returns.
+type SnapshotBulk struct {
 	Snapshots []Snapshot
 }
 
