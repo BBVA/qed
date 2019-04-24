@@ -28,7 +28,7 @@ type CommandType uint8
 
 const (
 	AddEventCommandType CommandType = iota // Commands which modify the database.
-	AddBulkEventCommandType
+	AddEventsBulkCommandType
 	MetadataSetCommandType
 	MetadataDeleteCommandType
 )
@@ -37,7 +37,7 @@ type AddEventCommand struct {
 	Event []byte
 }
 
-type AddBulkEventCommand struct {
+type AddEventsBulkCommand struct {
 	Events [][]byte
 }
 

@@ -27,7 +27,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func TestAddVerify(t *testing.T) {
+func TestAddAndVerify(t *testing.T) {
 	before, after := setupServer(0, "", false, t)
 	scenario, let := scope.Scope(t, before, after)
 	// log.SetLogger("", log.DEBUG)

@@ -33,7 +33,7 @@ type Event struct {
 	Event []byte
 }
 
-type EventBulk struct {
+type EventsBulk struct {
 	Events [][]byte
 }
 
@@ -57,11 +57,6 @@ type Snapshot struct {
 	HistoryDigest hashing.Digest
 	HyperDigest   hashing.Digest
 	Version       uint64
-}
-
-// SnapshotBulk is the public struct that apihttp.AddBulk Handler call returns.
-type SnapshotBulk struct {
-	Snapshots []Snapshot
 }
 
 type SignedSnapshot struct {

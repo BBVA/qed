@@ -26,7 +26,7 @@ import (
 	assert "github.com/stretchr/testify/require"
 )
 
-func TestAddBulkVerify(t *testing.T) {
+func TestAddBulkAndVerify(t *testing.T) {
 	before, after := setupServer(0, "", false, t)
 	scenario, let := scope.Scope(t, before, after)
 	// log.SetLogger("", log.DEBUG)
@@ -45,7 +45,7 @@ func TestAddBulkVerify(t *testing.T) {
 	}
 
 	scenario("Add one event and get its membership proof", func() {
-		var snapshotBulk *protocol.SnapshotBulk
+		var snapshotBulk []*protocol.Snapshot
 		var membershipBulk []*protocol.MembershipResult
 		var err error
 
@@ -55,7 +55,7 @@ func TestAddBulkVerify(t *testing.T) {
 			snapshotBulk, err = client.AddBulk(events)
 			assert.NoError(t, err)
 
-			for i, snapshot := range snapshotBulk.Snapshots {
+			for i, snapshot := range snapshotBulk {
 				assert.Equal(t, snapshot.EventDigest, hashing.NewSha256Hasher().Do([]byte(events[i])),
 					"The snapshot's event doesn't match: expected %s, actual %s", events[i], snapshot.EventDigest)
 				assert.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
@@ -66,7 +66,7 @@ func TestAddBulkVerify(t *testing.T) {
 
 		let("Get membership proof for each inserted event", func(t *testing.T) {
 			lastVersion := uint64(len(events) - 1)
-			for i, snapshot := range snapshotBulk.Snapshots {
+			for i, snapshot := range snapshotBulk {
 
 				result, err := client.Membership([]byte(events[i]), snapshot.Version)
 				assert.NoError(t, err)
@@ -91,7 +91,7 @@ func TestAddBulkVerify(t *testing.T) {
 
 		let("Verify each membership", func(t *testing.T) {
 			for i, result := range membershipBulk {
-				snap := &snapshotBulk.Snapshots[i]
+				snap := snapshotBulk[i]
 				assert.True(t, client.DigestVerify(result, snap, hashing.NewSha256Hasher), "result should be valid")
 			}
 		})

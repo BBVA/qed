@@ -344,7 +344,7 @@ func TestManualDiscoveryPrimaryLost(t *testing.T) {
 	require.False(t, client.topology.HasActivePrimary())
 
 	// try to discovery a new primary endpoint
-	client.discover()
+	_ = client.discover()
 	require.True(t, client.topology.HasActivePrimary())
 	resp, err := client.callPrimary("GET", "/events", nil)
 	require.NoError(t, err)
@@ -437,21 +437,20 @@ func TestAddBulkSuccess(t *testing.T) {
 	log.SetLogger("TestAddBulkSuccess", log.SILENT)
 
 	eventBulk := []string{"This is event 1", "This is event 2"}
-	bulk := &protocol.SnapshotBulk{
-		Snapshots: []protocol.Snapshot{
-			{
-				HistoryDigest: []byte("history"),
-				HyperDigest:   []byte("hyper"),
-				Version:       0,
-				EventDigest:   []byte(eventBulk[0]),
-			},
-			{
-				HistoryDigest: []byte("history"),
-				HyperDigest:   []byte("hyper"),
-				Version:       1,
-				EventDigest:   []byte(eventBulk[1]),
-			},
-		}}
+	bulk := []*protocol.Snapshot{
+		{
+			HistoryDigest: []byte("history"),
+			HyperDigest:   []byte("hyper"),
+			Version:       0,
+			EventDigest:   []byte(eventBulk[0]),
+		},
+		{
+			HistoryDigest: []byte("history"),
+			HyperDigest:   []byte("hyper"),
+			Version:       1,
+			EventDigest:   []byte(eventBulk[1]),
+		},
+	}
 	input, _ := json.Marshal(bulk)
 
 	serverURL, tearDown := setupServer(input)

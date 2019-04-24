@@ -43,7 +43,7 @@ type fsmAddResponse struct {
 }
 
 type fsmAddBulkResponse struct {
-	snapshotBulk *balloon.SnapshotBulk
+	snapshotBulk []*balloon.Snapshot
 	error        error
 }
 
@@ -146,13 +146,13 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 		}
 		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 
-	case commands.AddBulkEventCommandType:
-		var cmd commands.AddBulkEventCommand
+	case commands.AddEventsBulkCommandType:
+		var cmd commands.AddEventsBulkCommand
 		if err := commands.Decode(buf[1:], &cmd); err != nil {
 			return &fsmAddBulkResponse{error: err}
 		}
 		// INFO: after applying a bulk there will be a jump in term version due to balloon version mapping.
-		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + uint64(len(cmd.Events)-1)}
 		if fsm.state.shouldApply(newState) {
 			return fsm.applyAddBulk(cmd.Events, newState)
 		}
