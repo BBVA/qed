@@ -67,7 +67,7 @@ func setupClient(t *testing.T, urls []string) *HTTPClient {
 		SetHealthChecks(false),
 	)
 	if err != nil {
-		t.Fatal(errors.Wrap(err, "Cannot create http client"))
+		t.Fatal(errors.Wrap(err, "Cannot create http client: "))
 	}
 	return client
 }
