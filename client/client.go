@@ -140,7 +140,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 	}
 
 	// configure retrier
-	client.setRetrier(client.maxRetries)
+	_ = client.setRetrier(client.maxRetries)
 
 	// Initial topology assignment
 	if client.discoveryEnabled {
@@ -247,7 +247,7 @@ func (c *HTTPClient) callPrimary(method, path string, data []byte) ([]byte, erro
 		endpoint, err = c.topology.Primary()
 		if err != nil {
 			if !retried && c.discoveryEnabled {
-				c.discover()
+				_ = c.discover()
 				retried = true
 				continue
 			}
@@ -277,7 +277,7 @@ func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 		endpoint, err = c.topology.NextReadEndpoint(c.readPreference)
 		if err != nil {
 			if !retried && c.discoveryEnabled {
-				c.discover()
+				_ = c.discover()
 				retried = true
 				continue
 			}
@@ -469,9 +469,9 @@ func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 }
 
 // AddBulk will do a request to the server with a post data to store a bulk of new events.
-func (c *HTTPClient) AddBulk(events []string) (*protocol.SnapshotBulk, error) {
+func (c *HTTPClient) AddBulk(events []string) ([]*protocol.Snapshot, error) {
 
-	eventBulk := protocol.EventBulk{}
+	eventBulk := protocol.EventsBulk{}
 	for _, e := range events {
 		eventBulk.Events = append(eventBulk.Events, []byte(e))
 	}
@@ -482,13 +482,13 @@ func (c *HTTPClient) AddBulk(events []string) (*protocol.SnapshotBulk, error) {
 		return nil, err
 	}
 
-	var bs protocol.SnapshotBulk
+	bs := []*protocol.Snapshot{}
 	err = json.Unmarshal(body, &bs)
 	if err != nil {
 		return nil, err
 	}
 
-	return &bs, nil
+	return bs, nil
 }
 
 // Membership will ask for a Proof to the server.

@@ -97,7 +97,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		snapshot := protocol.Snapshot(*(response))
+		snapshot := protocol.Snapshot(*response)
 
 		out, err := json.Marshal(&snapshot)
 		if err != nil {
@@ -148,7 +148,7 @@ func AddBulk(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		var eventBulk protocol.EventBulk
+		var eventBulk protocol.EventsBulk
 		err := json.NewDecoder(r.Body).Decode(&eventBulk)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

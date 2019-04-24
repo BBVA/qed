@@ -73,12 +73,6 @@ type Snapshot struct {
 	Version       uint64
 }
 
-// BulkSnapshot is the struct that has both history and hyper digest and the
-// current version for that rootNode digests.
-type SnapshotBulk struct {
-	Snapshots []Snapshot
-}
-
 type Verifiable interface {
 	Verify(key []byte, expectedDigest hashing.Digest) bool
 }
@@ -230,7 +224,7 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 	return snapshot, mutations, nil
 }
 
-func (b *Balloon) AddBulk(bulk [][]byte) (*SnapshotBulk, []*storage.Mutation, error) {
+func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, error) {
 
 	// Activate metrics gathering
 	stats := metrics.Balloon
@@ -273,9 +267,9 @@ func (b *Balloon) AddBulk(bulk [][]byte) (*SnapshotBulk, []*storage.Mutation, er
 	// Append trees mutations
 	mutations = append(mutations, historyMutations...)
 
-	snapshotBulk := &SnapshotBulk{}
+	snapshotBulk := make([]*Snapshot, 0)
 	for i, _ := range eventBulkDigest {
-		snapshotBulk.Snapshots = append(snapshotBulk.Snapshots, Snapshot{
+		snapshotBulk = append(snapshotBulk, &Snapshot{
 			EventDigest:   eventBulkDigest[i],
 			HistoryDigest: historyDigests[i],
 			HyperDigest:   hyperDigest,
@@ -284,7 +278,7 @@ func (b *Balloon) AddBulk(bulk [][]byte) (*SnapshotBulk, []*storage.Mutation, er
 	}
 
 	// Increment version
-	stats.Set("version", metrics.Uint64ToVar(b.version))
+	stats.Set("version", metrics.Uint64ToVar(b.version-1))
 
 	return snapshotBulk, mutations, nil
 }
