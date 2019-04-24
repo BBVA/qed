@@ -294,6 +294,32 @@ func BenchmarkAddRocksDB(b *testing.B) {
 
 }
 
+func BenchmarkAddBulkRocksDB(b *testing.B) {
+
+	log.SetLogger("BenchmarkAddBulkRocksDB", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/balloon_bench.db")
+	defer closeF()
+
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(b, err)
+
+	balloonMetrics := metrics_utils.CustomRegister(AddTotal)
+	srvCloseF := metrics_utils.StartMetricsServer(balloonMetrics, store)
+	defer srvCloseF()
+
+	b.ResetTimer()
+	b.N = 2000000
+	for i := 0; i < b.N; i++ {
+		events := [][]byte{rand.Bytes(128)}
+		_, mutations, err := balloon.AddBulk(events)
+		require.NoError(b, err)
+		require.NoError(b, store.Mutate(mutations))
+		AddTotal.Inc()
+	}
+
+}
+
 func BenchmarkQueryRocksDB(b *testing.B) {
 	var events [][]byte
 	log.SetLogger("BenchmarkQueryRocksDB", log.SILENT)
