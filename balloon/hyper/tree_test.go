@@ -61,7 +61,8 @@ func TestAdd(t *testing.T) {
 		version := uint64(i)
 		rootHash, mutations, err := tree.Add(c.eventDigest, version)
 		require.NoErrorf(t, err, "This should not fail for version %d", i)
-		tree.store.Mutate(mutations)
+		err = tree.store.Mutate(mutations)
+		require.NoErrorf(t, err, "Error inserting mutations for version %d", i)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for index %d", i)
 	}
 }
