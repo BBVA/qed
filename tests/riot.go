@@ -198,6 +198,7 @@ type kind string
 
 const (
 	add         kind = "add"
+	addBulk     kind = "addBulk"
 	membership  kind = "membership"
 	incremental kind = "incremental"
 )
@@ -214,7 +215,7 @@ type Attack struct {
 type Task struct {
 	kind kind
 
-	event               string
+	events              []string
 	key                 []byte
 	version, start, end uint64
 }
@@ -417,15 +418,19 @@ func (a *Attack) Run() {
 
 				switch task.kind {
 				case add:
-					log.Debugf(">>> add: %s", task.event)
-					_, _ = a.client.Add(task.event)
+					log.Debugf(">>> add: %s", task.events[0])
+					_, _ = a.client.Add(task.events[0])
 					RiotEventAdd.Inc()
+				case addBulk:
+					log.Debugf(">>> addBulk: %s", task.events[0])
+					_, _ = a.client.AddBulk(task.events)
+					RiotEventAdd.Add(float64(len(task.events)))
 				case membership:
-					log.Debugf(">>> mem: %s, %d", task.event, task.version)
+					log.Debugf(">>> mem: %s, %d", task.events[0], task.version)
 					_, _ = a.client.Membership(task.key, task.version)
 					RiotQueryMembership.Inc()
 				case incremental:
-					log.Debugf(">>> inc: %s", task.event)
+					log.Debugf(">>> inc: %s", task.events[0])
 					_, _ = a.client.Incremental(task.start, task.end)
 					RiotQueryIncremental.Inc()
 				}
@@ -437,7 +442,7 @@ func (a *Attack) Run() {
 		ev := fmt.Sprintf("event %d", i)
 		a.senChan <- Task{
 			kind:    a.kind,
-			event:   ev,
+			events:  []string{ev},
 			key:     []byte(ev),
 			version: a.balloonVersion,
 			start:   uint64(i),
