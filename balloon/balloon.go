@@ -25,7 +25,6 @@ import (
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/hashing"
-	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
@@ -182,9 +181,6 @@ func (b *Balloon) RefreshVersion() error {
 
 func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 
-	// Activate metrics gathering
-	stats := metrics.Balloon
-
 	// Get version
 	version := b.version
 	b.version++
@@ -224,9 +220,6 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 		HyperDigest:   hyperDigest,
 		Version:       version,
 	}
-
-	// Increment version
-	stats.Set("version", metrics.Uint64ToVar(version))
 
 	return snapshot, mutations, nil
 }
@@ -284,8 +277,6 @@ func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
 
-	stats := metrics.Balloon
-	stats.AddFloat("QueryConsistency", 1)
 	var proof IncrementalProof
 
 	if start >= b.version || end >= b.version || start > end {
