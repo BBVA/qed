@@ -410,7 +410,7 @@ func (a *Attack) Run() {
 			for {
 				task, ok := <-a.senChan
 				if !ok {
-					log.Debugf("!!! clos: %d", rID)
+					log.Debugf("!!! close: %d", rID)
 					wg.Done()
 					return
 				}
