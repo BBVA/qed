@@ -67,6 +67,137 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestAddBulk(t *testing.T) {
+
+	log.SetLogger("TestAddBulk", log.SILENT)
+
+	testCases := []struct {
+		eventDigests     []hashing.Digest
+		versions         []uint64
+		expectedRootHash hashing.Digest
+	}{
+		{
+			[]hashing.Digest{
+				hashing.Digest{0x0},
+			},
+			[]uint64{0},
+			hashing.Digest{0x0},
+		},
+		{
+			[]hashing.Digest{
+				hashing.Digest{0x0}, hashing.Digest{0x1}, hashing.Digest{0x2}, hashing.Digest{0x3},
+				hashing.Digest{0x4}, hashing.Digest{0x5}, hashing.Digest{0x6}, hashing.Digest{0x7},
+				hashing.Digest{0x8}, hashing.Digest{0x9},
+			},
+			[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			hashing.Digest{0x1},
+		},
+	}
+
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
+
+	tree := NewHyperTree(hashing.NewFakeXorHasher, store, cache.NewSimpleCache(10))
+
+	for i, c := range testCases {
+		rootHash, mutations, err := tree.AddBulk(c.eventDigests, c.versions)
+		require.NoErrorf(t, err, "This should not fail in test %d", i)
+		err = tree.store.Mutate(mutations)
+		require.NoErrorf(t, err, "Error inserting mutations in test %d", i)
+		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash in test %d", i)
+	}
+}
+
+func TestConsistencyBetweenAddAndAddBulk(t *testing.T) {
+
+	log.SetLogger("TestAddVsAddBulk", log.SILENT)
+
+	testCases := []struct {
+		eventDigests     []hashing.Digest
+		versions         []uint64
+		expectedRootHash hashing.Digest
+	}{
+		{
+			[]hashing.Digest{
+				hashing.Digest{0x0},
+			},
+			[]uint64{0},
+			hashing.Digest{0x0},
+		},
+		{
+			[]hashing.Digest{
+				hashing.Digest{0x0}, hashing.Digest{0x1}, hashing.Digest{0x2}, hashing.Digest{0x3},
+				hashing.Digest{0x4}, hashing.Digest{0x5}, hashing.Digest{0x6}, hashing.Digest{0x7},
+				hashing.Digest{0x8}, hashing.Digest{0x9},
+			},
+			[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			hashing.Digest{0x1},
+		},
+	}
+
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
+	addCache := cache.NewSimpleCache(10)
+	addTree := NewHyperTree(hashing.NewFakeXorHasher, store, addCache)
+
+	store2, closeF2 := storage_utils.OpenBPlusTreeStore()
+	defer closeF2()
+	addBulkCache := cache.NewSimpleCache(10)
+	addBulkTree := NewHyperTree(hashing.NewFakeXorHasher, store2, addBulkCache)
+
+	for i, c := range testCases {
+		// Add
+		var lastRootHash hashing.Digest
+		for j, _ := range c.eventDigests {
+			rootHash, mutations, err := addTree.Add(c.eventDigests[j], c.versions[j])
+			require.NoErrorf(t, err, "This should not fail in test %d", j)
+			err = addTree.store.Mutate(mutations)
+			require.NoErrorf(t, err, "Error inserting mutations in test %d", j)
+			lastRootHash = rootHash
+		}
+
+		// Add Bulk
+		rootHashBulk, mutations, err := addBulkTree.AddBulk(c.eventDigests, c.versions)
+		require.NoErrorf(t, err, "This should not fail in test %d", i)
+		err = addBulkTree.store.Mutate(mutations)
+		require.NoErrorf(t, err, "Error inserting mutations in test %d", i)
+
+		// Root Hashes
+		assert.Equalf(t, lastRootHash, rootHashBulk, "Incorrect root hash in test %d", i)
+		assert.Equalf(t, c.expectedRootHash, rootHashBulk, "Incorrect root hash in test %d", i)
+
+		// Caches
+		assert.True(t, addCache.Equal(addBulkCache), "Caches are different in test %d", i)
+
+		// Stores
+		// All elements from addTree are in addBulkTree
+		reader := addTree.store.GetAll(storage.HyperCacheTable)
+		for {
+			entries := make([]*storage.KVPair, 0)
+			n, _ := reader.Read(entries)
+			if n == 0 {
+				break
+			}
+			_, err := addBulkTree.store.Get(storage.HyperCacheTable, entries[0].Key)
+			assert.NotNil(t, err, "Entry from addBulkTree not found in addTree")
+		}
+		reader.Close()
+
+		// All elements from addBulkTree are in addTree
+		reader = addBulkTree.store.GetAll(storage.HyperCacheTable)
+		for {
+			entries := make([]*storage.KVPair, 0)
+			n, _ := reader.Read(entries)
+			if n == 0 {
+				break
+			}
+			_, err := addTree.store.Get(storage.HyperCacheTable, entries[0].Key)
+			assert.NotNil(t, err, "Entry from addBulkTree not found in addTree")
+		}
+		reader.Close()
+	}
+}
+
 func TestProveMembership(t *testing.T) {
 
 	log.SetLogger("TestProveMembership", log.SILENT)
@@ -119,7 +250,8 @@ func TestProveMembership(t *testing.T) {
 
 		for index, digest := range c.addedKeys {
 			_, mutations, err := tree.Add(digest, index)
-			tree.store.Mutate(mutations)
+			require.NoErrorf(t, err, "This should not fail for index %d", i)
+			err = tree.store.Mutate(mutations)
 			require.NoErrorf(t, err, "This should not fail for index %d", i)
 		}
 
@@ -159,7 +291,7 @@ func TestAddAndVerify(t *testing.T) {
 
 		rootHash, mutations, err := tree.Add(key, value)
 		require.NoErrorf(t, err, "Add operation should not fail for index %d", i)
-		tree.store.Mutate(mutations)
+		_ = tree.store.Mutate(mutations)
 
 		proof, err := tree.QueryMembership(key)
 		require.Nilf(t, err, "The membership query should not fail for index %d", i)
@@ -193,9 +325,9 @@ func TestDeterministicAdd(t *testing.T) {
 		eventDigest := hasher.Do(event)
 		version := uint64(i)
 		_, m1, _ := tree1.Add(eventDigest, version)
-		store1.Mutate(m1)
+		_ = store1.Mutate(m1)
 		_, m2, _ := tree2.Add(eventDigest, version)
-		store2.Mutate(m2)
+		_ = store2.Mutate(m2)
 	}
 
 	// check cache store equality
@@ -245,7 +377,7 @@ func TestRebuildCache(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		key := hasher.Do(rand.Bytes(32))
 		_, mutations, _ := tree.Add(key, uint64(i))
-		store.Mutate(mutations)
+		_ = store.Mutate(mutations)
 	}
 	expectedSize := firstCache.Size()
 
