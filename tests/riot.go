@@ -34,96 +34,34 @@ import (
 )
 
 const riotHelp = `---
-openapi: 3.0
-info:
-info:
-  title: riot-workloader
-  description: >
+workloader:
 	this program runs as a single workloader (default) or as a server to receive
 	"plans" (Config structs) through a small web API.
 
-servers:
-  - url: http://localhost:7700/
-
-components:
-  schemas:
-    Config:
-      type: object
-      properties:
-				endpoint:
-					type: string
-				apikey
-					type: string
-				insecure:
-					type: bool
-				kind:
-					type: string
-					enum: ["add", "membership", "incremental"]
-				offload:
-					type: bool
-				profiling:
-					type: bool
-				incrementalDelta:
-					type: integer
-					minimum: 0
-				offset:
-					type: integer
-					minimum: 0
-				numRequests:
-					type: integer
-					minimum: 0
-				maxGoRoutines:
-					type: integer
-					minimum: 0
-				clusterSize:
-					type: integer
-					minimum: 0
-		Plan:
-			type: array
-			items:
-				type: array
-				items:
-					$ref: '#/components/schemas/Config'
-
-paths:
-  /:
-    get:
-      description: return this help and this openapi documentation.
-      responses:
-        200:
-          description: this help.
-          content:
-            text/plain:
-              schema:
-                type: string
-
+API:
   /run:
-    post:
-      summary: Endpoint for receiving a single Config to run
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Config'
-			examples:
-			  simple: {"kind": "add"}
-				advanced: {"kind": "incremental", "insecure":true, "endpoint": "https://qedserver:8800"}
-				advanced: {"kind": "incremental", "insecure":true, "endpoint": "https://qedserver0:8800,qedserver1:8801"}
+    examples:
+	  # simple add
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/run \
+	  -d'{"kind":"add"}'
+
+	  # complex config example
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/run \
+	  -d'{"kind": "incremental", "insecure":true, "endpoint": "https://qedserver:8800,qedserver1:8801"}'
 
   /plan:
-    post:
-      summary: Endpoint for receiving a Plan to run
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Plan'
-			examples:
-			  single_plan:  [[{"kind": "add"}]]
-			  secuential:  [[{"kind": "add"}], [{"kind": "membership"}]]
-			  parallel:  [[{"kind": "add"}, {"kind": "membership"}]]
+	examples:
+	  # like a simple run
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
+	  -d'[[{"kind": "add"}]]'
+
+	  # secuential
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
+	  -d'[[{"kind": "add"}], [{"kind": "membership"}]]'
+
+	  # parallel
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
+	  -d'[[{"kind": "add"}, {"kind": "membership"}]]'
 `
 
 var (
