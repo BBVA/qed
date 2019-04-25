@@ -68,6 +68,12 @@ type Config struct {
 	// Enable TLS service
 	EnableTLS bool
 
+	// Enable Pprof prifiling server
+	EnableProfiling bool
+
+	// Profiling server address/port
+	ProfilingAddr string
+
 	// TLS server cerificate
 	SSLCertificate string
 
@@ -93,6 +99,8 @@ func DefaultConfig() *Config {
 		DBPath:            currentDir + "/db",
 		RaftPath:          currentDir + "/wal",
 		EnableTLS:         false,
+		EnableProfiling:   false,
+		ProfilingAddr:     "127.0.0.1:6060",
 		SSLCertificate:    "",
 		SSLCertificateKey: "",
 	}
