@@ -260,7 +260,7 @@ func (riot *Riot) Serve() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, riotHelp)
+		fmt.Fprint(w, riotHelp)
 	})
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		w, r = postReqSanitizer(w, r)
