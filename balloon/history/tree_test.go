@@ -99,9 +99,51 @@ func TestAdd(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for test case %d", i)
 		assert.Equalf(t, c.expectedMutationsLen, len(mutations), "The mutations should match for test case %d", i)
-		store.Mutate(mutations)
+		err = store.Mutate(mutations)
+		require.NoErrorf(t, err, "Error inserting mutations in test case %d", i)
 	}
 
+}
+
+func TestAddBulk(t *testing.T) {
+
+	log.SetLogger("TestAddBulk", log.SILENT)
+
+	testCases := []struct {
+		eventDigests     []hashing.Digest
+		versions         []uint64
+		expectedRootHash []hashing.Digest
+	}{
+		{
+			[]hashing.Digest{
+				hashing.Digest{0x0},
+			},
+			[]uint64{0},
+			[]hashing.Digest{hashing.Digest{0x0}},
+		},
+		{
+			[]hashing.Digest{
+				hashing.Digest{0x0}, hashing.Digest{0x1}, hashing.Digest{0x2}, hashing.Digest{0x3},
+				hashing.Digest{0x4}, hashing.Digest{0x5}, hashing.Digest{0x6}, hashing.Digest{0x7},
+				hashing.Digest{0x8}, hashing.Digest{0x9},
+			},
+			[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			[]hashing.Digest{hashing.Digest{0x0}, hashing.Digest{0x1}, hashing.Digest{0x3}, hashing.Digest{0x0}, hashing.Digest{0x4}, hashing.Digest{0x1}, hashing.Digest{0x7}, hashing.Digest{0x0}, hashing.Digest{0x8}, hashing.Digest{0x1}},
+		},
+	}
+
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
+
+	tree := NewHistoryTree(hashing.NewFakeXorHasher, store, 30)
+
+	for i, c := range testCases {
+		rootHash, mutations, err := tree.AddBulk(c.eventDigests, c.versions)
+		require.NoErrorf(t, err, "This should not fail in test %d", i)
+		err = store.Mutate(mutations)
+		require.NoErrorf(t, err, "Error inserting mutations in test %d", i)
+		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash in test %d", i)
+	}
 }
 
 func TestProveMembership(t *testing.T) {
