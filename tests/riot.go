@@ -137,7 +137,7 @@ type kind string
 
 const (
 	add         kind = "add"
-	addBulk     kind = "addBulk"
+	bulk        kind = "bulk"
 	membership  kind = "membership"
 	incremental kind = "incremental"
 )
@@ -360,7 +360,7 @@ func (a *Attack) Run() {
 					log.Debugf(">>> add: %s", task.events[0])
 					_, _ = a.client.Add(task.events[0])
 					RiotEventAdd.Inc()
-				case addBulk:
+				case bulk:
 					bulkSize := float64(len(task.events))
 					log.Debugf(">>> bulk(%d): %s", bulkSize, task.events)
 					_, _ = a.client.AddBulk(task.events)
