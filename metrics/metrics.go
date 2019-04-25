@@ -18,8 +18,6 @@ package metrics
 
 import (
 	"context"
-	"expvar"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -27,20 +25,6 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
-
-// Balloon has a Map of all the stats relative to Balloon
-var Balloon *expvar.Map
-
-// Implement expVar.Var interface
-type Uint64ToVar uint64
-
-func (v Uint64ToVar) String() string {
-	return fmt.Sprintf("%d", v)
-}
-
-func init() {
-	Balloon = expvar.NewMap("Qed_balloon_stats")
-}
 
 // Registry defines the interface of the prometheus metrics registry
 type Registry interface {
