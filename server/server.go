@@ -204,6 +204,16 @@ func (s *Server) Start() error {
 		s.metricsServer.Start()
 	}()
 
+	if s.conf.EnableProfiling {
+		go func() {
+			log.Debug("	* Starting QED Profiling server in addr: ", s.conf.ProfilingAddr)
+			err := http.ListenAndServe(s.conf.ProfilingAddr, nil)
+			if err != http.ErrServerClosed {
+				log.Errorf("Can't start QED Profiling Server: %s", err)
+			}
+		}()
+	}
+
 	if s.conf.EnableTLS {
 		go func() {
 			log.Debug("	* Starting QED API HTTPS server in addr: ", s.conf.HTTPAddr)
@@ -222,7 +232,6 @@ func (s *Server) Start() error {
 				log.Errorf("Can't start QED API HTTP Server: %s", err)
 			}
 		}()
-
 	}
 
 	go func() {
