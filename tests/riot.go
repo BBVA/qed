@@ -125,6 +125,7 @@ type Config struct {
 	Profiling        bool
 	IncrementalDelta uint
 	Offset           uint
+	BulkSize         uint
 	NumRequests      uint
 	MaxGoRoutines    uint
 	ClusterSize      uint
@@ -154,7 +155,6 @@ type Task struct {
 	kind kind
 
 	events              []string
-	key                 []byte
 	version, start, end uint64
 }
 
@@ -211,6 +211,7 @@ func newRiotCommand() *cobra.Command {
 	f.UintVar(&riot.Config.NumRequests, "n", 10e4, "Number of requests for the attack")
 	f.UintVar(&riot.Config.MaxGoRoutines, "r", 10, "Set the concurrency value")
 	f.UintVar(&riot.Config.Offset, "offset", 0, "The starting version from which we start the load")
+	f.UintVar(&riot.Config.BulkSize, "bulk-size", 20, "the size of the bulk in bulk loads (kind: bulk)")
 
 	return cmd
 }
@@ -360,12 +361,13 @@ func (a *Attack) Run() {
 					_, _ = a.client.Add(task.events[0])
 					RiotEventAdd.Inc()
 				case addBulk:
-					log.Debugf(">>> addBulk: %s", task.events[0])
+					bulkSize := float64(len(task.events))
+					log.Debugf(">>> bulk(%d): %s", bulkSize, task.events)
 					_, _ = a.client.AddBulk(task.events)
-					RiotEventAdd.Add(float64(len(task.events)))
+					RiotEventAdd.Add(bulkSize)
 				case membership:
 					log.Debugf(">>> mem: %s, %d", task.events[0], task.version)
-					_, _ = a.client.Membership(task.key, task.version)
+					_, _ = a.client.Membership([]byte(task.events[0]), task.version)
 					RiotQueryMembership.Inc()
 				case incremental:
 					log.Debugf(">>> inc: %s", task.events[0])
@@ -376,16 +378,28 @@ func (a *Attack) Run() {
 		}(rID)
 	}
 
-	for i := a.config.Offset; i < a.config.Offset+a.config.NumRequests; i++ {
-		ev := fmt.Sprintf("event %d", i)
-		a.senChan <- Task{
+	hasReqs := func(i uint) bool {
+		return i < a.config.Offset+a.config.NumRequests
+	}
+
+	hasBulk := func(j, i uint) bool {
+		return i < j+a.config.BulkSize && hasReqs(i)
+	}
+
+	for i := a.config.Offset; hasReqs(i); i++ {
+		task := Task{
 			kind:    a.kind,
-			events:  []string{ev},
-			key:     []byte(ev),
+			events:  []string{},
 			version: a.balloonVersion,
 			start:   uint64(i),
 			end:     uint64(i + a.config.IncrementalDelta),
 		}
+
+		for j := i; hasBulk(j, i); i++ {
+			task.events = append(task.events, fmt.Sprintf("event %d", i))
+		}
+
+		a.senChan <- task
 	}
 
 	close(a.senChan)
