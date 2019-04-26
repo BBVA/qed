@@ -116,9 +116,61 @@ func (o *Options) SetMaxFileOpeningThreads(value int) {
 }
 
 // SetBlockBasedTableFactory sets the block based table factory.
+//
+// This is the default table type that we inherited from LevelDB, which was
+// designed for storing data in hard disk or flash device.
+//
+// In block-based table, data is chucked into (almost) fix-sized blocks
+// (default block size is 4k). Each block, in turn, keeps a bunch of entries.
+//
+// When storing data, we can compress and/or encode data efficiently within a
+// block, which often resulted in a much smaller data size compared with the raw
+// data size.
+//
+// As for the record retrieval, we'll first locate the block where target record
+// may reside, then read the block to memory, and finally search that record within
+// the block. Of course, to avoid frequent reads of the same block, we introduced
+// the block cache to keep the loaded blocks in the memory.
 func (o *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
 	o.bbto = value
 	C.rocksdb_options_set_block_based_table_factory(o.c, value.c)
+}
+
+// SetPlainTableFactory sets a plain table factory with prefix-only seek.
+//
+// Plain table stores data in a sequence of key/value pairs. Compared with
+// block-based table, which employs mostly binary search for entry lookup,
+// the well designed hash-based index in plain table enables us to locate
+// data magnitudes faster. No memory copy is needed. Plain table bypasses
+// the concept of "block" and therefore avoids the overhead inherent in block-based
+// table, like extra block lookup, block cache, etc.
+//
+// For this factory, you need to set prefix_extractor properly to make it
+// work. Look-up will starts with prefix hash lookup for key prefix. Inside the
+// hash bucket found, a binary search is executed for hash conflicts. Finally,
+// a linear search is used.
+//
+// Limitations:
+//
+// - File size may not be greater than 2^31 - 1 (i.e., `2147483647`) bytes.
+// - Data compression/Delta encoding is not supported, which may resulted in
+//	 bigger file size compared with block-based table.
+// - Backward (Iterator.Prev()) scan is not supported.
+// - Non-prefix-based Seek() is not supported.
+// - Table loading is slower since indexes are built on the fly by 2-pass table scanning.
+// - Only support mmap mode.
+//
+// keyLen: 			plain table has optimization for fix-sized keys,
+// 					which can be specified via keyLen.
+// bloomBitsPerKey: the number of bits used for bloom filer per prefix. You
+//                  may disable it by passing a zero.
+// hashTableRatio:  the desired utilization of the hash table used for prefix
+//                  hashing. hashTableRatio = number of prefixes / #buckets
+//                  in the hash table
+// indexSparseness: inside each prefix, need to build one index record for how
+//                  many keys for binary search inside each hash bucket.
+func (o *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, hashTableRatio float64, indexSparseness int) {
+	C.rocksdb_options_set_plain_table_factory(o.c, C.uint32_t(keyLen), C.int(bloomBitsPerKey), C.double(hashTableRatio), C.size_t(indexSparseness))
 }
 
 // SetCreateIfMissingColumnFamilies specifies whether the column families
