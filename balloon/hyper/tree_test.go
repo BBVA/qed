@@ -173,26 +173,26 @@ func TestConsistencyBetweenAddAndAddBulk(t *testing.T) {
 		// All elements from addTree are in addBulkTree
 		reader := addTree.store.GetAll(storage.HyperCacheTable)
 		for {
-			entries := make([]*storage.KVPair, 0)
+			entries := make([]*storage.KVPair, 1)
 			n, _ := reader.Read(entries)
 			if n == 0 {
 				break
 			}
 			_, err := addBulkTree.store.Get(storage.HyperCacheTable, entries[0].Key)
-			assert.NotNil(t, err, "Entry from addBulkTree not found in addTree")
+			assert.NoError(t, err, "Entry from addTree not found in addBulkTree")
 		}
 		reader.Close()
 
 		// All elements from addBulkTree are in addTree
 		reader = addBulkTree.store.GetAll(storage.HyperCacheTable)
 		for {
-			entries := make([]*storage.KVPair, 0)
+			entries := make([]*storage.KVPair, 1)
 			n, _ := reader.Read(entries)
 			if n == 0 {
 				break
 			}
 			_, err := addTree.store.Get(storage.HyperCacheTable, entries[0].Key)
-			assert.NotNil(t, err, "Entry from addBulkTree not found in addTree")
+			assert.NoError(t, err, "Entry from addBulkTree not found in addTree")
 		}
 		reader.Close()
 	}
