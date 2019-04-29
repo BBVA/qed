@@ -193,12 +193,13 @@ func getHyperCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 	// L2 size = 64MB (target_file_base) * 8^3 (target_file_size_multiplier)
 	// 		   = 32GB = 512 (max_bytes_for_level_base) * 8^2 (max_bytes_for_level_multiplier)
 	// ...
+	opts.SetMaxSubCompactions(2)
 	opts.SetWriteBufferSize(64 * 1024 * 1024) // 64MB
 	opts.SetMaxWriteBufferNumber(3)
 	opts.SetMinWriteBufferNumberToMerge(2)
 	opts.SetLevel0FileNumCompactionTrigger(8)
-	opts.SetLevel0SlowdownWritesTrigger(17)
-	opts.SetLevel0StopWritesTrigger(24)
+	opts.SetLevel0SlowdownWritesTrigger(24)
+	opts.SetLevel0StopWritesTrigger(33)
 	opts.SetTargetFileSizeBase(64 * 1024 * 1024) // 64MB
 	opts.SetTargetFileSizeMultiplier(8)
 	opts.SetMaxBytesForLevelBase(512 * 1024 * 1024) // 512MB
