@@ -39,7 +39,7 @@ func TestMutate(t *testing.T) {
 		key, value    []byte
 		expectedError error
 	}{
-		{"Mutate Key=Value", storage.HistoryCacheTable, []byte("Key"), []byte("Value"), nil},
+		{"Mutate Key=Value", storage.HistoryTable, []byte("Key"), []byte("Value"), nil},
 	}
 
 	for _, test := range tests {
@@ -61,8 +61,8 @@ func TestGetExistentKey(t *testing.T) {
 		key, value    []byte
 		expectedError error
 	}{
-		{storage.HistoryCacheTable, []byte("Key1"), []byte("Value1"), nil},
-		{storage.HistoryCacheTable, []byte("Key2"), []byte("Value2"), nil},
+		{storage.HistoryTable, []byte("Key1"), []byte("Value1"), nil},
+		{storage.HistoryTable, []byte("Key2"), []byte("Value2"), nil},
 		{storage.HyperCacheTable, []byte("Key3"), []byte("Value3"), nil},
 		{storage.HyperCacheTable, []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
 	}
@@ -108,7 +108,7 @@ func TestGetRange(t *testing.T) {
 		{0, 20, 10},
 	}
 
-	table := storage.HistoryCacheTable
+	table := storage.HistoryTable
 	for i := 10; i < 50; i++ {
 		store.Mutate([]*storage.Mutation{
 			{table, []byte{byte(i)}, []byte("Value")},
@@ -174,7 +174,7 @@ func TestGetLast(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	tables := []storage.Table{storage.HistoryCacheTable, storage.HyperCacheTable}
+	tables := []storage.Table{storage.HistoryTable, storage.HyperCacheTable}
 	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
@@ -185,7 +185,7 @@ func TestGetLast(t *testing.T) {
 	}
 
 	// get last element for history table
-	kv, err := store.GetLast(storage.HistoryCacheTable)
+	kv, err := store.GetLast(storage.HistoryTable)
 	require.NoError(t, err)
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Key, "The key should match the last inserted element")
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
@@ -198,7 +198,7 @@ func TestBackupLoad(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	tables := []storage.Table{storage.HistoryCacheTable, storage.HyperCacheTable}
+	tables := []storage.Table{storage.HistoryTable, storage.HyperCacheTable}
 	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)

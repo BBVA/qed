@@ -76,7 +76,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	cfNames := []string{
 		storage.DefaultTable.String(),
 		storage.HyperCacheTable.String(),
-		storage.HistoryCacheTable.String(),
+		storage.HistoryTable.String(),
 		storage.FSMStateTable.String(),
 	}
 
@@ -104,7 +104,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	cfOpts := []*rocksdb.Options{
 		rocksdb.NewDefaultOptions(),
 		getHyperCacheTableOpts(blockCache),
-		getHistoryCacheTableOpts(blockCache),
+		getHistoryTableOpts(blockCache),
 		getFsmStateTableOpts(),
 	}
 
@@ -214,7 +214,7 @@ func getHyperCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 
 // The history table is insert-only without updates so we have
 // to optimize for an IO-bound and write-once workload.
-func getHistoryCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
+func getHistoryTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 	// This table performs both Get() and total order iterations.
 
 	bbto := rocksdb.NewDefaultBlockBasedTableOptions()
@@ -488,7 +488,7 @@ func (s *RocksDBStore) Backup(w io.Writer, id uint64) error {
 	tables := []storage.Table{
 		storage.DefaultTable,
 		storage.HyperCacheTable,
-		storage.HistoryCacheTable,
+		storage.HistoryTable,
 		storage.FSMStateTable,
 	}
 	for _, table := range tables {
