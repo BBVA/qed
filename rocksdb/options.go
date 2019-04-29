@@ -42,6 +42,7 @@ type Options struct {
 	// Hold references for GC.
 	env  *Env
 	bbto *BlockBasedTableOptions
+	cst  *C.rocksdb_slicetransform_t
 }
 
 // NewDefaultOptions creates the default Options.
@@ -177,6 +178,24 @@ func (o *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, hashT
 // should be created if they are missing.
 func (o *Options) SetCreateIfMissingColumnFamilies(value bool) {
 	C.rocksdb_options_set_create_missing_column_families(o.c, boolToUchar(value))
+}
+
+// SetPrefixExtractor sets the prefic extractor.
+//
+// If set, use the specified function to determine the
+// prefixes for keys. These prefixes will be placed in the filter.
+// Depending on the workload, this can reduce the number of read-IOP
+// cost for scans when a prefix is passed via ReadOptions to
+// db.NewIterator().
+// Default: nil
+func (o *Options) SetPrefixExtractor(st SliceTransform) {
+	if nst, ok := st.(nativeSliceTransform); ok {
+		o.cst = nst.c
+	} else {
+		idx := registerSliceTransform(st)
+		o.cst = C.rocksdb_slicetransform_create_ext(C.uintptr_t(idx))
+	}
+	C.rocksdb_options_set_prefix_extractor(o.c, o.cst)
 }
 
 // SetCompression sets the compression algorithm.
@@ -465,6 +484,9 @@ func (o *Options) Destroy() {
 	}
 	if o.bbto != nil {
 		o.bbto.Destroy()
+	}
+	if o.cst != nil {
+		C.rocksdb_slicetransform_destroy(o.cst)
 	}
 	o.c = nil
 	o.env = nil

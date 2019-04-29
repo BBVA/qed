@@ -17,7 +17,7 @@
 #include "extended.h"
 
 #include "rocksdb/c.h"
-//#include "rocksdb/slice.h"
+#include "_cgo_export.h"
 #include "rocksdb/db.h"
 #include "rocksdb/statistics.h"
 #include "rocksdb/options.h"
@@ -53,6 +53,19 @@ rocksdb_cache_t* rocksdb_cache_create_lru_with_ratio(
     c->rep = NewLRUCache(capacity, -1, false, hi_pri_pool_ratio);
     return c;
 }
+
+void rocksdb_destruct_handler(void* state) { }
+
+rocksdb_slicetransform_t* rocksdb_slicetransform_create_ext(uintptr_t idx) {
+    return rocksdb_slicetransform_create(
+    	(void*)idx,
+    	rocksdb_destruct_handler,
+    	(char* (*)(void*, const char*, size_t, size_t*))(rocksdb_slicetransform_transform),
+    	(unsigned char (*)(void*, const char*, size_t))(rocksdb_slicetransform_in_domain),
+    	(unsigned char (*)(void*, const char*, size_t))(rocksdb_slicetransform_in_range),
+    	(const char* (*)(void*))(rocksdb_slicetransform_name));
+}
+
 
 rocksdb_statistics_t* rocksdb_create_statistics() {
     rocksdb_statistics_t* result = new rocksdb_statistics_t;

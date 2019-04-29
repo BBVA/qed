@@ -48,6 +48,18 @@ func bytesToChar(b []byte) *C.char {
 	return c
 }
 
+// Go []byte to C string
+// The C string is allocated in the C heap using malloc.
+func cByteSlice(b []byte) *C.char {
+	var c *C.char
+	if len(b) > 0 {
+		cData := C.malloc(C.size_t(len(b)))
+		copy((*[1 << 24]byte)(cData)[0:len(b)], b)
+		c = (*C.char)(cData)
+	}
+	return c
+}
+
 // charToBytes converts a *C.char to a byte slice.
 func charToBytes(data *C.char, len C.size_t) []byte {
 	var value []byte
