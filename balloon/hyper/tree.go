@@ -152,7 +152,7 @@ func (t *HyperTree) RebuildCache() {
 	end := make([]byte, 2+t.hasher.Len()/8)
 	start[1] = byte(t.cacheHeightLimit)
 	end[1] = byte(t.cacheHeightLimit + 1)
-	nodes, err := t.store.GetRange(storage.HyperCacheTable, start, end)
+	nodes, err := t.store.GetRange(storage.HyperTable, start, end)
 	if err != nil {
 		log.Fatalf("Oops, something went wrong: %v", err)
 	}

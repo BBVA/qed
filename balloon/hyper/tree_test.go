@@ -331,8 +331,8 @@ func TestDeterministicAdd(t *testing.T) {
 	}
 
 	// check cache store equality
-	reader12 := store1.GetAll(storage.HyperCacheTable)
-	reader22 := store2.GetAll(storage.HyperCacheTable)
+	reader12 := store1.GetAll(storage.HyperTable)
+	reader22 := store2.GetAll(storage.HyperTable)
 	defer reader12.Close()
 	defer reader22.Close()
 	buff12 := make([]*storage.KVPair, 0)
