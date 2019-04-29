@@ -53,7 +53,7 @@ func BenchmarkMutateOnlyHyper(b *testing.B) {
 		key = append(key, hasher.Do([]byte(fmt.Sprintf("test%d", rnd.Intn(10000))))...)
 		store.Mutate([]*storage.Mutation{
 			{
-				Table: storage.HyperCacheTable,
+				Table: storage.HyperTable,
 				Key:   key,
 				Value: value,
 			},
@@ -80,7 +80,7 @@ func BenchmarkQueryOnlyHyper(b *testing.B) {
 		key = append(key, hasher.Do([]byte(fmt.Sprintf("test%d", rnd.Intn(10000))))...)
 		store.Mutate([]*storage.Mutation{
 			{
-				Table: storage.HyperCacheTable,
+				Table: storage.HyperTable,
 				Key:   key,
 				Value: value,
 			},
@@ -92,7 +92,7 @@ func BenchmarkQueryOnlyHyper(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		key := []byte{0x0, 0x0}
 		key = append(key, hasher.Do([]byte(fmt.Sprintf("test%d", rnd.Intn(1000))))...)
-		_, err := store.Get(storage.HyperCacheTable, key)
+		_, err := store.Get(storage.HyperTable, key)
 		require.NoError(b, err)
 	}
 
@@ -230,7 +230,7 @@ func BenchmarkMutateAllTables(b *testing.B) {
 		hyperKey = append(hyperKey, util.Uint64AsBytes(uint64(rnd.Intn(1000)))...)
 		store.Mutate([]*storage.Mutation{
 			{
-				Table: storage.HyperCacheTable,
+				Table: storage.HyperTable,
 				Key:   hyperKey,
 				Value: rand.Bytes(1024),
 			},

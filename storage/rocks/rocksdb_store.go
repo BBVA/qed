@@ -75,7 +75,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 
 	cfNames := []string{
 		storage.DefaultTable.String(),
-		storage.HyperCacheTable.String(),
+		storage.HyperTable.String(),
 		storage.HistoryTable.String(),
 		storage.FSMStateTable.String(),
 	}
@@ -103,7 +103,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	// Per column family options
 	cfOpts := []*rocksdb.Options{
 		rocksdb.NewDefaultOptions(),
-		getHyperCacheTableOpts(blockCache),
+		getHyperTableOpts(blockCache),
 		getHistoryTableOpts(blockCache),
 		getFsmStateTableOpts(),
 	}
@@ -142,7 +142,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 // The hyper table has the more varied behavior. It receives
 // a mixed workload of point lookups and write/updates.
 // The values are higher than the ones inserted in other tables (~1KB).
-func getHyperCacheTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
+func getHyperTableOpts(blockCache *rocksdb.Cache) *rocksdb.Options {
 
 	// Keys in this table are positions in the hyper tree and
 	// values are batches of at most 31 hashes of 32B.
@@ -487,7 +487,7 @@ func (s *RocksDBStore) Backup(w io.Writer, id uint64) error {
 
 	tables := []storage.Table{
 		storage.DefaultTable,
-		storage.HyperCacheTable,
+		storage.HyperTable,
 		storage.HistoryTable,
 		storage.FSMStateTable,
 	}
