@@ -59,7 +59,7 @@ func (l defaultBatchLoader) loadBatchFromCache(pos position) *batchNode {
 }
 
 func (l defaultBatchLoader) loadBatchFromStore(pos position) *batchNode {
-	kv, err := l.store.Get(storage.HyperCacheTable, pos.Bytes())
+	kv, err := l.store.Get(storage.HyperTable, pos.Bytes())
 	if err != nil {
 		if err == storage.ErrKeyNotFound {
 			return newEmptyBatchNode(len(pos.Index))

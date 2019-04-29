@@ -30,10 +30,10 @@ type Table uint32
 const (
 	// DefaultTable is mandatory but not used.
 	DefaultTable Table = iota
-	// HyperCacheTable contains cached batches of the hyper tree.
+	// HyperTable contains batches of the hyper tree below the cache level.
 	// Position -> Batch
-	HyperCacheTable
-	// HistoryTable contains cached hashes of the history tree.
+	HyperTable
+	// HistoryTable contains frozen hashes of the history tree.
 	// Position -> Hash
 	HistoryTable
 	// FSMStateTable contains the current state of the FSM (index, term, version...).
@@ -50,7 +50,7 @@ func (t Table) String() string {
 	switch t {
 	case DefaultTable:
 		s = "default"
-	case HyperCacheTable:
+	case HyperTable:
 		s = "hyper"
 	case HistoryTable:
 		s = "history"
@@ -65,7 +65,7 @@ func (t Table) String() string {
 func (t Table) Prefix() byte {
 	var prefix byte
 	switch t {
-	case HyperCacheTable:
+	case HyperTable:
 		prefix = byte(0x0)
 	case HistoryTable:
 		prefix = byte(0x1)

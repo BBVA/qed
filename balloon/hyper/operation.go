@@ -142,7 +142,7 @@ func mutateBatch(pos position, batch *batchNode) *operation {
 		Pos:  pos,
 		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
 			hash := ops.Pop().Interpret(ops, c)
-			c.Mutations = append(c.Mutations, storage.NewMutation(storage.HyperCacheTable, pos.Bytes(), batch.Serialize()))
+			c.Mutations = append(c.Mutations, storage.NewMutation(storage.HyperTable, pos.Bytes(), batch.Serialize()))
 			return hash
 		},
 	}

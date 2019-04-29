@@ -65,8 +65,8 @@ func TestGetExistentKey(t *testing.T) {
 	}{
 		{storage.HistoryTable, []byte("Key1"), []byte("Value1"), nil},
 		{storage.HistoryTable, []byte("Key2"), []byte("Value2"), nil},
-		{storage.HyperCacheTable, []byte("Key3"), []byte("Value3"), nil},
-		{storage.HyperCacheTable, []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
+		{storage.HyperTable, []byte("Key3"), []byte("Value3"), nil},
+		{storage.HyperTable, []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
 	}
 
 	for _, test := range testCases {
@@ -121,7 +121,7 @@ func TestGetRange(t *testing.T) {
 
 func TestGetAll(t *testing.T) {
 
-	table := storage.HyperCacheTable
+	table := storage.HyperTable
 	numElems := uint16(1000)
 	testCases := []struct {
 		batchSize    int
@@ -170,7 +170,7 @@ func TestGetLast(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	tables := []storage.Table{storage.HistoryTable, storage.HyperCacheTable}
+	tables := []storage.Table{storage.HistoryTable, storage.HyperTable}
 	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
