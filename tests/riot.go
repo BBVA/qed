@@ -180,7 +180,7 @@ func newRiotCommand() *cobra.Command {
 
 			if riot.Config.Profiling {
 				go func() {
-					log.Info("	* Starting Riot Profiling server")
+					log.Info("	* Starting Riot Profiling server at :6060")
 					log.Info(http.ListenAndServe(":6060", nil))
 				}()
 			}
@@ -222,7 +222,7 @@ func (riot *Riot) Start(APIMode bool) {
 	Register(r)
 	riot.prometheusRegistry = r
 	metricsMux := metricshttp.NewMetricsHTTP(r)
-	log.Debug("	* Starting Riot Metrics server")
+	log.Debug("	* Starting Riot Metrics server at :17700")
 	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
 
 	if APIMode {
@@ -301,7 +301,7 @@ func (riot *Riot) Serve() {
 
 	api := &http.Server{Addr: ":7700", Handler: mux}
 
-	log.Debug("	* Starting Riot HTTP server")
+	log.Debug("	* Starting Riot HTTP server at :7700")
 	if err := api.ListenAndServe(); err != http.ErrServerClosed {
 		log.Errorf("Can't start Riot API HTTP server: %s", err)
 	}
