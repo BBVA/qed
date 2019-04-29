@@ -60,6 +60,12 @@ extern void rocksdb_options_set_statistics(
 extern rocksdb_cache_t* rocksdb_cache_create_lru_with_ratio(
     size_t capacity, double hi_pri_pool_ratio);
 
+/* Slice Transform */
+
+extern void rocksdb_destruct_handler(void* state);
+
+extern rocksdb_slicetransform_t* rocksdb_slicetransform_create_ext(uintptr_t idx);
+
 /* Statistics */
 
 typedef enum {
