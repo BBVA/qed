@@ -33,9 +33,9 @@ const (
 	// HyperCacheTable contains cached batches of the hyper tree.
 	// Position -> Batch
 	HyperCacheTable
-	// HistoryCacheTable contains cached hashes of the history tree.
+	// HistoryTable contains cached hashes of the history tree.
 	// Position -> Hash
-	HistoryCacheTable
+	HistoryTable
 	// FSMStateTable contains the current state of the FSM (index, term, version...).
 	// key -> state
 	FSMStateTable
@@ -52,7 +52,7 @@ func (t Table) String() string {
 		s = "default"
 	case HyperCacheTable:
 		s = "hyper"
-	case HistoryCacheTable:
+	case HistoryTable:
 		s = "history"
 	case FSMStateTable:
 		s = "fsm"
@@ -67,7 +67,7 @@ func (t Table) Prefix() byte {
 	switch t {
 	case HyperCacheTable:
 		prefix = byte(0x0)
-	case HistoryCacheTable:
+	case HistoryTable:
 		prefix = byte(0x1)
 	case FSMStateTable:
 		prefix = byte(0x2)

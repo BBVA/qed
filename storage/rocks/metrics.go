@@ -48,7 +48,7 @@ type rocksDBMetrics struct {
 func newRocksDBMetrics(store *RocksDBStore) *rocksDBMetrics {
 	tables := make([]*perTableMetrics, 0)
 	tables = append(tables, newPerTableMetrics(storage.HyperCacheTable, store))
-	tables = append(tables, newPerTableMetrics(storage.HistoryCacheTable, store))
+	tables = append(tables, newPerTableMetrics(storage.HistoryTable, store))
 	tables = append(tables, newPerTableMetrics(storage.FSMStateTable, store))
 	return &rocksDBMetrics{
 		blockCacheMetrics:  newBlockCacheMetrics(store.stats, store.blockCache),

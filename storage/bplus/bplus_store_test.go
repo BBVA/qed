@@ -36,7 +36,7 @@ func TestMutate(t *testing.T) {
 		key, value    []byte
 		expectedError error
 	}{
-		{"Mutate Key=Value", storage.HistoryCacheTable, []byte("Key"), []byte("Value"), nil},
+		{"Mutate Key=Value", storage.HistoryTable, []byte("Key"), []byte("Value"), nil},
 	}
 
 	for _, test := range tests {
@@ -63,8 +63,8 @@ func TestGetExistentKey(t *testing.T) {
 		key, value    []byte
 		expectedError error
 	}{
-		{storage.HistoryCacheTable, []byte("Key1"), []byte("Value1"), nil},
-		{storage.HistoryCacheTable, []byte("Key2"), []byte("Value2"), nil},
+		{storage.HistoryTable, []byte("Key1"), []byte("Value1"), nil},
+		{storage.HistoryTable, []byte("Key2"), []byte("Value2"), nil},
 		{storage.HyperCacheTable, []byte("Key3"), []byte("Value3"), nil},
 		{storage.HyperCacheTable, []byte("Key4"), []byte("Value4"), storage.ErrKeyNotFound},
 	}
@@ -104,7 +104,7 @@ func TestGetRange(t *testing.T) {
 		{0, 20, 10},
 	}
 
-	table := storage.HistoryCacheTable
+	table := storage.HistoryTable
 	for i := 10; i < 50; i++ {
 		store.Mutate([]*storage.Mutation{
 			{table, []byte{byte(i)}, []byte("Value")},
@@ -170,7 +170,7 @@ func TestGetLast(t *testing.T) {
 
 	// insert
 	numElems := uint64(20)
-	tables := []storage.Table{storage.HistoryCacheTable, storage.HyperCacheTable}
+	tables := []storage.Table{storage.HistoryTable, storage.HyperCacheTable}
 	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
@@ -181,7 +181,7 @@ func TestGetLast(t *testing.T) {
 	}
 
 	// get last element for history table
-	kv, err := store.GetLast(storage.HistoryCacheTable)
+	kv, err := store.GetLast(storage.HistoryTable)
 	require.NoError(t, err)
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Key, "The key should match the last inserted element")
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
@@ -194,7 +194,7 @@ func BenchmarkMutate(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		store.Mutate([]*storage.Mutation{
-			{storage.HistoryCacheTable, rand.Bytes(128), []byte("Value")},
+			{storage.HistoryTable, rand.Bytes(128), []byte("Value")},
 		})
 	}
 }
@@ -211,11 +211,11 @@ func BenchmarkGet(b *testing.B) {
 		if i == 10 {
 			key = rand.Bytes(128)
 			store.Mutate([]*storage.Mutation{
-				{storage.HistoryCacheTable, key, []byte("Value")},
+				{storage.HistoryTable, key, []byte("Value")},
 			})
 		} else {
 			store.Mutate([]*storage.Mutation{
-				{storage.HistoryCacheTable, rand.Bytes(128), []byte("Value")},
+				{storage.HistoryTable, rand.Bytes(128), []byte("Value")},
 			})
 		}
 	}
@@ -223,7 +223,7 @@ func BenchmarkGet(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		store.Get(storage.HistoryCacheTable, key)
+		store.Get(storage.HistoryTable, key)
 	}
 
 }
@@ -236,7 +236,7 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 	// populate storage
 	for i := 0; i < N; i++ {
 		store.Mutate([]*storage.Mutation{
-			{storage.HistoryCacheTable, []byte{byte(i)}, []byte("Value")},
+			{storage.HistoryTable, []byte{byte(i)}, []byte("Value")},
 		})
 	}
 
@@ -245,14 +245,14 @@ func BenchmarkGetRangeInLargeTree(b *testing.B) {
 	b.Run("Small range", func(b *testing.B) {
 		b.N = 10000
 		for i := 0; i < b.N; i++ {
-			store.GetRange(storage.HistoryCacheTable, []byte{10}, []byte{10})
+			store.GetRange(storage.HistoryTable, []byte{10}, []byte{10})
 		}
 	})
 
 	b.Run("Large range", func(b *testing.B) {
 		b.N = 10000
 		for i := 0; i < b.N; i++ {
-			store.GetRange(storage.HistoryCacheTable, []byte{10}, []byte{35})
+			store.GetRange(storage.HistoryTable, []byte{10}, []byte{35})
 		}
 	})
 

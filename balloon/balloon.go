@@ -168,7 +168,7 @@ func (b Balloon) Version() uint64 {
 
 func (b *Balloon) RefreshVersion() error {
 	// get last stored version
-	kv, err := b.store.GetLast(storage.HistoryCacheTable)
+	kv, err := b.store.GetLast(storage.HistoryTable)
 	if err != nil {
 		if err != storage.ErrKeyNotFound {
 			return err

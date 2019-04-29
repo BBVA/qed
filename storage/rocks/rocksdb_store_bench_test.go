@@ -114,7 +114,7 @@ func BenchmarkMutateOnlyHistory(b *testing.B) {
 		key = append(key, []byte{0x0, 0x0}...)
 		store.Mutate([]*storage.Mutation{
 			{
-				Table: storage.HistoryCacheTable,
+				Table: storage.HistoryTable,
 				Key:   key,
 				Value: hasher.Do([]byte(fmt.Sprintf("test%d", i))),
 			},
@@ -140,7 +140,7 @@ func BenchmarkQueryOnlyHistory(b *testing.B) {
 		key = append(key, []byte{0x0, 0x0}...)
 		store.Mutate([]*storage.Mutation{
 			{
-				Table: storage.HistoryCacheTable,
+				Table: storage.HistoryTable,
 				Key:   key,
 				Value: hasher.Do([]byte(fmt.Sprintf("test%d", i))),
 			},
@@ -153,7 +153,7 @@ func BenchmarkQueryOnlyHistory(b *testing.B) {
 		index := rnd.Intn(N)
 		key := util.Uint64AsBytes(uint64(index))
 		key = append(key, []byte{0x0, 0x0}...)
-		_, err := store.Get(storage.HistoryCacheTable, key)
+		_, err := store.Get(storage.HistoryTable, key)
 		require.NoError(b, err)
 	}
 
@@ -235,7 +235,7 @@ func BenchmarkMutateAllTables(b *testing.B) {
 				Value: rand.Bytes(1024),
 			},
 			{
-				Table: storage.HistoryCacheTable,
+				Table: storage.HistoryTable,
 				Key:   historyKey,
 				Value: key,
 			},
