@@ -44,22 +44,22 @@ func TestInsertVisitor(t *testing.T) {
 			))),
 			expectedMutations: []*storage.Mutation{
 				{
-					Table: storage.HistoryCacheTable,
+					Table: storage.HistoryTable,
 					Key:   pos(7, 0).Bytes(),
 					Value: []byte{7},
 				},
 				{
-					Table: storage.HistoryCacheTable,
+					Table: storage.HistoryTable,
 					Key:   pos(6, 1).Bytes(),
 					Value: []byte{7},
 				},
 				{
-					Table: storage.HistoryCacheTable,
+					Table: storage.HistoryTable,
 					Key:   pos(4, 2).Bytes(),
 					Value: []byte{7},
 				},
 				{
-					Table: storage.HistoryCacheTable,
+					Table: storage.HistoryTable,
 					Key:   pos(0, 3).Bytes(),
 					Value: []byte{7},
 				},
@@ -75,7 +75,7 @@ func TestInsertVisitor(t *testing.T) {
 
 	for i, c := range testCases {
 		cache := cache.NewFakeCache([]byte{0x0})
-		visitor := newInsertVisitor(hashing.NewFakeXorHasher(), cache, storage.HistoryCacheTable)
+		visitor := newInsertVisitor(hashing.NewFakeXorHasher(), cache, storage.HistoryTable)
 
 		c.op.Accept(visitor)
 
