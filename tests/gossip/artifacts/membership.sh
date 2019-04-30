@@ -20,7 +20,13 @@ if [ -z "$1" -o -z "$2" ]; then
 	exit -1
 fi
 
-entry=$(cat $1 | sed 's/\n//g' |base64 -w0)
+if [ $(uname) == "Darwin" ]; then
+    entry=$(cat $1 | sed 's/\n//g' |base64 -b0)
+else
+    entry=$(cat $1 | sed 's/\n//g' |base64 -w0)
+fi
+
+
 
 go run $GOPATH/src/github.com/bbva/qed/main.go 	\
 	--apikey foo \

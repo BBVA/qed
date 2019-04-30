@@ -19,6 +19,11 @@ if [ -z "$1" ]; then
 	exit -1
 fi
 
-entry=$(cat $1 | sed 's/\n//g' |base64 -w0)
+if [ $(uname) == "Darwin" ]; then
+    entry=$(cat $1 | sed 's/\n//g' |base64 -b0)
+else
+    entry=$(cat $1 | sed 's/\n//g' |base64 -w0)
+fi
 
-go run $GOPATH/src/github.com/bbva/qed/main.go client add --apikey foo -e http://127.0.0.1:8800 --key "$entry"
+
+./qed client add --apikey foo -e http://host.docker.internal:8800 --key "$entry"
