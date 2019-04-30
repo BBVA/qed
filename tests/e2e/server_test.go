@@ -30,7 +30,7 @@ func TestStart(t *testing.T) {
 
 	scenario, let := scope.Scope(t,
 		merge(bServer),
-		merge(aServer, delay(2*time.Second)),
+		merge(aServer),
 	)
 
 	scenario("Test availability of qed server", func() {
@@ -56,9 +56,7 @@ func TestStart(t *testing.T) {
 			assert.Equal(t, resp.StatusCode, http.StatusNotFound, "Server should respond with http status code 404")
 
 		})
-	})
 
-	scenario("Test availability of metrics server", func() {
 		let("Query metrics endpoint", func(t *testing.T) {
 			var resp *http.Response
 			var err error

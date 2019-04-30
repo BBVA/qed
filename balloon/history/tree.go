@@ -56,6 +56,19 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	return rh, visitor.Result(), nil
 }
 
+func (t *HistoryTree) AddBulk(eventDigests []hashing.Digest, versions []uint64) ([]hashing.Digest, []*storage.Mutation, error) {
+
+	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryCacheTable)
+
+	rootHashes := make([]hashing.Digest, 0)
+	for i, e := range eventDigests {
+		rootHashes = append(rootHashes, pruneToInsert(versions[i], e).Accept(visitor))
+	}
+
+	return rootHashes, visitor.Result(), nil
+
+}
+
 func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, error) {
 
 	//log.Debugf("Proving membership for index %d with version %d", index, version)
