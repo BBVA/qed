@@ -323,6 +323,86 @@ func TestPruneToInsert(t *testing.T) {
 
 }
 
+func TestPruneToInsertBulk(t *testing.T) {
+
+	testCases := []struct {
+		index, value  [][]byte
+		cachedBatches map[string][]byte
+		storedBatches map[string][]byte
+		expectedOps   []op
+	}{
+		{
+			// insert index = 0 and index = 1 on empty tree
+			index:         [][]byte{[]byte{0}, []byte{0}},
+			value:         [][]byte{[]byte{1}, []byte{1}},
+			cachedBatches: map[string][]byte{},
+			storedBatches: map[string][]byte{},
+			expectedOps: []op{
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{mutateBatchCode, pos(0, 4)},
+				{updateBatchShortcutCode, pos(0, 4)},
+				{leafHashCode, pos(0, 4)},
+			},
+		},
+		{
+			// insert index = 0 and index = 16 on empty tree
+			index:         [][]byte{[]byte{0}, []byte{16}},
+			value:         [][]byte{[]byte{0}, []byte{16}},
+			cachedBatches: map[string][]byte{},
+			storedBatches: map[string][]byte{},
+			expectedOps: []op{
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{updateBatchNodeCode, pos(16, 4)},
+				{mutateBatchCode, pos(16, 4)},
+				{updateBatchShortcutCode, pos(16, 4)},
+				{leafHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{mutateBatchCode, pos(0, 4)},
+				{updateBatchShortcutCode, pos(0, 4)},
+				{leafHashCode, pos(0, 4)},
+			},
+		},
+	}
+
+	batchLevels := uint16(1)
+	cacheHeightLimit := batchLevels * 4
+
+	for i, c := range testCases {
+		loader := newFakeBatchLoader(c.cachedBatches, c.storedBatches, cacheHeightLimit)
+		prunedOps := pruneToInsertBulk(c.index, c.value, cacheHeightLimit, loader).List()
+		require.Truef(t, len(c.expectedOps) == len(prunedOps), "The size of the pruned ops should match the expected for test case %d", i)
+		for j := 0; j < len(prunedOps); j++ {
+			assert.Equalf(t, c.expectedOps[j].Code, prunedOps[j].Code, "The pruned operation's code should match for test case %d", i)
+			assert.Equalf(t, c.expectedOps[j].Pos, prunedOps[j].Pos, "The pruned operation's position should match for test case %d", i)
+		}
+	}
+
+}
+
 func TestInsertInterpretation(t *testing.T) {
 
 	testCases := []struct {

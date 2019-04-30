@@ -140,7 +140,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 	}
 
 	// configure retrier
-	client.setRetrier(client.maxRetries)
+	_ = client.setRetrier(client.maxRetries)
 
 	// Initial topology assignment
 	if client.discoveryEnabled {
@@ -247,7 +247,7 @@ func (c *HTTPClient) callPrimary(method, path string, data []byte) ([]byte, erro
 		endpoint, err = c.topology.Primary()
 		if err != nil {
 			if !retried && c.discoveryEnabled {
-				c.discover()
+				_ = c.discover()
 				retried = true
 				continue
 			}
@@ -277,7 +277,7 @@ func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 		endpoint, err = c.topology.NextReadEndpoint(c.readPreference)
 		if err != nil {
 			if !retried && c.discoveryEnabled {
-				c.discover()
+				_ = c.discover()
 				retried = true
 				continue
 			}
@@ -468,6 +468,29 @@ func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 
 }
 
+// AddBulk will do a request to the server with a post data to store a bulk of new events.
+func (c *HTTPClient) AddBulk(events []string) ([]*protocol.Snapshot, error) {
+
+	eventBulk := protocol.EventsBulk{}
+	for _, e := range events {
+		eventBulk.Events = append(eventBulk.Events, []byte(e))
+	}
+
+	data, _ := json.Marshal(eventBulk)
+	body, err := c.callPrimary("POST", "/events/bulk", data)
+	if err != nil {
+		return nil, err
+	}
+
+	bs := []*protocol.Snapshot{}
+	err = json.Unmarshal(body, &bs)
+	if err != nil {
+		return nil, err
+	}
+
+	return bs, nil
+}
+
 // Membership will ask for a Proof to the server.
 func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
 
@@ -536,14 +559,9 @@ func (c *HTTPClient) Verify(
 ) bool {
 
 	proof := protocol.ToBalloonProof(result, hasherF)
+	balloonSnapshot := balloon.Snapshot(*snap)
 
-	return proof.Verify(snap.EventDigest, &balloon.Snapshot{
-		EventDigest:   snap.EventDigest,
-		HistoryDigest: snap.HistoryDigest,
-		HyperDigest:   snap.HyperDigest,
-		Version:       snap.Version,
-	})
-
+	return proof.Verify(snap.EventDigest, &balloonSnapshot)
 }
 
 // Verify will compute the Proof given in Membership and the snapshot from the
@@ -555,14 +573,9 @@ func (c *HTTPClient) DigestVerify(
 ) bool {
 
 	proof := protocol.ToBalloonProof(result, hasherF)
+	balloonSnapshot := balloon.Snapshot(*snap)
 
-	return proof.DigestVerify(snap.EventDigest, &balloon.Snapshot{
-		EventDigest:   snap.EventDigest,
-		HistoryDigest: snap.HistoryDigest,
-		HyperDigest:   snap.HyperDigest,
-		Version:       snap.Version,
-	})
-
+	return proof.DigestVerify(snap.EventDigest, &balloonSnapshot)
 }
 
 func (c *HTTPClient) VerifyIncremental(
@@ -573,18 +586,11 @@ func (c *HTTPClient) VerifyIncremental(
 
 	proof := protocol.ToIncrementalProof(result, hasher)
 
-	start := &balloon.Snapshot{
-		EventDigest:   startSnapshot.EventDigest,
-		HistoryDigest: startSnapshot.HistoryDigest,
-		HyperDigest:   startSnapshot.HyperDigest,
-		Version:       startSnapshot.Version,
-	}
-	end := &balloon.Snapshot{
-		EventDigest:   endSnapshot.EventDigest,
-		HistoryDigest: endSnapshot.HistoryDigest,
-		HyperDigest:   endSnapshot.HyperDigest,
-		Version:       endSnapshot.Version,
-	}
+	s := balloon.Snapshot(*startSnapshot)
+	start := &s
+
+	e := balloon.Snapshot(*endSnapshot)
+	end := &e
 
 	return proof.Verify(start, end)
 }

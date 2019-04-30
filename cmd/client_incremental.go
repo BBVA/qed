@@ -104,8 +104,18 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 
 		sdBytes, _ := hex.DecodeString(startDigest)
 		edBytes, _ := hex.DecodeString(endDigest)
-		startSnapshot := &protocol.Snapshot{sdBytes, nil, params.Start, nil}
-		endSnapshot := &protocol.Snapshot{edBytes, nil, params.End, nil}
+		startSnapshot := &protocol.Snapshot{
+			EventDigest:   nil,
+			HistoryDigest: sdBytes,
+			HyperDigest:   nil,
+			Version:       params.Start,
+		}
+		endSnapshot := &protocol.Snapshot{
+			EventDigest:   nil,
+			HistoryDigest: edBytes,
+			HyperDigest:   nil,
+			Version:       params.End,
+		}
 
 		fmt.Printf("\nVerifying with snapshots: \n")
 		fmt.Printf(" HistoryDigest for start version [ %d ]: %s\n", params.Start, startDigest)
@@ -120,4 +130,3 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
-

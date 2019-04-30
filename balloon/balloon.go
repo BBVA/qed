@@ -224,6 +224,59 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 	return snapshot, mutations, nil
 }
 
+func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, error) {
+
+	// Get version
+	version := b.version
+	b.version += uint64(len(bulk))
+
+	var eventBulkDigest []hashing.Digest
+	var eventVersions []uint64
+	for i, event := range bulk {
+		// Hash event
+		eventBulkDigest = append(eventBulkDigest, b.hasher.Do(event))
+		eventVersions = append(eventVersions, version+uint64(i))
+	}
+
+	// Update trees
+	var historyDigests []hashing.Digest
+	var historyMutations []*storage.Mutation
+	var historyErr error
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		historyDigests, historyMutations, historyErr = b.historyTree.AddBulk(eventBulkDigest, eventVersions)
+		wg.Done()
+	}()
+
+	hyperDigest, mutations, hyperErr := b.hyperTree.AddBulk(eventBulkDigest, eventVersions)
+
+	wg.Wait()
+
+	if historyErr != nil {
+		return nil, nil, historyErr
+	}
+	if hyperErr != nil {
+		return nil, nil, hyperErr
+	}
+
+	// Append trees mutations
+	mutations = append(mutations, historyMutations...)
+
+	snapshotBulk := make([]*Snapshot, 0)
+	for i, _ := range eventBulkDigest {
+		snapshotBulk = append(snapshotBulk, &Snapshot{
+			EventDigest:   eventBulkDigest[i],
+			HistoryDigest: historyDigests[i],
+			HyperDigest:   hyperDigest,
+			Version:       eventVersions[i],
+		})
+	}
+
+	return snapshotBulk, mutations, nil
+}
+
 func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
 
 	var proof MembershipProof

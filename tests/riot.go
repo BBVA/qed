@@ -34,96 +34,34 @@ import (
 )
 
 const riotHelp = `---
-openapi: 3.0
-info:
-info:
-  title: riot-workloader
-  description: >
+workloader:
 	this program runs as a single workloader (default) or as a server to receive
 	"plans" (Config structs) through a small web API.
 
-servers:
-  - url: http://localhost:7700/
-
-components:
-  schemas:
-    Config:
-      type: object
-      properties:
-				endpoint:
-					type: string
-				apikey
-					type: string
-				insecure:
-					type: bool
-				kind:
-					type: string
-					enum: ["add", "membership", "incremental"]
-				offload:
-					type: bool
-				profiling:
-					type: bool
-				incrementalDelta:
-					type: integer
-					minimum: 0
-				offset:
-					type: integer
-					minimum: 0
-				numRequests:
-					type: integer
-					minimum: 0
-				maxGoRoutines:
-					type: integer
-					minimum: 0
-				clusterSize:
-					type: integer
-					minimum: 0
-		Plan:
-			type: array
-			items:
-				type: array
-				items:
-					$ref: '#/components/schemas/Config'
-
-paths:
-  /:
-    get:
-      description: return this help and this openapi documentation.
-      responses:
-        200:
-          description: this help.
-          content:
-            text/plain:
-              schema:
-                type: string
-
+API:
   /run:
-    post:
-      summary: Endpoint for receiving a single Config to run
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Config'
-			examples:
-			  simple: {"kind": "add"}
-				advanced: {"kind": "incremental", "insecure":true, "endpoint": "https://qedserver:8800"}
-				advanced: {"kind": "incremental", "insecure":true, "endpoint": "https://qedserver0:8800,qedserver1:8801"}
+    examples:
+	  # simple add
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/run \
+	  -d'{"kind":"add"}'
+
+	  # complex config example
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/run \
+	  -d'{"kind": "incremental", "insecure":true, "endpoint": "https://qedserver:8800,qedserver1:8801"}'
 
   /plan:
-    post:
-      summary: Endpoint for receiving a Plan to run
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Plan'
-			examples:
-			  single_plan:  [[{"kind": "add"}]]
-			  secuential:  [[{"kind": "add"}], [{"kind": "membership"}]]
-			  parallel:  [[{"kind": "add"}, {"kind": "membership"}]]
+	examples:
+	  # like a simple run
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
+	  -d'[[{"kind": "add"}]]'
+
+	  # secuential
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
+	  -d'[[{"kind": "add"}], [{"kind": "membership"}]]'
+
+	  # parallel
+	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
+	  -d'[[{"kind": "add"}, {"kind": "membership"}]]'
 `
 
 var (
@@ -187,6 +125,7 @@ type Config struct {
 	Profiling        bool
 	IncrementalDelta uint
 	Offset           uint
+	BulkSize         uint
 	NumRequests      uint
 	MaxGoRoutines    uint
 	ClusterSize      uint
@@ -198,6 +137,7 @@ type kind string
 
 const (
 	add         kind = "add"
+	bulk        kind = "bulk"
 	membership  kind = "membership"
 	incremental kind = "incremental"
 )
@@ -214,8 +154,7 @@ type Attack struct {
 type Task struct {
 	kind kind
 
-	event               string
-	key                 []byte
+	events              []string
 	version, start, end uint64
 }
 
@@ -241,7 +180,7 @@ func newRiotCommand() *cobra.Command {
 
 			if riot.Config.Profiling {
 				go func() {
-					log.Info("	* Starting Riot Profiling server")
+					log.Info("	* Starting Riot Profiling server at :6060")
 					log.Info(http.ListenAndServe(":6060", nil))
 				}()
 			}
@@ -272,6 +211,7 @@ func newRiotCommand() *cobra.Command {
 	f.UintVar(&riot.Config.NumRequests, "n", 10e4, "Number of requests for the attack")
 	f.UintVar(&riot.Config.MaxGoRoutines, "r", 10, "Set the concurrency value")
 	f.UintVar(&riot.Config.Offset, "offset", 0, "The starting version from which we start the load")
+	f.UintVar(&riot.Config.BulkSize, "bulk-size", 20, "the size of the bulk in bulk loads (kind: bulk)")
 
 	return cmd
 }
@@ -282,7 +222,7 @@ func (riot *Riot) Start(APIMode bool) {
 	Register(r)
 	riot.prometheusRegistry = r
 	metricsMux := metricshttp.NewMetricsHTTP(r)
-	log.Debug("	* Starting Riot Metrics server")
+	log.Debug("	* Starting Riot Metrics server at :17700")
 	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
 
 	if APIMode {
@@ -320,7 +260,7 @@ func (riot *Riot) Serve() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, riotHelp)
+		fmt.Fprint(w, riotHelp)
 	})
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		w, r = postReqSanitizer(w, r)
@@ -361,7 +301,7 @@ func (riot *Riot) Serve() {
 
 	api := &http.Server{Addr: ":7700", Handler: mux}
 
-	log.Debug("	* Starting Riot HTTP server")
+	log.Debug("	* Starting Riot HTTP server at :7700")
 	if err := api.ListenAndServe(); err != http.ErrServerClosed {
 		log.Errorf("Can't start Riot API HTTP server: %s", err)
 	}
@@ -417,15 +357,20 @@ func (a *Attack) Run() {
 
 				switch task.kind {
 				case add:
-					log.Debugf(">>> add: %s", task.event)
-					_, _ = a.client.Add(task.event)
+					log.Debugf(">>> add: %s", task.events[0])
+					_, _ = a.client.Add(task.events[0])
 					RiotEventAdd.Inc()
+				case bulk:
+					bulkSize := float64(len(task.events))
+					log.Debugf(">>> bulk(%d): %s", bulkSize, task.events)
+					_, _ = a.client.AddBulk(task.events)
+					RiotEventAdd.Add(bulkSize)
 				case membership:
-					log.Debugf(">>> mem: %s, %d", task.event, task.version)
-					_, _ = a.client.Membership(task.key, task.version)
+					log.Debugf(">>> mem: %s, %d", task.events[0], task.version)
+					_, _ = a.client.Membership([]byte(task.events[0]), task.version)
 					RiotQueryMembership.Inc()
 				case incremental:
-					log.Debugf(">>> inc: %s", task.event)
+					log.Debugf(">>> inc: %s", task.events[0])
 					_, _ = a.client.Incremental(task.start, task.end)
 					RiotQueryIncremental.Inc()
 				}
@@ -433,16 +378,28 @@ func (a *Attack) Run() {
 		}(rID)
 	}
 
-	for i := a.config.Offset; i < a.config.Offset+a.config.NumRequests; i++ {
-		ev := fmt.Sprintf("event %d", i)
-		a.senChan <- Task{
+	hasReqs := func(i uint) bool {
+		return i < a.config.Offset+a.config.NumRequests
+	}
+
+	hasBulk := func(j, i uint) bool {
+		return i < j+a.config.BulkSize && hasReqs(i)
+	}
+
+	for i := a.config.Offset; hasReqs(i); i++ {
+		task := Task{
 			kind:    a.kind,
-			event:   ev,
-			key:     []byte(ev),
+			events:  []string{},
 			version: a.balloonVersion,
 			start:   uint64(i),
 			end:     uint64(i + a.config.IncrementalDelta),
 		}
+
+		for j := i; hasBulk(j, i); i++ {
+			task.events = append(task.events, fmt.Sprintf("event %d", i))
+		}
+
+		a.senChan <- task
 	}
 
 	close(a.senChan)

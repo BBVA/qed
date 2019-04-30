@@ -17,51 +17,10 @@
 package hyper
 
 import (
-	"bytes"
-	"sort"
-
 	"github.com/bbva/qed/util"
 )
 
-type leaf struct {
-	Index, Value []byte
-}
-
-type leaves []leaf
-
-func (l leaves) InsertSorted(leaf leaf) leaves {
-
-	if len(l) == 0 {
-		l = append(l, leaf)
-		return l
-	}
-
-	index := sort.Search(len(l), func(i int) bool {
-		return bytes.Compare(l[i].Index, leaf.Index) > 0
-	})
-
-	if index > 0 && bytes.Equal(l[index-1].Index, leaf.Index) {
-		return l
-	}
-
-	l = append(l, leaf)
-	copy(l[index+1:], l[index:])
-	l[index] = leaf
-	return l
-
-}
-
-func (l leaves) Split(index []byte) (left, right leaves) {
-	// the smallest index i where l[i].Index >= index
-	splitIndex := sort.Search(len(l), func(i int) bool {
-		return bytes.Compare(l[i].Index, index) >= 0
-	})
-	return l[:splitIndex], l[splitIndex:]
-}
-
-type traverseBatch func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack)
-
-func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
+func pruneToInsertBulk(indexes [][]byte, values [][]byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
 
 	var traverse, traverseThroughCache, traverseAfterCache traverseBatch
 
@@ -181,11 +140,13 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 			if batch.HasLeafAt(iBatch) {
 				// push down leaf
 				key, value := batch.GetLeafKVAt(iBatch)
-				leaves = leaves.InsertSorted(leaf{key, value})
+				// we need to make a copy of the slice because it could affect to other branches
+				newLeaves := append(leaves[:0:0], leaves...)
+				newLeaves = newLeaves.InsertSorted(leaf{key, value})
 				batch.ResetElementAt(iBatch)
 				batch.ResetElementAt(2*iBatch + 1)
 				batch.ResetElementAt(2*iBatch + 2)
-				traverseAfterCache(pos, leaves, batch, iBatch, ops)
+				traverseAfterCache(pos, newLeaves, batch, iBatch, ops)
 				return
 			}
 		}
@@ -205,10 +166,14 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 	}
 
 	ops := newOperationsStack()
-	version := util.AddPaddingToBytes(value, len(index))
-	version = version[len(version)-len(index):] // TODO GET RID OF THIS: used only to pass tests
 	leaves := make(leaves, 0)
-	leaves = leaves.InsertSorted(leaf{index, version})
-	traverse(newRootPosition(uint16(len(index))), leaves, nil, 0, ops)
+	indexLength := len(indexes[0])
+	for i, index := range indexes {
+		version := util.AddPaddingToBytes(values[i], indexLength)
+		version = version[len(version)-indexLength:] // TODO GET RID OF THIS: used only to pass tests
+		leaves = leaves.InsertSorted(leaf{index, version})
+	}
+
+	traverse(newRootPosition(uint16(indexLength)), leaves, nil, 0, ops)
 	return ops
 }

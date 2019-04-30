@@ -53,6 +53,7 @@ var (
 // RaftBalloon is the interface Raft-backed balloons must implement.
 type RaftBalloonApi interface {
 	Add(event []byte) (*balloon.Snapshot, error)
+	AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error)
 	QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
 	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
@@ -375,17 +376,34 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 		return nil, err
 	}
 	b.metrics.Adds.Inc()
+
 	snapshot := resp.(*fsmAddResponse).snapshot
+	p := protocol.Snapshot(*snapshot)
 
 	//Send snapshot to the snapshot channel
-	b.snapshotsCh <- &protocol.Snapshot{ // TODO move this to an upper layer (shard manager?)
-		HistoryDigest: snapshot.HistoryDigest,
-		HyperDigest:   snapshot.HyperDigest,
-		Version:       snapshot.Version,
-		EventDigest:   snapshot.EventDigest,
-	}
+	b.snapshotsCh <- &p // TODO move this to an upper layer (shard manager?)
 
 	return snapshot, nil
+}
+
+func (b *RaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
+	cmd := &commands.AddEventsBulkCommand{Events: bulk}
+	resp, err := b.raftApply(commands.AddEventsBulkCommandType, cmd)
+	if err != nil {
+		return nil, err
+	}
+	b.metrics.Adds.Add(float64(len(bulk)))
+
+	snapshotBulk := resp.(*fsmAddBulkResponse).snapshotBulk
+
+	//Send snapshot to the snapshot channel
+	// TODO move this to an upper layer (shard manager?)
+	for _, s := range snapshotBulk {
+		p := protocol.Snapshot(*s)
+		b.snapshotsCh <- &p
+	}
+
+	return snapshotBulk, nil
 }
 
 func (b *RaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {

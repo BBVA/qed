@@ -99,9 +99,51 @@ func TestAdd(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for test case %d", i)
 		assert.Equalf(t, c.expectedMutationsLen, len(mutations), "The mutations should match for test case %d", i)
-		store.Mutate(mutations)
+		err = store.Mutate(mutations)
+		require.NoErrorf(t, err, "Error inserting mutations in test case %d", i)
 	}
 
+}
+
+func TestAddBulk(t *testing.T) {
+
+	log.SetLogger("TestAddBulk", log.SILENT)
+
+	testCases := []struct {
+		eventDigests     []hashing.Digest
+		versions         []uint64
+		expectedRootHash []hashing.Digest
+	}{
+		{
+			[]hashing.Digest{
+				hashing.Digest{0x0},
+			},
+			[]uint64{0},
+			[]hashing.Digest{hashing.Digest{0x0}},
+		},
+		{
+			[]hashing.Digest{
+				hashing.Digest{0x0}, hashing.Digest{0x1}, hashing.Digest{0x2}, hashing.Digest{0x3},
+				hashing.Digest{0x4}, hashing.Digest{0x5}, hashing.Digest{0x6}, hashing.Digest{0x7},
+				hashing.Digest{0x8}, hashing.Digest{0x9},
+			},
+			[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			[]hashing.Digest{hashing.Digest{0x0}, hashing.Digest{0x1}, hashing.Digest{0x3}, hashing.Digest{0x0}, hashing.Digest{0x4}, hashing.Digest{0x1}, hashing.Digest{0x7}, hashing.Digest{0x0}, hashing.Digest{0x8}, hashing.Digest{0x1}},
+		},
+	}
+
+	store, closeF := storage_utils.OpenBPlusTreeStore()
+	defer closeF()
+
+	tree := NewHistoryTree(hashing.NewFakeXorHasher, store, 30)
+
+	for i, c := range testCases {
+		rootHash, mutations, err := tree.AddBulk(c.eventDigests, c.versions)
+		require.NoErrorf(t, err, "This should not fail in test %d", i)
+		err = store.Mutate(mutations)
+		require.NoErrorf(t, err, "Error inserting mutations in test %d", i)
+		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash in test %d", i)
+	}
 }
 
 func TestProveMembership(t *testing.T) {
@@ -478,18 +520,51 @@ func BenchmarkAdd(b *testing.B) {
 	defer closeF()
 
 	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 300)
+	hasher := hashing.NewSha256Hasher()
 
 	historyMetrics := metrics_utils.CustomRegister(AddTotal)
 	srvCloseF := metrics_utils.StartMetricsServer(historyMetrics, store)
 	defer srvCloseF()
 
-	b.N = 100000
+	b.N = 10000000
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
-		key := rand.Bytes(64)
-		_, mutations, err := tree.Add(key, i)
+		_, mutations, err := tree.Add(hasher.Do(rand.Bytes(64)), i)
 		require.NoError(b, err)
 		require.NoError(b, store.Mutate(mutations))
 		AddTotal.Inc()
+	}
+}
+
+func BenchmarkAddBulk(b *testing.B) {
+
+	log.SetLogger("BenchmarkAddBulk", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/history_tree_test.db")
+	defer closeF()
+
+	tree := NewHistoryTree(hashing.NewSha256Hasher, store, 300)
+	hasher := hashing.NewSha256Hasher()
+
+	historyMetrics := metrics_utils.CustomRegister(AddTotal)
+	srvCloseF := metrics_utils.StartMetricsServer(historyMetrics, store)
+	defer srvCloseF()
+
+	bulkSize := uint64(10)
+	eventDigests := make([]hashing.Digest, bulkSize)
+	versions := make([]uint64, bulkSize)
+
+	b.N = 10000000
+	b.ResetTimer()
+	for i := uint64(0); i < uint64(b.N); i++ {
+		index := i % bulkSize
+		eventDigests[index] = hasher.Do(rand.Bytes(64))
+		versions[index] = i
+		if index == bulkSize-1 {
+			_, mutations, err := tree.AddBulk(eventDigests, versions)
+			require.NoError(b, err)
+			require.NoError(b, store.Mutate(mutations))
+			AddTotal.Add(float64(bulkSize))
+		}
 	}
 }

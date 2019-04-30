@@ -18,6 +18,8 @@ package bplus
 
 import (
 	"bytes"
+	"github.com/bbva/qed/metrics"
+	"io"
 
 	"github.com/bbva/qed/storage"
 	"github.com/google/btree"
@@ -131,4 +133,20 @@ func (r *BPlusKVPairReader) Close() {
 func (s BPlusTreeStore) Close() error {
 	s.db.Clear(false)
 	return nil
+}
+
+func (s BPlusTreeStore) Backup(w io.Writer, id uint64) error {
+	panic("Not implemented")
+}
+
+func (s BPlusTreeStore) Load(r io.Reader) error {
+	panic("Not implemented")
+}
+
+func (s BPlusTreeStore) Snapshot() (uint64, error) {
+	panic("Not implemented")
+}
+
+func (s BPlusTreeStore) RegisterMetrics(registry metrics.Registry) {
+	panic("Not implemented")
 }

@@ -511,3 +511,27 @@ func BenchmarkRaftAdd(b *testing.B) {
 	})
 
 }
+
+func BenchmarkRaftAddBulk(b *testing.B) {
+
+	log.SetLogger("BenchmarkRaftAddBulk", log.SILENT)
+
+	raftNode, clean := newNodeBench(b, 1)
+	defer clean()
+
+	err := raftNode.Open(true, map[string]string{"foo": "bar"})
+	require.NoError(b, err)
+
+	// b.N shoul be eq or greater than 500k to avoid benchmark framework spreading more than one goroutine.
+	b.N = 2000000
+	b.ResetTimer()
+	b.SetParallelism(100)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			events := [][]byte{utilrand.Bytes(128)}
+			_, err := raftNode.AddBulk(events)
+			require.NoError(b, err)
+		}
+	})
+
+}
