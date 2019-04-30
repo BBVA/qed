@@ -226,9 +226,6 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 
 func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, error) {
 
-	// Activate metrics gathering
-	stats := metrics.Balloon
-
 	// Get version
 	version := b.version
 	b.version += uint64(len(bulk))
@@ -276,9 +273,6 @@ func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, erro
 			Version:       eventVersions[i],
 		})
 	}
-
-	// Increment version
-	stats.Set("version", metrics.Uint64ToVar(b.version-1))
 
 	return snapshotBulk, mutations, nil
 }
