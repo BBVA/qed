@@ -47,7 +47,7 @@ func (t targets) InsertSorted(version uint64) targets {
 func (t targets) Split(version uint64) (left, right targets) {
 	// the smallest index i where t[i] >= version
 	index := sort.Search(len(t), func(i int) bool {
-		return t[i] >= version //bytes.Compare(r[i].Key, key) >= 0
+		return t[i] >= version
 	})
 	return t[:index], t[index:]
 }

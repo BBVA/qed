@@ -27,13 +27,18 @@ import (
 type CommandType uint8
 
 const (
-	AddEventCommandType       CommandType = 0 // Commands which modify the database.
-	MetadataSetCommandType    CommandType = 1
-	MetadataDeleteCommandType CommandType = 2
+	AddEventCommandType CommandType = iota // Commands which modify the database.
+	AddEventsBulkCommandType
+	MetadataSetCommandType
+	MetadataDeleteCommandType
 )
 
 type AddEventCommand struct {
 	Event []byte
+}
+
+type AddEventsBulkCommand struct {
+	Events [][]byte
 }
 
 type MetadataSetCommand struct {

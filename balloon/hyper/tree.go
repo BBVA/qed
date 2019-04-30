@@ -94,6 +94,31 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	return rh, ctx.Mutations, nil
 }
 
+func (t *HyperTree) AddBulk(eventDigests []hashing.Digest, versions []uint64) (hashing.Digest, []*storage.Mutation, error) {
+	t.Lock()
+	defer t.Unlock()
+
+	versionsAsBytes := make([][]byte, 0)
+	digestsAsBytes := make([][]byte, 0)
+	for i, version := range versions {
+		versionsAsBytes = append(versionsAsBytes, util.Uint64AsBytes(version))
+		digestsAsBytes = append(digestsAsBytes, []byte(eventDigests[i]))
+	}
+
+	// build a stack of operations and then interpret it to generate the root hash
+	ops := pruneToInsertBulk(digestsAsBytes, versionsAsBytes, t.cacheHeightLimit, t.batchLoader)
+	ctx := &pruningContext{
+		Hasher:        t.hasher,
+		Cache:         t.cache,
+		DefaultHashes: t.defaultHashes,
+		Mutations:     make([]*storage.Mutation, 0),
+	}
+
+	rh := ops.Pop().Interpret(ops, ctx)
+
+	return rh, ctx.Mutations, nil
+}
+
 func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryProof, err error) {
 	t.Lock()
 	defer t.Unlock()

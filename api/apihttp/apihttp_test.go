@@ -45,7 +45,28 @@ type fakeRaftBalloon struct {
 }
 
 func (b fakeRaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
-	return &balloon.Snapshot{hashing.Digest{0x02}, hashing.Digest{0x00}, hashing.Digest{0x01}, 0}, nil
+	return &balloon.Snapshot{
+		EventDigest:   hashing.Digest{0x02},
+		HistoryDigest: hashing.Digest{0x00},
+		HyperDigest:   hashing.Digest{0x01},
+		Version:       0}, nil
+}
+
+func (b fakeRaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
+	return []*balloon.Snapshot{
+		{
+			EventDigest:   hashing.Digest{0x02},
+			HistoryDigest: hashing.Digest{0x00},
+			HyperDigest:   hashing.Digest{0x01},
+			Version:       0,
+		},
+		{
+			EventDigest:   hashing.Digest{0x05},
+			HistoryDigest: hashing.Digest{0x03},
+			HyperDigest:   hashing.Digest{0x04},
+			Version:       1,
+		},
+	}, nil
 }
 
 func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) error {
@@ -150,7 +171,7 @@ func TestAdd(t *testing.T) {
 	// Check the body response
 	snapshot := &protocol.Snapshot{}
 
-	json.Unmarshal([]byte(rr.Body.String()), snapshot)
+	_ = json.Unmarshal([]byte(rr.Body.String()), snapshot)
 
 	if !bytes.Equal(snapshot.HyperDigest, []byte{0x1}) {
 		t.Errorf("HyperDigest is not consistent: %s", snapshot.HyperDigest)
@@ -165,12 +186,60 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestAddBulk(t *testing.T) {
+	// Create a request to pass to our handler. We pass a message as a data.
+	// If it's nil it will fail.
+	data, _ := json.Marshal(protocol.EventsBulk{Events: [][]byte{
+		[]byte("this is event 1"),
+		[]byte("this is event 2"),
+	}})
+
+	req, err := http.NewRequest("POST", "/events/bulk", bytes.NewBuffer(data))
+	if len(data) == 0 {
+		t.Fatal(err)
+	}
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := AddBulk(fakeRaftBalloon{})
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusCreated)
+	}
+
+	// Check the body response
+	bs := []*protocol.Snapshot{}
+	_ = json.Unmarshal([]byte(rr.Body.String()), &bs)
+
+	expectedHyperDigests := [][]byte{[]byte{0x1}, []byte{0x4}}
+	expectedHistoryDigests := [][]byte{[]byte{0x0}, []byte{0x3}}
+	expectedVersions := []uint64{0, 1}
+
+	for i, snap := range bs {
+		if !bytes.Equal(snap.HyperDigest, expectedHyperDigests[i]) {
+			t.Errorf("HyperDigest is not consistent: %s", snap.HyperDigest)
+		}
+		if !bytes.Equal(snap.HistoryDigest, expectedHistoryDigests[i]) {
+			t.Errorf("HistoryDigest is not consistent: %s", snap.HistoryDigest)
+		}
+		if snap.Version != expectedVersions[i] {
+			t.Errorf("Version is not consistent")
+		}
+	}
+}
+
 func TestMembership(t *testing.T) {
 	var version uint64 = 1
 	key := []byte("this is a sample event")
 	query, _ := json.Marshal(protocol.MembershipQuery{
-		key,
-		version,
+		Key:     key,
+		Version: version,
 	})
 
 	req, err := http.NewRequest("POST", "/proofs/membership", bytes.NewBuffer(query))
