@@ -116,6 +116,56 @@ func (o *Options) SetMaxFileOpeningThreads(value int) {
 	C.rocksdb_options_set_max_file_opening_threads(o.c, C.int(value))
 }
 
+// OptimizeForPointLookup optimize the DB for point lookups.
+//
+// Use this if you don't need to keep the data sorted, i.e. you'll never use
+// an iterator, only Put() and Get() API calls
+//
+// If you use this with rocksdb >= 5.0.2, you must call `SetAllowConcurrentMemtableWrites(false)`
+// to avoid an assertion error immediately on opening the db.
+func (o *Options) OptimizeForPointLookup(blockCacheSizeMb uint64) {
+	C.rocksdb_options_optimize_for_point_lookup(o.c, C.uint64_t(blockCacheSizeMb))
+}
+
+// SetAllowConcurrentMemtableWrites sets whether to allow concurrent memtable writes. Conccurent writes are
+// not supported by all memtable factories (currently only SkipList memtables).
+// As of rocksdb 5.0.2 you must call `SetAllowConcurrentMemtableWrites(false)`
+// if you use `OptimizeForPointLookup`.
+func (o *Options) SetAllowConcurrentMemtableWrites(allow bool) {
+	C.rocksdb_options_set_allow_concurrent_memtable_write(o.c, boolToUchar(allow))
+}
+
+// SetMemtableVectorRep sets a MemTableRep which is backed by a vector.
+//
+// On iteration, the vector is sorted. This is useful for workloads where
+// iteration is very rare and writes are generally not issued after reads begin.
+func (o *Options) SetMemtableVectorRep() {
+	C.rocksdb_options_set_memtable_vector_rep(o.c)
+}
+
+// SetHashSkipListRep sets a hash skip list as MemTableRep.
+//
+// It contains a fixed array of buckets, each
+// pointing to a skiplist (null if the bucket is empty).
+//
+// bucketCount:             number of fixed array buckets
+// skiplistHeight:          the max height of the skiplist
+// skiplistBranchingFactor: probabilistic size ratio between adjacent
+//                          link lists in the skiplist
+func (o *Options) SetHashSkipListRep(bucketCount int, skiplistHeight, skiplistBranchingFactor int32) {
+	C.rocksdb_options_set_hash_skip_list_rep(o.c, C.size_t(bucketCount), C.int32_t(skiplistHeight), C.int32_t(skiplistBranchingFactor))
+}
+
+// SetHashLinkListRep sets a hashed linked list as MemTableRep.
+//
+// It contains a fixed array of buckets, each pointing to a sorted single
+// linked list (null if the bucket is empty).
+//
+// bucketCount: number of fixed array buckets
+func (o *Options) SetHashLinkListRep(bucketCount int) {
+	C.rocksdb_options_set_hash_link_list_rep(o.c, C.size_t(bucketCount))
+}
+
 // SetBlockBasedTableFactory sets the block based table factory.
 //
 // This is the default table type that we inherited from LevelDB, which was
@@ -162,7 +212,8 @@ func (o *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
 // - Only support mmap mode.
 //
 // keyLen: 			plain table has optimization for fix-sized keys,
-// 					which can be specified via keyLen.
+// 					which can be specified via keyLen. Alternatively, you can
+// 					pass 0 if your keys have variable lengths.
 // bloomBitsPerKey: the number of bits used for bloom filer per prefix. You
 //                  may disable it by passing a zero.
 // hashTableRatio:  the desired utilization of the hash table used for prefix
