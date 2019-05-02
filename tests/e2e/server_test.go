@@ -21,51 +21,53 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bbva/qed/testutils/scope"
-	assert "github.com/stretchr/testify/require"
+	"github.com/bbva/qed/testutils/scenario"
 )
 
 func TestStart(t *testing.T) {
-	bServer, aServer := setupServer(0, "", false, t)
+	before, after := prepare_new_server(0, "", false)
+	let, report := scenario.New()
+	defer func() {
+		after()
+		t.Logf(report())
+	}()
+	before()
 
-	scenario, let := scope.Scope(t,
-		merge(bServer),
-		merge(aServer),
-	)
-
-	scenario("Test availability of qed server", func() {
-		let("Query info endpoint", func(t *testing.T) {
+	let(t, "Test availability of qed server", func(t *testing.T) {
+		let(t, "Query info endpoint", func(t *testing.T) {
 			var resp *http.Response
 			var err error
 			retry(3, 2*time.Second, func() error {
 				resp, err = doReq("GET", "http://localhost:8800/info", APIKey, nil)
 				return err
 			})
-			assert.NoError(t, err, "Subprocess must not exit with non-zero status")
-			assert.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
+			scenario.NoError(t, err, "Subprocess must not exit with non-zero status")
+			scenario.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
 
-		let("Query to unexpected context", func(t *testing.T) {
+		let(t, "Query to unexpected context", func(t *testing.T) {
 			var resp *http.Response
 			var err error
 			retry(3, 1*time.Second, func() error {
 				resp, err = doReq("GET", "http://localhost:8800/xD", APIKey, nil)
 				return err
 			})
-			assert.NoError(t, err)
-			assert.Equal(t, resp.StatusCode, http.StatusNotFound, "Server should respond with http status code 404")
+			scenario.NoError(t, err, "Error getting response from server")
+			scenario.Equal(t, resp.StatusCode, http.StatusNotFound, "Server should respond with http status code 404")
 
 		})
+	})
 
-		let("Query metrics endpoint", func(t *testing.T) {
+	let(t, "Test availability of metrics server", func(t *testing.T) {
+		let(t, "Query metrics endpoint", func(t *testing.T) {
 			var resp *http.Response
 			var err error
 			retry(3, 1*time.Second, func() error {
 				resp, err = doReq("GET", "http://localhost:8600/metrics", APIKey, nil)
 				return err
 			})
-			assert.NoError(t, err, "Subprocess must not exit with non-zero status")
-			assert.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
+			scenario.NoError(t, err, "Subprocess must not exit with non-zero status")
+			scenario.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
 
 	})
