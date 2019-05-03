@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"testing"
@@ -95,31 +96,44 @@ func TestStartCluster(t *testing.T) {
 		scenario.NoError(t, err, "Error starting node 1")
 		err = b2()
 		scenario.NoError(t, err, "Error starting node 2")
+	})
 
-		let(t, "Check the cluster topology", func(t *testing.T) {
-			var resp *http.Response
-			var err error
-
+	let(t, "Check the cluster topology", func(t *testing.T) {
+		var resp *http.Response
+		var mainErr error
+		retry(3, 2*time.Second, func() error {
+			var subErr error
 			retry(3, 2*time.Second, func() error {
-				resp, err = doReq("GET", "http://localhost:8802/info/shards", "APIKey", nil)
-				return err
+				resp, subErr = doReq("GET", "http://localhost:8802/info/shards", "APIKey", nil)
+				return subErr
 			})
+			if subErr != nil {
+				return subErr
+			}
+			if resp == nil {
+				mainErr = fmt.Errorf("nil response")
+				return mainErr
+			}
 
-			scenario.NoError(t, err, "Error quering for cluster topology")
-			scenario.NotNil(t, resp, "Error getting a response")
-
-			buff, err := ioutil.ReadAll(resp.Body)
-			scenario.NoError(t, err, "Error reading response")
+			buff, mainErr := ioutil.ReadAll(resp.Body)
+			if subErr != nil {
+				return subErr
+			}
 			defer resp.Body.Close()
 
 			m := make(map[string]interface{})
-			err = json.Unmarshal(buff, &m)
-			scenario.NoError(t, err, "Error decoding json response")
-
+			mainErr = json.Unmarshal(buff, &m)
+			if mainErr != nil {
+				return mainErr
+			}
 			shards := m["shards"].(map[string]interface{})
-
-			scenario.Equal(t, len(shards), 3, "There must be 3 shards in the cluster")
+			if len(shards) != 3 {
+				mainErr = fmt.Errorf("not enought shards")
+				return mainErr
+			}
+			return nil
 		})
+		scenario.NoError(t, mainErr, "There should be no error")
 	})
 }
 
