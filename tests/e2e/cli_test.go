@@ -22,49 +22,92 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/bbva/qed/testutils/scope"
-	"github.com/stretchr/testify/require"
+	// "github.com/bbva/qed/log"
+	"github.com/bbva/qed/testutils/scenario"
 )
 
 func Test_Client_To_Single_Server(t *testing.T) {
-	t.Skip()
-	before, after := setupServer(0, "", true, t)
-	scenario, let := scope.Scope(t, before, merge(after, delay(2*time.Second)))
+	// log.SetLogger("test_client_to_single_server", log.DEBUG)
+	b0, a0 := prepare_new_server(0, true)
+	let, report := scenario.New()
+	defer func() {
+		a0()
+		t.Logf(report())
+	}()
 
-	scenario("Add one event through cli and verify it", func() {
+	err := b0()
+	scenario.NoError(t, err, "Error starting server")
 
-		let("Add event", func(t *testing.T) {
+	let(t, "Add one event through cli and verify it", func(t *testing.T) {
+
+		let(t, "Add event", func(t *testing.T) {
+
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=%s", QEDTLS),
+				"--api-key=APIKey",
+				"--endpoints=https://127.0.0.1:8800",
 				"add",
-				"--key='test event'",
-				"--log=info",
+				"--event='test event'",
+				"--attempt-to-revive-endpoints",
+				"--max-retries=3",
+				"--log=error",
 				"--insecure",
 			)
 
-			_, err := cmd.CombinedOutput()
+			output, err := cmd.CombinedOutput()
 
-			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			fmt.Println(string(output))
+
+			scenario.NoError(t, err, "Client returned error")
 		})
 
-		let("Verify event with eventDigest", func(t *testing.T) {
+		let(t, "Verify membership proof with an event digest", func(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=%s", QEDTLS),
+				"--api-key=APIKey",
+				"--endpoints=https://127.0.0.1:8800",
 				"membership",
-				"--hyperDigest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
-				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
+				"--event-digest=8694718de4363adf07ec3b4aff4c76589f60fe89a7715bee7c8b250e06493922",
+				"--hyper-digest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
+				"--history-digest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
+				"--verify",
 				"--version=0",
-				"--eventDigest=8694718de4363adf07ec3b4aff4c76589f60fe89a7715bee7c8b250e06493922",
+				"--attempt-to-revive-endpoints",
+				"--max-retries=3",
+				"--log=error",
+				"--insecure",
+			)
+
+			output, err := cmd.CombinedOutput()
+
+			fmt.Println(string(output))
+
+			scenario.NoError(t, err, "Client returned an error")
+			// This check depends on the client print format
+			// which makes it fragile.
+			// IF the client returns a 0, the the command is succesfull and no
+			// furhter check should be needed.
+			scenario.True(t, strings.Contains(string(output), "Verify: OK"), "Must verify with eventDigest")
+		})
+
+		let(t, "Verify membership proof with a plain event", func(t *testing.T) {
+
+			cmd := exec.Command("go",
+				"run",
+				"./../../main.go",
+				"client",
+				"--api-key=APIKey",
+				"--endpoints=https://127.0.0.1:8800",
+				"membership",
+				"--hyper-digest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
+				"--history-digest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
+				"--version=0",
+				"--event='test event'",
 				"--log=info",
 				"--verify",
 				"--insecure",
@@ -72,220 +115,208 @@ func Test_Client_To_Single_Server(t *testing.T) {
 
 			stdoutStderr, err := cmd.CombinedOutput()
 
-			require.NoError(t, err, "Subprocess must not exit with status 1")
-			require.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
-		})
-
-		let("Verify event with event", func(t *testing.T) {
-
-			cmd := exec.Command("go",
-				"run",
-				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
-				"client",
-				fmt.Sprintf("--endpoints=%s", QEDTLS),
-				"membership",
-				"--hyperDigest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
-				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
-				"--version=0",
-				"--key='test event'",
-				"--log=info",
-				"--verify",
-				"--insecure",
-			)
-
-			stdoutStderr, err := cmd.CombinedOutput()
-
-			require.NoError(t, err, "Subprocess must not exit with status 1")
-			require.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+			scenario.NoError(t, err, "Subprocess must not exit with status 1")
+			scenario.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 		})
 
 	})
 }
 
 func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
-	t.Skip()
-	before0, after0 := setupServer(0, "", false, t)
-	before1, after1 := setupServer(1, "", false, t)
-	before2, after2 := setupServer(2, "", false, t)
+	b0, a0 := prepare_new_server(0, true)
+	b1, a1 := prepare_new_server(1, true)
+	b2, a2 := prepare_new_server(2, true)
+	let, report := scenario.New()
+	defer func() {
+		// a0()
+		a1()
+		a2()
+		t.Logf(report())
+	}()
 
-	serversHttpAddr := "http://127.0.0.1:8800"
+	err := b0()
+	scenario.NoError(t, err, "Error starting node 0")
+	err = b1()
+	scenario.NoError(t, err, "Error starting node 1")
+	err = b2()
+	scenario.NoError(t, err, "Error starting node 2")
 
-	scenario, let := scope.Scope(t, merge(before0, before1, before2), merge(after1, after2, delay(2*time.Second)))
+	let(t, "Add one event through cli and verify it", func(t *testing.T) {
+		let(t, "Add event", func(t *testing.T) {
 
-	scenario("Add one event through cli and verify it", func() {
-		let("Add event", func(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				"--api-key=APIKey",
+				"--endpoints=https://127.0.0.1:8800,https://127.0.0.1:8801,https://127.0.0.1:8802",
 				"add",
-				"--key='test event'",
-				"--log=info",
+				"--event='test event'",
+				"--attempt-to-revive-endpoints",
+				"--max-retries=3",
+				"--log=error",
+				"--insecure",
 			)
 
-			_, err := cmd.CombinedOutput()
+			output, err := cmd.CombinedOutput()
 
-			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			fmt.Println(string(output))
+
+			scenario.NoError(t, err, "Client returned error")
 		})
 
-		let("Verify event with eventDigest", func(t *testing.T) {
+		let(t, "Verify membership proof with an event digest", func(t *testing.T) {
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				"--api-key=APIKey",
+				"--endpoints=https://127.0.0.1:8800,https://127.0.0.1:8801,https://127.0.0.1:8802",
 				"membership",
-				"--hyperDigest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
-				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
+				"--event-digest=8694718de4363adf07ec3b4aff4c76589f60fe89a7715bee7c8b250e06493922",
+				"--hyper-digest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
+				"--history-digest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
+				"--verify",
 				"--version=0",
-				"--eventDigest=8694718de4363adf07ec3b4aff4c76589f60fe89a7715bee7c8b250e06493922",
+				"--attempt-to-revive-endpoints",
+				"--max-retries=3",
+				"--log=error",
+				"--insecure",
+			)
+
+			output, err := cmd.CombinedOutput()
+
+			fmt.Println(string(output))
+
+			scenario.NoError(t, err, "Client returned an error")
+			// This check depends on the client print format
+			// which makes it fragile.
+			// IF the client returns a 0, the the command is succesfull and no
+			// furhter check should be needed.
+			scenario.True(t, strings.Contains(string(output), "Verify: OK"), "Must verify with eventDigest")
+		})
+
+		let(t, "Verify membership proof with a plain event", func(t *testing.T) {
+
+			cmd := exec.Command("go",
+				"run",
+				"./../../main.go",
+				"client",
+				"--api-key=APIKey",
+				"--endpoints=https://127.0.0.1:8800,https://127.0.0.1:8801,https://127.0.0.1:8802",
+				"membership",
+				"--hyper-digest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
+				"--history-digest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
+				"--version=0",
+				"--event='test event'",
 				"--log=info",
 				"--verify",
+				"--insecure",
 			)
 
 			stdoutStderr, err := cmd.CombinedOutput()
 
-			require.NoError(t, err, "Subprocess must not exit with status 1")
-			require.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+			scenario.NoError(t, err, "Subprocess must not exit with status 1")
+			scenario.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 		})
 
-		let("Verify event with event", func(t *testing.T) {
+		let(t, "Shutdown server 0", func(t *testing.T) {
+			err = a0()
+			scenario.NoError(t, err, "error stoping server")
+
+		})
+
+		let(t, "Add second event", func(t *testing.T) {
 
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
-				"membership",
-				"--hyperDigest=2b0096433f25f59a4310af8a8999abfd9beb6adacbbbb086251f24609c4f5bbf",
-				"--historyDigest=0f5129eaf5dbfb1405ff072a04d716aaf4e4ba4247a3322c41582e970dbb7b00",
-				"--version=0",
-				"--key='test event'",
-				"--log=info",
-				"--verify",
-			)
-
-			stdoutStderr, err := cmd.CombinedOutput()
-
-			require.NoError(t, err, "Subprocess must not exit with status 1")
-			require.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
-
-		})
-
-		let("Kill server 0", func(t *testing.T) {
-			after0(t)
-			serversHttpAddr = "http://127.0.0.1:8801"
-
-			// Need time to propagate changes via RAFT.
-			time.Sleep(10 * time.Second)
-		})
-
-		let("Add second event", func(t *testing.T) {
-			cmd := exec.Command("go",
-				"run",
-				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
-				"client",
-				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
+				"--api-key=APIKey",
+				"--endpoints=https://127.0.0.1:8800,https://127.0.0.1:8801,https://127.0.0.1:8802",
 				"add",
-				"--key='test event 2'",
-				"--log=info",
+				"--event='test event 2'",
+				"--attempt-to-revive-endpoints",
+				"--max-retries=3",
+				"--log=error",
+				"--insecure",
 			)
 
-			_, err := cmd.CombinedOutput()
+			output, err := cmd.CombinedOutput()
 
-			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			fmt.Println(string(output))
+
+			scenario.NoError(t, err, "Client returned error")
 		})
 
 	})
 }
 
 func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
-	t.Skip()
-	before0, after0 := setupServer(0, "", false, t)
-	before1, after1 := setupServer(1, "", false, t)
+	b0, a0 := prepare_new_server(0, true)
+	b1, a1 := prepare_new_server(1, true)
 
-	scenario, let := scope.Scope(t, merge(before0, before1), merge(after0, after1, delay(2*time.Second)))
+	let, report := scenario.New()
+	defer func() {
+		a0()
+		a1()
+		t.Logf(report())
+	}()
 
-	scenario("Success by extracting topology from right endpoint", func() {
+	err := b0()
+	scenario.NoError(t, err, "Error starting node 0")
+	err = b1()
+	scenario.NoError(t, err, "Error starting node 1")
 
-		let("Add event with one valid endpoint", func(t *testing.T) {
+	let(t, "Success by extracting topology from right endpoint", func(t *testing.T) {
+
+		let(t, "Add event with one valid endpoint", func(t *testing.T) {
+
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=badendpoint,http://127.0.0.1:8800"),
+				"--api-key=APIKey",
+				"--endpoints=https://127.0.0.1:8800",
 				"add",
-				"--key='test event'",
-				"--log=info",
+				"--event='test event'",
+				"--attempt-to-revive-endpoints",
+				"--max-retries=3",
+				"--log=error",
+				"--insecure",
 			)
 
-			_, err := cmd.CombinedOutput()
+			output, err := cmd.CombinedOutput()
 
-			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
+			fmt.Println(string(output))
+
+			scenario.NoError(t, err, "Client returned error")
 		})
 
-		let("Add event with no valid endpoint and fail", func(t *testing.T) {
+		let(t, "Add event with no valid endpoint and fail", func(t *testing.T) {
+
 			cmd := exec.Command("go",
 				"run",
 				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
 				"client",
-				fmt.Sprintf("--endpoints=badendpoint"),
+				"--api-key=APIKey",
+				"--endpoints=badendpoint",
 				"add",
-				"--key='test event'",
-				"--log=info",
+				"--event='test event'",
+				"--attempt-to-revive-endpoints",
+				"--max-retries=3",
+				"--log=error",
+				"--insecure",
 			)
 
-			_, err := cmd.CombinedOutput()
+			output, err := cmd.CombinedOutput()
 
-			require.Errorf(t, err, "Subprocess must exit with status 1: %v", *cmd)
+			fmt.Println(string(output))
+
+			scenario.Error(t, err, "Client must return error")
 		})
 
 	})
 
 }
 
-func Test_Client_To_Cluster_Continuous_Load_Node_Fails(t *testing.T) {
-	t.Skip()
-	before0, after0 := setupServer(0, "", false, t)
-	before1, after1 := setupServer(1, "", false, t)
-
-	serversHttpAddr := "http://127.0.0.1:8800,http://127.0.0.1:8801"
-
-	scenario, let := scope.Scope(t, merge(before0, before1), merge(after1, delay(2*time.Second)))
-
-	scenario("Success by extracting topology from right endpoint", func() {
-		let("Add event", func(t *testing.T) {
-			cmd := exec.Command("go",
-				"run",
-				"./../../main.go",
-				fmt.Sprintf("--apikey=%s", APIKey),
-				"client",
-				fmt.Sprintf("--endpoints=%s", serversHttpAddr),
-				"add",
-				"--key='test event'",
-				"--log=info",
-			)
-
-			_, err := cmd.CombinedOutput()
-
-			require.NoErrorf(t, err, "Subprocess must not exit with status 1: %v", *cmd)
-		})
-
-		let("Kill server 0", func(t *testing.T) {
-			after0(t)
-			serversHttpAddr = "http://127.0.0.1:8081"
-
-			// Need time to propagate changes via RAFT.
-			time.Sleep(10 * time.Second)
-		})
-
-	})
-}

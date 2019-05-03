@@ -17,6 +17,8 @@
 package e2e
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
@@ -25,7 +27,7 @@ import (
 )
 
 func TestStart(t *testing.T) {
-	before, after := prepare_new_server(0, "", false)
+	before, after := prepare_new_server(0, false)
 	let, report := scenario.New()
 	defer func() {
 		after()
@@ -38,7 +40,7 @@ func TestStart(t *testing.T) {
 			var resp *http.Response
 			var err error
 			retry(3, 2*time.Second, func() error {
-				resp, err = doReq("GET", "http://localhost:8800/info", APIKey, nil)
+				resp, err = doReq("GET", "http://localhost:8800/info", "APIKey", nil)
 				return err
 			})
 			scenario.NoError(t, err, "Subprocess must not exit with non-zero status")
@@ -49,7 +51,7 @@ func TestStart(t *testing.T) {
 			var resp *http.Response
 			var err error
 			retry(3, 1*time.Second, func() error {
-				resp, err = doReq("GET", "http://localhost:8800/xD", APIKey, nil)
+				resp, err = doReq("GET", "http://localhost:8800/xD", "APIKey", nil)
 				return err
 			})
 			scenario.NoError(t, err, "Error getting response from server")
@@ -63,7 +65,7 @@ func TestStart(t *testing.T) {
 			var resp *http.Response
 			var err error
 			retry(3, 1*time.Second, func() error {
-				resp, err = doReq("GET", "http://localhost:8600/metrics", APIKey, nil)
+				resp, err = doReq("GET", "http://localhost:8600/metrics", "APIKey", nil)
 				return err
 			})
 			scenario.NoError(t, err, "Subprocess must not exit with non-zero status")
@@ -73,3 +75,51 @@ func TestStart(t *testing.T) {
 	})
 
 }
+
+func TestStartCluster(t *testing.T) {
+	b0, a0 := prepare_new_server(0, false)
+	b1, a1 := prepare_new_server(1, false)
+	b2, a2 := prepare_new_server(2, false)
+	let, report := scenario.New()
+	defer func() {
+		a0()
+		a1()
+		a2()
+		t.Logf(report())
+	}()
+
+	let(t, "Start three servers", func(t *testing.T) {
+		err := b0()
+		scenario.NoError(t, err, "Error starting node 0")
+		err = b1()
+		scenario.NoError(t, err, "Error starting node 1")
+		err = b2()
+		scenario.NoError(t, err, "Error starting node 2")
+
+		let(t, "Check the cluster topology", func(t *testing.T) {
+			var resp *http.Response
+			var err error
+
+			retry(3, 2*time.Second, func() error {
+				resp, err = doReq("GET", "http://localhost:8800/info/shards", "APIKey", nil)
+				return err
+			})
+
+			scenario.NoError(t, err, "Error quering for cluster topology")
+			scenario.NotNil(t, resp, "Error getting a response")
+
+			buff, err := ioutil.ReadAll(resp.Body)
+			scenario.NoError(t, err, "Error reading response")
+			defer resp.Body.Close()
+
+			m := make(map[string]interface{})
+			err = json.Unmarshal(buff, &m)
+			scenario.NoError(t, err, "Error decoding json response")
+
+			shards := m["shards"].(map[string]interface{})
+
+			scenario.Equal(t, len(shards), 3, "There must be 3 shards in the cluster")
+		})
+	})
+}
+
