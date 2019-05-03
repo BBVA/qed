@@ -26,7 +26,7 @@ QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
 AGENT_CONFIG=()
 AGENT_CONFIG+=('--log debug')
 AGENT_CONFIG+=('--bind-addr 127.0.0.1:810${i}')
-AGENT_CONFIG+=('--metrics-addr 127.0.0.2:1810${i}')
+AGENT_CONFIG+=('--metrics-addr 127.0.0.1:1810${i}')
 AGENT_CONFIG+=('--start-join 127.0.0.1:8400')
 
 # Notifier options

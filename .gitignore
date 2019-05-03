@@ -16,6 +16,8 @@ tests/cloud/aws/results
 tests/cloud/aws/to_upload/rendered
 tests/results
 c-deps/libs
+demo/project
+demo/event*
 
 # Documents 
 *.pdf
