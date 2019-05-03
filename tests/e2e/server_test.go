@@ -101,7 +101,7 @@ func TestStartCluster(t *testing.T) {
 			var err error
 
 			retry(3, 2*time.Second, func() error {
-				resp, err = doReq("GET", "http://localhost:8800/info/shards", "APIKey", nil)
+				resp, err = doReq("GET", "http://localhost:8802/info/shards", "APIKey", nil)
 				return err
 			})
 
