@@ -53,6 +53,8 @@ type membershipParams struct {
 	Verify      bool   `desc:"Set to enable proof verification process"`
 	Event       string `desc:"QED event to build the proof"`
 	EventDigest string `desc:"QED event digest to build the proof"`
+	HistoryDigest string`desc:"QED history digest is used to verify the proof"`
+	HyperDigest string `desc:"QED hyper digest is used to verify the proof"`
 }
 
 func configClientMembership() context.Context {
@@ -108,20 +110,14 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 	fmt.Printf(" KeyDigest: %x\n\n", membershipResult.KeyDigest)
 
 	if params.Verify {
-
-		var hyperDigest, historyDigest string
-		for {
+		hyperDigest := params.HyperDigest
+		historyDigest := params.HistoryDigest
+		for hyperDigest == "" {
 			hyperDigest = readLine(fmt.Sprintf("Please, provide the hyperDigest for current version [ %d ]: ", membershipResult.CurrentVersion))
-			if hyperDigest != "" {
-				break
-			}
 		}
 		if membershipResult.Exists {
-			for {
+			for historyDigest == "" {
 				historyDigest = readLine(fmt.Sprintf("Please, provide the historyDigest for version [ %d ] : ", params.Version))
-				if historyDigest != "" {
-					break
-				}
 			}
 		}
 
