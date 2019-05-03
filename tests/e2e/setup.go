@@ -179,9 +179,10 @@ func new_qed_client(id int) (*client.HTTPClient, error) {
 		client.SetHttpClient(httpClient),
 		client.SetURLs(fmt.Sprintf("http://127.0.0.1:880%d", id)),
 		client.SetAPIKey("APIKey"),
-		client.SetTopologyDiscovery(false),
+		client.SetTopologyDiscovery(true),
 		client.SetHealthChecks(false),
-		client.SetMaxRetries(3),
+		client.SetMaxRetries(5),
+		client.SetAttemptToReviveEndpoints(true),
 	)
 	if err != nil {
 		return nil, err
