@@ -20,16 +20,20 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/testutils/rand"
-	"github.com/bbva/qed/testutils/scope"
-	assert "github.com/stretchr/testify/require"
+	"github.com/bbva/qed/testutils/scenario"
 )
 
 func TestAddBulkAndVerify(t *testing.T) {
-	before, after := setupServer(0, "", false, t)
-	scenario, let := scope.Scope(t, before, after)
-	// log.SetLogger("", log.DEBUG)
+	before, after := prepare_new_server(0, false)
+	let, report := scenario.New()
+	defer func() {
+		after()
+		t.Logf(report())
+	}()
+	log.SetLogger("e2e", log.DEBUG)
 
 	events := []string{
 		rand.RandomString(10),
@@ -43,56 +47,53 @@ func TestAddBulkAndVerify(t *testing.T) {
 		rand.RandomString(10),
 		rand.RandomString(10),
 	}
+	err := before()
+	scenario.NoError(t, err, "Error starting server")
 
-	scenario("Add one event and get its membership proof", func() {
+	let(t, "Add one event and get its membership proof", func(t *testing.T) {
 		var snapshotBulk []*protocol.Snapshot
 		var membershipBulk []*protocol.MembershipResult
 		var err error
 
-		client := getClient(t, 0)
+		client, err := new_qed_client(0)
+		scenario.NoError(t, err, "Error creating qed client")
 
-		let("Add event", func(t *testing.T) {
+		let(t, "Add event", func(t *testing.T) {
 			snapshotBulk, err = client.AddBulk(events)
-			assert.NoError(t, err)
+			scenario.NoError(t, err, "Error calling client.AddBulk")
 
 			for i, snapshot := range snapshotBulk {
-				assert.Equal(t, snapshot.EventDigest, hashing.NewSha256Hasher().Do([]byte(events[i])),
-					"The snapshot's event doesn't match: expected %s, actual %s", events[i], snapshot.EventDigest)
-				assert.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
-				assert.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
-				assert.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empt")
+				scenario.Equal(t, snapshot.EventDigest, hashing.NewSha256Hasher().Do([]byte(events[i])), "The snapshot's event doesn't match")
+				scenario.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
+				scenario.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
+				scenario.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empt")
 			}
 		})
 
-		let("Get membership proof for each inserted event", func(t *testing.T) {
+		let(t, "Get membership proof for each inserted event", func(t *testing.T) {
 			lastVersion := uint64(len(events) - 1)
 			for i, snapshot := range snapshotBulk {
 
 				result, err := client.Membership([]byte(events[i]), snapshot.Version)
-				assert.NoError(t, err)
+				scenario.NoError(t, err, "Error getting membership proof")
 
-				assert.True(t, result.Exists, "The queried key should be a member")
-				assert.Equal(t, result.QueryVersion, snapshot.Version,
-					"The query version doest't match the queried one: expected %d, actual %d", snapshot.Version, result.QueryVersion)
-				assert.Equal(t, result.ActualVersion, snapshot.Version,
-					"The actual version should match the queried one: expected %d, actual %d", snapshot.Version, result.ActualVersion)
-				assert.Equal(t, result.CurrentVersion, lastVersion,
-					"The current version should match the queried one: expected %d, actual %d", lastVersion, result.CurrentVersion)
-				assert.Equal(t, []byte(events[i]), result.Key,
-					"The returned event doesn't math the original one: expected %s, actual %s", events[i], result.Key)
-				assert.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
-				assert.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
-				assert.False(t, result.ActualVersion > 0 && len(result.History) == 0,
-					"The history proof cannot be empty when version is greater than 0")
+				scenario.True(t, result.Exists, "The queried key should be a member")
+				scenario.Equal(t, result.QueryVersion, snapshot.Version, "The query version doest't match the queried one")
+				scenario.Equal(t, result.ActualVersion, snapshot.Version, "The actual version should match the queried one")
+				scenario.Equal(t, result.CurrentVersion, lastVersion, "The current version should match the queried one")
+				scenario.Equal(t, []byte(events[i]), result.Key, "The returned event doesn't math the original one")
+				scenario.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
+				scenario.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
+				scenario.False(t, result.ActualVersion > 0 && len(result.History) == 0, "The history proof cannot be empty when version is greater than 0")
 
 				membershipBulk = append(membershipBulk, result)
 			}
 		})
 
-		let("Verify each membership", func(t *testing.T) {
+		let(t, "Verify each membership", func(t *testing.T) {
 			for i, result := range membershipBulk {
 				snap := snapshotBulk[i]
-				assert.True(t, client.DigestVerify(result, snap, hashing.NewSha256Hasher), "result should be valid")
+				scenario.True(t, client.DigestVerify(result, snap, hashing.NewSha256Hasher), "result should be valid")
 			}
 		})
 	})
