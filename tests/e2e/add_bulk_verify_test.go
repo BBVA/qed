@@ -33,7 +33,7 @@ func TestAddBulkAndVerify(t *testing.T) {
 		after()
 		t.Logf(report())
 	}()
-	log.SetLogger("e2e", log.DEBUG)
+	log.SetLogger("e2e", log.ERROR)
 
 	events := []string{
 		rand.RandomString(10),
