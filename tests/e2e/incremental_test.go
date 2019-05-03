@@ -27,7 +27,7 @@ import (
 )
 
 func TestIncrementalConsistency(t *testing.T) {
-	before, after := prepare_new_server(0, "", false)
+	before, after := prepare_new_server(0, false)
 	let, report := scenario.New()
 	defer func() {
 		after()
@@ -37,11 +37,10 @@ func TestIncrementalConsistency(t *testing.T) {
 
 	let(t, "Add multiple events and verify consistency between two of them", func(t *testing.T) {
 
-		client := getClient(t, 0)
-
+		client, err := new_qed_client(0)
+		scenario.NoError(t, err, "Error building client")
 		events := make([]string, 10)
 		snapshots := make([]*protocol.Snapshot, 10)
-		var err error
 		var result *protocol.IncrementalResponse
 
 		let(t, "Add ten events", func(t *testing.T) {
