@@ -57,7 +57,7 @@ func New() (LetF, ReportF) {
 func Equal(t *testing.T, exp, got interface{}, msg string) {
 	t.Helper()
 	if !reflect.DeepEqual(exp, got) {
-		t.Fatalf("Not equals: %s -> expecting '%v' got '%v' %s\n", msg, exp, got)
+		t.Fatalf("Not equals: %s -> expecting '%v' got '%v'\n", msg, exp, got)
 	}
 }
 
