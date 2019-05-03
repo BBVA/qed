@@ -236,8 +236,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 				"--endpoints=https://127.0.0.1:8800,https://127.0.0.1:8801,https://127.0.0.1:8802",
 				"add",
 				"--event='test event 2'",
-				"--attempt-to-revive-endpoints",
-				"--max-retries=3",
+				"--max-retries=5",
 				"--log=error",
 				"--insecure",
 			)
