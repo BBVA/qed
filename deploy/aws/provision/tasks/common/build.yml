@@ -22,7 +22,7 @@
     go build -o {{ item }}
   with_items:
     - config_files/bin/qed ../../../
-    - config_files/bin/storage ../../../tests/gossip/test_service.go
+    - config_files/bin/storage ../../../testutils/notifierstore.go
     - config_files/bin/riot ../../../tests/riot.go
   when: ansible_system == 'Linux'
 

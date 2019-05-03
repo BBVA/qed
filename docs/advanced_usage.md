@@ -75,7 +75,7 @@ an in-memory structure to store signed snapshots that acts as a public log-stora
 Moreover, it provides an alert endpoint to allow agents register its alerts.
 
 ```bash
-go run tests/e2e/gossip/test_service.go
+go run testutils/notifierstore.go
 ```
 
 To be production-ready, both services must be developed and deployed separatelly.
