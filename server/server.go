@@ -199,10 +199,8 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	go func() {
-		log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
-		s.metricsServer.Start()
-	}()
+	log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
+	s.metricsServer.Start()
 
 	if s.conf.EnableProfiling {
 		go func() {
