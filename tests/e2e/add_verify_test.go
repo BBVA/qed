@@ -17,117 +17,23 @@
 package e2e
 
 import (
-	"crypto/tls"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
-	"runtime/debug"
 	"testing"
 
-	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
-	"github.com/bbva/qed/server"
-	"github.com/bbva/qed/testutils/keys"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/testutils/scenario"
 )
 
-func config_server(id int, pathDB, signPath, tlsPath, addr string, tls bool) *server.Config {
-	hostname, _ := os.Hostname()
-	conf := server.DefaultConfig()
-	conf.APIKey = APIKey
-	conf.NodeID = fmt.Sprintf("%s-%d", hostname, id)
-	conf.HTTPAddr = fmt.Sprintf("127.0.0.1:880%d", id)
-	conf.MgmtAddr = fmt.Sprintf("127.0.0.1:870%d", id)
-	conf.MetricsAddr = fmt.Sprintf("127.0.0.1:860%d", id)
-	conf.RaftAddr = fmt.Sprintf("127.0.0.1:850%d", id)
-	conf.GossipAddr = fmt.Sprintf("127.0.0.1:840%d", id)
-	if id > 0 {
-		conf.RaftJoinAddr = []string{"127.0.0.1:8700"}
-		conf.GossipJoinAddr = []string{"127.0.0.1:8400"}
-	}
-	conf.DBPath = pathDB + "data"
-	conf.RaftPath = pathDB + "raft"
-	conf.PrivateKeyPath = signPath
-	if tls {
-		conf.SSLCertificate = tlsPath + "/cert.pem"
-		conf.SSLCertificateKey = tlsPath + "/key.pem"
-	}
-	conf.EnableTLS = tls
-
-	return conf
-}
-
-// This function creates a new server each time a scenario is called
-// Each server instance is completely new and blank.
-func prepare_new_server(id int, addr string, tls bool) (func() error, func() error) {
-	var srv *server.Server
-	var path string
-	var err error
-
-	before := func() error {
-		var tlsPath string
-
-		path, err = ioutil.TempDir("", "e2e-qed-")
-		if err != nil {
-			return err
-		}
-		signKeyPath, err := keys.GenerateSignKey(path)
-		if err != nil {
-			return err
-		}
-		if tls {
-			tlsPath, err = keys.GenerateTlsCert(path)
-			if err != nil {
-				return err
-			}
-		}
-		conf := config_server(id, path, signKeyPath, tlsPath, addr, false)
-		srv, err = server.NewServer(conf)
-		if err != nil {
-			return err
-		}
-		return srv.Start()
-	}
-
-	after := func() error {
-		srv.Stop()
-		debug.FreeOSMemory()
-		os.RemoveAll(path)
-		return nil
-	}
-	return before, after
-}
-
-func new_qed_client(id int) (*client.HTTPClient, error) {
-	// QED client
-	transport := http.DefaultTransport.(*http.Transport)
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
-	httpClient := http.DefaultClient
-	httpClient.Transport = transport
-	client, err := client.NewHTTPClient(
-		client.SetHttpClient(httpClient),
-		client.SetURLs(fmt.Sprintf("http://127.0.0.1:880%d", id)),
-		client.SetAPIKey(APIKey),
-		client.SetTopologyDiscovery(false),
-		client.SetHealthChecks(false),
-		client.SetMaxRetries(3),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
 func TestAddVerify(t *testing.T) {
-	before, after := prepare_new_server(0, "", false)
+	before, after := prepare_new_server(0, false)
 	let, report := scenario.New()
 	defer func() { t.Logf(report()) }()
 	// log.SetLogger("", log.DEBUG)
 	event := rand.RandomString(10)
 	before()
+
 	let(t, "Add one event and get its membership proof", func(t *testing.T) {
 		var snapshot *protocol.Snapshot
 		var err error
