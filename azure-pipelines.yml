@@ -23,7 +23,6 @@ steps:
     tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.12.4.tar.gz"
   displayName: 'Install Go 1.12.4'
 
-steps:
 - script: |
     mkdir -p '$(GOBIN)'
     mkdir -p '$(GOPATH)/pkg'
