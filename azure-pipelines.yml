@@ -19,6 +19,12 @@ variables:
 
 steps:
 - script: |
+    wget "https://dl.google.com/go/go1.12.4.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.12.4.tar.gz"
+    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.12.4.tar.gz"
+  displayName: 'Install Go 1.12.4'
+
+steps:
+- script: |
     mkdir -p '$(GOBIN)'
     mkdir -p '$(GOPATH)/pkg'
     mkdir -p '$(modulePath)'
@@ -31,13 +37,6 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-    ssh-keygen -t ed25519 -f $HOME/.ssh/id_ed25519 -P ''
-    openssl req -newkey rsa:2048 -nodes -days 3650 -x509 -keyout $HOME/.ssh/ca.key -out $HOME/.ssh/ca.crt -subj "/CN=*"
-    openssl req -newkey rsa:2048 -nodes -keyout $HOME/.ssh/server.key -out $HOME/.ssh/server.csr -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*"
-    openssl x509 -req -days 365 -sha256 -in $HOME/.ssh/server.csr -CA $HOME/.ssh/ca.crt -CAkey $HOME/.ssh/ca.key -CAcreateserial -out $HOME/.ssh/server.crt -extfile <(echo subjectAltName = IP:127.0.0.1)
-  displayName: 'Generate certificates'
-
-- script: |
     git submodule update --init --recursive
     cd c-deps
     ./builddeps.sh
@@ -46,10 +45,10 @@ steps:
   displayName: 'Build rocksdb'
 
 - script: |
-    GO111MODULE=auto go get github.com/jstemmer/go-junit-report
-    GO111MODULE=auto go get github.com/axw/gocov/gocov
-    GO111MODULE=auto go get github.com/AlekSi/gocov-xml 
-    GO111MODULE=auto go get gopkg.in/matm/v1/gocov-html
+    go get github.com/jstemmer/go-junit-report
+    go get github.com/axw/gocov/gocov
+    go get github.com/AlekSi/gocov-xml 
+    go get github.com/matm/gocov-html
   workingDirectory: '$(modulePath)'  
   displayName: 'Download code coverage tools'
   
