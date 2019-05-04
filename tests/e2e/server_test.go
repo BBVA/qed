@@ -27,6 +27,16 @@ import (
 	"github.com/bbva/qed/testutils/scenario"
 )
 
+// This test is used to profile server starting time
+// go test -v -cpuprofile=cpu2.out ./... -run ProfilingStart
+func TestProfilingStart(t *testing.T) {
+	before, after := prepare_new_server(0, false)
+	defer after()
+	err := before()
+	scenario.NoError(t, err, "Error starting server")
+	<-time.After(10 * time.Second)
+}
+
 func TestStart(t *testing.T) {
 	before, after := prepare_new_server(0, false)
 	let, report := scenario.New()
@@ -34,8 +44,8 @@ func TestStart(t *testing.T) {
 		after()
 		t.Logf(report())
 	}()
-	before()
-
+	err := before()
+	scenario.NoError(t, err, "Error starting server")
 	let(t, "Test availability of qed server", func(t *testing.T) {
 		let(t, "Query info endpoint", func(t *testing.T) {
 			var resp *http.Response

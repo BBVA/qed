@@ -97,5 +97,4 @@ func TestAddBulkAndVerify(t *testing.T) {
 			}
 		})
 	})
-
 }
