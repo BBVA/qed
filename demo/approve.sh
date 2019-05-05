@@ -14,7 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "Getting project"
-git clone https://github.com/gin-gonic/gin.git project
-cd project
-git checkout -b v1.3.0
+./get_project.sh
+echo "Checking dependencies..."
+sleep 2
+echo "Dependencies approved. Generating QED event..."
+./add_event0.sh
+echo "Done"
+

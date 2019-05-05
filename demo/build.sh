@@ -14,7 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "Getting project"
-git clone https://github.com/gin-gonic/gin.git project
-cd project
-git checkout -b v1.3.0
+export GO111MODULE=on
+
+mkdir -p build
+cd build
+../get_project.sh
+echo "Checking dependencies..."
+cd ..
+./membership_event0.sh
+echo "Dependencies list exist in QED!"
+sleep 2
+echo "Getting required Snapshot infomation."
+./get_snapshot.sh 0
+sleep 2
+echo "Verifiy dependencies auhenticity"
+./membership_verify_event0.sh
+
+if [[ "$?" -eq 0 ]]
+then
+    echo "Building project"
+    cd build/project
+    go build -o gin
+    echo "Generating artifact in build/project"
+    sleep 1
+    echo "gin binary file created"
+else
+    echo "Verification failed. The project has been tampered!"
+fi
+

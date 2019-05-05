@@ -14,7 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "Getting project"
-git clone https://github.com/gin-gonic/gin.git project
-cd project
-git checkout -b v1.3.0
+name="gin"
+version="v1.3.0"
+hash=$(sha256sum release/gin | sed 's/  release\/gin//g' )
+salt=$(echo -n $(hostname) | sha256sum | tr -d ' ' | tr -d '-')
+msg="$version $name"
+
+echo "
+{
+	\"msg\": \"$salt $msg $version\",
+	\"version\": \"$version\",
+	\"hash\": \"$hash\"
+}
+" > event2.json
+go run ../main.go client --api-key key --insecure add --event "$(cat event2.json)" --log info

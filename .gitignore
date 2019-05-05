@@ -18,6 +18,9 @@ tests/results
 c-deps/libs
 demo/project
 demo/event*
+demo/build
+demo/release
+demo/deploy
 
 # Documents 
 *.pdf

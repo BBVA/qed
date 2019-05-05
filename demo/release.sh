@@ -14,7 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "Getting project"
-git clone https://github.com/gin-gonic/gin.git project
-cd project
-git checkout -b v1.3.0
+mkdir -p release
+cd release
+echo "Checking Artifact..."
+cp ../build/project/gin .
+sleep 2
+echo "Artifact approved. Generating QED event..."
+cd ../
+./add_event2.sh
+echo "Uploading to artifact repository.."
+sleep 2
+echo "Done"
+
