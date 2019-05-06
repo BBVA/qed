@@ -189,16 +189,6 @@ func (c *HTTPClient) Close() {
 
 	log.Info("Closing QED client...")
 
-	if c.healthCheckEnabled {
-		c.healthCheckStopCh <- true
-		<-c.healthCheckStopCh
-	}
-	/*
-		if c.discoveryEnabled {
-			c.discoveryStopCh <- true
-			<-c.discoveryStopCh
-		}
-	*/
 	close(c.healthCheckStopCh)
 	close(c.discoveryStopCh)
 
@@ -431,8 +421,6 @@ func (c *HTTPClient) startHealthChecker() {
 	for {
 		select {
 		case <-c.healthCheckStopCh:
-			// we are asked to stop, so we signal back that we're stopping now
-			c.healthCheckStopCh <- true
 			return
 		case <-ticker.C:
 			c.healthCheck(timeout)
