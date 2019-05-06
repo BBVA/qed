@@ -13,8 +13,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -x
+echo "BUILDING QED EVENT FROM GO.MOD"
+msg="message"
+version="v1.0.0"
+hash=$(echo -n $version | sha256sum | cut -d' ' -f1)
+salt=$(echo -n $(hostname) | sha256sum | cut -d' ' -f1)
 
-echo -e "CLONING PROJECT\n"
-git clone https://github.com/gin-gonic/gin.git project
-cd project
-git checkout -b v1.3.0
+echo "
+{
+	\"msg\": \"$salt $msg\",
+	\"version\": \"$version\",
+	\"hash\": \"$hash\"
+}
+" > event1.json
+echo -e "\t RESULTING QED EVENT:"
+cat event1.json
+read -p "Press intro to continue"
+
+echo -e "\t ASKING FOR MEMBERSHIP PROOF:"
+echo "go run ../main.go client membership --api-key key --insecure --event "$(cat event1.json)" --log info"

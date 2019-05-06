@@ -14,7 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo -e "CLONING PROJECT\n"
-git clone https://github.com/gin-gonic/gin.git project
-cd project
-git checkout -b v1.3.0
+mkdir -p deploy
+echo "DOWNLOADING ARTIFACT"
+cp build/project/gin deploy/
+./membership_event2.sh
+read -p "Press intro to continue"
+
+echo -e "\n GETTING SNAPSHOT INFO. FROM SNAPSHOT STORE \n"
+./get_snapshot.sh 2
+read -p "Press intro to continue"
+
+echo "VERIFY ARTIFACT.."
+./membership_verify_event2.sh
+
+echo -e "\n GETTING SNAPSHOT INFO FOR VERSION 0. FROM SNAPSHOT STORE \n"
+./get_snapshot.sh 0
+echo -e "\n GETTING SNAPSHOT INFO FOR VERSION 2. FROM SNAPSHOT STORE \n"
+./get_snapshot.sh 2
+
+read -p "Press intro to continue"
+echo "DEPLOYING ARTIFACTS.."
+read -p "Press intro to continue"
+echo "DONE"
+

@@ -14,7 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo -e "CLONING PROJECT\n"
-git clone https://github.com/gin-gonic/gin.git project
-cd project
-git checkout -b v1.3.0
+echo "BUILDING QED EVENT FROM BINARY FILE GIN"
+name="gin"
+version="v1.3.0"
+hash=$(sha256sum deploy/gin | cut -d' ' -f1 )
+salt=$(echo -n $(hostname) | sha256sum | cut -d' ' -f1)
+msg="$version $name"
+
+echo "
+{
+	\"msg\": \"$salt $msg\",
+	\"version\": \"$version\",
+	\"hash\": \"$hash\"
+}
+" > event2.json
+
+echo -e "\t RESULTING QED EVENT:"
+cat event2.json
+read -p "Press intro to continue"
+
+echo -e "\t ASKING FOR MEMBERSHIP PROOF:"
+go run ../main.go client membership --api-key key --insecure --event "$(cat event2.json | xargs)" --log info

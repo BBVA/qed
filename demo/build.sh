@@ -19,15 +19,16 @@ export GO111MODULE=on
 mkdir -p build
 cd build
 ../get_project.sh
-echo "Checking dependencies..."
 cd ..
+read -p "Press intro to continue"
 ./membership_event0.sh
-echo "Dependencies list exist in QED!"
-sleep 2
-echo "Getting required Snapshot infomation."
+read -p "Press intro to continue"
+
+echo -e "\n GETTING SNAPSHOT INFO. FROM SNAPSHOT STORE \n"
 ./get_snapshot.sh 0
-sleep 2
-echo "Verifiy dependencies auhenticity"
+read -p "Press intro to continue"
+
+echo -e "\n VERIFY DEPENDENCIES AUTHENTICITY\n"
 ./membership_verify_event0.sh
 
 if [[ "$?" -eq 0 ]]

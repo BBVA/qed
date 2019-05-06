@@ -15,9 +15,9 @@
 # limitations under the License.
 
 ./get_project.sh
-echo "Checking dependencies..."
+echo "CHECKING DEPENDENCIES..."
 sleep 2
-echo "Dependencies approved. Generating QED event..."
+echo "DEPENDENCIES APPROVED..."
 ./add_event0.sh
 echo "Done"
 

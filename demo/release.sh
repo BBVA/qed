@@ -16,13 +16,13 @@
 
 mkdir -p release
 cd release
-echo "Checking Artifact..."
+echo "CHECKING ARTIFACT"
 cp ../build/project/gin .
-sleep 2
-echo "Artifact approved. Generating QED event..."
+read -p "Press intro to continue"
+echo "ARTIFACT APPROVED. GENERATING QED EVENT..."
 cd ../
 ./add_event2.sh
-echo "Uploading to artifact repository.."
-sleep 2
-echo "Done"
+echo "UPLOAD TO ARTIFACTS REPOSITORY.."
+read -p "Press intro to continue"
+echo "DONE"
 

@@ -14,4 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-go run ../main.go client membership --api-key key --insecure add --event "$(cat event0.json)" --log info
+echo "BUILDING QED EVENT FROM GO.MOD"
+msg=$(cat build/project/go.mod | xargs )
+version="v1.3.0"
+hash=$(sha256sum build/project/go.mod | cut -d' ' -f1)
+salt=$(echo -n $(hostname) | sha256sum | tr -d ' ' | tr -d '-')
+
+echo "
+{
+	\"msg\": \"$salt $msg\",
+	\"version\": \"$version\",
+	\"hash\": \"$hash\"
+}
+" > event0.json
+echo -e "\t RESULTING QED EVENT:"
+cat event0.json
+read -p "Press intro to continue"
+
+echo -e "\t ASKING FOR MEMBERSHIP PROOF:"
+echo 'go run ../main.go client membership --api-key key --insecure --event "$(cat event0.json)" --log info'

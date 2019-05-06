@@ -16,7 +16,7 @@
 
 echo Starting services
 ../tests/start_server &
-sleep 5
+sleep 15
 ../tests/start_agent publisher &
 sleep 5
 go run ../testutils/notifierstore.go &

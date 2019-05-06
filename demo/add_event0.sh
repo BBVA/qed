@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+echo "BUILDING QED EVENT FROM GO.MOD"
 msg=$(cat project/go.mod | xargs )
 version="v1.3.0"
 hash=$(sha256sum project/go.mod | cut -d' ' -f1)
@@ -26,4 +27,6 @@ echo "
 	\"hash\": \"$hash\"
 }
 " > event0.json
+echo -e "\t RESULTING QED EVENT:"
+cat event0.json
 go run ../main.go client --api-key key --insecure add --event "$(cat event0.json)" --log info

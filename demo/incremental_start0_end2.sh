@@ -14,7 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo -e "CLONING PROJECT\n"
-git clone https://github.com/gin-gonic/gin.git project
-cd project
-git checkout -b v1.3.0
+echo -e "\t ASKING FOR INCREMENTAL PROOF VERIFICATION:"
+go run ../main.go client incremental --api-key key --insecure --log info --start 0 --end 2 --verify
