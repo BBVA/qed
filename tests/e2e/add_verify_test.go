@@ -23,90 +23,97 @@ import (
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/testutils/rand"
-	"github.com/bbva/qed/testutils/scope"
-	assert "github.com/stretchr/testify/require"
+	"github.com/bbva/qed/testutils/spec"
 )
 
-func TestAddAndVerify(t *testing.T) {
-	before, after := setupServer(0, "", false, t)
-	scenario, let := scope.Scope(t, before, after)
+func TestAddVerify(t *testing.T) {
+	before, after := newServerSetup(0, false)
+	let, report := spec.New()
+	defer func() { t.Logf(report()) }()
 	// log.SetLogger("", log.DEBUG)
 	event := rand.RandomString(10)
+	err := before()
+	spec.NoError(t, err, "Error starting server")
 
-	scenario("Add one event and get its membership proof", func() {
+	let(t, "Add one event and get its membership proof", func(t *testing.T) {
 		var snapshot *protocol.Snapshot
 		var err error
 
-		client := getClient(t, 0)
-
-		let("Add event", func(t *testing.T) {
+		client, err := newQedClient(0)
+		spec.NoError(t, err, "Error creating qed client")
+		defer func() { client.Close() }()
+		
+		let(t, "Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
-			assert.NoError(t, err)
+			spec.NoError(t, err, "Error adding event")
 
-			assert.Equal(t, snapshot.EventDigest, hashing.NewSha256Hasher().Do([]byte(event)),
-				"The snapshot's event doesn't match: expected %s, actual %s", event, snapshot.EventDigest)
-			assert.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
-			assert.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
-			assert.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empt")
+			spec.Equal(t, snapshot.EventDigest, hashing.NewSha256Hasher().Do([]byte(event)), "The snapshot's event doesn't match")
+			spec.False(t, snapshot.Version < 0, "The snapshot's version must be greater or equal to 0")
+			spec.False(t, len(snapshot.HyperDigest) == 0, "The snapshot's hyperDigest cannot be empty")
+			spec.False(t, len(snapshot.HistoryDigest) == 0, "The snapshot's hyperDigest cannot be empt")
 		})
 
-		let("Get membership proof for first inserted event", func(t *testing.T) {
+		let(t, "Get membership proof for first inserted event", func(t *testing.T) {
 			result, err := client.Membership([]byte(event), snapshot.Version)
-			assert.NoError(t, err)
+			spec.NoError(t, err, "Error getting membership proof")
 
-			assert.True(t, result.Exists, "The queried key should be a member")
-			assert.Equal(t, result.QueryVersion, snapshot.Version,
-				"The query version doest't match the queried one: expected %d, actual %d", snapshot.Version, result.QueryVersion)
-			assert.Equal(t, result.ActualVersion, snapshot.Version,
-				"The actual version should match the queried one: expected %d, actual %d", snapshot.Version, result.ActualVersion)
-			assert.Equal(t, result.CurrentVersion, snapshot.Version,
-				"The current version should match the queried one: expected %d, actual %d", snapshot.Version, result.CurrentVersion)
-			assert.Equal(t, []byte(event), result.Key,
-				"The returned event doesn't math the original one: expected %s, actual %s", event, result.Key)
-			assert.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
-			assert.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
-			assert.False(t, result.ActualVersion > 0 && len(result.History) == 0,
-				"The history proof cannot be empty when version is greater than 0")
+			spec.True(t, result.Exists, "The queried key should be a member")
+			spec.Equal(t, result.QueryVersion, snapshot.Version, "The query version doest't match the queried one")
+			spec.Equal(t, result.ActualVersion, snapshot.Version, "The actual version should match the queried one")
+			spec.Equal(t, result.CurrentVersion, snapshot.Version, "The current version should match the queried one")
+			spec.Equal(t, []byte(event), result.Key, "The returned event doesn't math the original one")
+			spec.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
+			spec.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
+			spec.False(t, result.ActualVersion > 0 && len(result.History) == 0, "The history proof cannot be empty when version is greater than 0")
 
 		})
 	})
-
-	scenario("Add two events, verify the first one", func() {
+	after()
+	err = before()
+	spec.NoError(t, err, "Error starting server")
+	let(t, "Add two events, verify the first one", func(t *testing.T) {
 		var resultFirst, resultLast *protocol.MembershipResult
 		var err error
 		var first, last *protocol.Snapshot
 
-		client := getClient(t, 0)
+		client, err := newQedClient(0)
+		spec.NoError(t, err, "Error creating a new qed client")
+		defer func(){ client.Close() }()
 
 		first, err = client.Add("Test event 1")
-		assert.NoError(t, err)
+		spec.NoError(t, err, "Error adding event 1")
 		last, err = client.Add("Test event 2")
-		assert.NoError(t, err)
+		spec.NoError(t, err, "Error adding event 2")
 
-		let("Get membership proof for inserted events", func(t *testing.T) {
+		let(t, "Get membership proof for inserted events", func(t *testing.T) {
 			resultFirst, err = client.MembershipDigest(first.EventDigest, first.Version)
-			assert.NoError(t, err)
+			spec.NoError(t, err, "Error getting membership digest")
 			resultLast, err = client.MembershipDigest(last.EventDigest, last.Version)
-			assert.NoError(t, err)
+			spec.NoError(t, err, "Error getting membership digest")
 		})
 
-		let("Verify events", func(t *testing.T) {
+		let(t, "Verify events", func(t *testing.T) {
 			first.HyperDigest = last.HyperDigest
-			assert.True(t, client.DigestVerify(resultFirst, first, hashing.NewSha256Hasher), "The first proof should be valid")
-			assert.True(t, client.DigestVerify(resultLast, last, hashing.NewSha256Hasher), "The last proof should be valid")
+			spec.True(t, client.DigestVerify(resultFirst, first, hashing.NewSha256Hasher), "The first proof should be valid")
+			spec.True(t, client.DigestVerify(resultLast, last, hashing.NewSha256Hasher), "The last proof should be valid")
 		})
 
 	})
 
-	scenario("Add 10 events, verify event with index i", func() {
+	after()
+	err = before()
+	spec.NoError(t, err, "Error starting server")
+	let(t, "Add 10 events, verify event with index i", func(t *testing.T) {
 		var p1, p2 *protocol.MembershipResult
 		var err error
 		const size int = 10
 
 		var s [size]*protocol.Snapshot
 
-		client := getClient(t, 0)
-
+		client, err := newQedClient(0)
+		spec.NoError(t, err, "Error creating a new qed client")
+		defer func(){ client.Close() }()
+		
 		for i := 0; i < size; i++ {
 			s[i], _ = client.Add(fmt.Sprintf("Test Event %d", i))
 		}
@@ -115,21 +122,21 @@ func TestAddAndVerify(t *testing.T) {
 		j := 6
 		k := 9
 
-		let("Get proofs p1, p2 for event with index i in versions j and k", func(t *testing.T) {
+		let(t, "Get proofs p1, p2 for event with index i in versions j and k", func(t *testing.T) {
 			p1, err = client.MembershipDigest(s[i].EventDigest, s[j].Version)
-			assert.NoError(t, err)
+			spec.NoError(t, err, "Error getting membership digest")
 			p2, err = client.MembershipDigest(s[i].EventDigest, s[k].Version)
-			assert.NoError(t, err)
+			spec.NoError(t, err, "Error getting membership digest")
 		})
 
-		let("Verify both proofs against index i event", func(t *testing.T) {
+		let(t, "Verify both proofs against index i event", func(t *testing.T) {
 			snap := &protocol.Snapshot{
 				HistoryDigest: s[j].HistoryDigest,
 				HyperDigest:   s[9].HyperDigest,
 				Version:       s[j].Version,
 				EventDigest:   s[i].EventDigest,
 			}
-			assert.True(t, client.DigestVerify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
+			spec.True(t, client.DigestVerify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
 
 			snap = &protocol.Snapshot{
 				HistoryDigest: s[k].HistoryDigest,
@@ -137,9 +144,11 @@ func TestAddAndVerify(t *testing.T) {
 				Version:       s[k].Version,
 				EventDigest:   s[i].EventDigest,
 			}
-			assert.True(t, client.DigestVerify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
+			spec.True(t, client.DigestVerify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
 
 		})
 
 	})
+	after()
+
 }
