@@ -95,7 +95,7 @@ func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
 //	- signPath: oath to where the signer key is stored
 //	- tlsPath: path to where the tls cer and key are stored
 //	- tls: if true, tls is activated
-func config_server(id int, pathDB, signPath, tlsPath string, tls bool) *server.Config {
+func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server.Config {
 	hostname, _ := os.Hostname()
 	conf := server.DefaultConfig()
 	conf.APIKey = "APIKey"
@@ -126,7 +126,7 @@ func config_server(id int, pathDB, signPath, tlsPath string, tls bool) *server.C
 // 	- the second one deletes the server the first one created
 // Each server instance is completely new and blank.
 // It will also generate all the needed keys for the instance.
-func prepare_new_server(id int, tls bool) (func() error, func() error) {
+func newServerSetup(id int, tls bool) (func() error, func() error) {
 	var srv *server.Server
 	var path string
 	var err error
@@ -148,7 +148,7 @@ func prepare_new_server(id int, tls bool) (func() error, func() error) {
 				return err
 			}
 		}
-		conf := config_server(id, path, signKeyPath, tlsPath, tls)
+		conf := configQedServer(id, path, signKeyPath, tlsPath, tls)
 		srv, err = server.NewServer(conf)
 		if err != nil {
 			return err
@@ -169,7 +169,7 @@ func prepare_new_server(id int, tls bool) (func() error, func() error) {
 
 // This function will return a new qed http client.
 // Always check for the error.
-func new_qed_client(id int) (*client.HTTPClient, error) {
+func newQedClient(id int) (*client.HTTPClient, error) {
 	// QED client
 	transport := http.DefaultTransport.(*http.Transport)
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}

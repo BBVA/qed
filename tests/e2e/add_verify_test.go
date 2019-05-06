@@ -27,20 +27,22 @@ import (
 )
 
 func TestAddVerify(t *testing.T) {
-	before, after := prepare_new_server(0, false)
+	before, after := newServerSetup(0, false)
 	let, report := spec.New()
 	defer func() { t.Logf(report()) }()
 	// log.SetLogger("", log.DEBUG)
 	event := rand.RandomString(10)
-	before()
+	err := before()
+	spec.NoError(t, err, "Error starting server")
 
 	let(t, "Add one event and get its membership proof", func(t *testing.T) {
 		var snapshot *protocol.Snapshot
 		var err error
 
-		client, err := new_qed_client(0)
+		client, err := newQedClient(0)
 		spec.NoError(t, err, "Error creating qed client")
-
+		defer func() { client.Close() }()
+		
 		let(t, "Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
 			spec.NoError(t, err, "Error adding event")
@@ -67,14 +69,16 @@ func TestAddVerify(t *testing.T) {
 		})
 	})
 	after()
-	before()
+	err = before()
+	spec.NoError(t, err, "Error starting server")
 	let(t, "Add two events, verify the first one", func(t *testing.T) {
 		var resultFirst, resultLast *protocol.MembershipResult
 		var err error
 		var first, last *protocol.Snapshot
 
-		client, err := new_qed_client(0)
+		client, err := newQedClient(0)
 		spec.NoError(t, err, "Error creating a new qed client")
+		defer func(){ client.Close() }()
 
 		first, err = client.Add("Test event 1")
 		spec.NoError(t, err, "Error adding event 1")
@@ -97,7 +101,8 @@ func TestAddVerify(t *testing.T) {
 	})
 
 	after()
-	before()
+	err = before()
+	spec.NoError(t, err, "Error starting server")
 	let(t, "Add 10 events, verify event with index i", func(t *testing.T) {
 		var p1, p2 *protocol.MembershipResult
 		var err error
@@ -105,9 +110,10 @@ func TestAddVerify(t *testing.T) {
 
 		var s [size]*protocol.Snapshot
 
-		client, err := new_qed_client(0)
-		spec.NoError(t, err, "Error getting new qed client")
-
+		client, err := newQedClient(0)
+		spec.NoError(t, err, "Error creating a new qed client")
+		defer func(){ client.Close() }()
+		
 		for i := 0; i < size; i++ {
 			s[i], _ = client.Add(fmt.Sprintf("Test Event %d", i))
 		}

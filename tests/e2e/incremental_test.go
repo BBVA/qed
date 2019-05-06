@@ -27,18 +27,19 @@ import (
 )
 
 func TestIncrementalConsistency(t *testing.T) {
-	before, after := prepare_new_server(0, false)
+	before, after := newServerSetup(0, false)
 	let, report := spec.New()
 	defer func() {
 		after()
 		t.Logf(report())
 	}()
-	before()
+	err := before()
+	spec.NoError(t, err, "Error starting server")
 
 	let(t, "Add multiple events and verify consistency between two of them", func(t *testing.T) {
-
-		client, err := new_qed_client(0)
-		spec.NoError(t, err, "Error building client")
+		client, err := newQedClient(0)
+		spec.NoError(t, err, "Error creating a new qed client")
+		defer func(){ client.Close() }()
 		events := make([]string, 10)
 		snapshots := make([]*protocol.Snapshot, 10)
 		var result *protocol.IncrementalResponse
