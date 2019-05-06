@@ -29,4 +29,4 @@ echo "
 " > event2.json
 echo -e "\t RESULTING QED EVENT:"
 cat event2.json
-go run ../main.go client --api-key key --insecure add --event "$(cat event2.json)" --log info
+/tmp/qed client --api-key key --insecure add --event "$(cat event2.json)" --log info

@@ -32,4 +32,4 @@ echo -e "\t RESULTING QED EVENT:"
 cat event2.json
 read -p "Press intro to continue"
 echo -e "\t ASKING FOR MEMBERSHIP PROOF VERIFICATION:"
-go run ../main.go client membership --api-key key --insecure --event "$(cat event2.json)" --verify --log info --version 2
+/tmp/qed client membership --api-key key --insecure --event "$(cat event2.json)" --verify --log info --version 2

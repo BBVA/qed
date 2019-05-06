@@ -32,4 +32,4 @@ cat event0.json
 read -p "Press intro to continue"
 
 echo -e "\t ASKING FOR MEMBERSHIP PROOF:"
-go run ../main.go client membership --api-key key --insecure --event "$(cat event0.json)" --log info
+/tmp/qed client membership --api-key key --insecure --event "$(cat event0.json)" --log info

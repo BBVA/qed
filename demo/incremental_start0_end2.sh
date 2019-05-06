@@ -15,4 +15,4 @@
 # limitations under the License.
 
 echo -e "\t ASKING FOR INCREMENTAL PROOF VERIFICATION:"
-go run ../main.go client incremental --api-key key --insecure --log info --start 0 --end 2 --verify
+/tmp/qed client incremental --api-key key --insecure --log info --start 0 --end 2 --verify

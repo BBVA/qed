@@ -15,6 +15,7 @@
 # limitations under the License.
 
 echo Starting services
+go build -o /tmp/qed ../
 ../tests/start_server &
 sleep 15
 ../tests/start_agent publisher &

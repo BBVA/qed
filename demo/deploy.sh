@@ -17,8 +17,8 @@
 mkdir -p deploy
 echo "DOWNLOADING ARTIFACT"
 cp build/project/gin deploy/
-./membership_event2.sh
 read -p "Press intro to continue"
+./membership_event2.sh
 
 echo -e "\n GETTING SNAPSHOT INFO. FROM SNAPSHOT STORE \n"
 ./get_snapshot.sh 2
@@ -27,6 +27,7 @@ read -p "Press intro to continue"
 echo "VERIFY ARTIFACT.."
 ./membership_verify_event2.sh
 
+read -p "Press intro to continue"
 echo -e "\n GETTING SNAPSHOT INFO FOR VERSION 0. FROM SNAPSHOT STORE \n"
 ./get_snapshot.sh 0
 echo -e "\n GETTING SNAPSHOT INFO FOR VERSION 2. FROM SNAPSHOT STORE \n"

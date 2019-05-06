@@ -20,8 +20,17 @@ mkdir -p build
 cd build
 ../get_project.sh
 cd ..
-read -p "Press intro to continue"
-./membership_event0.sh
+
+echo -n'' | ./membership_event0.sh > /tmp/membership_result
+membership_check=$(grep "true" /tmp/membership_result)
+
+if [[ "$membership_check" = " Exists: true" ]];
+then
+    ./membership_event0.sh
+else
+    echo -e "EVENT NOT FOUND\nBUILD FAILED!"
+    exit 1
+fi
 read -p "Press intro to continue"
 
 echo -e "\n GETTING SNAPSHOT INFO. FROM SNAPSHOT STORE \n"
