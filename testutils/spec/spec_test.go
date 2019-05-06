@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package scenario
+package spec
 
 import (
 	"fmt"

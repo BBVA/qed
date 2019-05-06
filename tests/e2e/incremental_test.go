@@ -23,12 +23,12 @@ import (
 	"github.com/bbva/qed/protocol"
 
 	"github.com/bbva/qed/testutils/rand"
-	"github.com/bbva/qed/testutils/scenario"
+	"github.com/bbva/qed/testutils/spec"
 )
 
 func TestIncrementalConsistency(t *testing.T) {
 	before, after := prepare_new_server(0, false)
-	let, report := scenario.New()
+	let, report := spec.New()
 	defer func() {
 		after()
 		t.Logf(report())
@@ -38,7 +38,7 @@ func TestIncrementalConsistency(t *testing.T) {
 	let(t, "Add multiple events and verify consistency between two of them", func(t *testing.T) {
 
 		client, err := new_qed_client(0)
-		scenario.NoError(t, err, "Error building client")
+		spec.NoError(t, err, "Error building client")
 		events := make([]string, 10)
 		snapshots := make([]*protocol.Snapshot, 10)
 		var result *protocol.IncrementalResponse
@@ -47,19 +47,19 @@ func TestIncrementalConsistency(t *testing.T) {
 			for i := 0; i < 10; i++ {
 				events[i] = rand.RandomString(10)
 				snapshots[i], err = client.Add(events[i])
-				scenario.NoError(t, err, "Error adding event")
+				spec.NoError(t, err, "Error adding event")
 			}
 		})
 
 		let(t, "Query for an incremental proof between version 2 and version 8", func(t *testing.T) {
 			result, err = client.Incremental(2, 8)
-			scenario.NoError(t, err, "error getting incremental proof")
-			scenario.Equal(t, uint64(2), result.Start, "The start version should match")
-			scenario.Equal(t, uint64(8), result.End, "The end version should match")
+			spec.NoError(t, err, "error getting incremental proof")
+			spec.Equal(t, uint64(2), result.Start, "The start version should match")
+			spec.Equal(t, uint64(8), result.End, "The end version should match")
 		})
 
 		let(t, "Verify the proof", func(t *testing.T) {
-			scenario.True(t, client.VerifyIncremental(result, snapshots[2], snapshots[8], hashing.NewSha256Hasher()), "The proofs should be valid")
+			spec.True(t, client.VerifyIncremental(result, snapshots[2], snapshots[8], hashing.NewSha256Hasher()), "The proofs should be valid")
 		})
 
 	})
