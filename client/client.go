@@ -193,12 +193,12 @@ func (c *HTTPClient) Close() {
 		c.healthCheckStopCh <- true
 		<-c.healthCheckStopCh
 	}
-
-	if c.discoveryEnabled {
-		c.discoveryStopCh <- true
-		<-c.discoveryStopCh
-	}
-
+	/*
+		if c.discoveryEnabled {
+			c.discoveryStopCh <- true
+			<-c.discoveryStopCh
+		}
+	*/
 	close(c.healthCheckStopCh)
 	close(c.discoveryStopCh)
 

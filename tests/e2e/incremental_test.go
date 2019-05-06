@@ -21,42 +21,46 @@ import (
 
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
-	assert "github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/testutils/rand"
-	"github.com/bbva/qed/testutils/scope"
+	"github.com/bbva/qed/testutils/spec"
 )
 
 func TestIncrementalConsistency(t *testing.T) {
-	before, after := setupServer(0, "", false, t)
-	scenario, let := scope.Scope(t, before, after)
+	before, after := newServerSetup(0, false)
+	let, report := spec.New()
+	defer func() {
+		after()
+		t.Logf(report())
+	}()
+	err := before()
+	spec.NoError(t, err, "Error starting server")
 
-	scenario("Add multiple events and verify consistency between two of them", func() {
-
-		client := getClient(t, 0)
-
+	let(t, "Add multiple events and verify consistency between two of them", func(t *testing.T) {
+		client, err := newQedClient(0)
+		spec.NoError(t, err, "Error creating a new qed client")
+		defer func(){ client.Close() }()
 		events := make([]string, 10)
 		snapshots := make([]*protocol.Snapshot, 10)
-		var err error
 		var result *protocol.IncrementalResponse
 
-		let("Add ten events", func(t *testing.T) {
+		let(t, "Add ten events", func(t *testing.T) {
 			for i := 0; i < 10; i++ {
 				events[i] = rand.RandomString(10)
 				snapshots[i], err = client.Add(events[i])
-				assert.NoError(t, err)
+				spec.NoError(t, err, "Error adding event")
 			}
 		})
 
-		let("Query for an incremental proof between version 2 and version 8", func(t *testing.T) {
+		let(t, "Query for an incremental proof between version 2 and version 8", func(t *testing.T) {
 			result, err = client.Incremental(2, 8)
-			assert.NoError(t, err)
-			assert.Equal(t, uint64(2), result.Start, "The start version should match")
-			assert.Equal(t, uint64(8), result.End, "The end version should match")
+			spec.NoError(t, err, "error getting incremental proof")
+			spec.Equal(t, uint64(2), result.Start, "The start version should match")
+			spec.Equal(t, uint64(8), result.End, "The end version should match")
 		})
 
-		let("Verify the proof", func(t *testing.T) {
-			assert.True(t, client.VerifyIncremental(result, snapshots[2], snapshots[8], hashing.NewSha256Hasher()), "The proofs should be valid")
+		let(t, "Verify the proof", func(t *testing.T) {
+			spec.True(t, client.VerifyIncremental(result, snapshots[2], snapshots[8], hashing.NewSha256Hasher()), "The proofs should be valid")
 		})
 
 	})
