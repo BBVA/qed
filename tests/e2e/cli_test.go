@@ -18,26 +18,25 @@ package e2e
 
 import (
 	"fmt"
-	// "math/rand"
 	"os/exec"
 	"strings"
 	"testing"
 
 	// "github.com/bbva/qed/log"
-	"github.com/bbva/qed/testutils/scenario"
+	"github.com/bbva/qed/testutils/spec"
 )
 
 func Test_Client_To_Single_Server(t *testing.T) {
 	// log.SetLogger("test_client_to_single_server", log.DEBUG)
 	b0, a0 := prepare_new_server(0, true)
-	let, report := scenario.New()
+	let, report := spec.New()
 	defer func() {
 		a0()
 		t.Logf(report())
 	}()
 
 	err := b0()
-	scenario.NoError(t, err, "Error starting server")
+	spec.NoError(t, err, "Error starting server")
 
 	let(t, "Add one event through cli and verify it", func(t *testing.T) {
 
@@ -61,7 +60,7 @@ func Test_Client_To_Single_Server(t *testing.T) {
 
 			fmt.Println(string(output))
 
-			scenario.NoError(t, err, "Client returned error")
+			spec.NoError(t, err, "Client returned error")
 		})
 
 		let(t, "Verify membership proof with an event digest", func(t *testing.T) {
@@ -87,12 +86,12 @@ func Test_Client_To_Single_Server(t *testing.T) {
 
 			fmt.Println(string(output))
 
-			scenario.NoError(t, err, "Client returned an error")
+			spec.NoError(t, err, "Client returned an error")
 			// This check depends on the client print format
 			// which makes it fragile.
 			// IF the client returns a 0, the the command is succesfull and no
 			// furhter check should be needed.
-			scenario.True(t, strings.Contains(string(output), "Verify: OK"), "Must verify with eventDigest")
+			spec.True(t, strings.Contains(string(output), "Verify: OK"), "Must verify with eventDigest")
 		})
 
 		let(t, "Verify membership proof with a plain event", func(t *testing.T) {
@@ -115,8 +114,8 @@ func Test_Client_To_Single_Server(t *testing.T) {
 
 			stdoutStderr, err := cmd.CombinedOutput()
 
-			scenario.NoError(t, err, "Subprocess must not exit with status 1")
-			scenario.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+			spec.NoError(t, err, "Subprocess must not exit with status 1")
+			spec.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 		})
 
 	})
@@ -126,7 +125,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 	b0, a0 := prepare_new_server(0, true)
 	b1, a1 := prepare_new_server(1, true)
 	b2, a2 := prepare_new_server(2, true)
-	let, report := scenario.New()
+	let, report := spec.New()
 	defer func() {
 		// a0()
 		a1()
@@ -135,11 +134,11 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 	}()
 
 	err := b0()
-	scenario.NoError(t, err, "Error starting node 0")
+	spec.NoError(t, err, "Error starting node 0")
 	err = b1()
-	scenario.NoError(t, err, "Error starting node 1")
+	spec.NoError(t, err, "Error starting node 1")
 	err = b2()
-	scenario.NoError(t, err, "Error starting node 2")
+	spec.NoError(t, err, "Error starting node 2")
 
 	let(t, "Add one event through cli and verify it", func(t *testing.T) {
 		let(t, "Add event", func(t *testing.T) {
@@ -162,7 +161,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 			fmt.Println(string(output))
 
-			scenario.NoError(t, err, "Client returned error")
+			spec.NoError(t, err, "Client returned error")
 		})
 
 		let(t, "Verify membership proof with an event digest", func(t *testing.T) {
@@ -188,12 +187,12 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 			fmt.Println(string(output))
 
-			scenario.NoError(t, err, "Client returned an error")
+			spec.NoError(t, err, "Client returned an error")
 			// This check depends on the client print format
 			// which makes it fragile.
 			// IF the client returns a 0, the the command is succesfull and no
 			// furhter check should be needed.
-			scenario.True(t, strings.Contains(string(output), "Verify: OK"), "Must verify with eventDigest")
+			spec.True(t, strings.Contains(string(output), "Verify: OK"), "Must verify with eventDigest")
 		})
 
 		let(t, "Verify membership proof with a plain event", func(t *testing.T) {
@@ -216,13 +215,13 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 			stdoutStderr, err := cmd.CombinedOutput()
 
-			scenario.NoError(t, err, "Subprocess must not exit with status 1")
-			scenario.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
+			spec.NoError(t, err, "Subprocess must not exit with status 1")
+			spec.True(t, strings.Contains(fmt.Sprintf("%s", stdoutStderr), "Verify: OK"), "Must verify with eventDigest")
 		})
 
 		let(t, "Shutdown server 0", func(t *testing.T) {
 			err = a0()
-			scenario.NoError(t, err, "error stoping server")
+			spec.NoError(t, err, "error stoping server")
 
 		})
 
@@ -245,7 +244,7 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 
 			fmt.Println(string(output))
 
-			scenario.NoError(t, err, "Client returned error")
+			spec.NoError(t, err, "Client returned error")
 		})
 
 	})
@@ -255,7 +254,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 	b0, a0 := prepare_new_server(0, true)
 	b1, a1 := prepare_new_server(1, true)
 
-	let, report := scenario.New()
+	let, report := spec.New()
 	defer func() {
 		a0()
 		a1()
@@ -263,9 +262,9 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 	}()
 
 	err := b0()
-	scenario.NoError(t, err, "Error starting node 0")
+	spec.NoError(t, err, "Error starting node 0")
 	err = b1()
-	scenario.NoError(t, err, "Error starting node 1")
+	spec.NoError(t, err, "Error starting node 1")
 
 	let(t, "Success by extracting topology from right endpoint", func(t *testing.T) {
 
@@ -289,7 +288,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 
 			fmt.Println(string(output))
 
-			scenario.NoError(t, err, "Client returned error")
+			spec.NoError(t, err, "Client returned error")
 		})
 
 		let(t, "Add event with no valid endpoint and fail", func(t *testing.T) {
@@ -312,10 +311,7 @@ func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
 
 			fmt.Println(string(output))
 
-			scenario.Error(t, err, "Client must return error")
+			spec.Error(t, err, "Client must return error")
 		})
-
 	})
-
 }
-
