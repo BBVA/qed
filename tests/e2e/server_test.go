@@ -31,7 +31,7 @@ import (
 // This test is used to profile server starting time
 // go test -v -cpuprofile=cpu2.out ./... -run ProfilingStart
 func TestProfilingStart(t *testing.T) {
-	before, after := prepare_new_server(0, false)
+	before, after := newServerSetup(0, false)
 	defer after()
 	err := before()
 	spec.NoError(t, err, "Error starting server")
@@ -39,7 +39,7 @@ func TestProfilingStart(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-	before, after := prepare_new_server(0, false)
+	before, after := newServerSetup(0, false)
 	let, report := spec.New()
 	defer func() {
 		after()
@@ -89,9 +89,9 @@ func TestStart(t *testing.T) {
 }
 
 func TestStartCluster(t *testing.T) {
-	b0, a0 := prepare_new_server(0, false)
-	b1, a1 := prepare_new_server(1, false)
-	b2, a2 := prepare_new_server(2, false)
+	b0, a0 := newServerSetup(0, false)
+	b1, a1 := newServerSetup(1, false)
+	b2, a2 := newServerSetup(2, false)
 	let, report := spec.New()
 	defer func() {
 		a0()
