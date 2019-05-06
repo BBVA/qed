@@ -199,10 +199,8 @@ func (s *Server) Start() error {
 		return err
 	}
 
-	go func() {
-		log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
-		s.metricsServer.Start()
-	}()
+	log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
+	s.metricsServer.Start()
 
 	if s.conf.EnableProfiling {
 		go func() {
@@ -279,6 +277,15 @@ func (s *Server) Stop() error {
 		return err
 	}
 
+	log.Debugf("Closing QED sender...")
+	s.sender.Stop()
+
+	log.Debugf("Stopping QED agent...")
+	if err := s.agent.Shutdown(); err != nil {
+		log.Error(err)
+		return err
+	}
+
 	log.Debugf("Stopping RAFT server...")
 	err := s.raftBalloon.Close(true)
 	if err != nil {
@@ -286,16 +293,7 @@ func (s *Server) Stop() error {
 		return err
 	}
 
-	/*
-		log.Debugf("Closing QED sender...")
-		s.sender.Stop() */
 	close(s.snapshotsCh)
-
-	log.Debugf("Stopping QED agent...")
-	if err := s.agent.Shutdown(); err != nil {
-		log.Error(err)
-		return err
-	}
 
 	log.Debugf("Done. Exiting...\n")
 	return nil
