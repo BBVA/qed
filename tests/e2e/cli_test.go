@@ -28,7 +28,7 @@ import (
 
 func Test_Client_To_Single_Server(t *testing.T) {
 	// log.SetLogger("test_client_to_single_server", log.DEBUG)
-	b0, a0 := prepare_new_server(0, true)
+	b0, a0 := newServerSetup(0, true)
 	let, report := spec.New()
 	defer func() {
 		a0()
@@ -122,9 +122,9 @@ func Test_Client_To_Single_Server(t *testing.T) {
 }
 
 func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
-	b0, a0 := prepare_new_server(0, true)
-	b1, a1 := prepare_new_server(1, true)
-	b2, a2 := prepare_new_server(2, true)
+	b0, a0 := newServerSetup(0, true)
+	b1, a1 := newServerSetup(1, true)
+	b2, a2 := newServerSetup(2, true)
 	let, report := spec.New()
 	defer func() {
 		// a0()
@@ -251,8 +251,8 @@ func Test_Client_To_Cluster_With_Leader_Change(t *testing.T) {
 }
 
 func Test_Client_To_Cluster_With_Bad_Endpoint(t *testing.T) {
-	b0, a0 := prepare_new_server(0, true)
-	b1, a1 := prepare_new_server(1, true)
+	b0, a0 := newServerSetup(0, true)
+	b1, a1 := newServerSetup(1, true)
 
 	let, report := spec.New()
 	defer func() {

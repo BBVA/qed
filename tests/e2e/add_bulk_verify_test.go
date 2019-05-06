@@ -27,7 +27,7 @@ import (
 )
 
 func TestAddBulkAndVerify(t *testing.T) {
-	before, after := prepare_new_server(0, false)
+	before, after := newServerSetup(0, false)
 	let, report := spec.New()
 	defer func() {
 		after()
@@ -50,13 +50,14 @@ func TestAddBulkAndVerify(t *testing.T) {
 	err := before()
 	spec.NoError(t, err, "Error starting server")
 
+	client, err := newQedClient(0)
+	spec.NoError(t, err, "Error creating a new qed client")
+	defer func() { client.Close() }()
+
 	let(t, "Add one event and get its membership proof", func(t *testing.T) {
 		var snapshotBulk []*protocol.Snapshot
 		var membershipBulk []*protocol.MembershipResult
 		var err error
-
-		client, err := new_qed_client(0)
-		spec.NoError(t, err, "Error creating qed client")
 
 		let(t, "Add event", func(t *testing.T) {
 			snapshotBulk, err = client.AddBulk(events)
@@ -93,7 +94,8 @@ func TestAddBulkAndVerify(t *testing.T) {
 		let(t, "Verify each membership", func(t *testing.T) {
 			for i, result := range membershipBulk {
 				snap := snapshotBulk[i]
-				spec.True(t, client.DigestVerify(result, snap, hashing.NewSha256Hasher), "result should be valid")
+				res := client.DigestVerify(result, snap, hashing.NewSha256Hasher)
+				spec.True(t, res, "result should be valid")
 			}
 		})
 	})
