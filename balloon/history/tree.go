@@ -58,7 +58,7 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 
 func (t *HistoryTree) AddBulk(eventDigests []hashing.Digest, versions []uint64) ([]hashing.Digest, []*storage.Mutation, error) {
 
-	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryCacheTable)
+	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryTable)
 
 	rootHashes := make([]hashing.Digest, 0)
 	for i, e := range eventDigests {
