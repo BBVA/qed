@@ -32,6 +32,9 @@ echo -e "\n GETTING SNAPSHOT INFO FOR VERSION 0. FROM SNAPSHOT STORE \n"
 echo -e "\n GETTING SNAPSHOT INFO FOR VERSION 2. FROM SNAPSHOT STORE \n"
 ./get_snapshot.sh 2
 
+echo -e "\n EXECUTING INCREMENTAL PROOF \n"
+./incremental_start0_end2.sh
+
 read -p "Press intro to continue"
 echo "DEPLOYING ARTIFACTS.."
 read -p "Press intro to continue"
