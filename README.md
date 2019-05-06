@@ -1,7 +1,7 @@
 
 
 [![Build Status](https://gdiazlo.visualstudio.com/qed/_apis/build/status/BBVA.qed?branchName=master)](https://gdiazlo.visualstudio.com/qed/_build/latest?definitionId=1&branchName=master)
-[![Azure DevOps coverage](https://img.shields.io/azure-devops/coverage/gdiazlo/qed/1.svg)](https://gdiazlo.visualstudio.com/qed/_build/latest?definitionId=1&branchName=master)
+[![Azure DevOps coverage](https://img.shields.io/azure-devops/coverage/gdiazlo/qed/1/master.svg)](https://gdiazlo.visualstudio.com/qed/_build/latest?definitionId=1&branchName=master)
 [![GoReport](https://goreportcard.com/badge/github.com/bbva/qed)](https://goreportcard.com/report/github.com/bbva/qed)
 [![GoDoc](https://godoc.org/github.com/bbva/qed?status.svg)](https://godoc.org/github.com/bbva/qed)
 
