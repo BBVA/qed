@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/testutils/scenario"
+	"github.com/bbva/qed/testutils/spec"
 )
 
 // This test is used to profile server starting time
@@ -34,19 +34,19 @@ func TestProfilingStart(t *testing.T) {
 	before, after := prepare_new_server(0, false)
 	defer after()
 	err := before()
-	scenario.NoError(t, err, "Error starting server")
+	spec.NoError(t, err, "Error starting server")
 	<-time.After(10 * time.Second)
 }
 
 func TestStart(t *testing.T) {
 	before, after := prepare_new_server(0, false)
-	let, report := scenario.New()
+	let, report := spec.New()
 	defer func() {
 		after()
 		t.Logf(report())
 	}()
 	err := before()
-	scenario.NoError(t, err, "Error starting server")
+	spec.NoError(t, err, "Error starting server")
 	let(t, "Test availability of qed server", func(t *testing.T) {
 		let(t, "Query info endpoint", func(t *testing.T) {
 			var resp *http.Response
@@ -55,8 +55,8 @@ func TestStart(t *testing.T) {
 				resp, err = doReq("GET", "http://localhost:8800/info", "APIKey", nil)
 				return err
 			})
-			scenario.NoError(t, err, "Subprocess must not exit with non-zero status")
-			scenario.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
+			spec.NoError(t, err, "Subprocess must not exit with non-zero status")
+			spec.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
 
 		let(t, "Query to unexpected context", func(t *testing.T) {
@@ -66,8 +66,8 @@ func TestStart(t *testing.T) {
 				resp, err = doReq("GET", "http://localhost:8800/xD", "APIKey", nil)
 				return err
 			})
-			scenario.NoError(t, err, "Error getting response from server")
-			scenario.Equal(t, resp.StatusCode, http.StatusNotFound, "Server should respond with http status code 404")
+			spec.NoError(t, err, "Error getting response from server")
+			spec.Equal(t, resp.StatusCode, http.StatusNotFound, "Server should respond with http status code 404")
 
 		})
 	})
@@ -80,8 +80,8 @@ func TestStart(t *testing.T) {
 				resp, err = doReq("GET", "http://localhost:8600/metrics", "APIKey", nil)
 				return err
 			})
-			scenario.NoError(t, err, "Subprocess must not exit with non-zero status")
-			scenario.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
+			spec.NoError(t, err, "Subprocess must not exit with non-zero status")
+			spec.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
 		})
 
 	})
@@ -92,7 +92,7 @@ func TestStartCluster(t *testing.T) {
 	b0, a0 := prepare_new_server(0, false)
 	b1, a1 := prepare_new_server(1, false)
 	b2, a2 := prepare_new_server(2, false)
-	let, report := scenario.New()
+	let, report := spec.New()
 	defer func() {
 		a0()
 		a1()
@@ -103,11 +103,11 @@ func TestStartCluster(t *testing.T) {
 
 	let(t, "Start three servers", func(t *testing.T) {
 		err := b0()
-		scenario.NoError(t, err, "Error starting node 0")
+		spec.NoError(t, err, "Error starting node 0")
 		err = b1()
-		scenario.NoError(t, err, "Error starting node 1")
+		spec.NoError(t, err, "Error starting node 1")
 		err = b2()
-		scenario.NoError(t, err, "Error starting node 2")
+		spec.NoError(t, err, "Error starting node 2")
 	})
 
 	let(t, "Check the cluster topology", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestStartCluster(t *testing.T) {
 			}
 			return nil
 		})
-		scenario.NoError(t, mainErr, "There should be no error")
+		spec.NoError(t, mainErr, "There should be no error")
 	})
 }
 
