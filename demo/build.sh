@@ -39,6 +39,7 @@ read -p "Press intro to continue"
 
 echo -e "\n VERIFY DEPENDENCIES AUTHENTICITY\n"
 ./membership_verify_event0.sh
+read -p "Press intro to continue"
 
 if [[ "$?" -eq 0 ]]
 then
