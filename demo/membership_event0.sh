@@ -14,17 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo "BUILDING QED EVENT FROM GO.MOD"
-msg=$(cat build/project/go.mod | xargs )
-version="v1.3.0"
-hash=$(sha256sum build/project/go.mod | cut -d' ' -f1)
-salt=$(echo -n $(hostname) | sha256sum | tr -d ' ' | tr -d '-')
-
+echo "BUILDING QED EVENT"
+cd build/project
+commit_hash=$(git rev-parse HEAD)
+src_hash=$(echo $(find . -type f -not -path "./.git/*" -exec sha256sum {} \; | sort -k2) | sha256sum | cut -d' ' -f1)
+cd ../../
 echo "
 {
-	\"msg\": \"$salt $msg\",
-	\"version\": \"$version\",
-	\"hash\": \"$hash\"
+	\"commit_hash\": \"$commit_hash\",
+	\"src_hash\": \"$src_hash\"
 }
 " > event0.json
 echo -e "\t RESULTING QED EVENT:"

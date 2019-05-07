@@ -16,6 +16,7 @@
 
 export GO111MODULE=on
 
+echo "BUILD STAGE"
 mkdir -p build
 cd build
 ../get_project.sh
@@ -33,7 +34,7 @@ else
 fi
 read -p "Press intro to continue"
 
-echo -e "\n GETTING SNAPSHOT INFO. FROM SNAPSHOT STORE \n"
+echo -e "\n GETTING SNAPSHOT INFO FOR VERSION 0. FROM SNAPSHOT STORE \n"
 ./get_snapshot.sh 0
 read -p "Press intro to continue"
 
@@ -43,13 +44,44 @@ read -p "Press intro to continue"
 
 if [[ "$?" -eq 0 ]]
 then
-    echo "Building project"
+    echo "BUILDING PROJECT"
     cd build/project
-    go build -o gin
-    echo "Generating artifact in build/project"
+    go build -o /tmp/gin
+    echo "GENERATING ARTIFACT IN BUILD/PROJECT"
     sleep 1
-    echo "gin binary file created"
+    echo "GIN BINARY CREATED IN /tmp/gin"
+    cd ../..
 else
-    echo "Verification failed. The project has been tampered!"
+    echo "VERIFICATION FAILED. THE PROJECT HAS BEEN TAMPERED!"
 fi
+
+echo -n'' | ./membership_event1.sh > /tmp/membership_result
+membership_check=$(grep "true" /tmp/membership_result)
+
+if [[ "$membership_check" = " Exists: true" ]];
+then
+    echo "EVENT WITH VERSION 1 ALREADY ADDED"
+else
+    echo "GENERATING INTERMEDIATE EVENT"
+    ./add_event1.sh
+fi
+
+rm -f archived/gin
+if [ ! -f archived/gin ];
+then
+    mkdir -p archived
+    cp /tmp/gin archived/gin
+fi
+
+echo -n'' | ./membership_event2.sh > /tmp/membership_result
+membership_check=$(grep "true" /tmp/membership_result)
+
+if [[ "$membership_check" = " Exists: true" ]];
+then
+    echo "ARTIFACT ALREADY RELEASED"
+else
+    ./release.sh
+fi
+
+
 

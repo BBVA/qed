@@ -15,5 +15,5 @@
 # limitations under the License.
 
 killall -9 main notifierstore
-rm -rf /var/tmp/qed* /var/tmp/id* project build release deploy event* /tmp/qed
+rm -rf /var/tmp/qed* /var/tmp/id* project build release deploy event* /tmp/qed /tmp/gin archived
 

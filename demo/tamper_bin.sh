@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p deploy
 echo "TAMPERING GIN BIN"
 read -p "Press intro to continue"
-rm -f deploy/gin
-echo "tampered bin" > deploy/gin
+rm -f archived/gin
+echo "tampered bin" > archived/gin
 echo "DONE"
 

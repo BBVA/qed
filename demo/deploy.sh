@@ -14,13 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p deploy
+echo "DEPLOYMENT STAGE"
 echo "DOWNLOADING ARTIFACT"
-cp build/project/gin deploy/
 read -p "Press intro to continue"
 ./membership_event2.sh
 
-echo -e "\n GETTING SNAPSHOT INFO. FROM SNAPSHOT STORE \n"
+echo -e "\n GETTING SNAPSHOT INFO FOR VERSION 2. FROM SNAPSHOT STORE \n"
 ./get_snapshot.sh 2
 read -p "Press intro to continue"
 

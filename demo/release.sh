@@ -14,13 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-mkdir -p release
-cd release
+echo "RELEASE STAGE"
 echo "CHECKING ARTIFACT"
-cp ../build/project/gin .
 read -p "Press intro to continue"
 echo "ARTIFACT APPROVED. GENERATING QED EVENT..."
-cd ../
 ./add_event2.sh
 echo "UPLOAD TO ARTIFACTS REPOSITORY.."
 read -p "Press intro to continue"

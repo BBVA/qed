@@ -14,17 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name="gin"
-version="v1.3.0"
-hash=$(sha256sum release/gin | sed 's/  release\/gin//g' )
-salt=$(echo -n $(hostname) | sha256sum | tr -d ' ' | tr -d '-')
-msg="$version $name"
+cd build/project
+commit_hash=$(git rev-parse HEAD)
+src_hash=$(echo $(find . -type f -not -path "./.git/*" -exec sha256sum {} \; | sort -k2) | sha256sum | cut -d' ' -f1)
+cd ../../
+artifact_hash=$(sha256sum archived/gin | cut -d' ' -f1 )
 
 echo "
 {
-	\"msg\": \"$salt $msg\",
-	\"version\": \"$version\",
-	\"hash\": \"$hash\"
+	\"commit_hash\": \"$commit_hash\",
+	\"src_hash\": \"$src_hash\",
+	\"artifact_hash\": \"$artifact_hash\",
+
+
 }
 " > event2.json
 echo -e "\t RESULTING QED EVENT:"
