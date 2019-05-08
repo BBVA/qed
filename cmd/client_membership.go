@@ -49,12 +49,12 @@ func init() {
 }
 
 type membershipParams struct {
-	Version     uint64 `desc:"Version for the membership proof"`
-	Verify      bool   `desc:"Set to enable proof verification process"`
-	Event       string `desc:"QED event to build the proof"`
-	EventDigest string `desc:"QED event digest to build the proof"`
-	HistoryDigest string`desc:"QED history digest is used to verify the proof"`
-	HyperDigest string `desc:"QED hyper digest is used to verify the proof"`
+	Version       uint64 `desc:"Version for the membership proof"`
+	Verify        bool   `desc:"Set to enable proof verification process"`
+	Event         string `desc:"QED event to build the proof"`
+	EventDigest   string `desc:"QED event digest to build the proof"`
+	HistoryDigest string `desc:"QED history digest is used to verify the proof"`
+	HyperDigest   string `desc:"QED hyper digest is used to verify the proof"`
 }
 
 func configClientMembership() context.Context {
@@ -129,7 +129,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 			Version:       params.Version,
 			EventDigest:   digest}
 
-		fmt.Printf("\nVerifying with Snapshot: \n\n EventDigest:%x\n HyperDigest: %s\n HistoryDigest: %s\n Version: %d\n",
+		fmt.Printf("\nVerifying with Snapshot: \n\n EventDigest: %x\n HyperDigest: %s\n HistoryDigest: %s\n Version: %d\n",
 			digest, hyperDigest, historyDigest, params.Version)
 
 		if client.DigestVerify(membershipResult, snapshot, hasherF) {
