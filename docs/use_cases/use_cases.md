@@ -98,7 +98,7 @@ The mapping function between the third-party data and QED must work in a way tha
    
     Verifying with Snapshot:
    
-     EventDigest:f56c757b5403c71ced0773684a259c7a2dcde6e4232b251ceae5084d58ff356e
+     EventDigest: f56c757b5403c71ced0773684a259c7a2dcde6e4232b251ceae5084d58ff356e
      HyperDigest: bcca38e67883f492b8dece031290a4b1b5cfa801d9917670f419b183487163be
      HistoryDigest: 784674a832f41ff7b9ddc13bdb2aef2093975319c5f23b69f04fbae163668975
      Version: 0
