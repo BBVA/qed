@@ -386,6 +386,48 @@ func TestPruneToInsertBulk(t *testing.T) {
 				{leafHashCode, pos(0, 4)},
 			},
 		},
+		{
+			// update index = 0 on tree with only one leaf
+			index: [][]byte{[]byte{0}},
+			value: [][]byte{[]byte{0}},
+			cachedBatches: map[string][]byte{
+				pos(0, 8).StringId(): []byte{
+					0xd1, 0x01, 0x00, 0x00, // bitmap: 11010001 00000001 00000000 00000000
+					0x00, 0x00, // iBatch 0 -> hash=0x00
+					0x00, 0x00, // iBatch 1 -> hash=0x00
+					0x00, 0x00, // iBatch 3 -> hash=0x00
+					0x00, 0x00, // iBatch 7 -> hash=0x00
+					0x00, 0x00, // iBatch 15 -> hash=0x00
+				},
+			},
+			storedBatches: map[string][]byte{
+				pos(0, 4).StringId(): []byte{
+					0xe0, 0x00, 0x00, 0x00, // bitmap: 11100000 00000000 00000000 00000000
+					0x00, 0x01, // iBatch 0 -> hash=0x00 (shortcut index=0)
+					0x00, 0x02, // iBatch 1 -> key=0x00
+					0x00, 0x02, // iBatch 2 -> value=0x00
+				},
+			},
+			expectedOps: []op{
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{mutateBatchCode, pos(0, 4)},
+				{updateBatchShortcutCode, pos(0, 4)},
+				{leafHashCode, pos(0, 4)},
+			},
+		},
 	}
 
 	batchLevels := uint16(1)
