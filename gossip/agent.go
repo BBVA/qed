@@ -271,8 +271,8 @@ func (a *Agent) sender() {
 				case msg := <-ch:
 					// as soon as we have a batch ready for retransmission, we try to send
 					// it after applying all the routing contraints
+					wg.Add(1)
 					go func() {
-						wg.Add(1)
 						defer wg.Done()
 						log.Debugf("Agent sender loop: sending msg!")
 						a.Send(msg)
