@@ -70,7 +70,7 @@ func (eb *MessageBus) Publish(msg *Message) error {
 		}(msg, channels)
 		return nil
 	}
-	log.Infof("Agent message bus publising message: no subscribers for message kind %d ", msg.Kind)
+	log.Debugf("Agent message bus publising message: no subscribers for message kind %d ", msg.Kind)
 	return NoSubscribersFound
 }
 
