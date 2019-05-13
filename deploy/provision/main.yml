@@ -26,6 +26,7 @@
     - include: tasks/common/config.yml
   tags:
     - install
+    - riot
 
 - hosts: all
   remote_user: ec2-user
@@ -46,6 +47,7 @@
       retries: 2
   tags:
     - install
+    - riot
 
 - hosts: all
   remote_user: ec2-user
@@ -56,6 +58,7 @@
   tags:
     - install
     - prometheus
+    - riot
 
 - hosts: type_aws_instance
   remote_user: ec2-user
@@ -86,6 +89,7 @@
     - include: tasks/riot/main.yml
   tags:
     - install
+    - riot
 
 - hosts: inmemory-storage
   remote_user: ec2-user
