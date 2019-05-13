@@ -332,8 +332,10 @@ func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data 
 // The timeout specifies how long to wait for a response from QED.
 func (c *HTTPClient) healthCheck(timeout time.Duration) {
 
+	var wg sync.WaitGroup
 	for _, e := range c.topology.Endpoints() {
 
+		wg.Add(1)
 		endpoint := e
 		// the goroutines execute the health-check HTTP request and sets status
 		go func(endpointURL string) {
@@ -341,6 +343,7 @@ func (c *HTTPClient) healthCheck(timeout time.Duration) {
 			// Run a HEAD request against QED with a timeout
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
+			defer wg.Done()
 
 			req, err := http.NewRequest("HEAD", endpointURL+"/healthcheck", nil)
 			if err != nil {
@@ -368,6 +371,8 @@ func (c *HTTPClient) healthCheck(timeout time.Duration) {
 		}(endpoint.URL())
 
 	}
+
+	wg.Wait()
 
 }
 
