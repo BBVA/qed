@@ -33,7 +33,7 @@ fi
 
 cd $BASE
 
-if [ ! -f $LIBS/librockdb.a ]; then
+if [ ! -f $LIBS/librocksdb.a ]; then
 	# build rocksdb shared with those libraries 
 	cd rocksdb
 	mkdir -p build
