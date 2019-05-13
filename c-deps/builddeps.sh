@@ -46,4 +46,4 @@ if [ ! -f $LIBS/librockdb.a ]; then
 	make -j8 rocksdb
 
 	cp librocksdb.a ../../libs
-done
+fi
