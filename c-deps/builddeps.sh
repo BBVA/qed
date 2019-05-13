@@ -42,7 +42,7 @@ if [ ! -f $LIBS/librockdb.a ]; then
 	cmake -DWITH_GFLAGS=OFF  -DPORTABLE=ON \
 	-DWITH_SNAPPY=ON -DSNAPPY_LIBRARIES="$LIBS/libsnappy.a" -DSNAPPY_INCLUDE_DIR="$BASE/snappy" \
 	-DWITH_JEMALLOC=ON -DJEMALLOC_LIBRARIES="$LIBS/libjemalloc.a" -DJEMALLOC_INCLUDE_DIR="$BASE/jemalloc/include" \
-	-DCMAKE_BUILD_TYPE=Release -DUSE_RTTI=1 -DCMAKE_CXX_FLAGS="-Wno-error=deprecated-copy" ../
+	-DCMAKE_BUILD_TYPE=Release -DUSE_RTTI=1 ../
 	make -j8 rocksdb
 
 	cp librocksdb.a ../../libs
