@@ -2,7 +2,7 @@
 Q.E.D. - Scalable, auditable and high-performance tamper-evident log
 ********************************************************************
 
-.. image:: https://qed.org/projects/apicheck/badge/?version=latest
+.. image:: https://readthedocs.org/projects/qed/badge/?version=latest
    :target: https://qed.readthedocs.io
    :alt: User Documentation Status
 .. image:: https://gdiazlo.visualstudio.com/qed/_apis/build/status/BBVA.qed?branchName=master
@@ -24,7 +24,12 @@ Q.E.D. - Scalable, auditable and high-performance tamper-evident log
 What's Q.E.D.
 -------------
 
-``Q.E.D.`` is an open-source software that allows you to establish **trust relations with others**. It can be used in multiple scenarios: **secure tamper-evident data transfers**, **tamper-evident** (system/application/business) **logging**, etc.
+``Q.E.D.`` is an open-source software that allows you to establish **trust relations with others**. It can be used in multiple scenarios:
+
+- **Secure tamper-evident data transfers**,
+- **Tamper-evident** (system/application/business)
+- **Logging**
+- ...
 
 ``Q.E.D.`` **guarantees** that the system itself, even when deployed **into a non-trusted server**, cannot be modified without being detected. It also **provides verifiable cryptographic proofs** in logarithmic relation (time and size) to the number of entries.
 
