@@ -18,6 +18,8 @@ Q.E.D. - Scalable, auditable and high-performance tamper-evident log
    :target: https://godoc.org/github.com/bbva/qed
    :alt: GoDoc
 
+
+
 .. figure:: https://raw.githubusercontent.com/BBVA/qed/master/rtd_docs/source/_static/images/qed_logo_small.png
    :align: center
 
