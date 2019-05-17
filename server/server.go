@@ -119,6 +119,17 @@ func NewServer(conf *Config) (*Server, error) {
 	// Create metrics server
 	server.metricsServer = metrics.NewServer(conf.MetricsAddr)
 
+	// Create profiling server
+	if server.conf.EnableProfiling {
+		go func() {
+			log.Debug("	* Starting QED Profiling server in addr: ", server.conf.ProfilingAddr)
+			err := http.ListenAndServe(server.conf.ProfilingAddr, nil)
+			if err != http.ErrServerClosed {
+				log.Errorf("Can't start QED Profiling Server: %s", err)
+			}
+		}()
+	}
+
 	// Create gossip agent
 	config := gossip.DefaultConfig()
 	config.BindAddr = conf.GossipAddr
@@ -201,16 +212,6 @@ func (s *Server) Start() error {
 
 	log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
 	s.metricsServer.Start()
-
-	if s.conf.EnableProfiling {
-		go func() {
-			log.Debug("	* Starting QED Profiling server in addr: ", s.conf.ProfilingAddr)
-			err := http.ListenAndServe(s.conf.ProfilingAddr, nil)
-			if err != http.ErrServerClosed {
-				log.Errorf("Can't start QED Profiling Server: %s", err)
-			}
-		}()
-	}
 
 	if s.conf.EnableTLS {
 		go func() {
