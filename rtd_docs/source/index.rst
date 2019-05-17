@@ -10,14 +10,20 @@ Contents
 
    home/overview_project
    home/installation_and_quickstart
-   home/internals
-
 
 .. toctree::
    :maxdepth: 2
    :caption: Glossary
 
    glossary
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Internals
+
+   internals/architecture_and_components
+   internals/internal_working
+   internals/internals_glossary
 
 .. toctree::
    :maxdepth: 2

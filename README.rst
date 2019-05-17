@@ -51,6 +51,11 @@ Documentation
 
 You can find the complete documentation at: `Documentation <https://qed.readthedocs.io>`_
 
+Project code
+------------
+
+You can find the project code at `Github <https://github.com/BBVA/qed>`_
+
 Authors
 -------
 
