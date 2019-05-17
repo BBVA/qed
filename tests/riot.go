@@ -75,6 +75,12 @@ var (
 			Help: "Number of events added into the cluster.",
 		},
 	)
+	RiotEventAddFail = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "riot_event_add_fail",
+			Help: "Number of events failed to add.",
+		},
+	)
 	RiotQueryMembership = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "riot_query_membership",
@@ -252,6 +258,7 @@ func postReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWrit
 
 	return w, r
 }
+
 func (riot *Riot) MergeConf(newConf Config) Config {
 	conf := riot.Config
 	_ = mergo.Merge(&conf, newConf)
@@ -361,13 +368,23 @@ func (a *Attack) Run() {
 				switch task.kind {
 				case add:
 					log.Debugf(">>> add: %s", task.events[0])
-					_, _ = a.client.Add(task.events[0])
-					RiotEventAdd.Inc()
+					_, err := a.client.Add(task.events[0])
+					if err != nil {
+						RiotEventAddFail.Inc()
+						log.Debugf(">>> Error adding event: version %d. Error: %s", task.version, err)
+					} else {
+						RiotEventAdd.Inc()
+					}
 				case bulk:
-					bulkSize := float64(len(task.events))
-					log.Debugf(">>> bulk(%d): %s", bulkSize, task.events)
-					_, _ = a.client.AddBulk(task.events)
-					RiotEventAdd.Add(bulkSize)
+					bulkSize := len(task.events)
+					log.Debugf(">>> bulk: version %d, size %d, events: %s", task.version, bulkSize, task.events)
+					_, err := a.client.AddBulk(task.events)
+					if err != nil {
+						RiotEventAddFail.Add(float64(bulkSize))
+						log.Debugf(">>> Error adding bulk: version %d, size %d. Error: %s", task.version, bulkSize, err)
+					} else {
+						RiotEventAdd.Add(float64(bulkSize))
+					}
 				case membership:
 					log.Debugf(">>> mem: %s, %d", task.events[0], task.version)
 					_, _ = a.client.Membership([]byte(task.events[0]), task.version)
