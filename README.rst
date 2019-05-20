@@ -6,7 +6,7 @@ Q.E.D. - Scalable, auditable and high-performance tamper-evident log
    :target: https://qed.readthedocs.io
    :alt: User Documentation Status
 .. image:: https://gdiazlo.visualstudio.com/qed/_apis/build/status/BBVA.qed?branchName=master
-   :target: https://github.com/BBVA/masquerade/blob/master/LICENSE
+   :target: https://gdiazlo.visualstudio.com/qed/_build/latest?definitionId=1&branchName=master
    :alt: Build Status
 .. image:: https://img.shields.io/azure-devops/coverage/gdiazlo/qed/1/master.svg
    :target: https://gdiazlo.visualstudio.com/qed/_build/latest?definitionId=1&branchName=master
