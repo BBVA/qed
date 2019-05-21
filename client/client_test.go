@@ -580,6 +580,90 @@ func TestIncrementalWithServerFailure(t *testing.T) {
 
 // TODO implement a test to verify proofs using fake hash function
 
+func TestMembershipVerify(t *testing.T) {
+
+}
+
+func TestIncrementalVerify(t *testing.T) {
+
+}
+
+func TestMembershipAutoVerify(t *testing.T) {
+
+	log.SetLogger("TestMembershipAutoVerify", log.SILENT)
+
+	eventDigest := hashing.Digest([]byte{0x0})
+	version := uint64(0)
+
+	fakeHttpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Path == "/proofs/digest-membership" {
+			m := protocol.MembershipResult{
+				Exists: true,
+				Hyper: map[string]hashing.Digest{
+					"0x80|7": hashing.Digest{0x0},
+					"0x40|6": hashing.Digest{0x0},
+					"0x20|5": hashing.Digest{0x0},
+					"0x10|4": hashing.Digest{0x0},
+				},
+				History: map[string]hashing.Digest{
+					"0|0": []byte{0x0},
+				},
+				CurrentVersion: uint64(0),
+				QueryVersion:   uint64(0),
+				ActualVersion:  uint64(0),
+				KeyDigest:      eventDigest,
+				Key:            []byte{0x0},
+			}
+			body, _ := json.Marshal(m)
+			return buildResponse(http.StatusOK, string(body)), nil
+		}
+		if req.Host == "snapshotStore.foo" && req.URL.Path == "/snapshot" { // ?v=0
+			ss := protocol.SignedSnapshot{
+				Snapshot: &protocol.Snapshot{
+					EventDigest:   eventDigest,
+					HyperDigest:   hashing.Digest([]byte{0x0}),
+					HistoryDigest: hashing.Digest([]byte{0x0}),
+					Version:       uint64(0),
+				},
+				Signature: nil,
+			}
+			body, _ := json.Marshal(ss)
+			return buildResponse(http.StatusOK, string(body)), nil
+		}
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(fakeHttpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary.foo"),
+		SetSnapshotStoreURL("http://snapshotStore.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(1),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(false),
+	)
+	require.NoError(t, err)
+
+	proof, err := client.MembershipDigest(eventDigest, version)
+	require.True(t, proof.Exists, "Event should exist.")
+	require.NoError(t, err, "Error: %v", err)
+
+	checkSnap := &protocol.Snapshot{
+		EventDigest:   eventDigest,
+		HyperDigest:   nil, // Auto-verify get hyper and history
+		HistoryDigest: nil, // digests from snapshot store.
+		Version:       version,
+	}
+
+	ok := client.MembershipVerify(proof, checkSnap, hashing.NewFakeXorHasher)
+	require.True(t, ok)
+}
+
+func TestIncrementalAutoVerify(t *testing.T) {
+
+}
+
 func defaultHandler(input []byte) func(http.ResponseWriter, *http.Request) {
 	statusOK := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

@@ -51,6 +51,7 @@ func init() {
 type membershipParams struct {
 	Version       uint64 `desc:"Version for the membership proof"`
 	Verify        bool   `desc:"Set to enable proof verification process"`
+	AutoVerify    bool   `desc:"Set to enable proof automatic verification process"`
 	Event         string `desc:"QED event to build the proof"`
 	EventDigest   string `desc:"QED event digest to build the proof"`
 	HistoryDigest string `desc:"QED history digest is used to verify the proof"`
@@ -109,30 +110,46 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 	fmt.Printf(" ActualVersion: %d\n", membershipResult.ActualVersion)
 	fmt.Printf(" KeyDigest: %x\n\n", membershipResult.KeyDigest)
 
-	if params.Verify {
-		hyperDigest := params.HyperDigest
-		historyDigest := params.HistoryDigest
-		for hyperDigest == "" {
-			hyperDigest = readLine(fmt.Sprintf("Please, provide the hyperDigest for current version [ %d ]: ", membershipResult.CurrentVersion))
-		}
-		if membershipResult.Exists {
-			for historyDigest == "" {
-				historyDigest = readLine(fmt.Sprintf("Please, provide the historyDigest for version [ %d ] : ", params.Version))
+	// Verify
+	if params.Verify || params.AutoVerify {
+		var snapshot *protocol.Snapshot
+
+		if params.Verify {
+			hyperDigest := params.HyperDigest
+			historyDigest := params.HistoryDigest
+			for hyperDigest == "" {
+				hyperDigest = readLine(fmt.Sprintf("Please, provide the hyperDigest for current version [ %d ]: ", membershipResult.CurrentVersion))
 			}
+			if membershipResult.Exists {
+				for historyDigest == "" {
+					historyDigest = readLine(fmt.Sprintf("Please, provide the historyDigest for version [ %d ] : ", params.Version))
+				}
+			}
+			hdBytes, _ := hex.DecodeString(hyperDigest)
+			htdBytes, _ := hex.DecodeString(historyDigest)
+
+			snapshot = &protocol.Snapshot{
+				HistoryDigest: htdBytes,
+				HyperDigest:   hdBytes,
+				Version:       params.Version,
+				EventDigest:   digest}
+
+			fmt.Printf("\nVerifying with Snapshot: \n\n EventDigest: %x\n HyperDigest: %s\n HistoryDigest: %s\n Version: %d\n",
+				digest, hyperDigest, historyDigest, params.Version)
 		}
 
-		hdBytes, _ := hex.DecodeString(hyperDigest)
-		htdBytes, _ := hex.DecodeString(historyDigest)
-		snapshot := &protocol.Snapshot{
-			HistoryDigest: htdBytes,
-			HyperDigest:   hdBytes,
-			Version:       params.Version,
-			EventDigest:   digest}
+		if params.AutoVerify {
+			snapshot = &protocol.Snapshot{
+				HistoryDigest: nil,
+				HyperDigest:   nil,
+				Version:       params.Version,
+				EventDigest:   digest}
 
-		fmt.Printf("\nVerifying with Snapshot: \n\n EventDigest: %x\n HyperDigest: %s\n HistoryDigest: %s\n Version: %d\n",
-			digest, hyperDigest, historyDigest, params.Version)
+			fmt.Printf("\nAuto-Verifying with Snapshot: \n\n EventDigest: %x\n Version: %d\n",
+				digest, params.Version)
+		}
 
-		if client.DigestVerify(membershipResult, snapshot, hasherF) {
+		if client.MembershipVerify(membershipResult, snapshot, hasherF) {
 			fmt.Printf("\nVerify: OK\n\n")
 		} else {
 			fmt.Printf("\nVerify: KO\n\n")
