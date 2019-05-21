@@ -31,6 +31,7 @@ func configToOptions(conf *Config) ([]HTTPClientOptionF, error) {
 	var options []HTTPClientOptionF
 	if conf != nil {
 		options = []HTTPClientOptionF{
+			SetSnapshotStoreURL(conf.SnapshotStoreURL),
 			SetAPIKey(conf.APIKey),
 			SetReadPreference(conf.ReadPreference),
 			SetMaxRetries(conf.MaxRetries),
@@ -78,6 +79,16 @@ func SetURLs(primary string, secondaries ...string) HTTPClientOptionF {
 			return nil
 		}
 		return errors.New("Cannot use empty string for the primary url")
+	}
+}
+
+func SetSnapshotStoreURL(url string) HTTPClientOptionF {
+	return func(c *HTTPClient) error {
+		if len(url) > 0 {
+			c.snapshotStore = newEndpoint(url, store)
+			return nil
+		}
+		return errors.New("Cannot use empty string for the snapshot store url")
 	}
 }
 

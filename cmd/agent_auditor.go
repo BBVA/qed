@@ -189,7 +189,7 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 			EventDigest:   s.Snapshot.EventDigest,
 		}
 
-		ok := a.Qed.DigestVerify(proof, checkSnap, hashing.NewSha256Hasher)
+		ok := a.Qed.MembershipVerify(proof, checkSnap, hashing.NewSha256Hasher)
 		if !ok {
 			a.Notifier.Alert(fmt.Sprintf("Unable to verify snapshot %v", s.Snapshot))
 			log.Infof("Unable to verify snapshot %v", s.Snapshot)

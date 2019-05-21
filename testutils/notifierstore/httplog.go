@@ -56,7 +56,7 @@ func logging(logger *log.Logger) func(http.Handler) http.Handler {
 				if !ok {
 					requestID = "unknown"
 				}
-				logger.Println(requestID, r.Method, r.URL.Path, r.RemoteAddr, r.UserAgent())
+				logger.Println(requestID, r.Method, r.URL, r.RemoteAddr, r.UserAgent())
 			}()
 			next.ServeHTTP(w, r)
 		})
