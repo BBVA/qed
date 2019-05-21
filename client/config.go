@@ -99,6 +99,9 @@ type Config struct {
 	// Endpoints [host:port,host:port,...] to ask for QED cluster-topology.
 	Endpoints []string `desc:"REST QED Log service endpoint list http://ip1:port1,http://ip2:port2... "`
 
+	// Snapshot store [host:port] to ask for QED published signed snapshots.
+	SnapshotStoreURL string `desc:"REST Snapshot store service endpoint http://ip:port "`
+
 	// ApiKey to query the server endpoint.
 	APIKey string `desc:"Set API Key to talk to QED Log service"`
 
@@ -145,6 +148,7 @@ type Config struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Endpoints:                []string{"http://127.0.0.1:8800"},
+		SnapshotStoreURL:         "http://127.0.0.1:8888",
 		APIKey:                   "my-key",
 		Insecure:                 DefaultInsecure,
 		Timeout:                  DefaultTimeout,

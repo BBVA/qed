@@ -39,6 +39,7 @@ type HTTPClient struct {
 	httpClient          *http.Client
 	retrier             RequestRetrier
 	topology            *topology
+	snapshotStore       *endpoint
 	apiKey              string
 	readPreference      ReadPref
 	maxRetries          int
@@ -58,7 +59,7 @@ type HTTPClient struct {
 //
 // All checks are disabled, including timeouts and periodic checks.
 // The number of retries is set to 0.
-func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, error) {
+func NewSimpleHTTPClient(httpClient *http.Client, urls []string, snapshotStoreURL string) (*HTTPClient, error) {
 
 	// defaultTransport := http.DefaultTransport.(*http.Transport)
 	// // Create new Transport that ignores self-signed SSL
@@ -81,6 +82,10 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, e
 		return nil, errors.New("Invalid urls")
 	}
 
+	if snapshotStoreURL == "" {
+		return nil, errors.New("Invalid snapshot store url")
+	}
+
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
@@ -88,6 +93,7 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, e
 	client := &HTTPClient{
 		httpClient:          httpClient,
 		topology:            newTopology(false),
+		snapshotStore:       newEndpoint(snapshotStoreURL, store),
 		healthCheckEnabled:  false,
 		healthCheckTimeout:  off,
 		healthCheckInterval: off,
@@ -122,6 +128,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 	client := &HTTPClient{
 		httpClient:          http.DefaultClient,
 		topology:            newTopology(false),
+		snapshotStore:       newEndpoint("", store),
 		healthCheckEnabled:  DefaultHealthCheckEnabled,
 		healthCheckTimeout:  DefaultHealthCheckTimeout,
 		healthCheckInterval: DefaultHealthCheckInterval,
@@ -543,27 +550,39 @@ func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalRespon
 	return response, nil
 }
 
-// Verify will compute the Proof given in Membership and the snapshot from the
-// add and returns a proof of existence.
-func (c *HTTPClient) Verify(
-	result *protocol.MembershipResult,
-	snap *protocol.Snapshot,
-	hasherF func() hashing.Hasher,
-) bool {
+func (c *HTTPClient) snapshotFromStore(version uint64) (*protocol.Snapshot, error) {
+	var ss protocol.SignedSnapshot
 
-	proof := protocol.ToBalloonProof(result, hasherF)
-	balloonSnapshot := balloon.Snapshot(*snap)
+	body, err := c.doReq("GET", c.snapshotStore, fmt.Sprintf("/snapshot?v=%d", version), nil)
+	if err != nil {
+		return nil, err
+	}
 
-	return proof.Verify(snap.EventDigest, &balloonSnapshot)
+	err = json.Unmarshal(body, &ss)
+	if err != nil {
+		return nil, err
+	}
+
+	return ss.Snapshot, nil
 }
 
 // Verify will compute the Proof given in Membership and the snapshot from the
 // add and returns a proof of existence.
-func (c *HTTPClient) DigestVerify(
+func (c *HTTPClient) MembershipVerify(
 	result *protocol.MembershipResult,
 	snap *protocol.Snapshot,
 	hasherF func() hashing.Hasher,
 ) bool {
+
+	if snap.HistoryDigest == nil && snap.HyperDigest == nil {
+		s, err := c.snapshotFromStore(snap.Version)
+		if err != nil {
+			log.Info("Error getting snapshot from snapshot store: %s", err)
+			return false
+		}
+		snap.HistoryDigest = s.HistoryDigest
+		snap.HyperDigest = s.HyperDigest
+	}
 
 	proof := protocol.ToBalloonProof(result, hasherF)
 	balloonSnapshot := balloon.Snapshot(*snap)

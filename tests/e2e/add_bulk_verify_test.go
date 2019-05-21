@@ -94,7 +94,7 @@ func TestAddBulkAndVerify(t *testing.T) {
 		let(t, "Verify each membership", func(t *testing.T) {
 			for i, result := range membershipBulk {
 				snap := snapshotBulk[i]
-				res := client.DigestVerify(result, snap, hashing.NewSha256Hasher)
+				res := client.MembershipVerify(result, snap, hashing.NewSha256Hasher)
 				spec.True(t, res, "result should be valid")
 			}
 		})

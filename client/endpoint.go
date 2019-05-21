@@ -27,6 +27,7 @@ type nodeType int
 const (
 	primary nodeType = iota
 	secondary
+	store
 )
 
 // endpoint represents status information of a single endpointection to a node in a cluster

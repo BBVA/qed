@@ -42,7 +42,7 @@ func TestAddVerify(t *testing.T) {
 		client, err := newQedClient(0)
 		spec.NoError(t, err, "Error creating qed client")
 		defer func() { client.Close() }()
-		
+
 		let(t, "Add event", func(t *testing.T) {
 			snapshot, err = client.Add(event)
 			spec.NoError(t, err, "Error adding event")
@@ -78,7 +78,7 @@ func TestAddVerify(t *testing.T) {
 
 		client, err := newQedClient(0)
 		spec.NoError(t, err, "Error creating a new qed client")
-		defer func(){ client.Close() }()
+		defer func() { client.Close() }()
 
 		first, err = client.Add("Test event 1")
 		spec.NoError(t, err, "Error adding event 1")
@@ -94,8 +94,8 @@ func TestAddVerify(t *testing.T) {
 
 		let(t, "Verify events", func(t *testing.T) {
 			first.HyperDigest = last.HyperDigest
-			spec.True(t, client.DigestVerify(resultFirst, first, hashing.NewSha256Hasher), "The first proof should be valid")
-			spec.True(t, client.DigestVerify(resultLast, last, hashing.NewSha256Hasher), "The last proof should be valid")
+			spec.True(t, client.MembershipVerify(resultFirst, first, hashing.NewSha256Hasher), "The first proof should be valid")
+			spec.True(t, client.MembershipVerify(resultLast, last, hashing.NewSha256Hasher), "The last proof should be valid")
 		})
 
 	})
@@ -112,8 +112,8 @@ func TestAddVerify(t *testing.T) {
 
 		client, err := newQedClient(0)
 		spec.NoError(t, err, "Error creating a new qed client")
-		defer func(){ client.Close() }()
-		
+		defer func() { client.Close() }()
+
 		for i := 0; i < size; i++ {
 			s[i], _ = client.Add(fmt.Sprintf("Test Event %d", i))
 		}
@@ -136,7 +136,7 @@ func TestAddVerify(t *testing.T) {
 				Version:       s[j].Version,
 				EventDigest:   s[i].EventDigest,
 			}
-			spec.True(t, client.DigestVerify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
+			spec.True(t, client.MembershipVerify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
 
 			snap = &protocol.Snapshot{
 				HistoryDigest: s[k].HistoryDigest,
@@ -144,7 +144,7 @@ func TestAddVerify(t *testing.T) {
 				Version:       s[k].Version,
 				EventDigest:   s[i].EventDigest,
 			}
-			spec.True(t, client.DigestVerify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
+			spec.True(t, client.MembershipVerify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
 
 		})
 
