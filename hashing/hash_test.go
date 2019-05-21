@@ -17,10 +17,13 @@
 package hashing
 
 import (
+	"crypto/sha256"
 	"strconv"
 	"testing"
 
+	"github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/blake2b"
 )
 
 func TestXorHasher(t *testing.T) {
@@ -70,6 +73,38 @@ func TestSha256Hasher(t *testing.T) {
 	}
 
 	hasher := NewSha256Hasher()
+	for testname, test := range tests {
+		hashSalt := hasher.Salted(test.salt, test.eventA, test.eventB)
+		hashDo := hasher.Do(test.eventA, test.eventB)
+		assert.Equalf(t, test.expectedHashDo, hashDo, "Hash Do don't match in test: %s", testname)
+		assert.Equalf(t, test.expectedHashSalt, hashSalt, "Hash Salt don't match in test: %s", testname)
+		assert.NotEqual(t, hashDo, hashSalt, "Do and Salted hashes should NOT match in test: %s", testname)
+	}
+}
+
+func TestBlake2bHasher(t *testing.T) {
+	tests := map[string]struct {
+		salt             []byte
+		eventA           []byte
+		eventB           []byte
+		expectedHashDo   Digest
+		expectedHashSalt Digest
+	}{
+		"LeafHash (0,0)": {
+			[]byte{'0'},
+			[]byte(strconv.Itoa((0))),
+			[]byte{},
+			Digest{0x5f, 0xec, 0xeb, 0x66, 0xff, 0xc8, 0x6f, 0x38, 0xd9, 0x52, 0x78, 0x6c, 0x6d, 0x69, 0x6c, 0x79, 0xc2, 0xdb, 0xc2, 0x39, 0xdd, 0x4e, 0x91, 0xb4, 0x67, 0x29, 0xd7, 0x3a, 0x27, 0xfb, 0x57, 0xe9},
+			Digest{0xf1, 0x53, 0x43, 0x92, 0x27, 0x9b, 0xdd, 0xbf, 0x9d, 0x43, 0xdd, 0xe8, 0x70, 0x1c, 0xb5, 0xbe, 0x14, 0xb8, 0x2f, 0x76, 0xec, 0x66, 0x7, 0xbf, 0x8d, 0x6a, 0xd5, 0x57, 0xf6, 0xf, 0x30, 0x4e}},
+		"InteriorHash (0,1)": {
+			[]byte{'1'},
+			[]byte{0xf1, 0x53, 0x43, 0x92, 0x27, 0x9b, 0xdd, 0xbf, 0x9d, 0x43, 0xdd, 0xe8, 0x70, 0x1c, 0xb5, 0xbe, 0x14, 0xb8, 0x2f, 0x76, 0xec, 0x66, 0x7, 0xbf, 0x8d, 0x6a, 0xd5, 0x57, 0xf6, 0xf, 0x30, 0x4e},
+			[]byte{0x93, 0x8d, 0xb8, 0xc9, 0xf8, 0x2c, 0x8c, 0xb5, 0x8d, 0x3f, 0x3e, 0xf4, 0xfd, 0x25, 0x00, 0x36, 0xa4, 0x8d, 0x26, 0xa7, 0x12, 0x75, 0x3d, 0x2f, 0xde, 0x5a, 0xbd, 0x03, 0xa8, 0x5c, 0xab, 0xf4},
+			Digest{0xc4, 0xd7, 0x31, 0xb6, 0xa4, 0x32, 0x1a, 0x63, 0x73, 0x56, 0xa6, 0x20, 0x3c, 0xa3, 0x9, 0xf2, 0x57, 0x9, 0x3e, 0x1d, 0x95, 0xc3, 0xa4, 0xf1, 0xde, 0xe1, 0x6a, 0xd, 0x14, 0x67, 0x47, 0x42},
+			Digest{0x4e, 0x6b, 0xb5, 0x68, 0x2f, 0x7, 0xfb, 0x91, 0x53, 0xa5, 0x62, 0xae, 0x98, 0xca, 0xe2, 0x69, 0x1f, 0x82, 0x2c, 0x6d, 0xc5, 0x5e, 0xe0, 0x20, 0xaa, 0xb1, 0xca, 0xa6, 0x9, 0x59, 0x7e, 0x12}},
+	}
+
+	hasher := NewBlake2bHasher()
 	for testname, test := range tests {
 		hashSalt := hasher.Salted(test.salt, test.eventA, test.eventB)
 		hashDo := hasher.Do(test.eventA, test.eventB)
@@ -171,5 +206,72 @@ func TestFakePearsonHasher(t *testing.T) {
 		assert.Equalf(t, test.expectedHashDo, hashDo, "Hash Do don't match in test: %s", testname)
 		assert.Equalf(t, test.expectedHashSalt, hashSalt, "Hash Salt don't match in test: %s", testname)
 		assert.Equal(t, hashDo, hashSalt, "Do and Salted hashes should NOT match in test: %s", testname)
+	}
+}
+
+func BenchmarkSha256HasherRandomBytes(b *testing.B) {
+
+	hasher := NewSha256Hasher()
+
+	b.ResetTimer()
+	b.N = 1000000
+	for i := 0; i < b.N; i++ {
+		hasher.Do(rand.Bytes(128))
+	}
+}
+func BenchmarkBlake2bHasherRandomBytes(b *testing.B) {
+
+	hasher := NewBlake2bHasher()
+
+	b.ResetTimer()
+	b.N = 1000000
+	for i := 0; i < b.N; i++ {
+		hasher.Do(rand.Bytes(128))
+	}
+}
+
+func BenchmarkSha256HasherFixedBytes(b *testing.B) {
+
+	hasher := NewSha256Hasher()
+	data := []byte("FixedBytes")
+
+	b.ResetTimer()
+	b.N = 100000000
+	for i := 0; i < b.N; i++ {
+		hasher.Do(data)
+	}
+}
+func BenchmarkBlake2bHasherFixedBytes(b *testing.B) {
+
+	hasher := NewBlake2bHasher()
+	data := []byte("FixedBytes")
+
+	b.ResetTimer()
+	b.N = 100000000
+	for i := 0; i < b.N; i++ {
+		hasher.Do(data)
+	}
+}
+
+func BenchmarkBlake2bFixedBytesNoWrite(b *testing.B) {
+
+	data := []byte("FixedBytes")
+
+	b.ResetTimer()
+	b.N = 100000000
+	blake2b.Sum256(data)
+	for i := 0; i < b.N; i++ {
+		blake2b.Sum256(data)
+	}
+}
+
+func BenchmarkSha256FixedBytesNoWrite(b *testing.B) {
+
+	data := []byte("FixedBytes")
+
+	b.ResetTimer()
+	b.N = 100000000
+	for i := 0; i < b.N; i++ {
+		sha256.Sum256(data)
 	}
 }
