@@ -33,6 +33,8 @@ const (
 	// HyperTable contains batches of the hyper tree below the cache level.
 	// Position -> Batch
 	HyperTable
+	// HyperCache contains the information to rebuild the cache.
+	HyperCacheTable
 	// HistoryTable contains frozen hashes of the history tree.
 	// Position -> Hash
 	HistoryTable
@@ -52,6 +54,8 @@ func (t Table) String() string {
 		s = "default"
 	case HyperTable:
 		s = "hyper"
+	case HyperCacheTable:
+		s = "hypercache"
 	case HistoryTable:
 		s = "history"
 	case FSMStateTable:
