@@ -43,11 +43,20 @@ type Balloon struct {
 	hasher      hashing.Hasher
 }
 
+func min(x, y uint16) uint16 {
+	if x < y {
+		return x
+	}
+	return y
+}
+
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// create trees
 	historyTree := history.NewHistoryTree(hasherF, store, 300)
-	hyperTree := hyper.NewHyperTree(hasherF, store, cache.NewFreeCache(hyper.CacheSize))
+	hasher := hasherF()
+	cacheHeightLimit := hasher.Len() - min(24, hasher.Len()/8*4)
+	hyperTree := hyper.NewHyperTree(hasherF, store, cache.NewFreeCache(hyper.CacheSize), cacheHeightLimit)
 
 	balloon := &Balloon{
 		version:     0,
