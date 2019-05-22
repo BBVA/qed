@@ -45,11 +45,10 @@ type HyperTree struct {
 	sync.RWMutex
 }
 
-func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache) *HyperTree {
+func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache, cacheHeightLimit uint16) *HyperTree {
 
 	hasher := hasherF()
 	numBits := hasher.Len()
-	cacheHeightLimit := numBits - min(24, (numBits/8)*4)
 
 	tree := &HyperTree{
 		store:            store,
@@ -67,7 +66,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 	}
 
 	// warm-up cache
-	tree.RebuildCache()
+	tree.RebuildCacheBulk()
 
 	return tree
 }
@@ -83,10 +82,11 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	// build a stack of operations and then interpret it to generate the root hash
 	ops := pruneToInsert(eventDigest, versionAsBytes, t.cacheHeightLimit, t.batchLoader)
 	ctx := &pruningContext{
-		Hasher:        t.hasher,
-		Cache:         t.cache,
-		DefaultHashes: t.defaultHashes,
-		Mutations:     make([]*storage.Mutation, 0),
+		Hasher:         t.hasher,
+		Cache:          t.cache,
+		RecoveryHeight: t.cacheHeightLimit + 4,
+		DefaultHashes:  t.defaultHashes,
+		Mutations:      make([]*storage.Mutation, 0),
 	}
 
 	rh := ops.Pop().Interpret(ops, ctx)
@@ -108,10 +108,11 @@ func (t *HyperTree) AddBulk(eventDigests []hashing.Digest, versions []uint64) (h
 	// build a stack of operations and then interpret it to generate the root hash
 	ops := pruneToInsertBulk(digestsAsBytes, versionsAsBytes, t.cacheHeightLimit, t.batchLoader)
 	ctx := &pruningContext{
-		Hasher:        t.hasher,
-		Cache:         t.cache,
-		DefaultHashes: t.defaultHashes,
-		Mutations:     make([]*storage.Mutation, 0),
+		Hasher:         t.hasher,
+		Cache:          t.cache,
+		RecoveryHeight: t.cacheHeightLimit + 4,
+		DefaultHashes:  t.defaultHashes,
+		Mutations:      make([]*storage.Mutation, 0),
 	}
 
 	rh := ops.Pop().Interpret(ops, ctx)
@@ -128,10 +129,11 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	// build a stack of operations and then interpret it to generate the audit path
 	ops := pruneToFind(eventDigest, t.batchLoader)
 	ctx := &pruningContext{
-		Hasher:        t.hasher,
-		Cache:         t.cache,
-		DefaultHashes: t.defaultHashes,
-		AuditPath:     make(AuditPath, 0),
+		Hasher:         t.hasher,
+		Cache:          t.cache,
+		RecoveryHeight: t.cacheHeightLimit + 4,
+		DefaultHashes:  t.defaultHashes,
+		AuditPath:      make(AuditPath, 0),
 	}
 
 	ops.Pop().Interpret(ops, ctx)
@@ -147,26 +149,65 @@ func (t *HyperTree) RebuildCache() {
 	// warm up cache
 	log.Info("Warming up hyper cache...")
 
-	// get all nodes at cache limit height
-	start := make([]byte, 2+t.hasher.Len()/8)
-	end := make([]byte, 2+t.hasher.Len()/8)
-	start[1] = byte(t.cacheHeightLimit)
-	end[1] = byte(t.cacheHeightLimit + 1)
-	nodes, err := t.store.GetRange(storage.HyperTable, start, end)
-	if err != nil {
-		log.Fatalf("Oops, something went wrong: %v", err)
+	tileReader := t.store.GetAll(storage.HyperCacheTable)
+	tiles := make([]*storage.KVPair, 1000)
+	for {
+		n, err := tileReader.Read(tiles)
+		if n == 0 || err != nil {
+			return
+		}
+
+		for i := 0; i < n; i++ {
+			t.cache.Put(tiles[i].Key, tiles[i].Value)
+			ops := pruneToRebuild(tiles[i].Key[2:], tiles[i].Value, t.cacheHeightLimit+4, t.batchLoader)
+			ctx := &pruningContext{
+				Hasher:         t.hasher,
+				Cache:          t.cache,
+				RecoveryHeight: t.cacheHeightLimit + 4,
+				DefaultHashes:  t.defaultHashes,
+			}
+			ops.Pop().Interpret(ops, ctx)
+		}
+	}
+}
+
+func (t *HyperTree) RebuildCacheBulk() {
+	t.Lock()
+	defer t.Unlock()
+
+	// warm up cache
+	log.Info("Warming up hyper cache...")
+
+	indexes := make([][]byte, 0)
+
+	tileReader := t.store.GetAll(storage.HyperCacheTable)
+	tiles := make([]*storage.KVPair, 1000)
+	for {
+		n, err := tileReader.Read(tiles)
+		if n == 0 || err != nil {
+			break
+		}
+
+		for i := 0; i < n; i++ {
+			indexes = append(indexes, tiles[i].Key[2:])
+			t.cache.Put(tiles[i].Key, tiles[i].Value)
+		}
+	}
+	// if there are no elements, we start with a clean
+	// cache
+	if len(indexes) == 0 {
+		return
 	}
 
-	// insert every node into cache
-	for _, node := range nodes {
-		ops := pruneToRebuild(node.Key[2:], node.Value, t.cacheHeightLimit, t.batchLoader)
-		ctx := &pruningContext{
-			Hasher:        t.hasher,
-			Cache:         t.cache,
-			DefaultHashes: t.defaultHashes,
-		}
-		ops.Pop().Interpret(ops, ctx)
+	ops := pruneToRebuildBulk(indexes, t.cacheHeightLimit+4, t.batchLoader)
+	ctx := &pruningContext{
+		Hasher:         t.hasher,
+		Cache:          t.cache,
+		RecoveryHeight: t.cacheHeightLimit + 4,
+		DefaultHashes:  t.defaultHashes,
 	}
+	ops.Pop().Interpret(ops, ctx)
+
 }
 
 func (t *HyperTree) Close() {
