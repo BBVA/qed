@@ -21,64 +21,6 @@ import (
 	"sort"
 )
 
-func pruneToRebuild(index, serializedBatch []byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
-
-	persistedBatch := parseBatchNode(len(index), serializedBatch)
-
-	var traverse, discardBranch func(pos position, batch *batchNode, iBatch int8, ops *operationsStack)
-
-	discardBranch = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
-
-		if batch.HasElementAt(iBatch) {
-			ops.Push(getProvidedHash(pos, iBatch, batch))
-		} else {
-			ops.Push(getDefaultHash(pos))
-		}
-	}
-
-	traverse = func(pos position, batch *batchNode, iBatch int8, ops *operationsStack) {
-
-		// we don't need to check the length of the leaves because we
-		// always have to descend to the cache height limit
-		if pos.Height == cacheHeightLimit {
-			ops.PushAll(useHash(pos, persistedBatch.GetElementAt(0)), updateBatchNode(pos, iBatch, batch))
-			return
-		}
-
-		if batch == nil {
-			batch = batches.Load(pos)
-		}
-
-		// at the end of a batch tree
-		if iBatch > 0 && pos.Height%4 == 0 {
-			traverse(pos, nil, 0, ops)
-			ops.Push(updateBatchNode(pos, iBatch, batch))
-			return
-		}
-
-		rightPos := pos.Right()
-		leftPos := pos.Left()
-		if bytes.Compare(index, rightPos.Index) < 0 { // go to left
-			traverse(pos.Left(), batch, 2*iBatch+1, ops)
-			discardBranch(rightPos, batch, 2*iBatch+2, ops)
-		} else { // go to right
-			discardBranch(leftPos, batch, 2*iBatch+1, ops)
-			traverse(rightPos, batch, 2*iBatch+2, ops)
-		}
-
-		ops.PushAll(innerHash(pos), updateBatchNode(pos, iBatch, batch))
-		if iBatch == 0 { // it's the root of the batch tree
-			ops.Push(putInCache(pos, batch))
-		}
-
-	}
-
-	ops := newOperationsStack()
-	traverse(newRootPosition(uint16(len(index))), nil, 0, ops)
-	return ops
-
-}
-
 func pruneToRebuildBulk(indexes [][]byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
 
 	var traverse, traverseThroughCache func(pos position, indexes [][]byte, batch *batchNode, iBatch int8, ops *operationsStack)
