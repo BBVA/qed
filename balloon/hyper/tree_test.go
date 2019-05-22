@@ -18,7 +18,9 @@ package hyper
 
 import (
 	"encoding/binary"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/hashing"
@@ -55,7 +57,7 @@ func TestAdd(t *testing.T) {
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 
-	tree := NewHyperTree(hashing.NewFakeXorHasher, store, cache.NewSimpleCache(10))
+	tree := NewHyperTree(hashing.NewFakeXorHasher, store, cache.NewSimpleCache(10), 232)
 
 	for i, c := range testCases {
 		version := uint64(i)
@@ -97,7 +99,7 @@ func TestAddBulk(t *testing.T) {
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 
-	tree := NewHyperTree(hashing.NewFakeXorHasher, store, cache.NewSimpleCache(10))
+	tree := NewHyperTree(hashing.NewFakeXorHasher, store, cache.NewSimpleCache(10), 232)
 
 	for i, c := range testCases {
 		rootHash, mutations, err := tree.AddBulk(c.eventDigests, c.versions)
@@ -138,12 +140,12 @@ func TestConsistencyBetweenAddAndAddBulk(t *testing.T) {
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 	addCache := cache.NewSimpleCache(10)
-	addTree := NewHyperTree(hashing.NewFakeXorHasher, store, addCache)
+	addTree := NewHyperTree(hashing.NewFakeXorHasher, store, addCache, 232)
 
 	store2, closeF2 := storage_utils.OpenBPlusTreeStore()
 	defer closeF2()
 	addBulkCache := cache.NewSimpleCache(10)
-	addBulkTree := NewHyperTree(hashing.NewFakeXorHasher, store2, addBulkCache)
+	addBulkTree := NewHyperTree(hashing.NewFakeXorHasher, store2, addBulkCache, 232)
 
 	for i, c := range testCases {
 		// Add
@@ -246,7 +248,8 @@ func TestProveMembership(t *testing.T) {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
 		simpleCache := cache.NewSimpleCache(10)
-		tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache)
+		// cacheHeightLimit ==  numbits - min(24, numbits/8 * 4) == 4
+		tree := NewHyperTree(hashing.NewFakeXorHasher, store, simpleCache, 4)
 
 		for index, digest := range c.addedKeys {
 			_, mutations, err := tree.Add(digest, index)
@@ -283,7 +286,8 @@ func TestAddAndVerify(t *testing.T) {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
 		simpleCache := cache.NewSimpleCache(10)
-		tree := NewHyperTree(c.hasherF, store, simpleCache)
+		cacheHeight := hasher.Len() - min(24, hasher.Len()/8*4)
+		tree := NewHyperTree(c.hasherF, store, simpleCache, cacheHeight)
 
 		key := hasher.Do(hashing.Digest("a test event"))
 		valueBytes := util.Uint64AsPaddedBytes(value, len(key))
@@ -316,8 +320,9 @@ func TestDeterministicAdd(t *testing.T) {
 	store2, closeF2 := storage_utils.OpenBPlusTreeStore()
 	defer closeF1()
 	defer closeF2()
-	tree1 := NewHyperTree(hashing.NewSha256Hasher, store1, cache1)
-	tree2 := NewHyperTree(hashing.NewSha256Hasher, store2, cache2)
+	cacheHeight := hasher.Len() - min(24, hasher.Len()/8*4)
+	tree1 := NewHyperTree(hashing.NewSha256Hasher, store1, cache1, cacheHeight)
+	tree2 := NewHyperTree(hashing.NewSha256Hasher, store2, cache2, cacheHeight)
 
 	// insert a bunch of events in both trees
 	for i := 0; i < 100; i++ {
@@ -369,8 +374,9 @@ func TestRebuildCache(t *testing.T) {
 	hasherF := hashing.NewSha256Hasher
 	hasher := hasherF()
 
-	firstCache := cache.NewSimpleCache(10)
-	tree := NewHyperTree(hasherF, store, firstCache)
+	cacheHeightLimit := uint16(256 - 4*3)
+	firstCache := cache.NewSimpleCache(16 * 16 * 16)
+	tree := NewHyperTree(hasherF, store, firstCache, cacheHeightLimit)
 	require.True(t, firstCache.Size() == 0, "The cache should be empty")
 
 	// store multiple elements
@@ -383,9 +389,8 @@ func TestRebuildCache(t *testing.T) {
 
 	// Close tree and reopen with a new fresh cache
 	tree.Close()
-	secondCache := cache.NewSimpleCache(10)
-	tree = NewHyperTree(hasherF, store, secondCache)
-
+	secondCache := cache.NewSimpleCache(16 * 16 * 16)
+	tree = NewHyperTree(hasherF, store, secondCache, cacheHeightLimit)
 	require.Equal(t, expectedSize, secondCache.Size(), "The size of the caches should match")
 	require.True(t, firstCache.Equal(secondCache), "The caches should be equal")
 }
@@ -399,7 +404,7 @@ func BenchmarkAdd(b *testing.B) {
 
 	hasher := hashing.NewSha256Hasher()
 	freeCache := cache.NewFreeCache(CacheSize)
-	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
+	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache, 232)
 
 	hyperMetrics := metrics_utils.CustomRegister(AddTotal)
 	srvCloseF := metrics_utils.StartMetricsServer(hyperMetrics) //, store)
@@ -428,7 +433,7 @@ func BenchmarkAddBulk(b *testing.B) {
 
 	hasher := hashing.NewSha256Hasher()
 	freeCache := cache.NewFreeCache(CacheSize)
-	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache)
+	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache, 232)
 
 	hyperMetrics := metrics_utils.CustomRegister(AddTotal)
 	srvCloseF := metrics_utils.StartMetricsServer(hyperMetrics) //, store)
@@ -457,5 +462,43 @@ func BenchmarkAddBulk(b *testing.B) {
 			AddTotal.Add(float64(bulkSize))
 		}
 	}
+
+}
+
+func BenchmarkRebuildCacheTime(b *testing.B) {
+
+	log.SetLogger("BenchmarkAdd", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/hyper_tree_test.db")
+	defer closeF()
+
+	hasher := hashing.NewSha256Hasher()
+	freeCache := cache.NewFreeCache(CacheSize)
+	tree := NewHyperTree(hashing.NewSha256Hasher, store, freeCache, 232)
+
+	hyperMetrics := metrics_utils.CustomRegister(AddTotal)
+	srvCloseF := metrics_utils.StartMetricsServer(hyperMetrics) //, store)
+	defer srvCloseF()
+
+	b.N = 200000000
+	for i := 0; i < b.N; i++ {
+		index := make([]byte, 8)
+		binary.LittleEndian.PutUint64(index, uint64(i))
+		elem := append(rand.Bytes(32), index...)
+		_, mutations, err := tree.Add(hasher.Do(elem), uint64(i))
+		require.NoError(b, err)
+		require.NoError(b, store.Mutate(mutations))
+		AddTotal.Inc()
+	}
+
+	b.ResetTimer()
+
+	tree.Close()
+	nfreeCache := cache.NewFreeCache(CacheSize)
+	before := time.Now()
+	ntree := NewHyperTree(hashing.NewSha256Hasher, store, nfreeCache, 232)
+	after := time.Now()
+	fmt.Println("Elapsed time in recovery: ", after.Sub(before))
+	ntree.Close()
 
 }
