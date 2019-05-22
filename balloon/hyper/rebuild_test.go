@@ -209,3 +209,95 @@ func TestRebuildInterpretation(t *testing.T) {
 		}
 	}
 }
+
+func TestPruneToRebuildBulk(t *testing.T) {
+
+	testCases := []struct {
+		index, serializedBatch []byte
+		cachedBatches          map[string][]byte
+		expectedOps            []op
+	}{
+		{
+			// insert index = 0 on empty cache
+			index: []byte{0},
+			serializedBatch: []byte{
+				0xe0, 0x00, 0x00, 0x00, // bitmap: 11100000 00000000 00000000 00000000
+				0x00, 0x01, // iBatch 0 -> hash=0x00 (shortcut index=0)
+				0x00, 0x02, // iBatch 1 -> key=0x00
+				0x00, 0x02, // iBatch 2 -> value=0x00
+			},
+			cachedBatches: map[string][]byte{},
+			expectedOps: []op{
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{getDefaultHashCode, pos(0, 4)},
+			},
+		},
+		{
+			// insert index = 1 on cache with one leaf (index=0)
+			index: []byte{1},
+			serializedBatch: []byte{
+				0xd1, 0x01, 0x80, 0x00, // bitmap: 11010001 00000001 10000000 00000000
+				0x01, 0x00, // iBatch 0 -> hash=0x01
+				0x01, 0x00, // iBatch 1 -> hash=0x01
+				0x01, 0x00, // iBatch 3 -> hash=0x01
+				0x01, 0x00, // iBatch 7 -> hash=0x01
+				0x00, 0x00, // iBatch 15 -> hash=0x00
+				0x01, 0x00, // iBatch 16 -> hash=0x01
+			},
+			cachedBatches: map[string][]byte{
+				pos(0, 8).StringId(): []byte{
+					0xd1, 0x01, 0x00, 0x00, // bitmap: 11010001 00000001 00000000 00000000
+					0x01, 0x00, // iBatch 0 -> hash=0x01
+					0x01, 0x00, // iBatch 1 -> hash=0x01
+					0x01, 0x00, // iBatch 3 -> hash=0x01
+					0x01, 0x00, // iBatch 7 -> hash=0x01
+					0x01, 0x00, // iBatch 15 -> hash=0x01
+				},
+			},
+			expectedOps: []op{
+				{putInCacheCode, pos(0, 8)},
+				{updateBatchNodeCode, pos(0, 8)},
+				{innerHashCode, pos(0, 8)},
+				{getDefaultHashCode, pos(128, 7)},
+				{updateBatchNodeCode, pos(0, 7)},
+				{innerHashCode, pos(0, 7)},
+				{getDefaultHashCode, pos(64, 6)},
+				{updateBatchNodeCode, pos(0, 6)},
+				{innerHashCode, pos(0, 6)},
+				{getDefaultHashCode, pos(32, 5)},
+				{updateBatchNodeCode, pos(0, 5)},
+				{innerHashCode, pos(0, 5)},
+				{getDefaultHashCode, pos(16, 4)},
+				{updateBatchNodeCode, pos(0, 4)},
+				{getDefaultHashCode, pos(0, 4)},
+			},
+		},
+	}
+
+	batchLevels := uint16(1)
+	cacheHeightLimit := batchLevels * 4
+
+	for i, c := range testCases {
+		loader := newFakeBatchLoader(c.cachedBatches, nil, cacheHeightLimit)
+		prunedOps := pruneToRebuildBulk([][]byte{c.index}, cacheHeightLimit, loader).List()
+
+		require.Equal(t, len(c.expectedOps), len(prunedOps), "The size of the pruned ops should match the expected for test case %d", i)
+		for j := 0; j < len(prunedOps); j++ {
+			assert.Equalf(t, c.expectedOps[j].Code, prunedOps[j].Code, "The pruned operation's code should match for test case %d elem %d", i, j)
+			assert.Equalf(t, c.expectedOps[j].Pos, prunedOps[j].Pos, "The pruned operation's position should match for test case %d elem %d", i, j)
+		}
+	}
+}
