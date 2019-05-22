@@ -24,12 +24,13 @@ import (
 )
 
 type pruningContext struct {
-	Hasher        hashing.Hasher
-	Cache         cache.ModifiableCache
-	DefaultHashes []hashing.Digest
-	Mutations     []*storage.Mutation
-	AuditPath     AuditPath
-	Value         []byte
+	Hasher         hashing.Hasher
+	Cache          cache.ModifiableCache
+	RecoveryHeight uint16
+	DefaultHashes  []hashing.Digest
+	Mutations      []*storage.Mutation
+	AuditPath      AuditPath
+	Value          []byte
 }
 
 type operationCode int
@@ -129,8 +130,14 @@ func putInCache(pos position, batch *batchNode) *operation {
 		Code: putInCacheCode,
 		Pos:  pos,
 		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
+
 			hash := ops.Pop().Interpret(ops, c)
-			c.Cache.Put(pos.Bytes(), batch.Serialize())
+			key := pos.Bytes()
+			val := batch.Serialize()
+			c.Cache.Put(key, val)
+			if pos.Height == c.RecoveryHeight {
+				c.Mutations = append(c.Mutations, storage.NewMutation(storage.HyperCacheTable, key, val))
+			}
 			return hash
 		},
 	}
