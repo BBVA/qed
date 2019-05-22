@@ -142,35 +142,6 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	return NewQueryProof(eventDigest, ctx.Value, ctx.AuditPath, t.hasherF()), nil
 }
 
-func (t *HyperTree) RebuildCache() {
-	t.Lock()
-	defer t.Unlock()
-
-	// warm up cache
-	log.Info("Warming up hyper cache...")
-
-	tileReader := t.store.GetAll(storage.HyperCacheTable)
-	tiles := make([]*storage.KVPair, 1000)
-	for {
-		n, err := tileReader.Read(tiles)
-		if n == 0 || err != nil {
-			return
-		}
-
-		for i := 0; i < n; i++ {
-			t.cache.Put(tiles[i].Key, tiles[i].Value)
-			ops := pruneToRebuild(tiles[i].Key[2:], tiles[i].Value, t.cacheHeightLimit+4, t.batchLoader)
-			ctx := &pruningContext{
-				Hasher:         t.hasher,
-				Cache:          t.cache,
-				RecoveryHeight: t.cacheHeightLimit + 4,
-				DefaultHashes:  t.defaultHashes,
-			}
-			ops.Pop().Interpret(ops, ctx)
-		}
-	}
-}
-
 func (t *HyperTree) RebuildCacheBulk() {
 	t.Lock()
 	defer t.Unlock()
