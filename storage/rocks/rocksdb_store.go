@@ -76,6 +76,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	cfNames := []string{
 		storage.DefaultTable.String(),
 		storage.HyperTable.String(),
+		storage.HyperCacheTable.String(),
 		storage.HistoryTable.String(),
 		storage.FSMStateTable.String(),
 	}
@@ -104,6 +105,7 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 	cfOpts := []*rocksdb.Options{
 		rocksdb.NewDefaultOptions(),
 		getHyperTableOpts(blockCache),
+		getHyperTableOpts(blockCache), // hyperCacheOpts table options
 		getHistoryTableOpts(blockCache),
 		getFsmStateTableOpts(),
 	}
