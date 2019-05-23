@@ -19,10 +19,10 @@ package sign
 import (
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io/ioutil"
 
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/ssh"
 )
 
 type Signer interface {
@@ -56,15 +56,14 @@ func NewEd25519SignerFromFile(privateKeyPath string) (Signer, error) {
 		return nil, err
 	}
 
-	pk, err := ssh.ParseRawPrivateKey(privateKeyBytes)
-	privateKey := *pk.(*ed25519.PrivateKey)
+	publicKeyBytes, err := ioutil.ReadFile(fmt.Sprintf("%v.pub", privateKeyPath))
 	if err != nil {
 		return nil, err
 	}
 
 	signer := &Ed25519Signer{
-		privateKey,
-		privateKey.Public().(ed25519.PublicKey),
+		privateKeyBytes,
+		publicKeyBytes,
 	}
 
 	message := []byte("test message")
