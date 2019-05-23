@@ -575,13 +575,22 @@ func (c *HTTPClient) MembershipVerify(
 ) bool {
 
 	if snap.HistoryDigest == nil && snap.HyperDigest == nil {
-		s, err := c.snapshotFromStore(snap.Version)
+		s, err := c.snapshotFromStore(result.QueryVersion)
 		if err != nil {
 			log.Info("Error getting snapshot from snapshot store: %s", err)
 			return false
 		}
 		snap.HistoryDigest = s.HistoryDigest
 		snap.HyperDigest = s.HyperDigest
+
+		if result.CurrentVersion != result.ActualVersion {
+			s, err := c.snapshotFromStore(result.CurrentVersion)
+			if err != nil {
+				log.Info("Error getting snapshot from snapshot store: %s", err)
+				return false
+			}
+			snap.HyperDigest = s.HyperDigest
+		}
 	}
 
 	proof := protocol.ToBalloonProof(result, hasherF)
