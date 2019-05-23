@@ -81,6 +81,11 @@ type Config struct {
 	SSLCertificateKey string
 }
 
+type GenerateConfig struct {
+	// Path to the private key file used to sign snapshots.
+	Path string
+}
+
 func DefaultConfig() *Config {
 	hostname, _ := os.Hostname()
 	currentDir := getCurrentDir()
@@ -103,6 +108,13 @@ func DefaultConfig() *Config {
 		ProfilingAddr:     "127.0.0.1:6060",
 		SSLCertificate:    "",
 		SSLCertificateKey: "",
+		PrivateKeyPath:    "",
+	}
+}
+
+func GenerateDefaultConfig() *GenerateConfig {
+	return &GenerateConfig{
+		Path: "/var/tmp",
 	}
 }
 
