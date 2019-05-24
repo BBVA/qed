@@ -140,7 +140,7 @@ func TestGetAll(t *testing.T) {
 	for i := uint16(0); i < numElems; i++ {
 		key := util.Uint16AsBytes(i)
 		store.Mutate([]*storage.Mutation{
-			{table, key, key},
+			&storage.Mutation{table, key, key},
 		})
 	}
 
@@ -174,6 +174,7 @@ func TestGetLast(t *testing.T) {
 	for _, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
+			key[5] = byte(table)
 			store.Mutate([]*storage.Mutation{
 				{table, key, key},
 			})
@@ -183,8 +184,10 @@ func TestGetLast(t *testing.T) {
 	// get last element for history table
 	kv, err := store.GetLast(storage.HistoryTable)
 	require.NoError(t, err)
-	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Key, "The key should match the last inserted element")
-	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
+	key := util.Uint64AsBytes(numElems - 1)
+	key[5] = byte(storage.HistoryTable)
+	require.Equalf(t, key, kv.Key, "The key should match the last inserted element")
+	require.Equalf(t, key, kv.Value, "The value should match the last inserted element")
 }
 
 func BenchmarkMutate(b *testing.B) {
