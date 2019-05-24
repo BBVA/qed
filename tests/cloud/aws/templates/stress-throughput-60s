@@ -19,7 +19,7 @@ CGO_LDFLAGS_ALLOW='.*'
 QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
 
 # build shared signing key
-$QED generate keypair --path /var/tmp/id_ed25519
+$QED generate keypair --path /var/tmp
 
 echo Stress time!
 
