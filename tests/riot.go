@@ -24,6 +24,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/bbva/qed/hashing"
+
 	"github.com/imdario/mergo"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
@@ -367,7 +369,7 @@ func (a *Attack) Run() {
 					RiotEventAdd.Add(bulkSize)
 				case membership:
 					log.Debugf(">>> mem: %s, %d", task.events[0], task.version)
-					_, _ = a.client.Membership([]byte(task.events[0]), task.version)
+					_, _ = a.client.Membership([]byte(task.events[0]), task.version, hashing.NewSha256Hasher)
 					RiotQueryMembership.Inc()
 				case incremental:
 					log.Debugf(">>> inc: %s", task.events[0])

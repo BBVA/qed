@@ -27,10 +27,10 @@ import (
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/protocol"
 )
 
 var clientMembershipCmd *cobra.Command = &cobra.Command{
@@ -73,7 +73,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 
 	hasherF := hashing.NewSha256Hasher
 
-	var membershipResult *protocol.MembershipResult
+	var proof *balloon.MembershipProof
 	var digest hashing.Digest
 	var err error
 
@@ -97,30 +97,34 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	membershipResult, err = client.MembershipDigest(digest, params.Version)
+	proof, err = client.MembershipDigest(digest, params.Version, hasherF)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\nReceived membership proof:\n")
-	fmt.Printf("\n Exists: %t\n", membershipResult.Exists)
+	fmt.Printf("\nReceived membership proof:\n\n")
+	fmt.Printf(" Exists: %t\n", proof.Exists)
 	fmt.Printf(" Hyper audit path: <TRUNCATED>\n")
 	fmt.Printf(" History audit path: <TRUNCATED>\n")
-	fmt.Printf(" CurrentVersion: %d\n", membershipResult.CurrentVersion)
-	fmt.Printf(" QueryVersion: %d\n", membershipResult.QueryVersion)
-	fmt.Printf(" ActualVersion: %d\n", membershipResult.ActualVersion)
-	fmt.Printf(" KeyDigest: %x\n\n", membershipResult.KeyDigest)
+	fmt.Printf(" CurrentVersion: %d\n", proof.CurrentVersion)
+	fmt.Printf(" QueryVersion: %d\n", proof.QueryVersion)
+	fmt.Printf(" ActualVersion: %d\n", proof.ActualVersion)
+	fmt.Printf(" KeyDigest: %x\n\n", proof.KeyDigest)
 
-	// Verify
-	if params.Verify || params.AutoVerify {
-		var snapshot *protocol.Snapshot
+	if params.AutoVerify || params.Verify {
+		var ok bool
+		var err error
 
-		if params.Verify {
+		if params.AutoVerify {
+			fmt.Printf("\nAuto-Verifying event with: \n\n EventDigest: %x\n Version: %d\n", digest, params.Version)
+			ok, err = client.MembershipAutoVerify(digest, params.Version, hasherF)
+		} else {
+
 			hyperDigest := params.HyperDigest
 			historyDigest := params.HistoryDigest
 			for hyperDigest == "" {
-				hyperDigest = readLine(fmt.Sprintf("Please, provide the hyperDigest for current version [ %d ]: ", membershipResult.CurrentVersion))
+				hyperDigest = readLine(fmt.Sprintf("Please, provide the hyperDigest for current version [ %d ]: ", proof.CurrentVersion))
 			}
-			if membershipResult.Exists {
+			if proof.Exists {
 				for historyDigest == "" {
 					historyDigest = readLine(fmt.Sprintf("Please, provide the historyDigest for version [ %d ] : ", params.Version))
 				}
@@ -128,31 +132,24 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 			hdBytes, _ := hex.DecodeString(hyperDigest)
 			htdBytes, _ := hex.DecodeString(historyDigest)
 
-			snapshot = &protocol.Snapshot{
+			snapshot := &balloon.Snapshot{
 				HistoryDigest: htdBytes,
 				HyperDigest:   hdBytes,
 				Version:       params.Version,
-				EventDigest:   digest}
+				EventDigest:   digest,
+			}
 
-			fmt.Printf("\nVerifying with Snapshot: \n\n EventDigest: %x\n HyperDigest: %s\n HistoryDigest: %s\n Version: %d\n",
-				digest, hyperDigest, historyDigest, params.Version)
+			fmt.Printf("\nVerifying event with: \n\n EventDigest: %x\n HyperDigest: %s\n HistoryDigest: %s\n Version: %d\n", digest, hdBytes, htdBytes, params.Version)
+			ok, err = client.MembershipVerify(digest, proof, snapshot)
 		}
 
-		if params.AutoVerify {
-			snapshot = &protocol.Snapshot{
-				HistoryDigest: nil,
-				HyperDigest:   nil,
-				Version:       params.Version,
-				EventDigest:   digest}
-
-			fmt.Printf("\nAuto-Verifying with Snapshot: \n\n EventDigest: %x\n Version: %d\n",
-				digest, params.Version)
-		}
-
-		if client.MembershipVerify(membershipResult, snapshot, hasherF) {
+		if ok {
 			fmt.Printf("\nVerify: OK\n\n")
 		} else {
 			fmt.Printf("\nVerify: KO\n\n")
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil

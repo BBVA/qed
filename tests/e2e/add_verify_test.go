@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/bbva/qed/balloon"
+
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/testutils/rand"
@@ -54,57 +56,59 @@ func TestAddVerify(t *testing.T) {
 		})
 
 		let(t, "Get membership proof for first inserted event", func(t *testing.T) {
-			result, err := client.Membership([]byte(event), snapshot.Version)
+			proof, err := client.Membership([]byte(event), snapshot.Version, hashing.NewSha256Hasher)
 			spec.NoError(t, err, "Error getting membership proof")
 
-			spec.True(t, result.Exists, "The queried key should be a member")
-			spec.Equal(t, result.QueryVersion, snapshot.Version, "The query version doest't match the queried one")
-			spec.Equal(t, result.ActualVersion, snapshot.Version, "The actual version should match the queried one")
-			spec.Equal(t, result.CurrentVersion, snapshot.Version, "The current version should match the queried one")
-			spec.Equal(t, []byte(event), result.Key, "The returned event doesn't math the original one")
-			spec.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
-			spec.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
-			spec.False(t, result.ActualVersion > 0 && len(result.History) == 0, "The history proof cannot be empty when version is greater than 0")
-
+			spec.True(t, proof.Exists, "The queried key should be a member")
+			spec.Equal(t, proof.QueryVersion, snapshot.Version, "The query version doest't match the queried one")
+			spec.Equal(t, proof.ActualVersion, snapshot.Version, "The actual version should match the queried one")
+			spec.Equal(t, proof.CurrentVersion, snapshot.Version, "The current version should match the queried one")
+			spec.False(t, len(proof.KeyDigest) == 0, "The key digest cannot be empty")
+			spec.NotNil(t, proof.HyperProof, "The hyper proof cannot be empty")
+			spec.False(t, proof.ActualVersion > 0 && proof.HistoryProof == nil, "The history proof cannot be empty when version is greater than 0")
 		})
 	})
 	after()
 	err = before()
 	spec.NoError(t, err, "Error starting server")
 	let(t, "Add two events, verify the first one", func(t *testing.T) {
-		var resultFirst, resultLast *protocol.MembershipResult
+		var proof1, proof2 *balloon.MembershipProof
 		var err error
-		var first, last *protocol.Snapshot
+		var snap1, snap2 *protocol.Snapshot
 
 		client, err := newQedClient(0)
 		spec.NoError(t, err, "Error creating a new qed client")
 		defer func() { client.Close() }()
 
-		first, err = client.Add("Test event 1")
+		snap1, err = client.Add("Test event 1")
 		spec.NoError(t, err, "Error adding event 1")
-		last, err = client.Add("Test event 2")
+		snap2, err = client.Add("Test event 2")
 		spec.NoError(t, err, "Error adding event 2")
 
 		let(t, "Get membership proof for inserted events", func(t *testing.T) {
-			resultFirst, err = client.MembershipDigest(first.EventDigest, first.Version)
+			proof1, err = client.MembershipDigest(snap1.EventDigest, snap1.Version, hashing.NewSha256Hasher)
 			spec.NoError(t, err, "Error getting membership digest")
-			resultLast, err = client.MembershipDigest(last.EventDigest, last.Version)
+			proof2, err = client.MembershipDigest(snap2.EventDigest, snap2.Version, hashing.NewSha256Hasher)
 			spec.NoError(t, err, "Error getting membership digest")
 		})
 
 		let(t, "Verify events", func(t *testing.T) {
-			first.HyperDigest = last.HyperDigest
-			spec.True(t, client.MembershipVerify(resultFirst, first, hashing.NewSha256Hasher), "The first proof should be valid")
-			spec.True(t, client.MembershipVerify(resultLast, last, hashing.NewSha256Hasher), "The last proof should be valid")
-		})
+			snap1.HyperDigest = snap2.HyperDigest
 
+			balloonSnap1 := balloon.Snapshot(*snap1)
+			balloonSnap2 := balloon.Snapshot(*snap2)
+			ok1, _ := client.MembershipVerify(snap1.EventDigest, proof1, &balloonSnap1)
+			ok2, _ := client.MembershipVerify(snap2.EventDigest, proof2, &balloonSnap2)
+			spec.True(t, ok1, "The first proof should be valid")
+			spec.True(t, ok2, "The last proof should be valid")
+		})
 	})
 
 	after()
 	err = before()
 	spec.NoError(t, err, "Error starting server")
 	let(t, "Add 10 events, verify event with index i", func(t *testing.T) {
-		var p1, p2 *protocol.MembershipResult
+		var p1, p2 *balloon.MembershipProof
 		var err error
 		const size int = 10
 
@@ -123,29 +127,32 @@ func TestAddVerify(t *testing.T) {
 		k := 9
 
 		let(t, "Get proofs p1, p2 for event with index i in versions j and k", func(t *testing.T) {
-			p1, err = client.MembershipDigest(s[i].EventDigest, s[j].Version)
+			p1, err = client.MembershipDigest(s[i].EventDigest, s[j].Version, hashing.NewSha256Hasher)
 			spec.NoError(t, err, "Error getting membership digest")
-			p2, err = client.MembershipDigest(s[i].EventDigest, s[k].Version)
+			p2, err = client.MembershipDigest(s[i].EventDigest, s[k].Version, hashing.NewSha256Hasher)
 			spec.NoError(t, err, "Error getting membership digest")
 		})
 
 		let(t, "Verify both proofs against index i event", func(t *testing.T) {
-			snap := &protocol.Snapshot{
+			snap := &balloon.Snapshot{
 				HistoryDigest: s[j].HistoryDigest,
 				HyperDigest:   s[9].HyperDigest,
 				Version:       s[j].Version,
 				EventDigest:   s[i].EventDigest,
 			}
-			spec.True(t, client.MembershipVerify(p1, snap, hashing.NewSha256Hasher), "p1 should be valid")
+			ok, err := client.MembershipVerify(s[i].EventDigest, p1, snap)
+			spec.True(t, ok, "p1 should be valid")
+			spec.NoError(t, err, "Error not expected")
 
-			snap = &protocol.Snapshot{
+			snap = &balloon.Snapshot{
 				HistoryDigest: s[k].HistoryDigest,
 				HyperDigest:   s[9].HyperDigest,
 				Version:       s[k].Version,
 				EventDigest:   s[i].EventDigest,
 			}
-			spec.True(t, client.MembershipVerify(p2, snap, hashing.NewSha256Hasher), "p2 should be valid")
-
+			ok, err = client.MembershipVerify(s[i].EventDigest, p2, snap)
+			spec.True(t, ok, "p2 should be valid")
+			spec.NoError(t, err, "Error not expected")
 		})
 
 	})

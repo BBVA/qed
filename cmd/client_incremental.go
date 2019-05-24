@@ -121,7 +121,7 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 		fmt.Printf(" HistoryDigest for start version [ %d ]: %s\n", params.Start, startDigest)
 		fmt.Printf(" HistoryDigest for end version [ %d ]: %s\n", params.End, endDigest)
 
-		if client.VerifyIncremental(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
+		if client.IncrementalVerify(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
 			fmt.Printf("\nVerify: OK\n\n")
 		} else {
 			fmt.Printf("\nVerify: KO\n\n")

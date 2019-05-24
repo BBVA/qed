@@ -39,7 +39,7 @@ func TestIncrementalConsistency(t *testing.T) {
 	let(t, "Add multiple events and verify consistency between two of them", func(t *testing.T) {
 		client, err := newQedClient(0)
 		spec.NoError(t, err, "Error creating a new qed client")
-		defer func(){ client.Close() }()
+		defer func() { client.Close() }()
 		events := make([]string, 10)
 		snapshots := make([]*protocol.Snapshot, 10)
 		var result *protocol.IncrementalResponse
@@ -60,7 +60,7 @@ func TestIncrementalConsistency(t *testing.T) {
 		})
 
 		let(t, "Verify the proof", func(t *testing.T) {
-			spec.True(t, client.VerifyIncremental(result, snapshots[2], snapshots[8], hashing.NewSha256Hasher()), "The proofs should be valid")
+			spec.True(t, client.IncrementalVerify(result, snapshots[2], snapshots[8], hashing.NewSha256Hasher()), "The proofs should be valid")
 		})
 
 	})
