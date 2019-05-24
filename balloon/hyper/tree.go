@@ -45,10 +45,11 @@ type HyperTree struct {
 	sync.RWMutex
 }
 
-func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache, cacheHeightLimit uint16) *HyperTree {
+func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache) *HyperTree {
 
 	hasher := hasherF()
 	numBits := hasher.Len()
+	cacheHeightLimit := numBits - min(24, numBits/8*4)
 
 	tree := &HyperTree{
 		store:            store,
@@ -66,7 +67,7 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 	}
 
 	// warm-up cache
-	tree.RebuildCacheBulk()
+	tree.RebuildCache()
 
 	return tree
 }
@@ -142,7 +143,7 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	return NewQueryProof(eventDigest, ctx.Value, ctx.AuditPath, t.hasherF()), nil
 }
 
-func (t *HyperTree) RebuildCacheBulk() {
+func (t *HyperTree) RebuildCache() {
 	t.Lock()
 	defer t.Unlock()
 
@@ -170,7 +171,7 @@ func (t *HyperTree) RebuildCacheBulk() {
 		return
 	}
 
-	ops := pruneToRebuildBulk(indexes, t.cacheHeightLimit+4, t.batchLoader)
+	ops := pruneToRebuild(indexes, t.cacheHeightLimit+4, t.batchLoader)
 	ctx := &pruningContext{
 		Hasher:         t.hasher,
 		Cache:          t.cache,
