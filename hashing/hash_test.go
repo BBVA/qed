@@ -17,10 +17,13 @@
 package hashing
 
 import (
+	"crypto/sha256"
 	"strconv"
 	"testing"
 
+	"github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/blake2b"
 )
 
 func TestXorHasher(t *testing.T) {
@@ -70,6 +73,38 @@ func TestSha256Hasher(t *testing.T) {
 	}
 
 	hasher := NewSha256Hasher()
+	for testname, test := range tests {
+		hashSalt := hasher.Salted(test.salt, test.eventA, test.eventB)
+		hashDo := hasher.Do(test.eventA, test.eventB)
+		assert.Equalf(t, test.expectedHashDo, hashDo, "Hash Do don't match in test: %s", testname)
+		assert.Equalf(t, test.expectedHashSalt, hashSalt, "Hash Salt don't match in test: %s", testname)
+		assert.NotEqual(t, hashDo, hashSalt, "Do and Salted hashes should NOT match in test: %s", testname)
+	}
+}
+
+func TestBlake2bHasher(t *testing.T) {
+	tests := map[string]struct {
+		salt             []byte
+		eventA           []byte
+		eventB           []byte
+		expectedHashDo   Digest
+		expectedHashSalt Digest
+	}{
+		"LeafHash (0,0)": {
+			[]byte{'0'},
+			[]byte(strconv.Itoa((0))),
+			[]byte{},
+			Digest{0x0f, 0xd9, 0x23, 0xca, 0x5e, 0x72, 0x18, 0xc4, 0xba, 0x3c, 0x38, 0x01, 0xc2, 0x6a, 0x61, 0x7e, 0xcd, 0xbf, 0xda, 0xeb, 0xb9, 0xc7, 0x6c, 0xe2, 0xec, 0xa1, 0x66, 0xe7, 0x85, 0x5e, 0xfb, 0xb8},
+			Digest{0xcb, 0xc6, 0x3d, 0xc2, 0xac, 0xb8, 0x6b, 0xd8, 0x96, 0x74, 0x53, 0xef, 0x98, 0xfd, 0x4f, 0x2b, 0xe2, 0xf2, 0x6d, 0x73, 0x37, 0xa0, 0x93, 0x79, 0x58, 0x21, 0x1c, 0x12, 0x8a, 0x18, 0xb4, 0x42}},
+		"InteriorHash (0,1)": {
+			[]byte{'1'},
+			[]byte{0x0f, 0xd9, 0x23, 0xca, 0x5e, 0x72, 0x18, 0xc4, 0xba, 0x3c, 0x38, 0x01, 0xc2, 0x6a, 0x61, 0x7e, 0xcd, 0xbf, 0xda, 0xeb, 0xb9, 0xc7, 0x6c, 0xe2, 0xec, 0xa1, 0x66, 0xe7, 0x85, 0x5e, 0xfb, 0xb8},
+			[]byte{0x3b, 0xd9, 0xb8, 0x17, 0x23, 0x3c, 0x46, 0x1c, 0xbf, 0xba, 0x46, 0xfb, 0xc5, 0xf4, 0x16, 0x39, 0x64, 0xc3, 0x56, 0xf5, 0x74, 0xcf, 0x8c, 0x4a, 0xb5, 0xea, 0x9a, 0xd, 0x4f, 0xc8, 0x2, 0xb8},
+			Digest{0x6e, 0x71, 0xa9, 0xe3, 0x9a, 0x19, 0x6d, 0x2a, 0x35, 0x67, 0x88, 0xe5, 0x57, 0xd7, 0x13, 0xdd, 0xc8, 0xd1, 0xa6, 0x25, 0xf2, 0x3d, 0x13, 0xde, 0x4c, 0x33, 0x9d, 0xa7, 0x9e, 0x70, 0xc2, 0xfc},
+			Digest{0x8f, 0x80, 0x61, 0x53, 0x52, 0x15, 0x5a, 0xdb, 0xdd, 0x15, 0xa5, 0x4d, 0xe0, 0x3d, 0xcb, 0x6b, 0x54, 0xc, 0xf8, 0x33, 0x69, 0x5a, 0xb8, 0x72, 0xfd, 0x2d, 0x8a, 0x4f, 0xc9, 0xc0, 0xe4, 0xa3}},
+	}
+
+	hasher := NewBlake2bHasher()
 	for testname, test := range tests {
 		hashSalt := hasher.Salted(test.salt, test.eventA, test.eventB)
 		hashDo := hasher.Do(test.eventA, test.eventB)
@@ -171,5 +206,72 @@ func TestFakePearsonHasher(t *testing.T) {
 		assert.Equalf(t, test.expectedHashDo, hashDo, "Hash Do don't match in test: %s", testname)
 		assert.Equalf(t, test.expectedHashSalt, hashSalt, "Hash Salt don't match in test: %s", testname)
 		assert.Equal(t, hashDo, hashSalt, "Do and Salted hashes should NOT match in test: %s", testname)
+	}
+}
+
+func BenchmarkSha256HasherRandomBytes(b *testing.B) {
+
+	hasher := NewSha256Hasher()
+
+	b.ResetTimer()
+	b.N = 1000000
+	for i := 0; i < b.N; i++ {
+		hasher.Do(rand.Bytes(128))
+	}
+}
+func BenchmarkBlake2bHasherRandomBytes(b *testing.B) {
+
+	hasher := NewBlake2bHasher()
+
+	b.ResetTimer()
+	b.N = 1000000
+	for i := 0; i < b.N; i++ {
+		hasher.Do(rand.Bytes(128))
+	}
+}
+
+func BenchmarkSha256HasherFixedBytes(b *testing.B) {
+
+	hasher := NewSha256Hasher()
+	data := []byte("FixedBytes")
+
+	b.ResetTimer()
+	b.N = 100000000
+	for i := 0; i < b.N; i++ {
+		hasher.Do(data)
+	}
+}
+func BenchmarkBlake2bHasherFixedBytes(b *testing.B) {
+
+	hasher := NewBlake2bHasher()
+	data := []byte("FixedBytes")
+
+	b.ResetTimer()
+	b.N = 100000000
+	for i := 0; i < b.N; i++ {
+		hasher.Do(data)
+	}
+}
+
+func BenchmarkBlake2bFixedBytesNoWrite(b *testing.B) {
+
+	data := []byte("FixedBytes")
+
+	b.ResetTimer()
+	b.N = 100000000
+	blake2b.Sum256(data)
+	for i := 0; i < b.N; i++ {
+		blake2b.Sum256(data)
+	}
+}
+
+func BenchmarkSha256FixedBytesNoWrite(b *testing.B) {
+
+	data := []byte("FixedBytes")
+
+	b.ResetTimer()
+	b.N = 100000000
+	for i := 0; i < b.N; i++ {
+		sha256.Sum256(data)
 	}
 }
