@@ -175,7 +175,7 @@ func (i incrementalFactory) New(ctx context.Context) gossip.Task {
 			log.Infof("Monitor is unable to get incremental proof from QED server: %s", err.Error())
 			return err
 		}
-		ok := a.Qed.VerifyIncremental(resp, first, last, hashing.NewSha256Hasher())
+		ok := a.Qed.IncrementalVerify(resp, first, last, hashing.NewSha256Hasher())
 		if !ok {
 			a.Notifier.Alert(fmt.Sprintf("Monitor is unable to verify incremental proof from %d to %d", first.Version, last.Version))
 			log.Infof("Monitor is unable to verify incremental proof from %d to %d", first.Version, last.Version)

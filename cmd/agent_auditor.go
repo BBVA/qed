@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/hashing"
@@ -162,13 +163,14 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 		timer := prometheus.NewTimer(QedAuditorBatchesProcessSeconds)
 		defer timer.ObserveDuration()
 
-		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, s.Snapshot.Version)
+		// TODO Get hasher via negotiation between agent and QED
+		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, s.Snapshot.Version, hashing.NewSha256Hasher)
 		if err != nil {
 			log.Infof("Auditor is unable to get membership proof from QED server: %v", err)
 
 			switch fmt.Sprintf("%T", err) {
 			case "*errors.errorString":
-				a.Notifier.Alert(fmt.Sprintf("Auditor is unable to get membership proof from QED server: %v", err))
+				_ = a.Notifier.Alert(fmt.Sprintf("Auditor is unable to get membership proof from QED server: %v", err))
 			default:
 				QedAuditorGetMembershipProofErrTotal.Inc()
 			}
@@ -182,16 +184,19 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 			return err
 		}
 
-		checkSnap := &protocol.Snapshot{
+		checkSnap := &balloon.Snapshot{
 			HistoryDigest: s.Snapshot.HistoryDigest,
 			HyperDigest:   storedSnap.Snapshot.HyperDigest,
 			Version:       s.Snapshot.Version,
 			EventDigest:   s.Snapshot.EventDigest,
 		}
 
-		ok := a.Qed.MembershipVerify(proof, checkSnap, hashing.NewSha256Hasher)
+		ok, err := a.Qed.MembershipVerify(s.Snapshot.EventDigest, proof, checkSnap)
+		if err != nil {
+			return err
+		}
 		if !ok {
-			a.Notifier.Alert(fmt.Sprintf("Unable to verify snapshot %v", s.Snapshot))
+			_ = a.Notifier.Alert(fmt.Sprintf("Unable to verify snapshot %v", s.Snapshot))
 			log.Infof("Unable to verify snapshot %v", s.Snapshot)
 		}
 

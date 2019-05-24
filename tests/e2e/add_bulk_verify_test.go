@@ -17,8 +17,10 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
@@ -30,7 +32,7 @@ func TestAddBulkAndVerify(t *testing.T) {
 	before, after := newServerSetup(0, false)
 	let, report := spec.New()
 	defer func() {
-		after()
+		_ = after()
 		t.Logf(report())
 	}()
 	log.SetLogger("e2e", log.ERROR)
@@ -54,12 +56,12 @@ func TestAddBulkAndVerify(t *testing.T) {
 	spec.NoError(t, err, "Error creating a new qed client")
 	defer func() { client.Close() }()
 
-	let(t, "Add one event and get its membership proof", func(t *testing.T) {
+	let(t, "Add an event bulk and get all membership proofs", func(t *testing.T) {
 		var snapshotBulk []*protocol.Snapshot
-		var membershipBulk []*protocol.MembershipResult
+		var proofs []*balloon.MembershipProof
 		var err error
 
-		let(t, "Add event", func(t *testing.T) {
+		let(t, "Add an event bulk", func(t *testing.T) {
 			snapshotBulk, err = client.AddBulk(events)
 			spec.NoError(t, err, "Error calling client.AddBulk")
 
@@ -75,27 +77,27 @@ func TestAddBulkAndVerify(t *testing.T) {
 			lastVersion := uint64(len(events) - 1)
 			for i, snapshot := range snapshotBulk {
 
-				result, err := client.Membership([]byte(events[i]), snapshot.Version)
+				proof, err := client.Membership([]byte(events[i]), snapshot.Version, hashing.NewSha256Hasher)
 				spec.NoError(t, err, "Error getting membership proof")
 
-				spec.True(t, result.Exists, "The queried key should be a member")
-				spec.Equal(t, result.QueryVersion, snapshot.Version, "The query version doest't match the queried one")
-				spec.Equal(t, result.ActualVersion, snapshot.Version, "The actual version should match the queried one")
-				spec.Equal(t, result.CurrentVersion, lastVersion, "The current version should match the queried one")
-				spec.Equal(t, []byte(events[i]), result.Key, "The returned event doesn't math the original one")
-				spec.False(t, len(result.KeyDigest) == 0, "The key digest cannot be empty")
-				spec.False(t, len(result.Hyper) == 0, "The hyper proof cannot be empty")
-				spec.False(t, result.ActualVersion > 0 && len(result.History) == 0, "The history proof cannot be empty when version is greater than 0")
+				spec.True(t, proof.Exists, "The queried key should be a member")
+				spec.Equal(t, proof.QueryVersion, snapshot.Version, "The query version doest't match the queried one")
+				spec.Equal(t, proof.ActualVersion, snapshot.Version, "The actual version should match the queried one")
+				spec.Equal(t, proof.CurrentVersion, lastVersion, "The current version should match the queried one")
+				spec.False(t, len(proof.KeyDigest) == 0, "The key digest cannot be empty")
+				spec.NotNil(t, proof.HyperProof, "The hyper proof cannot be empty")
+				spec.False(t, proof.ActualVersion > 0 && proof.HistoryProof == nil, "The history proof cannot be empty when version is greater than 0")
 
-				membershipBulk = append(membershipBulk, result)
+				proofs = append(proofs, proof)
 			}
 		})
 
 		let(t, "Verify each membership", func(t *testing.T) {
-			for i, result := range membershipBulk {
-				snap := snapshotBulk[i]
-				res := client.MembershipVerify(result, snap, hashing.NewSha256Hasher)
-				spec.True(t, res, "result should be valid")
+			for i, proof := range proofs {
+				balloonSnap := balloon.Snapshot(*snapshotBulk[i])
+				res, err := client.MembershipVerify(balloonSnap.EventDigest, proof, &balloonSnap)
+				spec.True(t, res, "Proof should be valid")
+				spec.NoError(t, err, fmt.Sprintf("Error not expected: %s", err))
 			}
 		})
 	})
