@@ -8,15 +8,21 @@ require (
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/coocood/freecache v1.1.0
 	github.com/dgryski/go-farm v0.0.0-20180109070241-2de33835d102 // indirect
+	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
+	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
+	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
 	github.com/golang/protobuf v1.2.0
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c
 	github.com/hashicorp/go-msgpack v0.5.3
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/memberlist v0.1.3
 	github.com/hashicorp/raft v1.0.0
+	github.com/iknite/dragonboat-example v0.0.0-20190217081224-402f6ee07cec // indirect
 	github.com/imdario/mergo v0.3.7
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/lni/dragonboat v2.1.1-0.20190523093113-affafc879add+incompatible
+	github.com/lni/dragonboat-example v2.0.1-0.20190523141457-bb41cfb1ee8f+incompatible
 	github.com/octago/sflags v0.2.0
 	github.com/pkg/errors v0.8.0
 	github.com/prometheus/client_golang v0.9.2
@@ -25,6 +31,7 @@ require (
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.2.2
+	github.com/tecbot/gorocksdb v0.0.0-20190519120508-025c3cf4ffb4
 	golang.org/x/crypto v0.0.0-20190228161510-8dd112bcdc25
 	golang.org/x/net v0.0.0-20181220203305-927f97764cc3 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
