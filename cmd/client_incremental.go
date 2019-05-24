@@ -21,10 +21,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/protocol"
 	"github.com/octago/sflags/gen/gpflag"
 
 	"github.com/spf13/cobra"
@@ -76,7 +76,7 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	proof, err := client.Incremental(params.Start, params.End)
+	proof, err := client.Incremental(params.Start, params.End, hashing.NewSha256Hasher)
 	if err != nil {
 		return err
 	}
@@ -104,13 +104,13 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 
 		sdBytes, _ := hex.DecodeString(startDigest)
 		edBytes, _ := hex.DecodeString(endDigest)
-		startSnapshot := &protocol.Snapshot{
+		startSnapshot := &balloon.Snapshot{
 			EventDigest:   nil,
 			HistoryDigest: sdBytes,
 			HyperDigest:   nil,
 			Version:       params.Start,
 		}
-		endSnapshot := &protocol.Snapshot{
+		endSnapshot := &balloon.Snapshot{
 			EventDigest:   nil,
 			HistoryDigest: edBytes,
 			HyperDigest:   nil,
@@ -121,10 +121,15 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 		fmt.Printf(" HistoryDigest for start version [ %d ]: %s\n", params.Start, startDigest)
 		fmt.Printf(" HistoryDigest for end version [ %d ]: %s\n", params.End, endDigest)
 
-		if client.IncrementalVerify(proof, startSnapshot, endSnapshot, hashing.NewSha256Hasher()) {
+		ok, err := client.IncrementalVerify(proof, startSnapshot, endSnapshot)
+		if ok {
 			fmt.Printf("\nVerify: OK\n\n")
 		} else {
 			fmt.Printf("\nVerify: KO\n\n")
+		}
+
+		if err != nil {
+			return err
 		}
 	}
 
