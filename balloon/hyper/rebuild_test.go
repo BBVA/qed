@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPruneToRebuildBulk(t *testing.T) {
+func TestPruneToRebuild(t *testing.T) {
 
 	testCases := []struct {
 		index, serializedBatch []byte
@@ -105,7 +105,7 @@ func TestPruneToRebuildBulk(t *testing.T) {
 
 	for i, c := range testCases {
 		loader := newFakeBatchLoader(c.cachedBatches, nil, cacheHeightLimit)
-		prunedOps := pruneToRebuildBulk([][]byte{c.index}, cacheHeightLimit, loader).List()
+		prunedOps := pruneToRebuild([][]byte{c.index}, cacheHeightLimit, loader).List()
 
 		require.Equal(t, len(c.expectedOps), len(prunedOps), "The size of the pruned ops should match the expected for test case %d", i)
 		for j := 0; j < len(prunedOps); j++ {
