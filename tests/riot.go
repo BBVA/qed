@@ -373,7 +373,7 @@ func (a *Attack) Run() {
 					RiotQueryMembership.Inc()
 				case incremental:
 					log.Debugf(">>> inc: %s", task.events[0])
-					_, _ = a.client.Incremental(task.start, task.end)
+					_, _ = a.client.Incremental(task.start, task.end, hashing.NewSha256Hasher)
 					RiotQueryIncremental.Inc()
 				}
 			}
