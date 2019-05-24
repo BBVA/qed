@@ -49,10 +49,6 @@ RUN go build -o /usr/local/bin/qed                                   &&\
 RUN rm -rf /var/lib/apt/lists/* /tmp/qed
 
 FROM ubuntu:19.10
-RUN apt-get update               &&\ 
-    apt-get install -y             \
-    ssh-client                   &&\
-    rm -rf /var/lib/apt/lists/*
 
 COPY --from=0 /usr/local/bin/qed /usr/local/bin/qed
 COPY --from=0 /usr/local/bin/riot /usr/local/bin/riot
