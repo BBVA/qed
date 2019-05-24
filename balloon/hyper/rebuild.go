@@ -21,7 +21,7 @@ import (
 	"sort"
 )
 
-func pruneToRebuildBulk(indexes [][]byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
+func pruneToRebuild(indexes [][]byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
 
 	var traverse, traverseThroughCache func(pos position, indexes [][]byte, batch *batchNode, iBatch int8, ops *operationsStack)
 
