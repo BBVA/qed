@@ -71,12 +71,14 @@ func (t Table) Prefix() byte {
 	switch t {
 	case HyperTable:
 		prefix = byte(0x0)
-	case HistoryTable:
+	case HyperCacheTable:
 		prefix = byte(0x1)
-	case FSMStateTable:
+	case HistoryTable:
 		prefix = byte(0x2)
-	default:
+	case FSMStateTable:
 		prefix = byte(0x3)
+	default:
+		prefix = byte(0x4)
 	}
 	return prefix
 }
