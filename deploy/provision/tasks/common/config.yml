@@ -18,7 +18,7 @@
       state: directory
 
 - name: Create private key
-  shell: ssh-keygen -t ed25519 -f config_files/id_ed25519 -P ''
+  shell: GOOS="" GOARCH="" $QED generate keypair --path config_files
   args:
     creates: config_files/id_ed25519
 
