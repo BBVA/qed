@@ -14,13 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo Create id_ed25519 key
-ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+# Deployment options
+CGO_LDFLAGS_ALLOW='.*'
+QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
+
+# build shared signing key
+$QED generate keypair --path /var/tmp/id_ed25519
 
 tdir=$(mktemp -d /var/tmp/demo.XXX)
 
 echo 'Starting leader...'
-go run ../../main.go start \
+go run $QED start \
     -k test_key \
     -p ${tdir} \
     --keypath /var/tmp/id_ed25519 \

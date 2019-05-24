@@ -21,6 +21,8 @@
     - GOOS: linux
     - GOARCH: amd64
     - GO111MODULE: 'on'
+    - CGO_LDFLAGS_ALLOW: '.*'
+    - QED: 'go run ../../main.go'
   tasks:
     - include: tasks/common/build.yml
     - include: tasks/common/config.yml
