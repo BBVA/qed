@@ -18,8 +18,9 @@ package bplus
 
 import (
 	"bytes"
-	"github.com/bbva/qed/metrics"
 	"io"
+
+	"github.com/bbva/qed/metrics"
 
 	"github.com/bbva/qed/storage"
 	"github.com/google/btree"
@@ -116,7 +117,8 @@ func (r *BPlusKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
 			return false
 		}
 		key := i.(KVItem).Key
-		if bytes.Compare(key, r.lastKey) != 0 {
+
+		if bytes.Compare(key[:1], r.lastKey[:1]) == 0 && bytes.Compare(key, r.lastKey) != 0 {
 			buffer[n] = &storage.KVPair{key[1:], i.(KVItem).Value}
 			n++
 		}
