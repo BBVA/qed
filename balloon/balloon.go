@@ -54,9 +54,7 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 
 	// create trees
 	historyTree := history.NewHistoryTree(hasherF, store, 300)
-	hasher := hasherF()
-	cacheHeightLimit := hasher.Len() - min(24, hasher.Len()/8*4)
-	hyperTree := hyper.NewHyperTree(hasherF, store, cache.NewFreeCache(hyper.CacheSize), cacheHeightLimit)
+	hyperTree := hyper.NewHyperTree(hasherF, store, cache.NewFreeCache(hyper.CacheSize))
 
 	balloon := &Balloon{
 		version:     0,
