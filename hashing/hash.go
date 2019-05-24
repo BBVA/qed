@@ -18,7 +18,10 @@ package hashing
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"hash"
+
+	"golang.org/x/crypto/blake2b"
 )
 
 type Digest []byte
@@ -53,20 +56,28 @@ func (x XorHasher) Do(data ...[]byte) Digest {
 }
 func (s XorHasher) Len() uint16 { return uint16(8) }
 
-type Sha256Hasher struct {
+type KeyHasher struct {
 	underlying hash.Hash
 }
 
-func NewSha256Hasher() Hasher {
-	return &Sha256Hasher{underlying: sha256.New()}
+func NewBlake2bHasher() Hasher {
+	hasher, err := blake2b.New256(nil)
+	if err != nil {
+		panic(fmt.Sprintf("Error creating BLAKE2b hasher %v", err))
+	}
+	return &KeyHasher{underlying: hasher}
 }
 
-func (s *Sha256Hasher) Salted(salt []byte, data ...[]byte) Digest {
+func NewSha256Hasher() Hasher {
+	return &KeyHasher{underlying: sha256.New()}
+}
+
+func (s *KeyHasher) Salted(salt []byte, data ...[]byte) Digest {
 	data = append(data, salt)
 	return s.Do(data...)
 }
 
-func (s *Sha256Hasher) Do(data ...[]byte) Digest {
+func (s *KeyHasher) Do(data ...[]byte) Digest {
 	s.underlying.Reset()
 	for i := 0; i < len(data); i++ {
 		s.underlying.Write(data[i])
@@ -74,7 +85,7 @@ func (s *Sha256Hasher) Do(data ...[]byte) Digest {
 	return s.underlying.Sum(nil)[:]
 }
 
-func (s Sha256Hasher) Len() uint16 { return uint16(256) }
+func (s KeyHasher) Len() uint16 { return uint16(256) }
 
 // PearsonHasher implements the Hasher interface and computes a 8 bit hash
 // function. Handy for testing hash tree implementations.
