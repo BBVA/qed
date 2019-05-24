@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo Create id_ed25519 key
-yes | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+# build shared signing key
+/tmp/to_upload/qed generate keypair --path /var/tmp/id_ed25519
 
 sleep 10
 
