@@ -619,7 +619,7 @@ func (c *HTTPClient) snapshotFromStore(version uint64) (*protocol.Snapshot, erro
 }
 
 // Incremental will ask for an IncrementalProof to the server.
-func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
+func (c *HTTPClient) Incremental(start, end uint64, hasherF func() hashing.Hasher) (*balloon.IncrementalProof, error) {
 
 	query, _ := json.Marshal(&protocol.IncrementalRequest{
 		Start: start,
@@ -634,30 +634,56 @@ func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalRespon
 	var response *protocol.IncrementalResponse
 	_ = json.Unmarshal(body, &response)
 
-	return response, nil
+	proof := protocol.ToIncrementalProof(response, hasherF)
+	return proof, nil
 }
 
 func (c *HTTPClient) IncrementalVerify(
-	result *protocol.IncrementalResponse,
-	startSnapshot, endSnapshot *protocol.Snapshot,
-	hasher hashing.Hasher,
-) bool {
+	proof *balloon.IncrementalProof,
+	startSnapshot, endSnapshot *balloon.Snapshot,
+) (bool, error) {
 
-	proof := protocol.ToIncrementalProof(result, hasher)
-
-	s := balloon.Snapshot(*startSnapshot)
-	start := &s
-
-	e := balloon.Snapshot(*endSnapshot)
-	end := &e
-
-	return proof.Verify(start, end)
+	return proof.Verify(startSnapshot, endSnapshot), nil
 }
 
 func (c *HTTPClient) IncrementalAutoVerify(
-	result *protocol.IncrementalResponse,
-	startSnapshot, endSnapshot *protocol.Snapshot,
-	hasher hashing.Hasher,
-) bool {
-	return true
+	start, end uint64,
+	hasherF func() hashing.Hasher,
+) (bool, error) {
+
+	// Get incrementral proof
+	proof, err := c.Incremental(start, end, hasherF)
+	if err != nil {
+		return false, err
+	}
+
+	// Build start and end snapshots info from snapshot snapshot store and params.
+	// Start snapshot
+	startSnapshot := balloon.Snapshot{
+		EventDigest: hashing.Digest{},
+		HyperDigest: hashing.Digest{},
+		Version:     start,
+	}
+	s, err := c.snapshotFromStore(start)
+	if err != nil {
+		log.Info("Error getting snapshot from snapshot store: %s", err)
+		return false, err
+	}
+	startSnapshot.HistoryDigest = s.HistoryDigest
+
+	// End snapshot
+	endSnapshot := balloon.Snapshot{
+		EventDigest: hashing.Digest{},
+		HyperDigest: hashing.Digest{},
+		Version:     end,
+	}
+	s, err = c.snapshotFromStore(end)
+	if err != nil {
+		log.Info("Error getting snapshot from snapshot store: %s", err)
+		return false, err
+	}
+	endSnapshot.HistoryDigest = s.HistoryDigest
+
+	// Verify
+	return c.IncrementalVerify(proof, &startSnapshot, &endSnapshot)
 }

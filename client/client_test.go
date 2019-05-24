@@ -483,7 +483,7 @@ func TestMembership(t *testing.T) {
 	version := uint64(0)
 
 	fakeHttpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
-		if req.URL.Path == "/proofs/membership" {
+		if req.Host == "primary.foo" && req.URL.Path == "/proofs/membership" {
 			m := protocol.MembershipResult{} // We dont care about content here.
 			body, _ := json.Marshal(m)
 			return buildResponse(http.StatusOK, string(body)), nil
@@ -563,21 +563,32 @@ func TestIncremental(t *testing.T) {
 
 	start := uint64(2)
 	end := uint64(8)
-	fakeResult := &protocol.IncrementalResponse{
-		Start:     start,
-		End:       end,
-		AuditPath: map[string]hashing.Digest{"0|0": []uint8{0x0}},
-	}
 
-	inputJSON, _ := json.Marshal(fakeResult)
+	fakeHttpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.Host == "primary.foo" && req.URL.Path == "/proofs/incremental" {
+			m := protocol.IncrementalResponse{} // We dont care about content here.
+			body, _ := json.Marshal(m)
+			return buildResponse(http.StatusOK, string(body)), nil
+		}
+		return nil, errors.New("Unreachable")
+	})
 
-	serverURL, tearDown := setupServer(inputJSON)
-	defer tearDown()
-	client := setupClient(t, []string{serverURL})
+	client, err := NewHTTPClient(
+		SetHttpClient(fakeHttpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(1),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(false),
+	)
+	require.NoError(t, err)
 
-	result, err := client.Incremental(start, end)
+	proof, err := client.Incremental(start, end, hashing.NewFakeXorHasher)
+	assert.NotNil(t, proof)
 	assert.NoError(t, err)
-	assert.Equal(t, fakeResult, result, "The inputs should match")
+
+	client.Close()
 }
 
 func TestIncrementalWithServerFailure(t *testing.T) {
@@ -588,7 +599,7 @@ func TestIncrementalWithServerFailure(t *testing.T) {
 	defer tearDown()
 	client := setupClient(t, []string{serverURL})
 
-	_, err := client.Incremental(uint64(2), uint64(8))
+	_, err := client.Incremental(uint64(2), uint64(8), hashing.NewSha256Hasher)
 	assert.Error(t, err)
 }
 
@@ -610,7 +621,7 @@ func TestMembershipAutoVerify(t *testing.T) {
 	version := uint64(0)
 
 	fakeHttpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
-		if req.URL.Path == "/proofs/digest-membership" {
+		if req.Host == "primary.foo" && req.URL.Path == "/proofs/digest-membership" {
 			m := protocol.MembershipResult{
 				Exists: true,
 				Hyper: map[string]hashing.Digest{
@@ -619,9 +630,7 @@ func TestMembershipAutoVerify(t *testing.T) {
 					"0x20|5": hashing.Digest{0x0},
 					"0x10|4": hashing.Digest{0x0},
 				},
-				History: map[string]hashing.Digest{
-					"0|0": []byte{0x0},
-				},
+				History:        map[string]hashing.Digest{}, // Dont care about this value in this test
 				CurrentVersion: uint64(0),
 				QueryVersion:   uint64(0),
 				ActualVersion:  uint64(0),
@@ -668,6 +677,72 @@ func TestMembershipAutoVerify(t *testing.T) {
 
 func TestIncrementalAutoVerify(t *testing.T) {
 
+	start := uint64(0)
+	end := uint64(2)
+
+	fakeHttpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.Host == "primary.foo" && req.URL.Path == "/proofs/incremental" {
+			m := protocol.IncrementalResponse{
+				Start: start,
+				End:   end,
+				AuditPath: map[string]hashing.Digest{
+					"0|0": []byte{0x0},
+					"1|0": []byte{0x1},
+					"2|0": []byte{0x2},
+				},
+			}
+			body, _ := json.Marshal(m)
+			return buildResponse(http.StatusOK, string(body)), nil
+		}
+		if req.Host == "snapshotStore.foo" && req.URL.Path == "/snapshot" {
+			params := req.URL.Query()
+			version := params.Get("v")
+
+			ss := protocol.SignedSnapshot{
+				Signature: nil,
+			}
+
+			if version == "0" {
+				ss.Snapshot = &protocol.Snapshot{
+					EventDigest:   hashing.Digest{},
+					HyperDigest:   hashing.Digest{}, // hashing.Digest([]byte{0x0}),
+					HistoryDigest: hashing.Digest([]byte{0x0}),
+					Version:       start,
+				}
+			} else if version == "2" {
+				ss.Snapshot = &protocol.Snapshot{
+					EventDigest:   hashing.Digest{},
+					HyperDigest:   hashing.Digest{}, // hashing.Digest([]byte{0x3}),
+					HistoryDigest: hashing.Digest([]byte{0x3}),
+					Version:       end,
+				}
+			} else {
+				return nil, errors.New("Snapshot version not found in snapshot store")
+			}
+
+			body, _ := json.Marshal(ss)
+			return buildResponse(http.StatusOK, string(body)), nil
+		}
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(fakeHttpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary.foo"),
+		SetSnapshotStoreURL("http://snapshotStore.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(1),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(false),
+	)
+	require.NoError(t, err)
+
+	ok, err := client.IncrementalAutoVerify(start, end, hashing.NewFakeXorHasher)
+	require.True(t, ok)
+	require.NoError(t, err)
+
+	client.Close()
 }
 
 func defaultHandler(input []byte) func(http.ResponseWriter, *http.Request) {
