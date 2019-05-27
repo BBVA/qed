@@ -82,10 +82,6 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string, snapshotStoreUR
 		return nil, errors.New("Invalid urls")
 	}
 
-	if snapshotStoreURL == "" {
-		return nil, errors.New("Invalid snapshot store url")
-	}
-
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
@@ -545,7 +541,7 @@ func (c *HTTPClient) MembershipDigest(
 	return proof, nil
 }
 
-// Verify will compute the Proof given in Membership and the snapshot from the
+// MembershipVerify will compute the Proof given in Membership and the snapshot from the
 // add and returns the verification result.
 func (c *HTTPClient) MembershipVerify(
 	eventDigest hashing.Digest,
@@ -580,7 +576,7 @@ func (c *HTTPClient) MembershipAutoVerify(
 		EventDigest:   eventDigest,
 	}
 
-	s, err := c.snapshotFromStore(proof.QueryVersion)
+	s, err := c.GetSnapshot(proof.QueryVersion)
 	if err != nil {
 		log.Info("Error getting snapshot from snapshot store: %s", err)
 		return false, err
@@ -590,7 +586,7 @@ func (c *HTTPClient) MembershipAutoVerify(
 	snapshot.HyperDigest = s.HyperDigest
 
 	if proof.CurrentVersion != proof.ActualVersion {
-		s, err := c.snapshotFromStore(proof.CurrentVersion)
+		s, err := c.GetSnapshot(proof.CurrentVersion)
 		if err != nil {
 			log.Info("Error getting snapshot from snapshot store: %s", err)
 			return false, err
@@ -602,7 +598,9 @@ func (c *HTTPClient) MembershipAutoVerify(
 	return proof.DigestVerify(eventDigest, snapshot), nil
 }
 
-func (c *HTTPClient) snapshotFromStore(version uint64) (*protocol.Snapshot, error) {
+// GetSnapshot will ask for a given snapshot version to the snapshot store
+// and returns the required snapshot
+func (c *HTTPClient) GetSnapshot(version uint64) (*protocol.Snapshot, error) {
 	var ss protocol.SignedSnapshot
 
 	body, err := c.doReq("GET", c.snapshotStore, fmt.Sprintf("/snapshot?v=%d", version), nil)
@@ -638,6 +636,8 @@ func (c *HTTPClient) Incremental(start, end uint64, hasherF func() hashing.Hashe
 	return proof, nil
 }
 
+// IncrementalVerify will verify a proof against two snapshots, given these 3 elements.
+// It returns the verification result.
 func (c *HTTPClient) IncrementalVerify(
 	proof *balloon.IncrementalProof,
 	startSnapshot, endSnapshot *balloon.Snapshot,
@@ -646,6 +646,10 @@ func (c *HTTPClient) IncrementalVerify(
 	return proof.Verify(startSnapshot, endSnapshot), nil
 }
 
+// IncrementalAutoVerify will ask for an Incremental proof to the server, given both a
+// start and end versions. With these versions, it will ask to the snapshot store to get
+// both snapshots, and finally it will verify the proof.
+// It returns the verification result.
 func (c *HTTPClient) IncrementalAutoVerify(
 	start, end uint64,
 	hasherF func() hashing.Hasher,
@@ -664,7 +668,7 @@ func (c *HTTPClient) IncrementalAutoVerify(
 		HyperDigest: hashing.Digest{},
 		Version:     start,
 	}
-	s, err := c.snapshotFromStore(start)
+	s, err := c.GetSnapshot(start)
 	if err != nil {
 		log.Info("Error getting snapshot from snapshot store: %s", err)
 		return false, err
@@ -677,7 +681,7 @@ func (c *HTTPClient) IncrementalAutoVerify(
 		HyperDigest: hashing.Digest{},
 		Version:     end,
 	}
-	s, err = c.snapshotFromStore(end)
+	s, err = c.GetSnapshot(end)
 	if err != nil {
 		log.Info("Error getting snapshot from snapshot store: %s", err)
 		return false, err

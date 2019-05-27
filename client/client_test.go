@@ -29,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/hashing"
 	"github.com/pkg/errors"
 
@@ -495,8 +496,8 @@ func TestMembership(t *testing.T) {
 		SetHttpClient(fakeHttpClient),
 		SetAPIKey("my-awesome-api-key"),
 		SetURLs("http://primary.foo"),
-		SetReadPreference(PrimaryPreferred),
-		SetMaxRetries(1),
+		SetReadPreference(Primary),
+		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
 	)
@@ -529,8 +530,8 @@ func TestMembershipDigest(t *testing.T) {
 		SetHttpClient(fakeHttpClient),
 		SetAPIKey("my-awesome-api-key"),
 		SetURLs("http://primary.foo"),
-		SetReadPreference(PrimaryPreferred),
-		SetMaxRetries(1),
+		SetReadPreference(Primary),
+		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
 	)
@@ -577,8 +578,8 @@ func TestIncremental(t *testing.T) {
 		SetHttpClient(fakeHttpClient),
 		SetAPIKey("my-awesome-api-key"),
 		SetURLs("http://primary.foo"),
-		SetReadPreference(PrimaryPreferred),
-		SetMaxRetries(1),
+		SetReadPreference(Primary),
+		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
 	)
@@ -603,14 +604,89 @@ func TestIncrementalWithServerFailure(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TODO implement a test to verify proofs using fake hash function
-
 func TestMembershipVerify(t *testing.T) {
 
+	eventDigest := hashing.Digest([]byte{0x0})
+	m := &protocol.MembershipResult{
+		Exists: true,
+		Hyper: map[string]hashing.Digest{
+			"0x80|7": hashing.Digest{0x0},
+			"0x40|6": hashing.Digest{0x0},
+			"0x20|5": hashing.Digest{0x0},
+			"0x10|4": hashing.Digest{0x0},
+		},
+		History:        map[string]hashing.Digest{}, // Dont care about this value in this test
+		CurrentVersion: uint64(0),
+		QueryVersion:   uint64(0),
+		ActualVersion:  uint64(0),
+		KeyDigest:      eventDigest,
+		Key:            []byte{0x0},
+	}
+	proof := protocol.ToBalloonProof(m, hashing.NewFakeXorHasher)
+	snapshot := &balloon.Snapshot{
+		EventDigest:   eventDigest,
+		HyperDigest:   hashing.Digest([]byte{0x0}),
+		HistoryDigest: hashing.Digest([]byte{0x0}),
+		Version:       uint64(0),
+	}
+
+	client, err := NewHTTPClient(
+		SetAPIKey("my-awesome-api-key"),
+		SetReadPreference(Primary),
+		SetMaxRetries(0),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(false),
+	)
+	require.NoError(t, err)
+
+	ok, err := client.MembershipVerify(eventDigest, proof, snapshot)
+	require.True(t, ok)
+	require.NoError(t, err)
+
+	client.Close()
 }
 
 func TestIncrementalVerify(t *testing.T) {
 
+	eventDigest := hashing.Digest([]byte{0x0})
+	m := &protocol.IncrementalResponse{
+		Start: 0,
+		End:   2,
+		AuditPath: map[string]hashing.Digest{
+			"0|0": []byte{0x0},
+			"1|0": []byte{0x1},
+			"2|0": []byte{0x2},
+		},
+	}
+	proof := protocol.ToIncrementalProof(m, hashing.NewFakeXorHasher)
+
+	startSnapshot := &balloon.Snapshot{
+		EventDigest:   eventDigest,
+		HyperDigest:   hashing.Digest([]byte{0x0}),
+		HistoryDigest: hashing.Digest([]byte{0x0}),
+		Version:       uint64(0),
+	}
+	endSnapshot := &balloon.Snapshot{
+		EventDigest:   hashing.Digest{},
+		HyperDigest:   hashing.Digest{},
+		HistoryDigest: hashing.Digest([]byte{0x3}),
+		Version:       2,
+	}
+
+	client, err := NewHTTPClient(
+		SetAPIKey("my-awesome-api-key"),
+		SetReadPreference(Primary),
+		SetMaxRetries(0),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(false),
+	)
+	require.NoError(t, err)
+
+	ok, err := client.IncrementalVerify(proof, startSnapshot, endSnapshot)
+	require.True(t, ok)
+	require.NoError(t, err)
+
+	client.Close()
 }
 
 func TestMembershipAutoVerify(t *testing.T) {
@@ -661,8 +737,7 @@ func TestMembershipAutoVerify(t *testing.T) {
 		SetAPIKey("my-awesome-api-key"),
 		SetURLs("http://primary.foo"),
 		SetSnapshotStoreURL("http://snapshotStore.foo"),
-		SetReadPreference(PrimaryPreferred),
-		SetMaxRetries(1),
+		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
 	)
@@ -731,8 +806,8 @@ func TestIncrementalAutoVerify(t *testing.T) {
 		SetAPIKey("my-awesome-api-key"),
 		SetURLs("http://primary.foo"),
 		SetSnapshotStoreURL("http://snapshotStore.foo"),
-		SetReadPreference(PrimaryPreferred),
-		SetMaxRetries(1),
+		SetReadPreference(Primary),
+		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
 	)
