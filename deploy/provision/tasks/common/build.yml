@@ -21,16 +21,16 @@
   shell: > 
     go build -o {{ item }}
   with_items:
-    - config_files/bin/qed ../../../
-    - config_files/bin/storage ../../../testutils/notifierstore.go
-    - config_files/bin/riot ../../../tests/riot.go
+    - config_files/bin/qed ../../
+    - config_files/bin/storage ../../testutils/notifierstore.go
+    - config_files/bin/riot ../../tests/riot.go
   when: ansible_system == 'Linux'
 
 - name: Build QED, Inmemory Storage and Riot binaries for Linux, on MacOS
   shell: >
     {{ item }}
   with_items:
-    - docker build -t qed/build ../../../
+    - docker build -t qed/build ../../
     - docker run -d --name qed qed/build:latest
     - docker cp qed:/usr/local/bin/. config_files/bin
     - docker rm -vf qed

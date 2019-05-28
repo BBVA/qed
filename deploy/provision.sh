@@ -22,8 +22,9 @@ then
 fi
 
 echo "Pulling terraform remote state to: $TF_STATE"
+cd aws
 terraform state pull > $TF_STATE
-cd provision
+cd ../provision
 
 if [ -z "$@" ];
 then
