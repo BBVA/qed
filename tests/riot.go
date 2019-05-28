@@ -24,6 +24,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/bbva/qed/hashing"
+
 	"github.com/imdario/mergo"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
@@ -320,6 +322,7 @@ func newAttack(conf Config) {
 		client.SetAPIKey(conf.APIKey),
 		client.SetReadPreference(client.Any),
 		client.SetAttemptToReviveEndpoints(true),
+		client.SetHasherFunction(hashing.NewSha256Hasher),
 	)
 
 	if err != nil {

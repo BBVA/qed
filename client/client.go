@@ -39,6 +39,7 @@ type HTTPClient struct {
 	httpClient          *http.Client
 	retrier             RequestRetrier
 	topology            *topology
+	snapshotStore       *endpoint
 	apiKey              string
 	readPreference      ReadPref
 	maxRetries          int
@@ -46,6 +47,7 @@ type HTTPClient struct {
 	healthCheckTimeout  time.Duration
 	healthCheckInterval time.Duration
 	discoveryEnabled    bool
+	hasherF             func() hashing.Hasher
 
 	mu                sync.RWMutex // guards the next block
 	running           bool
@@ -58,7 +60,7 @@ type HTTPClient struct {
 //
 // All checks are disabled, including timeouts and periodic checks.
 // The number of retries is set to 0.
-func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, error) {
+func NewSimpleHTTPClient(httpClient *http.Client, urls []string, snapshotStoreURL string) (*HTTPClient, error) {
 
 	// defaultTransport := http.DefaultTransport.(*http.Transport)
 	// // Create new Transport that ignores self-signed SSL
@@ -88,6 +90,7 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, e
 	client := &HTTPClient{
 		httpClient:          httpClient,
 		topology:            newTopology(false),
+		snapshotStore:       newEndpoint(snapshotStoreURL, store),
 		healthCheckEnabled:  false,
 		healthCheckTimeout:  off,
 		healthCheckInterval: off,
@@ -95,6 +98,7 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string) (*HTTPClient, e
 		readPreference:      Primary,
 		maxRetries:          0,
 		retrier:             NewNoRequestRetrier(httpClient),
+		hasherF:             hashing.NewSha256Hasher,
 	}
 
 	client.topology.Update(urls[0], urls[1:]...)
@@ -122,6 +126,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 	client := &HTTPClient{
 		httpClient:          http.DefaultClient,
 		topology:            newTopology(false),
+		snapshotStore:       newEndpoint("", store),
 		healthCheckEnabled:  DefaultHealthCheckEnabled,
 		healthCheckTimeout:  DefaultHealthCheckTimeout,
 		healthCheckInterval: DefaultHealthCheckInterval,
@@ -485,7 +490,10 @@ func (c *HTTPClient) AddBulk(events []string) ([]*protocol.Snapshot, error) {
 }
 
 // Membership will ask for a Proof to the server.
-func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.MembershipResult, error) {
+func (c *HTTPClient) Membership(
+	key []byte,
+	version uint64,
+) (*balloon.MembershipProof, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipQuery{
 		Key:     key,
@@ -497,15 +505,21 @@ func (c *HTTPClient) Membership(key []byte, version uint64) (*protocol.Membershi
 		return nil, err
 	}
 
-	var proof *protocol.MembershipResult
-	_ = json.Unmarshal(body, &proof)
+	var result *protocol.MembershipResult
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return nil, err
+	}
 
+	proof := protocol.ToBalloonProof(result, c.hasherF)
 	return proof, nil
-
 }
 
 // Membership will ask for a Proof to the server.
-func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) (*protocol.MembershipResult, error) {
+func (c *HTTPClient) MembershipDigest(
+	keyDigest hashing.Digest,
+	version uint64,
+) (*balloon.MembershipProof, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipDigest{
 		KeyDigest: keyDigest,
@@ -517,15 +531,92 @@ func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version uint64) 
 		return nil, err
 	}
 
-	var proof *protocol.MembershipResult
-	_ = json.Unmarshal(body, &proof)
+	var result *protocol.MembershipResult
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return nil, err
+	}
 
+	proof := protocol.ToBalloonProof(result, c.hasherF)
 	return proof, nil
+}
 
+// MembershipVerify will compute the Proof given in Membership and the snapshot from the
+// add and returns the verification result.
+func (c *HTTPClient) MembershipVerify(
+	eventDigest hashing.Digest,
+	proof *balloon.MembershipProof,
+	snapshot *balloon.Snapshot,
+) (bool, error) {
+
+	return proof.DigestVerify(eventDigest, snapshot), nil
+}
+
+// MembershipAutoVerify will compute the Proof given in Membership,
+// get hyper and history digests from the snapshot store,
+// and returns the verification result.
+func (c *HTTPClient) MembershipAutoVerify(
+	eventDigest hashing.Digest,
+	version uint64,
+) (bool, error) {
+
+	// Get membership proof
+	proof, err := c.MembershipDigest(eventDigest, version)
+	if err != nil {
+		log.Info("Error getting membership proof: %s", err)
+		return false, err
+	}
+
+	// Build snapshot info from snapshot store and params.
+	snapshot := &balloon.Snapshot{
+		HistoryDigest: nil,
+		HyperDigest:   nil,
+		Version:       version,
+		EventDigest:   eventDigest,
+	}
+
+	s, err := c.GetSnapshot(proof.QueryVersion)
+	if err != nil {
+		log.Info("Error getting snapshot from snapshot store: %s", err)
+		return false, err
+	}
+
+	snapshot.HistoryDigest = s.HistoryDigest
+	snapshot.HyperDigest = s.HyperDigest
+
+	if proof.CurrentVersion != proof.ActualVersion {
+		s, err := c.GetSnapshot(proof.CurrentVersion)
+		if err != nil {
+			log.Info("Error getting snapshot from snapshot store: %s", err)
+			return false, err
+		}
+		snapshot.HyperDigest = s.HyperDigest
+	}
+
+	// Verify
+	return proof.DigestVerify(eventDigest, snapshot), nil
+}
+
+// GetSnapshot will ask for a given snapshot version to the snapshot store
+// and returns the required snapshot
+func (c *HTTPClient) GetSnapshot(version uint64) (*protocol.Snapshot, error) {
+	var ss protocol.SignedSnapshot
+
+	body, err := c.doReq("GET", c.snapshotStore, fmt.Sprintf("/snapshot?v=%d", version), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(body, &ss)
+	if err != nil {
+		return nil, err
+	}
+
+	return ss.Snapshot, nil
 }
 
 // Incremental will ask for an IncrementalProof to the server.
-func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalResponse, error) {
+func (c *HTTPClient) Incremental(start, end uint64) (*balloon.IncrementalProof, error) {
 
 	query, _ := json.Marshal(&protocol.IncrementalRequest{
 		Start: start,
@@ -540,50 +631,61 @@ func (c *HTTPClient) Incremental(start, end uint64) (*protocol.IncrementalRespon
 	var response *protocol.IncrementalResponse
 	_ = json.Unmarshal(body, &response)
 
-	return response, nil
+	proof := protocol.ToIncrementalProof(response, c.hasherF)
+	return proof, nil
 }
 
-// Verify will compute the Proof given in Membership and the snapshot from the
-// add and returns a proof of existence.
-func (c *HTTPClient) Verify(
-	result *protocol.MembershipResult,
-	snap *protocol.Snapshot,
-	hasherF func() hashing.Hasher,
-) bool {
+// IncrementalVerify will verify a proof against two snapshots, given these 3 elements.
+// It returns the verification result.
+func (c *HTTPClient) IncrementalVerify(
+	proof *balloon.IncrementalProof,
+	startSnapshot, endSnapshot *balloon.Snapshot,
+) (bool, error) {
 
-	proof := protocol.ToBalloonProof(result, hasherF)
-	balloonSnapshot := balloon.Snapshot(*snap)
-
-	return proof.Verify(snap.EventDigest, &balloonSnapshot)
+	return proof.Verify(startSnapshot, endSnapshot), nil
 }
 
-// Verify will compute the Proof given in Membership and the snapshot from the
-// add and returns a proof of existence.
-func (c *HTTPClient) DigestVerify(
-	result *protocol.MembershipResult,
-	snap *protocol.Snapshot,
-	hasherF func() hashing.Hasher,
-) bool {
+// IncrementalAutoVerify will ask for an Incremental proof to the server, given both a
+// start and end versions. With these versions, it will ask to the snapshot store to get
+// both snapshots, and finally it will verify the proof.
+// It returns the verification result.
+func (c *HTTPClient) IncrementalAutoVerify(
+	start, end uint64,
+) (bool, error) {
 
-	proof := protocol.ToBalloonProof(result, hasherF)
-	balloonSnapshot := balloon.Snapshot(*snap)
+	// Get incrementral proof
+	proof, err := c.Incremental(start, end)
+	if err != nil {
+		return false, err
+	}
 
-	return proof.DigestVerify(snap.EventDigest, &balloonSnapshot)
-}
+	// Build start and end snapshots info from snapshot snapshot store and params.
+	// Start snapshot
+	startSnapshot := balloon.Snapshot{
+		EventDigest: hashing.Digest{},
+		HyperDigest: hashing.Digest{},
+		Version:     start,
+	}
+	s, err := c.GetSnapshot(start)
+	if err != nil {
+		log.Info("Error getting snapshot from snapshot store: %s", err)
+		return false, err
+	}
+	startSnapshot.HistoryDigest = s.HistoryDigest
 
-func (c *HTTPClient) VerifyIncremental(
-	result *protocol.IncrementalResponse,
-	startSnapshot, endSnapshot *protocol.Snapshot,
-	hasher hashing.Hasher,
-) bool {
+	// End snapshot
+	endSnapshot := balloon.Snapshot{
+		EventDigest: hashing.Digest{},
+		HyperDigest: hashing.Digest{},
+		Version:     end,
+	}
+	s, err = c.GetSnapshot(end)
+	if err != nil {
+		log.Info("Error getting snapshot from snapshot store: %s", err)
+		return false, err
+	}
+	endSnapshot.HistoryDigest = s.HistoryDigest
 
-	proof := protocol.ToIncrementalProof(result, hasher)
-
-	s := balloon.Snapshot(*startSnapshot)
-	start := &s
-
-	e := balloon.Snapshot(*endSnapshot)
-	end := &e
-
-	return proof.Verify(start, end)
+	// Verify
+	return c.IncrementalVerify(proof, &startSnapshot, &endSnapshot)
 }
