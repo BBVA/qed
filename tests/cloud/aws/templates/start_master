@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo Create id_ed25519 key
-yes | ssh-keygen -t ed25519 -N '' -f /var/tmp/id_ed25519
+echo Create qed_ed25519 key
+/tmp/to_upload/qed generate signerkeys --path /var/tmp
 
 echo Starting server...
-nohup /tmp/to_upload/qed start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/id_ed25519 -l error --http-addr ${master_address}:8800 --raft-addr ${master_address}:8500 --mgmt-addr ${master_address}:8700 &
+nohup /tmp/to_upload/qed start -k pepe -p $(mktemp -d /var/tmp/demo.XXX) --raftpath $(mktemp -d /var/tmp/demo.XXX) -y /var/tmp/qed_ed25519 -l error --http-addr ${master_address}:8800 --raft-addr ${master_address}:8500 --mgmt-addr ${master_address}:8700 &
 echo done.
 
 sleep 10

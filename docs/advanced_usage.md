@@ -23,7 +23,7 @@ go run main.go start \
     -k my-key \
     -p $(mktemp -d /var/tmp/demo.XXX) \
     --raftpath $(mktemp -d /var/tmp/demo.XXX) \
-    -y ~/.ssh/id_ed25519-qed \
+    -y ~/.ssh/qed_ed25519 \
     --http-addr :8800 \
     --raft-addr :8500 \
     --mgmt-addr :8700 \
@@ -38,7 +38,7 @@ for i in $(seq 1 $FOLLOWERS); do
         -k my-key \
         -p $(mktemp -d /var/tmp/demo.XXX) \
         --raftpath $(mktemp -d /var/tmp/demo.XXX) \
-        -y ~/.ssh/id_ed25519-qed \
+        -y ~/.ssh/qed_ed25519 \
         --http-addr :808$i \
         --join-addr :8700 \
         --raft-addr :900$i \

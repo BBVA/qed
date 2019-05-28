@@ -103,6 +103,7 @@ func DefaultConfig() *Config {
 		ProfilingAddr:     "127.0.0.1:6060",
 		SSLCertificate:    "",
 		SSLCertificateKey: "",
+		PrivateKeyPath:    "",
 	}
 }
 
