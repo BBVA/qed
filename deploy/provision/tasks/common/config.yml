@@ -18,9 +18,9 @@
       state: directory
 
 - name: Create private key
-  shell: ssh-keygen -t ed25519 -f config_files/id_ed25519 -P ''
+  shell: GOOS="" GOARCH="" $QED generate signerkeys --path config_files
   args:
-    creates: config_files/id_ed25519
+    creates: config_files/qed_ed25519
 
 - name: Create SSL certs
   shell: >
