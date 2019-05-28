@@ -16,6 +16,10 @@ tests/cloud/aws/results
 tests/cloud/aws/to_upload/rendered
 tests/results
 c-deps/libs
+c-deps/bzip2
+c-deps/lz4
+c-deps/zlib
+c-deps/zstd
 
 # Documents
 *.pdf

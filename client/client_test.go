@@ -242,7 +242,7 @@ func TestHealthCheck(t *testing.T) {
 	require.False(t, client.topology.HasActiveEndpoint())
 
 	// try to revive them
-	client.healthCheck(5 * time.Second)
+	client.clusterHealthCheck(5 * time.Second)
 	time.Sleep(1 * time.Second)
 	require.True(t, client.topology.HasActiveEndpoint())
 }

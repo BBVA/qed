@@ -17,12 +17,15 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/bbva/qed/util"
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/bbva/qed/hashing"
 
@@ -75,6 +78,12 @@ var (
 			Help: "Number of events added into the cluster.",
 		},
 	)
+	RiotEventAddFail = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "riot_event_add_fail",
+			Help: "Number of events failed to add.",
+		},
+	)
 	RiotQueryMembership = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "riot_query_membership",
@@ -89,6 +98,7 @@ var (
 	)
 	metricsList = []prometheus.Collector{
 		RiotEventAdd,
+		RiotEventAddFail,
 		RiotQueryMembership,
 		RiotQueryIncremental,
 	}
@@ -111,6 +121,7 @@ func Register(r *prometheus.Registry) {
 type Riot struct {
 	Config Config
 
+	httpServer         *http.Server
 	metricsServer      *http.Server
 	prometheusRegistry *prometheus.Registry
 }
@@ -219,20 +230,15 @@ func newRiotCommand() *cobra.Command {
 }
 
 func (riot *Riot) Start(APIMode bool) {
-
-	r := prometheus.NewRegistry()
-	Register(r)
-	riot.prometheusRegistry = r
-	metricsMux := metricshttp.NewMetricsHTTP(r)
-	log.Debug("	* Starting Riot Metrics server at :17700")
-	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
-
 	if APIMode {
 		riot.Serve()
 	} else {
 		riot.RunOnce()
 	}
 
+	util.AwaitTermSignal(riot.Stop)
+
+	log.Debug("Stopping riot, about to exit...")
 }
 
 func (riot *Riot) RunOnce() {
@@ -252,6 +258,7 @@ func postReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWrit
 
 	return w, r
 }
+
 func (riot *Riot) MergeConf(newConf Config) Config {
 	conf := riot.Config
 	_ = mergo.Merge(&conf, newConf)
@@ -301,12 +308,47 @@ func (riot *Riot) Serve() {
 		}
 	})
 
-	api := &http.Server{Addr: ":7700", Handler: mux}
+	// Metrics server
+	r := prometheus.NewRegistry()
+	Register(r)
+	riot.prometheusRegistry = r
+	metricsMux := metricshttp.NewMetricsHTTP(r)
+	log.Debug("	* Starting Riot Metrics server at :17700")
+	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
 
+	go func() {
+		if err := riot.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start metrics HTTP server: %s", err)
+		}
+	}()
+
+	// API server
+	riot.httpServer = &http.Server{Addr: ":7700", Handler: mux}
 	log.Debug("	* Starting Riot HTTP server at :7700")
-	if err := api.ListenAndServe(); err != http.ErrServerClosed {
-		log.Errorf("Can't start Riot API HTTP server: %s", err)
+	go func() {
+		if err := riot.httpServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start Riot API HTTP server: %s", err)
+		}
+	}()
+}
+
+func (riot *Riot) Stop() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	log.Debug("Stopping metrics server...")
+	err := riot.metricsServer.Shutdown(ctx)
+	if err != nil {
+		return err
 	}
+
+	log.Debug("Stopping HTTP server...")
+	err = riot.httpServer.Shutdown(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func newAttack(conf Config) {
@@ -360,20 +402,30 @@ func (a *Attack) Run() {
 
 				switch task.kind {
 				case add:
-					log.Debugf(">>> add: %s", task.events[0])
-					_, _ = a.client.Add(task.events[0])
-					RiotEventAdd.Inc()
+					log.Debugf("Adding: %s", task.events[0])
+					_, err := a.client.Add(task.events[0])
+					if err != nil {
+						RiotEventAddFail.Inc()
+						log.Debugf("Error adding event: version %d. Error: %s", task.version, err)
+					} else {
+						RiotEventAdd.Inc()
+					}
 				case bulk:
-					bulkSize := float64(len(task.events))
-					log.Debugf(">>> bulk(%d): %s", bulkSize, task.events)
-					_, _ = a.client.AddBulk(task.events)
-					RiotEventAdd.Add(bulkSize)
+					bulkSize := len(task.events)
+					log.Debugf("Inserting bulk: version %d, size %d, first event: %s", task.version, bulkSize, task.events[0])
+					_, err := a.client.AddBulk(task.events)
+					if err != nil {
+						RiotEventAddFail.Add(float64(bulkSize))
+						log.Debugf("Error inserting bulk: version %d, size %d. Error: %s", task.version, bulkSize, err)
+					} else {
+						RiotEventAdd.Add(float64(bulkSize))
+					}
 				case membership:
-					log.Debugf(">>> mem: %s, %d", task.events[0], task.version)
+					log.Debugf("Querying membership: event %s", task.events[0])
 					_, _ = a.client.Membership([]byte(task.events[0]), task.version)
 					RiotQueryMembership.Inc()
 				case incremental:
-					log.Debugf(">>> inc: %s", task.events[0])
+					log.Debugf("Querying incremental: start %d, end %d", task.start, task.end)
 					_, _ = a.client.Incremental(task.start, task.end)
 					RiotQueryIncremental.Inc()
 				}
