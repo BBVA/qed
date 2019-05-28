@@ -284,7 +284,7 @@ func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, erro
 	return snapshotBulk, mutations, nil
 }
 
-func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
+func (b Balloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
 
 	var proof MembershipProof
 	var err error
@@ -330,9 +330,9 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 	return &proof, nil
 }
 
-func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+func (b Balloon) QueryMembershipConsistency(event []byte, version uint64) (*MembershipProof, error) {
 	hasher := b.hasherF()
-	return b.QueryDigestMembership(hasher.Do(event), version)
+	return b.QueryDigestMembershipConsistency(hasher.Do(event), version)
 }
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {

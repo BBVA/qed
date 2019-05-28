@@ -54,8 +54,9 @@ var (
 type RaftBalloonApi interface {
 	Add(event []byte) (*balloon.Snapshot, error)
 	AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error)
-	QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
-	QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error)
+	QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
+	QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error)
+	// QueryMembership(event []byte) (*balloon.MembershipProof, error)
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
 	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
 	Join(nodeID, addr string, metadata map[string]string) error
@@ -406,14 +407,14 @@ func (b *RaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
 	return snapshotBulk, nil
 }
 
-func (b *RaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
+func (b *RaftBalloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
 	b.metrics.DigestMembershipQueries.Inc()
-	return b.fsm.QueryDigestMembership(keyDigest, version)
+	return b.fsm.QueryDigestMembershipConsistency(keyDigest, version)
 }
 
-func (b *RaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
+func (b *RaftBalloon) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	b.metrics.MembershipQueries.Inc()
-	return b.fsm.QueryMembership(event, version)
+	return b.fsm.QueryMembershipConsistency(event, version)
 }
 
 func (b *RaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {

@@ -494,7 +494,7 @@ func (c *HTTPClient) Membership(
 
 	query, _ := json.Marshal(&protocol.MembershipQuery{
 		Key:     key,
-		Version: version,
+		Version: &version,
 	})
 
 	body, err := c.callAny("POST", "/proofs/membership", query)
