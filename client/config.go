@@ -18,6 +18,8 @@ package client
 
 import (
 	"time"
+
+	"github.com/bbva/qed/hashing"
 )
 
 // ReadPref specifies the preferred type of node in the cluster
@@ -142,6 +144,9 @@ type Config struct {
 	// AttemptToReviveEndpoints sets if dead endpoints will be marked alive again after a
 	// round-robin round. This way, they will be picked up in the next try.
 	AttemptToReviveEndpoints bool `desc:"Set if dead endpoints will be marked alive again after a round-robin round"`
+
+	// HasherFunction sets which function will use the client to do its work: verify, ask for proofs, ...
+	HasherFunction func() hashing.Hasher `desc:"Hashing function to verify proofs"`
 }
 
 // DefaultConfig creates a Config structures with default values.
@@ -161,5 +166,6 @@ func DefaultConfig() *Config {
 		HealthCheckTimeout:       DefaultHealthCheckTimeout,
 		HealthCheckInterval:      DefaultHealthCheckInterval,
 		AttemptToReviveEndpoints: false,
+		HasherFunction:           hashing.NewSha256Hasher,
 	}
 }

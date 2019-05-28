@@ -322,6 +322,7 @@ func newAttack(conf Config) {
 		client.SetAPIKey(conf.APIKey),
 		client.SetReadPreference(client.Any),
 		client.SetAttemptToReviveEndpoints(true),
+		client.SetHasherFunction(hashing.NewSha256Hasher),
 	)
 
 	if err != nil {
@@ -369,11 +370,11 @@ func (a *Attack) Run() {
 					RiotEventAdd.Add(bulkSize)
 				case membership:
 					log.Debugf(">>> mem: %s, %d", task.events[0], task.version)
-					_, _ = a.client.Membership([]byte(task.events[0]), task.version, hashing.NewSha256Hasher)
+					_, _ = a.client.Membership([]byte(task.events[0]), task.version)
 					RiotQueryMembership.Inc()
 				case incremental:
 					log.Debugf(">>> inc: %s", task.events[0])
-					_, _ = a.client.Incremental(task.start, task.end, hashing.NewSha256Hasher)
+					_, _ = a.client.Incremental(task.start, task.end)
 					RiotQueryIncremental.Inc()
 				}
 			}

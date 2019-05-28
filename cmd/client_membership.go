@@ -97,7 +97,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	proof, err = client.MembershipDigest(digest, params.Version, hasherF)
+	proof, err = client.MembershipDigest(digest, params.Version)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 
 		if params.AutoVerify {
 			fmt.Printf("\nAuto-Verifying event with: \n\n EventDigest: %x\n Version: %d\n", digest, params.Version)
-			ok, err = client.MembershipAutoVerify(digest, params.Version, hasherF)
+			ok, err = client.MembershipAutoVerify(digest, params.Version)
 		} else {
 
 			hyperDigest := params.HyperDigest
