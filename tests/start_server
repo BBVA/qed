@@ -17,7 +17,7 @@
 CGO_LDFLAGS_ALLOW='.*'
 QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
 
-$QED generate keypair
+$QED generate signerkeys
 
 # Server options
 LEADER_CONFIG=()
@@ -29,7 +29,7 @@ LEADER_CONFIG+=('--http-addr 127.0.0.1:880${i}')
 LEADER_CONFIG+=('--metrics-addr 127.0.0.1:860${i}')
 LEADER_CONFIG+=('--mgmt-addr 127.0.0.1:870${i}')
 LEADER_CONFIG+=('--node-id server${i}')
-LEADER_CONFIG+=('--private-key-path /var/tmp/id_ed25519')
+LEADER_CONFIG+=('--private-key-path /var/tmp/qed_ed25519')
 LEADER_CONFIG+=('--raft-addr 127.0.0.1:850${i}')
 LEADER_CONFIG+=('--raft-path /var/tmp/qed${i}/wal')
 LEADER_CONFIG+=('--enable-profiling')

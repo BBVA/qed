@@ -17,26 +17,27 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/bbva/qed/crypto"
 	"github.com/spf13/cobra"
-
-	"github.com/bbva/qed/server"
 )
 
-var generateKeypair *cobra.Command = &cobra.Command{
-	Use:   "keypair",
-	Short: "Generate keypair",
-	Run:   runGenerateKeypair,
+var generateSignerKeys *cobra.Command = &cobra.Command{
+	Use:   "signerkeys",
+	Short: "Generate Signer Keys",
+	Run:   runGenerateSignerKeys,
 }
 
 func init() {
-	generateCmd.AddCommand(generateKeypair)
+	generateCmd.AddCommand(generateSignerKeys)
 }
 
-func runGenerateKeypair(cmd *cobra.Command, args []string) {
+func runGenerateSignerKeys(cmd *cobra.Command, args []string) {
 
-	conf := generateCtx.Value(k("server.config")).(*server.GenerateConfig)
+	conf := generateCtx.Value(k("generate.config")).(*GenerateConfig)
 
-	crypto.NewEd25519KeyPairFile(conf.Path)
+	pubKey, priKey, _ := crypto.NewEd25519SignerKeysFile(conf.Path)
+	fmt.Printf("New signer keys generated at:\n%v\n%v\n", pubKey, priKey)
 
 }

@@ -26,15 +26,7 @@ import (
 	"net"
 	"os"
 	"time"
-
-	"github.com/bbva/qed/crypto"
 )
-
-func GenerateSignKey(path string) (string, error) {
-	crypto.NewEd25519KeyPairFile(path)
-
-	return path + "/id_ed25519", nil
-}
 
 func GenerateTlsCert(path string) (string, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)

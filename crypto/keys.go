@@ -17,20 +17,25 @@ package crypto
 
 import (
 	"crypto/rand"
-	"fmt"
 	"io/ioutil"
 
+	"github.com/bbva/qed/log"
 	"golang.org/x/crypto/ed25519"
 )
 
-func NewEd25519KeyPairFile(path string) {
-	// Generate a new private/public keypair for QED server
-	pubKey, privKey, _ := ed25519.GenerateKey(rand.Reader)
-	err := ioutil.WriteFile(path+"/id_ed25519", privKey, 0644)
-	if err != nil {
-		panic(err)
-	}
-	_ = ioutil.WriteFile(path+"/id_ed25519.pub", pubKey, 0644)
+func NewEd25519SignerKeysFile(path string) (string, string, error) {
+	// Generate a new private/public signer keys for QED server
+	outPriv := path + "/qed_ed25519"
+	outPub := outPriv + ".pub"
 
-	fmt.Printf("New keypair generated => %v/id_ed25519|.pub\n", path)
+	pubKey, privKey, _ := ed25519.GenerateKey(rand.Reader)
+
+	err := ioutil.WriteFile(outPriv, privKey, 0644)
+	if err != nil {
+		log.Fatal(err)
+		return outPub, outPriv, err
+	}
+	_ = ioutil.WriteFile(outPub, pubKey, 0644)
+
+	return outPub, outPriv, nil
 }

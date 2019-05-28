@@ -139,7 +139,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 				EventDigest:   digest,
 			}
 
-			fmt.Printf("\nVerifying event with: \n\n EventDigest: %x\n HyperDigest: %s\n HistoryDigest: %s\n Version: %d\n", digest, hdBytes, htdBytes, params.Version)
+			fmt.Printf("\nVerifying event with: \n\n EventDigest: %x\n HyperDigest: %x\n HistoryDigest: %x\n Version: %d\n", digest, hdBytes, htdBytes, params.Version)
 			ok, err = client.MembershipVerify(digest, proof, snapshot)
 		}
 

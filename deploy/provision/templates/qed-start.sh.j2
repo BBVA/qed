@@ -26,7 +26,7 @@ $QED_HOME/qed server start \
 --metrics-addr "{{ ansible_eth0.ipv4.address }}:8600" \
 --mgmt-addr "{{ ansible_eth0.ipv4.address }}:8700" \
 --node-id server-{{ansible_hostname}} \
---private-key-path /var/qed/id_ed25519 \
+--private-key-path /var/qed/qed_ed25519 \
 --raft-addr "{{ ansible_eth0.ipv4.address }}:8500" \
 {% if groups.role_qed.index(inventory_hostname) != 0  %}
 {% for host in groups['name_qed-0'] %}

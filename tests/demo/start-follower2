@@ -18,7 +18,7 @@ echo 'Starting follower #2...'
 go run ../../main.go start \
     -k test_key \
     -p $(mktemp -d /var/tmp/demo.XXX) \
-    --raftpath /var/tmp/id_ed25519 \
+    --raftpath /var/tmp/qed_ed25519 \
     -l debug \
     --http-addr :8802 \
     --mgmt-addr :8702 \

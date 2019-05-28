@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/crypto"
 	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/keys"
@@ -139,7 +140,8 @@ func newServerSetup(id int, tls bool) (func() error, func() error) {
 		if err != nil {
 			return err
 		}
-		signKeyPath, err := keys.GenerateSignKey(path)
+
+		_, signKeyPath, err := crypto.NewEd25519SignerKeysFile(path)
 		if err != nil {
 			return err
 		}
