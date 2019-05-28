@@ -31,7 +31,7 @@ if [ ! -f ${node_path} ]; then (
 
 if [ ! -f ${sign_path} ]; then
     #build shared signing key
-    $QED generate keypair --path ${sign_path}
+    $QED generate signerkeys --path ${sign_path}
 fi
 
 if [ ! -f ${cert_path} ] && [ ! -f ${key_path} ]; then
