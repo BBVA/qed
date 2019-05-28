@@ -20,10 +20,20 @@ import (
 	"context"
 
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/server"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 )
+
+type GenerateConfig struct {
+	// Path to the private key file used to sign snapshots.
+	Path string
+}
+
+func GenerateDefaultConfig() *GenerateConfig {
+	return &GenerateConfig{
+		Path: "/var/tmp",
+	}
+}
 
 var generateCmd *cobra.Command = &cobra.Command{
 	Use:   "generate",
@@ -41,11 +51,11 @@ func init() {
 
 func generateConfig() context.Context {
 
-	conf := server.GenerateDefaultConfig()
+	conf := GenerateDefaultConfig()
 
 	err := gpflag.ParseTo(conf, generateCmd.PersistentFlags())
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
-	return context.WithValue(Ctx, k("server.config"), conf)
+	return context.WithValue(Ctx, k("generate.config"), conf)
 }

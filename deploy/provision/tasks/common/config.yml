@@ -18,9 +18,9 @@
       state: directory
 
 - name: Create private key
-  shell: GOOS="" GOARCH="" $QED generate keypair --path config_files
+  shell: GOOS="" GOARCH="" $QED generate signerkeys --path config_files
   args:
-    creates: config_files/id_ed25519
+    creates: config_files/qed_ed25519
 
 - name: Create SSL certs
   shell: >

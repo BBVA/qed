@@ -19,7 +19,7 @@ CGO_LDFLAGS_ALLOW='.*'
 QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
 
 # build shared signing key
-$QED generate keypair --path /var/tmp
+$QED generate signerkeys --path /var/tmp
 
 echo Stress time!
 
@@ -30,5 +30,5 @@ echo done.
 echo Cleanup...
 /sbin/fuser -k -n tcp 8800
 rm -rf /var/tmp/demo.*
-rm -f /var/tmp/id_ed25519{,.pub}
+rm -f /var/tmp/qed_ed25519{,.pub}
 echo done.
