@@ -21,9 +21,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
@@ -165,22 +165,26 @@ func (i incrementalFactory) New(ctx context.Context) gossip.Task {
 		timer := prometheus.NewTimer(QedMonitorBatchesProcessSeconds)
 		defer timer.ObserveDuration()
 
-		first := b.Snapshots[0].Snapshot
-		last := b.Snapshots[len(b.Snapshots)-1].Snapshot
+		firstSnap := balloon.Snapshot(*b.Snapshots[0].Snapshot)
+		lastSnap := balloon.Snapshot(*b.Snapshots[len(b.Snapshots)-1].Snapshot)
 
-		resp, err := a.Qed.Incremental(first.Version, last.Version)
+		proof, err := a.Qed.Incremental(firstSnap.Version, lastSnap.Version)
 		if err != nil {
 			QedMonitorGetIncrementalProofErrTotal.Inc()
-			a.Notifier.Alert(fmt.Sprintf("Monitor is unable to get incremental proof from QED server: %s", err.Error()))
+			_ = a.Notifier.Alert(fmt.Sprintf("Monitor is unable to get incremental proof from QED server: %s", err.Error()))
 			log.Infof("Monitor is unable to get incremental proof from QED server: %s", err.Error())
 			return err
 		}
-		ok := a.Qed.VerifyIncremental(resp, first, last, hashing.NewSha256Hasher())
-		if !ok {
-			a.Notifier.Alert(fmt.Sprintf("Monitor is unable to verify incremental proof from %d to %d", first.Version, last.Version))
-			log.Infof("Monitor is unable to verify incremental proof from %d to %d", first.Version, last.Version)
+
+		ok, err := a.Qed.IncrementalVerify(proof, &firstSnap, &lastSnap)
+		if err != nil {
+			return nil
 		}
-		log.Debugf("Monitor verified a consistency proof between versions %d and %d: %v\n", first.Version, last.Version, ok)
+		if !ok {
+			_ = a.Notifier.Alert(fmt.Sprintf("Monitor is unable to verify incremental proof from %d to %d", firstSnap.Version, lastSnap.Version))
+			log.Infof("Monitor is unable to verify incremental proof from %d to %d", firstSnap.Version, lastSnap.Version)
+		}
+		log.Debugf("Monitor verified a consistency proof between versions %d and %d: %v\n", firstSnap.Version, lastSnap.Version, ok)
 		return nil
 	}
 }
