@@ -73,7 +73,7 @@ func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) e
 	return nil
 }
 
-func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
+func (b fakeRaftBalloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
 	return &balloon.MembershipProof{
 		Exists:         true,
 		HyperProof:     hyper.NewQueryProof([]byte{0x0}, []byte{0x0}, hyper.AuditPath{}, nil),
@@ -86,7 +86,7 @@ func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest, version
 	}, nil
 }
 
-func (b fakeRaftBalloon) QueryMembership(event []byte, version uint64) (*balloon.MembershipProof, error) {
+func (b fakeRaftBalloon) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	hasher := hashing.NewFakeXorHasher()
 	return &balloon.MembershipProof{
 		Exists:         true,
@@ -239,7 +239,7 @@ func TestMembership(t *testing.T) {
 	key := []byte("this is a sample event")
 	query, _ := json.Marshal(protocol.MembershipQuery{
 		Key:     key,
-		Version: version,
+		Version: &version,
 	})
 
 	req, err := http.NewRequest("POST", "/proofs/membership", bytes.NewBuffer(query))

@@ -207,8 +207,12 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
+		if query.Version == nil {
+
+		}
+
 		// Wait for the response
-		proof, err := balloon.QueryMembership(query.Key, query.Version)
+		proof, err := balloon.QueryMembershipConsistency(query.Key, *query.Version)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -262,7 +266,7 @@ func DigestMembership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		proof, err := balloon.QueryDigestMembership(query.KeyDigest, query.Version)
+		proof, err := balloon.QueryDigestMembershipConsistency(query.KeyDigest, query.Version)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
