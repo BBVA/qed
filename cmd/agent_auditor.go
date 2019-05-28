@@ -22,7 +22,6 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
@@ -164,7 +163,7 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 		defer timer.ObserveDuration()
 
 		// TODO Get hasher via negotiation between agent and QED
-		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, s.Snapshot.Version, hashing.NewSha256Hasher)
+		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, s.Snapshot.Version)
 		if err != nil {
 			log.Infof("Auditor is unable to get membership proof from QED server: %v", err)
 

@@ -24,7 +24,6 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
@@ -169,7 +168,7 @@ func (i incrementalFactory) New(ctx context.Context) gossip.Task {
 		firstSnap := balloon.Snapshot(*b.Snapshots[0].Snapshot)
 		lastSnap := balloon.Snapshot(*b.Snapshots[len(b.Snapshots)-1].Snapshot)
 
-		proof, err := a.Qed.Incremental(firstSnap.Version, lastSnap.Version, hashing.NewSha256Hasher)
+		proof, err := a.Qed.Incremental(firstSnap.Version, lastSnap.Version)
 		if err != nil {
 			QedMonitorGetIncrementalProofErrTotal.Inc()
 			_ = a.Notifier.Alert(fmt.Sprintf("Monitor is unable to get incremental proof from QED server: %s", err.Error()))

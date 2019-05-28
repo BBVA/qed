@@ -23,7 +23,6 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/octago/sflags/gen/gpflag"
 
@@ -65,8 +64,6 @@ func configClientIncremental() context.Context {
 
 func runClientIncremental(cmd *cobra.Command, args []string) error {
 
-	hasherF := hashing.NewSha256Hasher
-
 	// SilenceUsage is set to true -> https://github.com/spf13/cobra/issues/340
 	cmd.SilenceUsage = true
 	params := clientIncrementalCtx.Value(k("client.incremental.params")).(*incrementalParams)
@@ -79,7 +76,7 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	proof, err := client.Incremental(params.Start, params.End, hasherF)
+	proof, err := client.Incremental(params.Start, params.End)
 	if err != nil {
 		return err
 	}
@@ -95,7 +92,7 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 
 		if params.AutoVerify {
 			fmt.Printf("\nAuto-Verifying event with: \n\n Start: %d\n End: %d\n", params.Start, params.End)
-			ok, err = client.IncrementalAutoVerify(params.Start, params.End, hasherF)
+			ok, err = client.IncrementalAutoVerify(params.Start, params.End)
 		} else {
 
 			var startDigest, endDigest string
