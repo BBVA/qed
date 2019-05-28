@@ -157,7 +157,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 
 	if client.healthCheckEnabled {
 		// perform an initial healthcheck
-		client.healthCheck(client.healthCheckTimeout)
+		client.clusterHealthCheck(client.healthCheckTimeout)
 	}
 
 	// Ensure that we have at least one endpoint, the primary, available
@@ -251,7 +251,7 @@ func (c *HTTPClient) callPrimary(method, path string, data []byte) ([]byte, erro
 
 		if !retried && endpoint.IsDead() {
 			if c.healthCheckEnabled {
-				c.healthCheck(c.healthCheckTimeout)
+				c.clusterHealthCheck(c.healthCheckTimeout)
 			}
 			retried = true
 			continue
@@ -335,7 +335,7 @@ func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data 
 // healthCheck does a health check on all nodes in the cluster.
 // Depending on the node state, it marks connections as dead, alive etc.
 // The timeout specifies how long to wait for a response from QED.
-func (c *HTTPClient) healthCheck(timeout time.Duration) {
+func (c *HTTPClient) clusterHealthCheck(timeout time.Duration) {
 
 	var wg sync.WaitGroup
 	for _, e := range c.topology.Endpoints() {
@@ -378,7 +378,6 @@ func (c *HTTPClient) healthCheck(timeout time.Duration) {
 	}
 
 	wg.Wait()
-
 }
 
 // discover uses the shards info API to return the list of nodes in the cluster.
@@ -387,7 +386,6 @@ func (c *HTTPClient) healthCheck(timeout time.Duration) {
 func (c *HTTPClient) discover() error {
 
 	for {
-
 		e, err := c.topology.NextReadEndpoint(Any)
 		if err != nil {
 			return err
@@ -433,7 +431,7 @@ func (c *HTTPClient) startHealthChecker() {
 		case <-c.healthCheckStopCh:
 			return
 		case <-ticker.C:
-			c.healthCheck(timeout)
+			c.clusterHealthCheck(timeout)
 		}
 	}
 }
@@ -463,7 +461,6 @@ func (c *HTTPClient) Add(event string) (*protocol.Snapshot, error) {
 	}
 
 	return &snapshot, nil
-
 }
 
 // AddBulk will do a request to the server with a post data to store a bulk of new events.
