@@ -47,6 +47,7 @@ type HTTPClient struct {
 	healthCheckTimeout  time.Duration
 	healthCheckInterval time.Duration
 	discoveryEnabled    bool
+	hasherF             func() hashing.Hasher
 
 	mu                sync.RWMutex // guards the next block
 	running           bool
@@ -97,6 +98,7 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string, snapshotStoreUR
 		readPreference:      Primary,
 		maxRetries:          0,
 		retrier:             NewNoRequestRetrier(httpClient),
+		hasherF:             hashing.NewSha256Hasher,
 	}
 
 	client.topology.Update(urls[0], urls[1:]...)
@@ -491,7 +493,6 @@ func (c *HTTPClient) AddBulk(events []string) ([]*protocol.Snapshot, error) {
 func (c *HTTPClient) Membership(
 	key []byte,
 	version uint64,
-	hasherF func() hashing.Hasher,
 ) (*balloon.MembershipProof, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipQuery{
@@ -510,7 +511,7 @@ func (c *HTTPClient) Membership(
 		return nil, err
 	}
 
-	proof := protocol.ToBalloonProof(result, hasherF)
+	proof := protocol.ToBalloonProof(result, c.hasherF)
 	return proof, nil
 }
 
@@ -518,7 +519,6 @@ func (c *HTTPClient) Membership(
 func (c *HTTPClient) MembershipDigest(
 	keyDigest hashing.Digest,
 	version uint64,
-	hasherF func() hashing.Hasher,
 ) (*balloon.MembershipProof, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipDigest{
@@ -537,7 +537,7 @@ func (c *HTTPClient) MembershipDigest(
 		return nil, err
 	}
 
-	proof := protocol.ToBalloonProof(result, hasherF)
+	proof := protocol.ToBalloonProof(result, c.hasherF)
 	return proof, nil
 }
 
@@ -558,11 +558,10 @@ func (c *HTTPClient) MembershipVerify(
 func (c *HTTPClient) MembershipAutoVerify(
 	eventDigest hashing.Digest,
 	version uint64,
-	hasherF func() hashing.Hasher,
 ) (bool, error) {
 
 	// Get membership proof
-	proof, err := c.MembershipDigest(eventDigest, version, hasherF)
+	proof, err := c.MembershipDigest(eventDigest, version)
 	if err != nil {
 		log.Info("Error getting membership proof: %s", err)
 		return false, err
@@ -617,7 +616,7 @@ func (c *HTTPClient) GetSnapshot(version uint64) (*protocol.Snapshot, error) {
 }
 
 // Incremental will ask for an IncrementalProof to the server.
-func (c *HTTPClient) Incremental(start, end uint64, hasherF func() hashing.Hasher) (*balloon.IncrementalProof, error) {
+func (c *HTTPClient) Incremental(start, end uint64) (*balloon.IncrementalProof, error) {
 
 	query, _ := json.Marshal(&protocol.IncrementalRequest{
 		Start: start,
@@ -632,7 +631,7 @@ func (c *HTTPClient) Incremental(start, end uint64, hasherF func() hashing.Hashe
 	var response *protocol.IncrementalResponse
 	_ = json.Unmarshal(body, &response)
 
-	proof := protocol.ToIncrementalProof(response, hasherF)
+	proof := protocol.ToIncrementalProof(response, c.hasherF)
 	return proof, nil
 }
 
@@ -652,11 +651,10 @@ func (c *HTTPClient) IncrementalVerify(
 // It returns the verification result.
 func (c *HTTPClient) IncrementalAutoVerify(
 	start, end uint64,
-	hasherF func() hashing.Hasher,
 ) (bool, error) {
 
 	// Get incrementral proof
-	proof, err := c.Incremental(start, end, hasherF)
+	proof, err := c.Incremental(start, end)
 	if err != nil {
 		return false, err
 	}

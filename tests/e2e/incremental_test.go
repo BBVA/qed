@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/protocol"
 
 	"github.com/bbva/qed/testutils/rand"
@@ -55,7 +54,7 @@ func TestIncrementalConsistency(t *testing.T) {
 		})
 
 		let(t, "Query for an incremental proof between version 2 and version 8", func(t *testing.T) {
-			proof, err = client.Incremental(2, 8, hashing.NewSha256Hasher)
+			proof, err = client.Incremental(2, 8)
 			spec.NoError(t, err, "error getting incremental proof")
 			spec.Equal(t, uint64(2), proof.Start, "The start version should match")
 			spec.Equal(t, uint64(8), proof.End, "The end version should match")

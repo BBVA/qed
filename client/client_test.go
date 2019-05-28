@@ -66,6 +66,7 @@ func setupClient(t *testing.T, urls []string) *HTTPClient {
 		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
+		SetHasherFunction(hashing.NewSha256Hasher),
 	)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "Cannot create http client: "))
@@ -500,10 +501,11 @@ func TestMembership(t *testing.T) {
 		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
+		SetHasherFunction(hashing.NewFakeXorHasher),
 	)
 	require.NoError(t, err)
 
-	proof, err := client.Membership(event, version, hashing.NewFakeXorHasher)
+	proof, err := client.Membership(event, version)
 	assert.NotNil(t, proof)
 	require.NoError(t, err)
 
@@ -534,10 +536,11 @@ func TestMembershipDigest(t *testing.T) {
 		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
+		SetHasherFunction(hashing.NewSha256Hasher),
 	)
 	require.NoError(t, err)
 
-	proof, err := client.MembershipDigest(eventDigest, version, hashing.NewSha256Hasher)
+	proof, err := client.MembershipDigest(eventDigest, version)
 	assert.NotNil(t, proof)
 	assert.NoError(t, err)
 
@@ -554,7 +557,7 @@ func TestMembershipWithServerFailure(t *testing.T) {
 
 	event := "Hello world!"
 
-	_, err := client.Membership(hashing.Digest(event), 0, hashing.NewSha256Hasher)
+	_, err := client.Membership(hashing.Digest(event), 0)
 	assert.Error(t, err)
 }
 
@@ -582,10 +585,11 @@ func TestIncremental(t *testing.T) {
 		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
+		SetHasherFunction(hashing.NewFakeXorHasher),
 	)
 	require.NoError(t, err)
 
-	proof, err := client.Incremental(start, end, hashing.NewFakeXorHasher)
+	proof, err := client.Incremental(start, end)
 	assert.NotNil(t, proof)
 	assert.NoError(t, err)
 
@@ -600,7 +604,7 @@ func TestIncrementalWithServerFailure(t *testing.T) {
 	defer tearDown()
 	client := setupClient(t, []string{serverURL})
 
-	_, err := client.Incremental(uint64(2), uint64(8), hashing.NewSha256Hasher)
+	_, err := client.Incremental(uint64(2), uint64(8))
 	assert.Error(t, err)
 }
 
@@ -740,10 +744,11 @@ func TestMembershipAutoVerify(t *testing.T) {
 		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
+		SetHasherFunction(hashing.NewFakeXorHasher),
 	)
 	require.NoError(t, err)
 
-	ok, err := client.MembershipAutoVerify(eventDigest, version, hashing.NewFakeXorHasher)
+	ok, err := client.MembershipAutoVerify(eventDigest, version)
 	require.True(t, ok)
 	require.NoError(t, err)
 
@@ -810,10 +815,11 @@ func TestIncrementalAutoVerify(t *testing.T) {
 		SetMaxRetries(0),
 		SetTopologyDiscovery(false),
 		SetHealthChecks(false),
+		SetHasherFunction(hashing.NewFakeXorHasher),
 	)
 	require.NoError(t, err)
 
-	ok, err := client.IncrementalAutoVerify(start, end, hashing.NewFakeXorHasher)
+	ok, err := client.IncrementalAutoVerify(start, end)
 	require.True(t, ok)
 	require.NoError(t, err)
 
