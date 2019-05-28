@@ -96,7 +96,7 @@
   with_items:
     # - server.crt
     # - server.key
-    - id_ed25519
+    - qed_ed25519
 
 - name: Copy CA cert to remote
   copy:

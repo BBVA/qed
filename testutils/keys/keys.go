@@ -22,37 +22,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"math/big"
 	"net"
 	"os"
 	"time"
 )
-
-func GenerateSignKey(path string) (string, error) {
-	/* public, private, err := ed25519.GenerateKey(nil)
-	if err != nil {
-		return "", err
-	} */
-
-	err := ioutil.WriteFile(path+"/id_ed25519", []byte(`-----BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACCXiy9taNh+avmEAyzfnlCXxYHzgS3wGPCi52AY8qQyTwAAAKA6Sq8iOkqv
-IgAAAAtzc2gtZWQyNTUxOQAAACCXiy9taNh+avmEAyzfnlCXxYHzgS3wGPCi52AY8qQyTw
-AAAEAzpsL9rtrmKhL3cEHFcKPEvkd8y/QJXeFTtyhgaYfUDpeLL21o2H5q+YQDLN+eUJfF
-gfOBLfAY8KLnYBjypDJPAAAAHWdkaWF6bG9AbWFjc2xhY2suc2xhY2t3YXJlLmVz
------END OPENSSH PRIVATE KEY-----
-`), 0644)
-	if err != nil {
-		return "", err
-	}
-	err = ioutil.WriteFile(path+"/id_ed25519.pub", []byte("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJeLL21o2H5q+YQDLN+eUJfFgfOBLfAY8KLnYBjypDJP gdiazlo@macslack.slackware.es"), 0644)
-	if err != nil {
-		return "", err
-	}
-
-	return path + "/id_ed25519", nil
-}
 
 func GenerateTlsCert(path string) (string, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)

@@ -50,6 +50,7 @@ coverage.txt
 .golangci.yml
 config.yml
 deploy/aws/config_files/*
+deploy/aws/provision/config_files/*
 deploy/provision/config_files/*
 !deploy/aws/config_files/README.md
 deploy/aws/modules/*/data

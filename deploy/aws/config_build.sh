@@ -6,10 +6,14 @@ function _readlink() { (
   echo $PWD/$(basename $1)
 ) }
 
+# Deployment options
+CGO_LDFLAGS_ALLOW='.*'
+QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
+
 pub=$(_readlink ./config_files)
 tdir=$(mktemp -d /tmp/qed_build.XXX)
 
-sign_path=${pub}/id_ed25519
+sign_path=${pub}
 cert_path=${pub}/server.crt
 key_path=${pub}/server.key
 node_path=${pub}/node_exporter
@@ -27,9 +31,7 @@ if [ ! -f ${node_path} ]; then (
 
 if [ ! -f ${sign_path} ]; then
     #build shared signing key
-    ssh-keygen -t ed25519 -f id_ed25519 -P ''
-
-    cp id_ed25519 ${sign_path}
+    $QED generate signerkeys --path ${sign_path}
 fi
 
 if [ ! -f ${cert_path} ] && [ ! -f ${key_path} ]; then
