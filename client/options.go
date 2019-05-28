@@ -22,6 +22,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/bbva/qed/hashing"
 )
 
 // HTTPClientOptionF is a function that configures an HTTPClient.
@@ -31,6 +33,7 @@ func configToOptions(conf *Config) ([]HTTPClientOptionF, error) {
 	var options []HTTPClientOptionF
 	if conf != nil {
 		options = []HTTPClientOptionF{
+			SetSnapshotStoreURL(conf.SnapshotStoreURL),
 			SetAPIKey(conf.APIKey),
 			SetReadPreference(conf.ReadPreference),
 			SetMaxRetries(conf.MaxRetries),
@@ -39,6 +42,7 @@ func configToOptions(conf *Config) ([]HTTPClientOptionF, error) {
 			SetHealthCheckTimeout(conf.HealthCheckTimeout),
 			SetHealthCheckInterval(conf.HealthCheckInterval),
 			SetAttemptToReviveEndpoints(conf.AttemptToReviveEndpoints),
+			SetHasherFunction(conf.HasherFunction),
 		}
 		if len(conf.Endpoints) > 0 {
 			options = append(options, SetURLs(conf.Endpoints[0], conf.Endpoints[1:]...))
@@ -78,6 +82,16 @@ func SetURLs(primary string, secondaries ...string) HTTPClientOptionF {
 			return nil
 		}
 		return errors.New("Cannot use empty string for the primary url")
+	}
+}
+
+func SetSnapshotStoreURL(url string) HTTPClientOptionF {
+	return func(c *HTTPClient) error {
+		if len(url) > 0 {
+			c.snapshotStore = newEndpoint(url, store)
+			return nil
+		}
+		return errors.New("Cannot use empty string for the snapshot store url")
 	}
 }
 
@@ -144,5 +158,15 @@ func SetHealthCheckInterval(seconds time.Duration) HTTPClientOptionF {
 	return func(c *HTTPClient) error {
 		c.healthCheckInterval = seconds
 		return nil
+	}
+}
+
+func SetHasherFunction(hasherF func() hashing.Hasher) HTTPClientOptionF {
+	return func(c *HTTPClient) error {
+		if hasherF != nil {
+			c.hasherF = hasherF
+			return nil
+		}
+		return errors.New("The hasher function cannot be nil")
 	}
 }

@@ -17,9 +17,10 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/protocol"
 
 	"github.com/bbva/qed/testutils/rand"
@@ -39,10 +40,10 @@ func TestIncrementalConsistency(t *testing.T) {
 	let(t, "Add multiple events and verify consistency between two of them", func(t *testing.T) {
 		client, err := newQedClient(0)
 		spec.NoError(t, err, "Error creating a new qed client")
-		defer func(){ client.Close() }()
+		defer func() { client.Close() }()
 		events := make([]string, 10)
 		snapshots := make([]*protocol.Snapshot, 10)
-		var result *protocol.IncrementalResponse
+		var proof *balloon.IncrementalProof
 
 		let(t, "Add ten events", func(t *testing.T) {
 			for i := 0; i < 10; i++ {
@@ -53,14 +54,18 @@ func TestIncrementalConsistency(t *testing.T) {
 		})
 
 		let(t, "Query for an incremental proof between version 2 and version 8", func(t *testing.T) {
-			result, err = client.Incremental(2, 8)
+			proof, err = client.Incremental(2, 8)
 			spec.NoError(t, err, "error getting incremental proof")
-			spec.Equal(t, uint64(2), result.Start, "The start version should match")
-			spec.Equal(t, uint64(8), result.End, "The end version should match")
+			spec.Equal(t, uint64(2), proof.Start, "The start version should match")
+			spec.Equal(t, uint64(8), proof.End, "The end version should match")
 		})
 
 		let(t, "Verify the proof", func(t *testing.T) {
-			spec.True(t, client.VerifyIncremental(result, snapshots[2], snapshots[8], hashing.NewSha256Hasher()), "The proofs should be valid")
+			balloonStartSnapshot := balloon.Snapshot(*snapshots[2])
+			balloonEndSnapshot := balloon.Snapshot(*snapshots[8])
+			ok, err := client.IncrementalVerify(proof, &balloonStartSnapshot, &balloonEndSnapshot)
+			spec.True(t, ok, "The proofs should be valid")
+			spec.NoError(t, err, fmt.Sprintf("Unexpected error: %s", err))
 		})
 
 	})
