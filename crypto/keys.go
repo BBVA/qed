@@ -26,11 +26,11 @@ import (
 func NewEd25519KeyPairFile(path string) {
 	// Generate a new private/public keypair for QED server
 	pubKey, privKey, _ := ed25519.GenerateKey(rand.Reader)
-	err := ioutil.WriteFile(fmt.Sprintf("%s/id_ed25519", path), privKey, 0644)
+	err := ioutil.WriteFile(path+"/id_ed25519", privKey, 0644)
 	if err != nil {
 		panic(err)
 	}
-	_ = ioutil.WriteFile(fmt.Sprintf("%s/id_ed25519.pub", path), pubKey, 0644)
+	_ = ioutil.WriteFile(path+"/id_ed25519.pub", pubKey, 0644)
 
 	fmt.Printf("New keypair generated => %v/id_ed25519|.pub\n", path)
 }
