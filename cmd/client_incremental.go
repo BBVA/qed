@@ -79,7 +79,7 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	proof, err := client.Incremental(params.Start, params.End, hashing.NewSha256Hasher)
+	proof, err := client.Incremental(params.Start, params.End, hasherF)
 	if err != nil {
 		return err
 	}
