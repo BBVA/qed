@@ -1,13 +1,17 @@
 Quick start
 ===========
 
+Pre-requisites:
+
+- First start QED server. For more information check our installation section.
+
 This section will guide you though QED functionality.
 
 Mainly, you can **add events** to QED, ask for the proof that an event **has been inserted**,
 ask for the proof that two events are **consistent** between each other,
 and verify (manual or automatically) each of both proofs.
 
-For each step we will use the **QED client** facility.
+For each step we will use the **QED cli** facility.
 The client will talk to the QED server and the snapshot store, so it must be configured for that proposal.
 
 The involved variables are the followings, and we will use their default values for this quickstart.
@@ -17,7 +21,6 @@ The involved variables are the followings, and we will use their default values 
       --api-key             string  Set API Key to talk to QED Log service (default "my-key")
       --endpoints           string  REST QED Log service endpoint list http://ip1:port1,http://ip2:port2...  (default [http://127.0.0.1:8800])
       --snapshot-store-url  string  REST Snapshot store service endpoint http://ip:port  (default "http://127.0.0.1:8888")
-
 
 1. Adding events.
 -----------------
@@ -51,10 +54,9 @@ So, let's insert 4 simple events:
         HistoryDigest: 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537
         Version: 3
 
-In theory, this operation should return only if it has been completed successfully or not.
+This operation should return only if it has been completed successfully or not.
 But currently it returns certain info for debugging/tesing purposes.
 In fact, we will retrieve this information later from the right place.
-
 
 .. note::
 
@@ -93,7 +95,7 @@ and there is a proof for you to check it.
 
 .. note::
 
-    We print proofs as <TRUNCATED> due to these crypthograpical proofs lenght and difficut to read.
+    We print proofs as <TRUNCATED> due to these crypthograpical proofs lenght and difficult to read.
 
 2.2 Getting snapshots from the snapshot store.
 ++++++++++++++++++++++++++++++++++++++++++++++
