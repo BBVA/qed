@@ -1,0 +1,53 @@
+version: '3'
+services:
+  qed_server_0:
+    image: "qed:v0.2.1"
+    container_name: qed_server_0
+    ports:
+      - "8800:8800"   # API HTTP
+      - "8700:8700"   # Management
+      - "8600:8600"   # Metrics
+      - "8500:8500"   # Raft
+      - "8400:8400"   # Gossip
+#      - "6060:6060"   # Profiling
+    entrypoint: [
+      "qed", "server", "start",
+      "--api-key", "key",
+      "--http-addr", "qed_server_0:8800",
+      "--mgmt-addr", "qed_server_0:8700",
+      "--metrics-addr", "qed_server_0:8600",
+      "--raft-addr", "qed_server_0:8500",
+      "--gossip-addr", "qed_server_0:8400",
+      "--node-id", "server0",
+      "--private-key-path", "/var/tmp/qed_ed25519",
+      "--raft-path", "/var/tmp/qed0/wal",
+      "--db-path", "/var/tmp/qed0/db",
+      "--log", "info",
+    ]
+
+  publisher:
+    image: "qed:v0.2.1"
+    container_name: publisher
+    ports:
+      - "8100:8100"   # API HTTP
+      - "18100:18100" # Metrics
+    entrypoint: [
+      "qed", "agent", "publisher",
+      "--bind-addr", "publisher:8100",
+      "--metrics-addr", "publisher:18100",
+      "--start-join", "qed_server_0:8400",
+      "--notifier-endpoint", "http://snapshotstore:8888/alert",
+      "--store-endpoint", "http://snapshotstore:8888",
+      "--role", "publisher",
+      "--node-name", "publisher0",
+      "--log", "info",
+    ]
+    restart: on-failure
+
+  snapshotstore:
+    image: "qed:v0.2.1"
+    container_name: snapshot_store
+    ports:
+      - "8888:8888"   # API HTTP
+    entrypoint:
+      - /usr/local/bin/storage
