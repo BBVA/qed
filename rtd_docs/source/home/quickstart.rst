@@ -1,13 +1,35 @@
 Quick start
 ===========
 
+This section will guide you though QED functionality.
 
-1. Adding events
-----------------
+Mainly, you can **add events** to QED, ask for the proof that an event **has been inserted**,
+ask for the proof that two events are **consistent** between each other,
+and verify (manual or automatically) each of both proofs.
+
+For each step we will use the **QED client** facility.
+The client will talk to the QED server and the snapshot store, so it must be configured for that proposal.
+
+The involved variables are the followings, and we will use their default values for this quickstart.
 
 .. code-block:: shell
 
-    $ go run main.go client add --event "event 0" --api-key my-key
+      --api-key             string  Set API Key to talk to QED Log service (default "my-key")
+      --endpoints           string  REST QED Log service endpoint list http://ip1:port1,http://ip2:port2...  (default [http://127.0.0.1:8800])
+      --snapshot-store-url  string  REST Snapshot store service endpoint http://ip:port  (default "http://127.0.0.1:8888")
+
+
+1. Adding events.
+-----------------
+
+In this step the client only talk to  the QED server (no snapshot-store info required).
+The mandatory field here is the event to insert.
+
+So, let's insert 4 simple events:
+
+.. code-block:: shell
+
+    $ go run main.go client add --event "event 0"
 
     Received snapshot with values:
 
@@ -16,11 +38,11 @@ Quick start
         HistoryDigest: 163d06ec973f7c902d3ddf6bc10c08c03757004c085e02a3ca463e30ef7aca09
         Version: 0
 
-    $ go run main.go client add --event "event 1" --api-key my-key
+    $ go run main.go client add --event "event 1"
     ...
-    $ go run main.go client add --event "event 2" --api-key my-key
+    $ go run main.go client add --event "event 2"
     ...
-    $ go run main.go client add --event "event 3" --api-key my-key
+    $ go run main.go client add --event "event 3"
 
     Received snapshot with values:
 
@@ -29,55 +51,30 @@ Quick start
         HistoryDigest: 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537
         Version: 3
 
+In theory, this operation should return only if it has been completed successfully or not.
+But currently it returns certain info for debugging/tesing purposes.
+In fact, we will retrieve this information later from the right place.
+
+
+.. note::
+
+    Take a look at the add help section by typing:
+
+    $ go run main.go client add -h
+
+
 2. Proof of event insertion.
 ----------------------------
 
-    2.1 Querying proof.
+2.1 Querying proof.
+++++++++++++++++++
 
-    Has "event 0" been inserted?
-
-    .. code-block:: shell
-
-        $ go run main.go client membership --event "event 0" --api-key my-key
-
-        Querying event [ event 0 ]
-
-        Received membership proof:
-
-            **Exists: true**
-            **Hyper audit path: <TRUNCATED>**
-            **History audit path: <TRUNCATED>**
-            CurrentVersion: 3
-            QueryVersion: 3
-            **ActualVersion: 0**
-            KeyDigest: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9
-
-    Yes! It was inserted in version 0, and the last event inserted has been in version 3.
-
-    And there is a proof for you to check it.
-
-    2.2 Getting snapshots from the snapshot store.
-
-    Ok, let's ask for the information I need ("hyperDigest" and "historyDigest") to check it.
+To get this proof we only need the original event.
+So...has "event 0" been inserted?
 
     .. code-block:: shell
 
-        $ go run main.go client get --version 3 --snapshot-store-url http://127.0.0.1:8888
-
-        Retreived snapshot with values:
-
-            EventDigest: 4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce
-            **HyperDigest: 28b2a8d7bfeedc61b988e5bddaf260f21aee96bfe88392a0af8a06d7129ab86d**
-            **HistoryDigest: 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537**
-            Version: 3
-
-    2.3 Verifying proof (manually).
-
-    This interactive process will ask you the info previously retrived.
-
-    .. code-block:: shell
-
-        $ go run main.go client membership --event "event 0" --api-key my-key **--verify**
+        $ go run main.go client membership --event "event 0"
 
         Querying event [ event 0 ]
 
@@ -91,25 +88,84 @@ Quick start
             ActualVersion: 0
             KeyDigest: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9
 
-        Please, **provide the hyperDigest** for current version [ 3 ]: 28b2a8d7bfeedc61b988e5bddaf260f21aee96bfe88392a0af8a06d7129ab86d
-        Please, **provide the historyDigest** for version [ 3 ] : 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537
+Yes! It was inserted in version 0 (actualversion), the last event inserted has version 3 (currentversion),
+and there is a proof for you to check it.
 
-        **Verifying** event with:
+.. note::
+
+    We print proofs as <TRUNCATED> due to these crypthograpical proofs lenght and difficut to read.
+
+2.2 Getting snapshots from the snapshot store.
+++++++++++++++++++++++++++++++++++++++++++++++
+
+This proof shows the version in which the event was inserted.
+So, let's ask for the snapshot of that version.
+(it contains the information needed -"HyperDigest" and "HistoryDigest"- to verify proofs)
+
+    .. code-block:: shell
+
+        $ go run main.go client get --version 3
+
+        Retreived snapshot with values:
+
+            EventDigest: 4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce
+            HyperDigest: 28b2a8d7bfeedc61b988e5bddaf260f21aee96bfe88392a0af8a06d7129ab86d
+            HistoryDigest: 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537
+            Version: 3
+
+.. note::
+
+    This is the right place to look for digests, and not as a result of the adding step.
+
+    Take a look at the get help section by typing:
+
+    $ go run main.go client get -h
+
+
+2.3 Verifying proof (manually).
++++++++++++++++++++++++++++++++
+
+Having the proof and the neccesary information, let's verify the former.
+The interactive process will ask you the info previously retrived.
+
+    .. code-block:: shell
+
+        $ go run main.go client membership --event "event 0" --verify
+
+        Querying event [ event 0 ]
+
+        Received membership proof:
+
+            Exists: true
+            Hyper audit path: <TRUNCATED>
+            History audit path: <TRUNCATED>
+            CurrentVersion: 3
+            QueryVersion: 3
+            ActualVersion: 0
+            KeyDigest: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9
+
+        Please, provide the hyperDigest for current version [ 3 ]: 28b2a8d7bfeedc61b988e5bddaf260f21aee96bfe88392a0af8a06d7129ab86d
+        Please, provide the historyDigest for version [ 3 ] : 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537
+
+        Verifying event with:
 
             EventDigest: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9
             HyperDigest: 28b2a8d7bfeedc61b988e5bddaf260f21aee96bfe88392a0af8a06d7129ab86d
             HistoryDigest: 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537
             Version: 3
 
-        **Verify: OK**
+        Verify: OK
 
-    2.4 Auto-verifying proofs.
+And yes! We can verify the membership of "event 0"
 
-    This process is similar to the previous one, but getting snapshots from the snapshot store in a transparent way.
+2.4 Auto-verifying proofs.
+++++++++++++++++++++++++++
+
+This process is similar to the previous one, but getting snapshots from the snapshot store in a transparent way.
 
     .. code-block:: shell
 
-        $ go run main.go client membership --event 0 --version 3 --api-key my-key **--auto-verify**
+        $ go run main.go client membership --event "event 0" --auto-verify
 
         Querying key [ 0 ] with version [ 3 ]
 
@@ -124,22 +180,26 @@ Quick start
             KeyDigest: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9
 
 
-        **Auto-Verifying** event with:
+        Auto-Verifying event with:
 
             EventDigest: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9
             Version: 3
 
-        **Verify: OK**
+        Verify: OK
 
 
 3. Incremental proof between 2 events.
 --------------------------------------
 
-    3.1 Querying proof.
+3.1 Querying proof.
++++++++++++++++++++
+
+For this proof we don't need the events, but the QED version in which they were added.
+(you can get both versions by doing membership proofs as above)
 
     .. code-block:: shell
 
-        $ go run main.go client incremental --start 0 --end 3 --api-key my-key
+        $ go run main.go client incremental --start 0 --end 3
 
         Querying incremental between versions [ 0 ] and [ 3 ]
 
@@ -149,11 +209,15 @@ Quick start
             End version: 3
             Incremental audit path: <TRUNCATED>
 
-    3.2 Getting snapshots from the snapshot store.
+3.2 Getting snapshots from the snapshot store.
+++++++++++++++++++++++++++++++++++++++++++++++
+
+This process is similar as the one in 2.2.
+As we need 2 snapshots, we repeat the query for each version.
 
     .. code-block:: shell
 
-        $ go run main.go client get --version 0 --snapshot-store-url http://127.0.0.1:8888
+        $ go run main.go client get --version 0
 
         Retreived snapshot with values:
 
@@ -162,7 +226,7 @@ Quick start
             HistoryDigest: 163d06ec973f7c902d3ddf6bc10c08c03757004c085e02a3ca463e30ef7aca09
             Version: 0
 
-        $ go run main.go client get --version 3 --snapshot-store-url http://127.0.0.1:8888
+        $ go run main.go client get --version 3
 
         Retreived snapshot with values:
 
@@ -171,11 +235,14 @@ Quick start
             HistoryDigest: 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537
             Version: 3
 
-    3.3 Verifying proofs.
+3.3 Verifying proofs (manually).
+++++++++++++++++++++++++++++++++
+
+To verify the proof manually, the process will ask you to enter the required digests.
 
         .. code-block:: shell
 
-            $ go run main.go client incremental --start 0 --end 3 --api-key my-key--verify
+            $ go run main.go client incremental --start 0 --end 3 --verify
 
             Querying incremental between versions [ 0 ] and [ 3 ]
 
@@ -194,11 +261,14 @@ Quick start
 
             Verify: OK
 
-    3.4 Auto-verifying proofs.
+3.4 Auto-verifying proofs.
+++++++++++++++++++++++++++
+
+This process is similar to the previous one, but getting snapshots from the snapshot store in a transparent way.
 
         .. code-block:: shell
 
-            $ go run main.go client incremental --start 0 --end 3 --api-key my-key--auto-verify
+            $ go run main.go client incremental --start 0 --end 3 --auto-verify
 
             Querying incremental between versions [ 0 ] and [ 3 ]
 
