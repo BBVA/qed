@@ -94,7 +94,7 @@ func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		// Wait for the response
 		response, err := api.Add(event.Event)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusPreconditionFailed)
 			return
 		}
 
@@ -160,7 +160,7 @@ func AddBulk(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		snapshotBulk, err := api.AddBulk(eventBulk.Events)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusPreconditionFailed)
 			return
 		}
 
@@ -335,13 +335,13 @@ func Incremental(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		// Wait for the response
 		proof, err := api.QueryConsistency(request.Start, request.End)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusPreconditionFailed)
 			return
 		}
 
 		out, err := json.Marshal(protocol.ToIncrementalResponse(proof))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 

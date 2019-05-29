@@ -265,26 +265,32 @@ func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 
 	var endpoint *endpoint
 	var retried bool
-	var err error
+	var errTopology, errRequest error
 	var result []byte
 	for {
 		// check every endpoint available in a round-robin manner
-		endpoint, err = c.topology.NextReadEndpoint(c.readPreference)
-		if err != nil {
+		endpoint, errTopology = c.topology.NextReadEndpoint(c.readPreference)
+		if errTopology != nil {
 			if !retried && c.discoveryEnabled {
 				_ = c.discover()
 				retried = true
 				continue
 			}
-			return nil, err
+			if errRequest != nil {
+				return nil, errRequest
+			}
+			return nil, errTopology
 		}
-		result, err = c.doReq(method, endpoint, path, data)
-		if err == nil {
+		result, errRequest = c.doReq(method, endpoint, path, data)
+		if errRequest == nil {
 			break
 		}
 		endpoint.MarkAsDead()
 	}
-	return result, err
+	if errRequest != nil {
+		return nil, errRequest
+	}
+	return result, errTopology
 }
 
 func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data []byte) ([]byte, error) {
@@ -488,12 +494,19 @@ func (c *HTTPClient) AddBulk(events []string) ([]*protocol.Snapshot, error) {
 
 // Membership will ask for a Proof to the server.
 func (c *HTTPClient) Membership(key []byte, version *uint64) (*balloon.MembershipProof, error) {
+	var query []byte
 
-	query, _ := json.Marshal(&protocol.MembershipQuery{
-		Key:     key,
-		Version: version,
-	})
+	if version == nil {
+		query, _ = json.Marshal(&protocol.MembershipQuery{
+			Key: key,
+		})
+	} else {
+		query, _ = json.Marshal(&protocol.MembershipQuery{
+			Key:     key,
+			Version: version,
+		})
 
+	}
 	body, err := c.callAny("POST", "/proofs/membership", query)
 	if err != nil {
 		return nil, err
@@ -511,11 +524,18 @@ func (c *HTTPClient) Membership(key []byte, version *uint64) (*balloon.Membershi
 
 // Membership will ask for a Proof to the server.
 func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version *uint64) (*balloon.MembershipProof, error) {
+	var query []byte
 
-	query, _ := json.Marshal(&protocol.MembershipDigest{
-		KeyDigest: keyDigest,
-		Version:   version,
-	})
+	if version == nil {
+		query, _ = json.Marshal(&protocol.MembershipDigest{
+			KeyDigest: keyDigest,
+		})
+	} else {
+		query, _ = json.Marshal(&protocol.MembershipDigest{
+			KeyDigest: keyDigest,
+			Version:   version,
+		})
+	}
 
 	body, err := c.callAny("POST", "/proofs/digest-membership", query)
 	if err != nil {
