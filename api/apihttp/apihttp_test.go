@@ -287,7 +287,7 @@ func TestDigestMembership(t *testing.T) {
 
 	query, _ := json.Marshal(protocol.MembershipDigest{
 		eventDigest,
-		version,
+		&version,
 	})
 
 	req, err := http.NewRequest("POST", "/proofs/digest-membership", bytes.NewBuffer(query))
