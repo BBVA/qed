@@ -487,14 +487,11 @@ func (c *HTTPClient) AddBulk(events []string) ([]*protocol.Snapshot, error) {
 }
 
 // Membership will ask for a Proof to the server.
-func (c *HTTPClient) Membership(
-	key []byte,
-	version uint64,
-) (*balloon.MembershipProof, error) {
+func (c *HTTPClient) Membership(key []byte, version *uint64) (*balloon.MembershipProof, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipQuery{
 		Key:     key,
-		Version: &version,
+		Version: version,
 	})
 
 	body, err := c.callAny("POST", "/proofs/membership", query)
@@ -513,14 +510,11 @@ func (c *HTTPClient) Membership(
 }
 
 // Membership will ask for a Proof to the server.
-func (c *HTTPClient) MembershipDigest(
-	keyDigest hashing.Digest,
-	version uint64,
-) (*balloon.MembershipProof, error) {
+func (c *HTTPClient) MembershipDigest(keyDigest hashing.Digest, version *uint64) (*balloon.MembershipProof, error) {
 
 	query, _ := json.Marshal(&protocol.MembershipDigest{
 		KeyDigest: keyDigest,
-		Version:   &version,
+		Version:   version,
 	})
 
 	body, err := c.callAny("POST", "/proofs/digest-membership", query)
@@ -552,10 +546,7 @@ func (c *HTTPClient) MembershipVerify(
 // MembershipAutoVerify will compute the Proof given in Membership,
 // get hyper and history digests from the snapshot store,
 // and returns the verification result.
-func (c *HTTPClient) MembershipAutoVerify(
-	eventDigest hashing.Digest,
-	version uint64,
-) (bool, error) {
+func (c *HTTPClient) MembershipAutoVerify(eventDigest hashing.Digest, version *uint64) (bool, error) {
 
 	// Get membership proof
 	proof, err := c.MembershipDigest(eventDigest, version)
@@ -568,7 +559,7 @@ func (c *HTTPClient) MembershipAutoVerify(
 	snapshot := &balloon.Snapshot{
 		HistoryDigest: nil,
 		HyperDigest:   nil,
-		Version:       version,
+		Version:       *version,
 		EventDigest:   eventDigest,
 	}
 

@@ -91,7 +91,7 @@ func TestAddBulk(t *testing.T) {
 	}
 }
 
-func TestQueryMembership(t *testing.T) {
+func TestQueryMembershipConsistency(t *testing.T) {
 
 	log.SetLogger("TestQueryMembership", log.SILENT)
 
@@ -132,6 +132,45 @@ func TestQueryMembership(t *testing.T) {
 		closeF()
 	}
 
+}
+
+func TestQueryMembership(t *testing.T) {
+
+	log.SetLogger("TestQueryMembership", log.SILENT)
+
+	testCases := []struct {
+		key    []byte
+		exists bool
+	}{
+		{[]byte{0x5a}, true},
+		{nil, false},
+	}
+
+	for i, c := range testCases {
+		store, closeF := storage_utils.OpenBPlusTreeStore()
+
+		balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+		require.NoError(t, err)
+
+		if c.key != nil {
+			_, mutations, err := balloon.Add(c.key)
+			require.NoErrorf(t, err, "Error adding event %d", i)
+			err = store.Mutate(mutations)
+			require.NoError(t, err)
+		}
+
+		proof, err := balloon.QueryMembership(c.key)
+
+		require.NoError(t, err)
+		assert.True(t, proof.Exists == c.exists, "The event should exist in test %d ", i)
+
+		if c.exists {
+			assert.NotNil(t, proof.HyperProof, "The hyper proof should not be nil in test %d ", i)
+			assert.NotNil(t, proof.HistoryProof, "The history proof should not be nil in test %d ", i)
+		}
+
+		closeF()
+	}
 }
 
 func TestQueryConsistencyProof(t *testing.T) {
