@@ -48,7 +48,7 @@ type MembershipQuery struct {
 // Handler uses to parse the post params.
 type MembershipDigest struct {
 	KeyDigest hashing.Digest
-	Version   uint64
+	Version   *uint64
 }
 
 // Snapshot is the public struct that apihttp.Add Handler call returns.

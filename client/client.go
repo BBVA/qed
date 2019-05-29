@@ -520,7 +520,7 @@ func (c *HTTPClient) MembershipDigest(
 
 	query, _ := json.Marshal(&protocol.MembershipDigest{
 		KeyDigest: keyDigest,
-		Version:   version,
+		Version:   &version,
 	})
 
 	body, err := c.callAny("POST", "/proofs/digest-membership", query)
