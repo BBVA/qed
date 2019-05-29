@@ -12,7 +12,7 @@ services:
 #      - "6060:6060"   # Profiling
     entrypoint: [
       "qed", "server", "start",
-      "--api-key", "key",
+      "--api-key", "my-key",
       "--http-addr", "qed_server_0:8800",
       "--mgmt-addr", "qed_server_0:8700",
       "--metrics-addr", "qed_server_0:8600",
