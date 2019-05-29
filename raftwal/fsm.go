@@ -104,6 +104,14 @@ func (fsm *BalloonFSM) QueryMembershipConsistency(event []byte, version uint64) 
 	return fsm.balloon.QueryMembershipConsistency(event, version)
 }
 
+func (fsm *BalloonFSM) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
+	return fsm.balloon.QueryDigestMembership(keyDigest)
+}
+
+func (fsm *BalloonFSM) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
+	return fsm.balloon.QueryMembership(event)
+}
+
 func (fsm *BalloonFSM) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	return fsm.balloon.QueryConsistency(start, end)
 }

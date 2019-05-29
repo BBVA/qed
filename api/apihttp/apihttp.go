@@ -211,13 +211,18 @@ func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		if query.Version == nil {
-
+			// Wait for the response
+			proof, err = api.QueryMembership(query.Key)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusPreconditionFailed)
+				return
+			}
 		} else {
 
 			// Wait for the response
 			proof, err = api.QueryMembershipConsistency(query.Key, *query.Version)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, err.Error(), http.StatusPreconditionFailed)
 				return
 			}
 		}
@@ -271,13 +276,18 @@ func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		if query.Version == nil {
-
+			// Wait for the response
+			proof, err = api.QueryDigestMembership(query.KeyDigest)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusPreconditionFailed)
+				return
+			}
 		} else {
 
 			// Wait for the response
 			proof, err = api.QueryDigestMembershipConsistency(query.KeyDigest, *query.Version)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, err.Error(), http.StatusPreconditionFailed)
 				return
 			}
 		}

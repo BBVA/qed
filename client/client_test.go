@@ -505,7 +505,7 @@ func TestMembership(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	proof, err := client.Membership(event, version)
+	proof, err := client.Membership(event, &version)
 	assert.NotNil(t, proof)
 	require.NoError(t, err)
 
@@ -540,7 +540,7 @@ func TestMembershipDigest(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	proof, err := client.MembershipDigest(eventDigest, version)
+	proof, err := client.MembershipDigest(eventDigest, &version)
 	assert.NotNil(t, proof)
 	assert.NoError(t, err)
 
@@ -556,8 +556,8 @@ func TestMembershipWithServerFailure(t *testing.T) {
 	client := setupClient(t, []string{serverURL})
 
 	event := "Hello world!"
-
-	_, err := client.Membership(hashing.Digest(event), 0)
+	i := uint64(0)
+	_, err := client.Membership(hashing.Digest(event), &i)
 	assert.Error(t, err)
 }
 
@@ -748,7 +748,7 @@ func TestMembershipAutoVerify(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	ok, err := client.MembershipAutoVerify(eventDigest, version)
+	ok, err := client.MembershipAutoVerify(eventDigest, &version)
 	require.True(t, ok)
 	require.NoError(t, err)
 
