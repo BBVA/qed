@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
@@ -68,7 +69,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //     "Version": 1,
 //     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
 //   }
-func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -91,7 +92,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		response, err := balloon.Add(event.Event)
+		response, err := api.Add(event.Event)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -133,7 +134,7 @@ func Add(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 //		},
 //		...
 //	]
-func AddBulk(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func AddBulk(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Make sure we can only be called with an HTTP POST request.
@@ -156,7 +157,7 @@ func AddBulk(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		snapshotBulk, err := balloon.AddBulk(eventBulk.Events)
+		snapshotBulk, err := api.AddBulk(eventBulk.Events)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -190,8 +191,10 @@ func AddBulk(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 //     "queryVersion": "1",
 //     "actualVersion": "2",
 //   }
-func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var proof *balloon.MembershipProof
+		var err error
 
 		// Make sure we can only be called with an HTTP POST request.
 		if r.Method != "POST" {
@@ -201,7 +204,7 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		var query protocol.MembershipQuery
-		err := json.NewDecoder(r.Body).Decode(&query)
+		err = json.NewDecoder(r.Body).Decode(&query)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -209,15 +212,15 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 
 		if query.Version == nil {
 
-		}
+		} else {
 
-		// Wait for the response
-		proof, err := balloon.QueryMembershipConsistency(query.Key, *query.Version)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			// Wait for the response
+			proof, err = api.QueryMembershipConsistency(query.Key, *query.Version)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
-
 		out, err := json.Marshal(protocol.ToMembershipResult(query.Key, proof))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -248,8 +251,10 @@ func Membership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 //     "queryVersion": "1",
 //     "actualVersion": "2",
 //   }
-func DigestMembership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var proof *balloon.MembershipProof
+		var err error
 
 		// Make sure we can only be called with an HTTP POST request.
 		if r.Method != "POST" {
@@ -259,20 +264,25 @@ func DigestMembership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		var query protocol.MembershipDigest
-		err := json.NewDecoder(r.Body).Decode(&query)
+		err = json.NewDecoder(r.Body).Decode(&query)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		// Wait for the response
-		proof, err := balloon.QueryDigestMembershipConsistency(query.KeyDigest, query.Version)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if query.Version == nil {
+
+		} else {
+
+			// Wait for the response
+			proof, err = api.QueryDigestMembershipConsistency(query.KeyDigest, *query.Version)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
-		out, err := json.Marshal(protocol.ToMembershipResult([]byte(nil), proof))
+		out, err := json.Marshal(protocol.ToMembershipResult(nil, proof))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -296,7 +306,7 @@ func DigestMembership(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 //     "end": "8",
 //     "auditPath": ["<truncated for clarity in docs>"]
 //   }
-func Incremental(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func Incremental(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Make sure we can only be called with an HTTP POST request.
 		if r.Method != "POST" {
@@ -313,7 +323,7 @@ func Incremental(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		// Wait for the response
-		proof, err := balloon.QueryConsistency(request.Start, request.End)
+		proof, err := api.QueryConsistency(request.Start, request.End)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
