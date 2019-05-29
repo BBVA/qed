@@ -9,7 +9,8 @@ Contents
    :caption: The Project
 
    home/overview_project
-   home/installation_and_quickstart
+   home/installation
+   home/quickstart
    home/trust_model
 
 .. toctree::
