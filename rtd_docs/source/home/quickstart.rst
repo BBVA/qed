@@ -7,14 +7,16 @@ Pre-requisites:
 
 This section will guide you though QED functionality.
 
-Mainly, you can **add events** to QED, ask for the proof that an event **has been inserted**,
-ask for the proof that two events are **consistent** between each other,
-and verify (manual or automatically) each of both proofs.
+Mainly, you can **add events** to QED, ask for the proof that an event
+**hasbeen inserted**, ask for the proof that two events are **consistent**
+between each other, and verify (manual or automatically) each of both proofs.
 
 For each step we will use the **QED cli** facility.
-The client will talk to the QED server and the snapshot store, so it must be configured for that proposal.
+The client will talk to the QED server and the snapshot store, so it must be
+configured for that proposal.
 
-The involved variables are the followings, and we will use their default values for this quickstart.
+The involved variables are the followings, and we will use their default values
+for this quickstart.
 
 .. code-block:: shell
 
@@ -25,8 +27,8 @@ The involved variables are the followings, and we will use their default values 
 1. Adding events.
 -----------------
 
-In this step the client only talk to  the QED server (no snapshot-store info required).
-The mandatory field here is the event to insert.
+In this step the client only talk to  the QED server (no snapshot-store info
+required). The mandatory field here is the event to insert.
 
 So, let's insert 4 simple events:
 
@@ -69,7 +71,7 @@ In fact, we will retrieve this information later from the right place.
 ----------------------------
 
 2.1 Querying proof.
-++++++++++++++++++
++++++++++++++++++++
 
 To get this proof we only need the original event.
 So...has "event 0" been inserted?
@@ -90,8 +92,8 @@ So...has "event 0" been inserted?
             ActualVersion: 0
             KeyDigest: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9
 
-Yes! It was inserted in version 0 (actualversion), the last event inserted has version 3 (currentversion),
-and there is a proof for you to check it.
+Yes! It was inserted in version 0 (actualversion), the last event inserted
+has version 3 (currentversion), and there is a proof for you to check it.
 
 .. note::
 
@@ -163,7 +165,8 @@ And yes! We can verify the membership of "event 0"
 2.4 Auto-verifying proofs.
 ++++++++++++++++++++++++++
 
-This process is similar to the previous one, but getting snapshots from the snapshot store in a transparent way.
+This process is similar to the previous one, but getting snapshots from the
+snapshot store in a transparent way.
 
     .. code-block:: shell
 
@@ -196,8 +199,8 @@ This process is similar to the previous one, but getting snapshots from the snap
 3.1 Querying proof.
 +++++++++++++++++++
 
-For this proof we don't need the events, but the QED version in which they were added.
-(you can get both versions by doing membership proofs as above)
+For this proof we don't need the events, but the QED version in which they
+were added (you can get both versions by doing membership proofs as above).
 
     .. code-block:: shell
 
@@ -240,7 +243,8 @@ As we need 2 snapshots, we repeat the query for each version.
 3.3 Verifying proofs (manually).
 ++++++++++++++++++++++++++++++++
 
-To verify the proof manually, the process will ask you to enter the required digests.
+To verify the proof manually, the process will ask you to enter the required
+digests.
 
         .. code-block:: shell
 
@@ -266,7 +270,8 @@ To verify the proof manually, the process will ask you to enter the required dig
 3.4 Auto-verifying proofs.
 ++++++++++++++++++++++++++
 
-This process is similar to the previous one, but getting snapshots from the snapshot store in a transparent way.
+This process is similar to the previous one, but getting snapshots from the
+snapshot store in a transparent way.
 
         .. code-block:: shell
 
