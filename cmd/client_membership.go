@@ -49,13 +49,13 @@ func init() {
 }
 
 type membershipParams struct {
-	Version       uint64 `desc:"Version for the membership proof"`
-	Event         string `desc:"QED event to build the proof"`
-	EventDigest   string `desc:"QED event digest to build the proof"`
-	HistoryDigest string `desc:"QED history digest is used to verify the proof"`
-	HyperDigest   string `desc:"QED hyper digest is used to verify the proof"`
-	Verify        bool   `desc:"Set to enable proof verification process"`
-	AutoVerify    bool   `desc:"Set to enable proof automatic verification process"`
+	Version       *uint64 `desc:"Version for the membership proof"`
+	Event         string  `desc:"QED event to build the proof"`
+	EventDigest   string  `desc:"QED event digest to build the proof"`
+	HistoryDigest string  `desc:"QED history digest is used to verify the proof"`
+	HyperDigest   string  `desc:"QED hyper digest is used to verify the proof"`
+	Verify        bool    `desc:"Set to enable proof verification process"`
+	AutoVerify    bool    `desc:"Set to enable proof automatic verification process"`
 }
 
 func configClientMembership() context.Context {
@@ -135,7 +135,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 			snapshot := &balloon.Snapshot{
 				HistoryDigest: htdBytes,
 				HyperDigest:   hdBytes,
-				Version:       params.Version,
+				Version:       *params.Version,
 				EventDigest:   digest,
 			}
 

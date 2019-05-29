@@ -77,7 +77,7 @@ func TestAddBulkAndVerify(t *testing.T) {
 			lastVersion := uint64(len(events) - 1)
 			for i, snapshot := range snapshotBulk {
 
-				proof, err := client.Membership([]byte(events[i]), snapshot.Version)
+				proof, err := client.Membership([]byte(events[i]), &snapshot.Version)
 				spec.NoError(t, err, "Error getting membership proof")
 
 				spec.True(t, proof.Exists, "The queried key should be a member")

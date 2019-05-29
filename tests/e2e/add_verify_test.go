@@ -56,7 +56,7 @@ func TestAddVerify(t *testing.T) {
 		})
 
 		let(t, "Get membership proof for first inserted event", func(t *testing.T) {
-			proof, err := client.Membership([]byte(event), snapshot.Version)
+			proof, err := client.Membership([]byte(event), &snapshot.Version)
 			spec.NoError(t, err, "Error getting membership proof")
 
 			spec.True(t, proof.Exists, "The queried key should be a member")
@@ -86,9 +86,9 @@ func TestAddVerify(t *testing.T) {
 		spec.NoError(t, err, "Error adding event 2")
 
 		let(t, "Get membership proof for inserted events", func(t *testing.T) {
-			proof1, err = client.MembershipDigest(snap1.EventDigest, snap1.Version)
+			proof1, err = client.MembershipDigest(snap1.EventDigest, &snap1.Version)
 			spec.NoError(t, err, "Error getting membership digest")
-			proof2, err = client.MembershipDigest(snap2.EventDigest, snap2.Version)
+			proof2, err = client.MembershipDigest(snap2.EventDigest, &snap2.Version)
 			spec.NoError(t, err, "Error getting membership digest")
 		})
 
@@ -127,9 +127,9 @@ func TestAddVerify(t *testing.T) {
 		k := 9
 
 		let(t, "Get proofs p1, p2 for event with index i in versions j and k", func(t *testing.T) {
-			p1, err = client.MembershipDigest(s[i].EventDigest, s[j].Version)
+			p1, err = client.MembershipDigest(s[i].EventDigest, &s[j].Version)
 			spec.NoError(t, err, "Error getting membership digest")
-			p2, err = client.MembershipDigest(s[i].EventDigest, s[k].Version)
+			p2, err = client.MembershipDigest(s[i].EventDigest, &s[k].Version)
 			spec.NoError(t, err, "Error getting membership digest")
 		})
 
