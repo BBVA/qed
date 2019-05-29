@@ -8,15 +8,16 @@ Pre-requisites:
 - **docker-compose** (see https://docs.docker.com/compose/install/)
 
 
-Once you have these pre-requisites installed, setting up the quickstart environment is as easy as:
+Once you have these pre-requisites installed, setting up the quickstart
+environment is as easy as:
 
 .. code-block:: shell
 
     $ cd deploy/docker
     $ docker-compose up -d
 
-This simple environment comprises 3 services: **QED server**, **publisher**, and **snapshot store**.
-And you should be able to check them by typing:
+This simple environment comprises 3 services: **QED server**, **publisher**,
+and **snapshot store**. And you should be able to check them by typing:
 
 .. code-block:: shell
 
