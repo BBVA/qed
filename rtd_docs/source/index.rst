@@ -10,6 +10,7 @@ Contents
 
    home/overview_project
    home/installation_and_quickstart
+   home/trust_model
 
 .. toctree::
    :maxdepth: 2
