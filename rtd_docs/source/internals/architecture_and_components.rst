@@ -1,3 +1,5 @@
+.. _architecture_and_components:
+
 Architecture and components
 ===========================
 
