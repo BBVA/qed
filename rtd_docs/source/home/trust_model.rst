@@ -107,7 +107,7 @@ proof that verifies that:
   operations not directly related to the transfer data, allowing to verify
   the complete end-to-end chain of operations derived from the order.
 
-.. image:: ../_static/images/qed_bank_transfers_verify.svg
+.. image:: ../_static/images/qed_bank_transfers_verify2.png
     :align: center
 
 However, the client might argue that these proofs are invalid because the QED
