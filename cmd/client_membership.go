@@ -26,6 +26,7 @@ import (
 
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
@@ -42,6 +43,7 @@ It also verifies the proofs provided by the server if flag enabled.`,
 }
 
 var clientMembershipCtx context.Context
+var isVersionSet bool
 
 func init() {
 	clientMembershipCtx = configClientMembership()
@@ -61,12 +63,21 @@ type membershipParams struct {
 func configClientMembership() context.Context {
 
 	conf := &membershipParams{}
-
 	err := gpflag.ParseTo(conf, clientMembershipCmd.PersistentFlags())
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
 	return context.WithValue(Ctx, k("client.membership.params"), conf)
+}
+
+func checkVersionSet(cmd *cobra.Command) bool {
+	var found bool
+	cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Name == "version" {
+			found = f.Changed
+		}
+	})
+	return found
 }
 
 func runClientMembership(cmd *cobra.Command, args []string) error {
@@ -76,6 +87,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 	var proof *balloon.MembershipProof
 	var digest hashing.Digest
 	var err error
+	var msg string
 
 	params := clientMembershipCtx.Value(k("client.membership.params")).(*membershipParams)
 
@@ -83,12 +95,22 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
 
 	if params.EventDigest == "" {
-		fmt.Printf("\nQuerying key [ %s ] with version [ %d ]\n", params.Event, params.Version)
+		msg += fmt.Sprintf("Querying key [ %s ]", params.Event)
 		digest = hasherF().Do([]byte(params.Event))
 	} else {
-		fmt.Printf("\nQuerying digest [ %s ] with version [ %d ]\n", params.EventDigest, params.Version)
+		msg += fmt.Sprintf("Querying digest [ %s ]", params.EventDigest)
 		digest, _ = hex.DecodeString(params.EventDigest)
 	}
+
+	if !checkVersionSet(cmd) {
+		params.Version = nil
+		msg += " with latest version"
+	} else {
+		msg += fmt.Sprintf(" with version [ %d ]", *params.Version)
+
+	}
+
+	fmt.Printf("\n%s\n", msg)
 
 	config := clientCtx.Value(k("client.config")).(*client.Config)
 

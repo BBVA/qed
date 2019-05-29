@@ -314,7 +314,7 @@ func (b Balloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, vers
 			return nil, fmt.Errorf("unable to get proof from history tree: %v", err)
 		}
 	} else {
-		return nil, fmt.Errorf("query version %d is greater than the actual version which is %d", version, proof.ActualVersion)
+		return nil, fmt.Errorf("actual version %d is greater than the query version which is %d", proof.ActualVersion, version)
 	}
 
 	return &proof, nil
