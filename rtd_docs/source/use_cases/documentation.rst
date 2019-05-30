@@ -18,22 +18,60 @@ untrusted servers, because of the way QED stores the transactions.
 Trust the untrustable
 ---------------------
 
-this is `Bizantine Fault Tolerant`_.
+Using today's technologies are by far trusted by default. A miriad of problems
+can emerge in the necesity to protect sensitve data, and even the when the
+maximun level of isolation and protection are in place, you can always ask
+**Who whatches the Watchmen?**
+
+This trust dillema is called in *distribution systems* a `Bizantine Fault
+Tolerant`_ service.
 
 .. _`Bizantine Fault Tolerant`: https://en.wikipedia.org/wiki/Byzantine_fault
-
 
 Criptographic proofs
 --------------------
 
-We create prrofss
+QED adress this problem by using a internal tree storage that are
+*statistically impossible* to alter whitout detection.
 
-Understading the Merkle trees
-+++++++++++++++++++++++++++++
+This is mainly because some inherent properties of the criptographic
+algorithms we use. From the original event source is fast and coherent to
+create a *criptographic hash* but **statistically impossible** to find other
+input that could create the same output.
 
-the history merkle tree is cool
+The other interesting property of the criptographic hashers are the
+**sparsity** of the hashes. This mean that similar inputs provides completely
+different results, and the *distance* between those results are really wide.
+
+This both properties are *abused* in QED in order to create a tamper evident
+storage, even on untrustable environments.
+
+
+Understading the QED storage
+++++++++++++++++++++++++++++
+
+QED stores all the transactions in a append-only tree. this allows us to track
+the previous and future transactions that where sent to the QED server.
+
+In order to prevent tamperings, we use a `Merkle tree`_. Which is a
+criptographic sum between adjacent elements in a tree fashion. This allows us
+to make a lot of criptographic hashes, between the last inserted elements and
+all the previous ones.
+
+Since the append-only storage can grow really fast, we need a way to find
+previously inserted transactions, so we use another criptographic tree, to
+prevent tampering in finding the stored transactions.
 
 How a Proof can be used
 +++++++++++++++++++++++
 
-Download it and use it
+Once a transaction is stored, we publish the final sum of all the criptographic
+nodes in a public, distributed storage.
+
+If the need to prove that some transaction exists we return and audit path of
+the current QED storage. Any alteration of the history will be evident and we
+can't determine if the transaction is the same as it was included in the QED
+server in first place. Only if the history is coherent the proof will be verified.
+
+A final note along the auditable proofs is that it must be verified outside the
+QED server in order to allow transparency.
