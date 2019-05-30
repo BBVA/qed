@@ -14,7 +14,7 @@ building blocks for creating authenticated data structures.
 Hash functions
 ++++++++++++++
 
-A cryptographic hash function compresses an arbitray large message *m* into a
+A cryptographic hash function compresses an arbitrary large message *m* into a
 fixed size digest *h*. Due to the large space of messages mapped, collisions
 are inevitable but they must be computationally hard to find. A cryptographic
 hash function must conform with the following properties:
@@ -71,13 +71,13 @@ A binary tree which all nodes must have two or no children.
 Complete binary tree
 ++++++++++++++++++++
 
-A binaty tree which must be filled left-to-right at the lowest level, and
+A binary tree which must be filled left-to-right at the lowest level, and
 entirely at the level above.
 
 Merkle tree
 -----------
 
-A binary tree that stores values at the lowest level of the tree and utilises
+A binary tree that stores values at the lowest level of the tree and uses
 cryptographic hash functions. While leaves compute the hash of their own
 attributes, parents derive the hash of their children’s hashes concatenated
 left-to-right. Therefore the hash rooted at a particular subtree is
