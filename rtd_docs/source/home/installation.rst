@@ -16,14 +16,15 @@ environment is as easy as:
     $ cd deploy/docker
     $ docker-compose up -d
 
-This simple environment comprises 3 services: **QED server**, **publisher**,
-and **snapshot store**. And you should be able to check them by typing:
+This simple environment comprises 3 services: **QED Log server**,
+**QED Publisher agent**, and **Snapshot store**. You should be able
+to check them by typing:
 
 .. code-block:: shell
 
     $ docker ps
 
-finding there these 3 services.
+Listing there these 3 services.
 
 .. note::
 
