@@ -58,3 +58,4 @@ deploy/aws/modules/*/data
 
 # Ansible
 !deploy/provision/tasks/common/config.yml
+rtd_docs/venv
