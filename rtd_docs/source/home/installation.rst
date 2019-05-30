@@ -25,6 +25,12 @@ and **snapshot store**. And you should be able to check them by typing:
 
 finding there these 3 services.
 
+.. note::
+
+    To enable connectivity from your host to these services, ensure that you have in your /etc/hosts the following line:
+
+    127.0.0.1   localhost   qed_server_0    snapshotstore
+
 Once finished the Quickstart section, don't forget to clean the environment:
 
 .. code-block:: shell
