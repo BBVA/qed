@@ -98,13 +98,7 @@ type MembershipProof struct {
 	Hasher         hashing.Hasher
 }
 
-func NewMembershipProof(
-	exists bool,
-	hyperProof *hyper.QueryProof,
-	historyProof *history.MembershipProof,
-	currentVersion, queryVersion, actualVersion uint64,
-	keyDigest hashing.Digest,
-	Hasher hashing.Hasher) *MembershipProof {
+func NewMembershipProof(exists bool, hyperProof *hyper.QueryProof, historyProof *history.MembershipProof, currentVersion, queryVersion, actualVersion uint64, keyDigest hashing.Digest, Hasher hashing.Hasher) *MembershipProof {
 
 	return &MembershipProof{
 		exists,
@@ -151,11 +145,7 @@ type IncrementalProof struct {
 	Hasher     hashing.Hasher
 }
 
-func NewIncrementalProof(
-	start, end uint64,
-	auditPath history.AuditPath,
-	hasher hashing.Hasher,
-) *IncrementalProof {
+func NewIncrementalProof(start, end uint64, auditPath history.AuditPath, hasher hashing.Hasher) *IncrementalProof {
 	return &IncrementalProof{
 		start,
 		end,
@@ -284,7 +274,7 @@ func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, erro
 	return snapshotBulk, mutations, nil
 }
 
-func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
+func (b Balloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
 
 	var proof MembershipProof
 	var err error
@@ -324,15 +314,66 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest, version uint64)
 			return nil, fmt.Errorf("unable to get proof from history tree: %v", err)
 		}
 	} else {
-		return nil, fmt.Errorf("query version %d is greater than the actual version which is %d", version, proof.ActualVersion)
+		return nil, fmt.Errorf("actual version %d is greater than the query version which is %d", proof.ActualVersion, version)
 	}
 
 	return &proof, nil
 }
 
-func (b Balloon) QueryMembership(event []byte, version uint64) (*MembershipProof, error) {
+func (b Balloon) QueryMembershipConsistency(event []byte, version uint64) (*MembershipProof, error) {
+	// We need a new instance of the hasher because the b.hasher cannot be
+	// used concurrently, and we support concurrent queries
 	hasher := b.hasherF()
-	return b.QueryDigestMembership(hasher.Do(event), version)
+	return b.QueryDigestMembershipConsistency(hasher.Do(event), version)
+}
+
+func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest) (*MembershipProof, error) {
+
+	var proof MembershipProof
+	var err error
+	proof.Hasher = b.hasherF()
+	proof.KeyDigest = keyDigest
+	proof.QueryVersion = b.version - 1
+	proof.CurrentVersion = proof.QueryVersion
+
+	proof.HyperProof, err = b.hyperTree.QueryMembership(keyDigest)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get proof from hyper tree: %v", err)
+	}
+
+	if len(proof.HyperProof.Value) == 0 {
+		proof.Exists = false
+		proof.ActualVersion = proof.QueryVersion
+		return &proof, nil
+	}
+
+	proof.Exists = true
+	if versionLen := len(proof.HyperProof.Value); versionLen < 8 { // TODO GET RID OF THIS: used only to pass tests
+		// the version is stored in the hyper tree with the length of the event digest
+		// if the length of the value is less than the length of a uint64 in bytes, we have to add padding
+		proof.ActualVersion = util.BytesAsUint64(util.AddPaddingToBytes(proof.HyperProof.Value, 8-versionLen))
+	} else {
+		// if the length of the value is greater or equal than the length of a uint64 in bytes, we have to truncate
+		proof.ActualVersion = util.BytesAsUint64(proof.HyperProof.Value[versionLen-8:])
+	}
+
+	if proof.ActualVersion <= proof.QueryVersion {
+		proof.HistoryProof, err = b.historyTree.ProveMembership(proof.ActualVersion, proof.QueryVersion)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get proof from history tree: %v", err)
+		}
+	} else {
+		panic("This cannot happen unless QED was tampered")
+	}
+
+	return &proof, nil
+}
+
+func (b Balloon) QueryMembership(event []byte) (*MembershipProof, error) {
+	// We need a new instance of the hasher because the b.hasher cannot be
+	// used concurrently, and we support concurrent queries
+	hasher := b.hasherF()
+	return b.QueryDigestMembership(hasher.Do(event))
 }
 
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {

@@ -91,7 +91,7 @@ func TestAddBulk(t *testing.T) {
 	}
 }
 
-func TestQueryMembership(t *testing.T) {
+func TestQueryMembershipConsistency(t *testing.T) {
 
 	log.SetLogger("TestQueryMembership", log.SILENT)
 
@@ -117,7 +117,7 @@ func TestQueryMembership(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		proof, err := balloon.QueryMembership(c.key, c.version)
+		proof, err := balloon.QueryMembershipConsistency(c.key, c.version)
 
 		require.NoError(t, err)
 		assert.True(t, proof.Exists == c.exists, "The event should exist in test %d ", i)
@@ -132,6 +132,45 @@ func TestQueryMembership(t *testing.T) {
 		closeF()
 	}
 
+}
+
+func TestQueryMembership(t *testing.T) {
+
+	log.SetLogger("TestQueryMembership", log.SILENT)
+
+	testCases := []struct {
+		key    []byte
+		exists bool
+	}{
+		{[]byte{0x5a}, true},
+		{nil, false},
+	}
+
+	for i, c := range testCases {
+		store, closeF := storage_utils.OpenBPlusTreeStore()
+
+		balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+		require.NoError(t, err)
+
+		if c.key != nil {
+			_, mutations, err := balloon.Add(c.key)
+			require.NoErrorf(t, err, "Error adding event %d", i)
+			err = store.Mutate(mutations)
+			require.NoError(t, err)
+		}
+
+		proof, err := balloon.QueryMembership(c.key)
+
+		require.NoError(t, err)
+		assert.True(t, proof.Exists == c.exists, "The event should exist in test %d ", i)
+
+		if c.exists {
+			assert.NotNil(t, proof.HyperProof, "The hyper proof should not be nil in test %d ", i)
+			assert.NotNil(t, proof.HistoryProof, "The history proof should not be nil in test %d ", i)
+		}
+
+		closeF()
+	}
 }
 
 func TestQueryConsistencyProof(t *testing.T) {
@@ -195,7 +234,7 @@ func TestAddQueryAndVerify(t *testing.T) {
 	require.NoError(t, err)
 
 	// Query event
-	proof, err := b.QueryMembership(event, snapshot.Version)
+	proof, err := b.QueryMembershipConsistency(event, snapshot.Version)
 	assert.NoError(t, err)
 
 	// Verify
@@ -234,7 +273,7 @@ func TestCacheWarmingUp(t *testing.T) {
 	// query for all elements
 	for i := uint64(0); i < 100; i++ {
 		key := util.Uint64AsBytes(i)
-		proof, err := balloon.QueryMembership(key, lastSnapshot.Version)
+		proof, err := balloon.QueryMembershipConsistency(key, lastSnapshot.Version)
 		require.NoError(t, err)
 		require.Truef(t, proof.Verify(key, lastSnapshot), "The proof should verify correctly for element %d", i)
 	}
@@ -340,7 +379,7 @@ func BenchmarkQueryRocksDB(b *testing.B) {
 
 	b.ResetTimer()
 	for i, e := range events {
-		_, err := balloon.QueryMembership(e, uint64(i))
+		_, err := balloon.QueryMembershipConsistency(e, uint64(i))
 		require.NoError(b, err)
 	}
 
@@ -371,7 +410,7 @@ func BenchmarkQueryRocksDBParallel(b *testing.B) {
 		for pb.Next() {
 			i := atomic.AddInt64(&n, 1)
 			event := events[i]
-			_, err := balloon.QueryMembership(event, uint64(i))
+			_, err := balloon.QueryMembershipConsistency(event, uint64(i))
 			require.NoError(b, err)
 		}
 	})

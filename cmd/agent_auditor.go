@@ -163,7 +163,7 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 		defer timer.ObserveDuration()
 
 		// TODO Get hasher via negotiation between agent and QED
-		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, s.Snapshot.Version)
+		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, &s.Snapshot.Version)
 		if err != nil {
 			log.Infof("Auditor is unable to get membership proof from QED server: %v", err)
 

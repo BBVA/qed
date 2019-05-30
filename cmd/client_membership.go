@@ -26,6 +26,7 @@ import (
 
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
@@ -42,6 +43,7 @@ It also verifies the proofs provided by the server if flag enabled.`,
 }
 
 var clientMembershipCtx context.Context
+var isVersionSet bool
 
 func init() {
 	clientMembershipCtx = configClientMembership()
@@ -49,24 +51,33 @@ func init() {
 }
 
 type membershipParams struct {
-	Version       uint64 `desc:"Version for the membership proof"`
-	Event         string `desc:"QED event to build the proof"`
-	EventDigest   string `desc:"QED event digest to build the proof"`
-	HistoryDigest string `desc:"QED history digest is used to verify the proof"`
-	HyperDigest   string `desc:"QED hyper digest is used to verify the proof"`
-	Verify        bool   `desc:"Set to enable proof verification process"`
-	AutoVerify    bool   `desc:"Set to enable proof automatic verification process"`
+	Version       *uint64 `desc:"Version for the membership proof"`
+	Event         string  `desc:"QED event to build the proof"`
+	EventDigest   string  `desc:"QED event digest to build the proof"`
+	HistoryDigest string  `desc:"QED history digest is used to verify the proof"`
+	HyperDigest   string  `desc:"QED hyper digest is used to verify the proof"`
+	Verify        bool    `desc:"Set to enable proof verification process"`
+	AutoVerify    bool    `desc:"Set to enable proof automatic verification process"`
 }
 
 func configClientMembership() context.Context {
 
 	conf := &membershipParams{}
-
 	err := gpflag.ParseTo(conf, clientMembershipCmd.PersistentFlags())
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
 	return context.WithValue(Ctx, k("client.membership.params"), conf)
+}
+
+func checkVersionSet(cmd *cobra.Command) bool {
+	var found bool
+	cmd.PersistentFlags().VisitAll(func(f *pflag.Flag) {
+		if f.Name == "version" {
+			found = f.Changed
+		}
+	})
+	return found
 }
 
 func runClientMembership(cmd *cobra.Command, args []string) error {
@@ -76,6 +87,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 	var proof *balloon.MembershipProof
 	var digest hashing.Digest
 	var err error
+	var msg string
 
 	params := clientMembershipCtx.Value(k("client.membership.params")).(*membershipParams)
 
@@ -83,12 +95,22 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
 
 	if params.EventDigest == "" {
-		fmt.Printf("\nQuerying key [ %s ] with version [ %d ]\n", params.Event, params.Version)
+		msg += fmt.Sprintf("Querying key [ %s ]", params.Event)
 		digest = hasherF().Do([]byte(params.Event))
 	} else {
-		fmt.Printf("\nQuerying digest [ %s ] with version [ %d ]\n", params.EventDigest, params.Version)
+		msg += fmt.Sprintf("Querying digest [ %s ]", params.EventDigest)
 		digest, _ = hex.DecodeString(params.EventDigest)
 	}
+
+	if !checkVersionSet(cmd) {
+		params.Version = nil
+		msg += " with latest version"
+	} else {
+		msg += fmt.Sprintf(" with version [ %d ]", *params.Version)
+
+	}
+
+	fmt.Printf("\n%s\n", msg)
 
 	config := clientCtx.Value(k("client.config")).(*client.Config)
 
@@ -135,7 +157,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 			snapshot := &balloon.Snapshot{
 				HistoryDigest: htdBytes,
 				HyperDigest:   hdBytes,
-				Version:       params.Version,
+				Version:       *params.Version,
 				EventDigest:   digest,
 			}
 

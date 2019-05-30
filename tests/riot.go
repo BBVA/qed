@@ -21,11 +21,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/bbva/qed/util"
 	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/bbva/qed/util"
 
 	"github.com/bbva/qed/hashing"
 
@@ -422,7 +423,7 @@ func (a *Attack) Run() {
 					}
 				case membership:
 					log.Debugf("Querying membership: event %s", task.events[0])
-					_, _ = a.client.Membership([]byte(task.events[0]), task.version)
+					_, _ = a.client.Membership([]byte(task.events[0]), &task.version)
 					RiotQueryMembership.Inc()
 				case incremental:
 					log.Debugf("Querying incremental: start %d, end %d", task.start, task.end)
