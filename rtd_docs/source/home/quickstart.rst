@@ -5,18 +5,18 @@ Pre-requisites:
 
 - First start QED server. For more information check our installation section.
 
-This section will guide you though QED functionality.
+This section will guide you through QED functionality.
 
 Mainly, you can **add events** to QED, ask for the proof that an event
-**hasbeen inserted**, ask for the proof that two events are **consistent**
+**has been inserted**, ask for the proof that two events are **consistent**
 between each other, and verify (manual or automatically) each of both proofs.
 
-For each step we will use the **QED cli** facility.
+For each step we will use the **QED CLI** facility.
 The client will talk to the QED server and the snapshot store, so it must be
 configured for that proposal.
 
-The involved variables are the followings, and we will use their default values
-for this quickstart.
+The involved variables are the following ones, and we will use their default
+values for this quickstart.
 
 .. code-block:: shell
 
@@ -27,8 +27,8 @@ for this quickstart.
 1. Adding events.
 -----------------
 
-In this step the client only talk to  the QED server (no snapshot-store info
-required). The mandatory field here is the event to insert.
+In this step the client only interact with the QED server (no snapshot store
+info is required). The mandatory field here is the event to insert.
 
 So, let's insert 4 simple events:
 
@@ -57,7 +57,7 @@ So, let's insert 4 simple events:
         Version: 3
 
 This operation should return only if it has been completed successfully or not.
-But currently it returns certain info for debugging/tesing purposes.
+But currently, it returns certain info for debugging/testing purposes.
 In fact, we will retrieve this information later from the right place.
 
 .. note::
@@ -74,7 +74,7 @@ In fact, we will retrieve this information later from the right place.
 +++++++++++++++++++
 
 To get this proof we only need the original event.
-So...has "event 0" been inserted?
+So... has "event 0" been inserted?
 
     .. code-block:: shell
 
@@ -92,19 +92,19 @@ So...has "event 0" been inserted?
             ActualVersion: 0
             KeyDigest: 5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9
 
-Yes! It was inserted in version 0 (actualversion), the last event inserted
-has version 3 (currentversion), and there is a proof for you to check it.
+Yes! It was inserted in version 0 (ActualVersion), the last event inserted
+has version 3 (CurrentVersion), and there is a proof for you to check it.
 
 .. note::
 
-    We print proofs as <TRUNCATED> due to these crypthograpical proofs lenght and difficult to read.
+    We print proofs as <TRUNCATED> due to these crypthograpical proofs are too long and difficult to read.
 
 2.2 Getting snapshots from the snapshot store.
 ++++++++++++++++++++++++++++++++++++++++++++++
 
 This proof shows the version in which the event was inserted.
-So, let's ask for the snapshot of that version.
-(it contains the information needed -"HyperDigest" and "HistoryDigest"- to verify proofs)
+So, let's ask for the snapshot with that version
+(it contains the information needed -"HyperDigest" and "HistoryDigest"- to verify proofs).
 
     .. code-block:: shell
 
@@ -119,7 +119,7 @@ So, let's ask for the snapshot of that version.
 
 .. note::
 
-    This is the right place to look for digests, and not as a result of the adding step.
+    The snapshot store is the right place to look for digests, instead of using the result of the adding step.
 
     Take a look at the get help section by typing:
 
@@ -160,12 +160,12 @@ The interactive process will ask you the info previously retrived.
 
         Verify: OK
 
-And yes! We can verify the membership of "event 0"
+And yes! We can verify the membership of "event 0".
 
 2.4 Auto-verifying proofs.
 ++++++++++++++++++++++++++
 
-This process is similar to the previous one, but getting snapshots from the
+This process is similar to the previous one, but we get the snapshots from the
 snapshot store in a transparent way.
 
     .. code-block:: shell
@@ -217,7 +217,7 @@ were added (you can get both versions by doing membership proofs as above).
 3.2 Getting snapshots from the snapshot store.
 ++++++++++++++++++++++++++++++++++++++++++++++
 
-This process is similar as the one in 2.2.
+This process is similar to the one explained in section 2.2.
 As we need 2 snapshots, we repeat the query for each version.
 
     .. code-block:: shell
@@ -270,7 +270,7 @@ digests.
 3.4 Auto-verifying proofs.
 ++++++++++++++++++++++++++
 
-This process is similar to the previous one, but getting snapshots from the
+This process is similar to the previous one, but we get the snapshots from the
 snapshot store in a transparent way.
 
         .. code-block:: shell
