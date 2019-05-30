@@ -15,9 +15,11 @@ Contents
 
 .. toctree::
    :maxdepth: 2
-   :caption: Glossary
+   :caption: Use Cases
 
-   glossary
+   use_cases/commits
+   use_cases/documentation
+   use_cases/tweets
 
 .. toctree::
    :maxdepth: 2
@@ -27,6 +29,12 @@ Contents
    internals/internal_working
    internals/security_model
    internals/internals_glossary
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Glossary
+
+   glossary
 
 .. toctree::
    :maxdepth: 2
