@@ -9,7 +9,6 @@ Contents
    :caption: The Project
 
    home/overview
-   home/installation
    home/quickstart
    home/trust_model
 

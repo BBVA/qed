@@ -1,8 +1,6 @@
 Certification of Documents, Emails, Contracts, etc.
 ===================================================
 
-.. image:: /_static/images/Uc2.png
-
 How can we create transparency about a transaction that somebody as interest to
 certify that a ``DOCUMENT`` is emitted that way?
 
@@ -17,6 +15,9 @@ untrusted servers, because of the way QED stores the transactions.
 
 In this Use case we will try to explain in mundane terms why QED is worth the
 effort to be used as warranteer.
+
+.. image:: /_static/images/Uc2.png
+
 
 Trust the untrustable
 ---------------------

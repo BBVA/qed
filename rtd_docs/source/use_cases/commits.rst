@@ -45,7 +45,7 @@ of truth as valid.
 Creating transparency in a GIT repository
 -----------------------------------------
 
-.. note::
+.. important::
 
     Visit 'Installation' and 'Quick start' sections before typing the following code snippets.
 
