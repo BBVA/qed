@@ -40,8 +40,7 @@ func init() {
 }
 
 type getParams struct {
-	Version          uint64 `desc:"Snapshot version to look for"`
-	SnapshotStoreURL string `desc:"Snapshot store URL"`
+	Version uint64 `desc:"Snapshot version to look for"`
 }
 
 func configClientGet() context.Context {
@@ -60,10 +59,6 @@ func runClientGet(cmd *cobra.Command, args []string) error {
 	params := clientGetCtx.Value(k("client.get.params")).(*getParams)
 
 	//TO DO: Check if "version" is set in params. Default value = 0, so it works.
-
-	if params.SnapshotStoreURL == "" {
-		fmt.Println("\nUsing default snapshot store: http://127.0.0.1:8888")
-	}
 
 	config := clientCtx.Value(k("client.config")).(*client.Config)
 	log.SetLogger("client", config.Log)
