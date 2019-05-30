@@ -4,7 +4,7 @@ Overview
 What's QED
 ------------
 
-``QED`` is an open-source software that allows you to establish
+**QED** is an open-source software that allows you to establish
 **trust relations** by leveraging verifiable cryptographic proofs.
 
 In real-life, we can find countless scenarios were maintaining a chronological
@@ -31,10 +31,10 @@ maintaining some grade of confidence with the integrity of the stored data.
 But here is where a problem of **trust** appears: how can we assure that
 nobody, either an insider or an outsider, tampered with such data?
 
-``QED`` comes to solve this lack of trust by adding **transparency** to the way
+QED comes to solve this lack of trust by adding **transparency** to the way
 that different parties interact with some specific set of data. It provides
 transparency by **making evident** any further non-authorized change either on
-such data or on the data that ``QED`` stores itself, even when deployed into a
+such data or on the data that QED stores itself, even when deployed into a
 non-trusted server. And the way it achieves this capability is by using such a
 extended technology as **verifiable cryptographic proofs**.
 
@@ -42,34 +42,34 @@ Why
 ---
 
 In practice, there are multiple ways to achieve a similar functionality as
-``QED`` implements that range from very simple technologies, as might be the
+QED implements that range from very simple technologies, as might be the
 case of storing signed data (by certificate signature) into a database, to
 far more complicated approaches like blockchain-based technologies and smart
-contracts. But ``QED`` has important **advantages**  over such alternatives:
+contracts. But QED has important **advantages**  over such alternatives:
 
 - Works completely **detached** from the ending database that will store the
   data, and so from the usual way to interact with such data.
 - Scales to reach **billions of events**.
 - Generates proofs of **membership** or non-membership in **logarithmic time**.
   and with **logarithmic size**.
-- Generates proofs of **temporal consistency** related to ``QED`` insertion
+- Generates proofs of **temporal consistency** related to QED insertion
   time.
 
 How
 ---
 
-``QED`` implements a :ref:`forward-secure <forward_secure_glossary>`
+QED implements a :ref:`forward-secure <forward_secure_glossary>`
 append-only persistent authenticated data structure. Each append operation
 produces as a result a cryptographic structure (a signed
 :ref:`snapshot <snapshot_glossary>`), which acts as a receipt for the operation
 and can be used later to verify the following statements:
 
-- Whether or not a piece of data is on ``QED``.
+- Whether or not a piece of data is on QED.
 - Whether or not the appended data **is consistent**, in **insertion order**,
   to another entry.
 
-``QED`` can be requested to proof whether the above statements are true or
-false for a specific piece of data. In response to that requests, ``QED``
+QED can be requested to proof whether the above statements are true or
+false for a specific piece of data. In response to that requests, QED
 returns a cryptographic proof which, combined with the original piece of data,
 can generate again the cryptographic value of the original snapshot.
 
@@ -79,10 +79,10 @@ understand this point.
 
 .. note::
 
-    ``QED`` **does not store the data itself**, only a representation of it
+    QED **does not store the data itself**, only a representation of it
     produced by a collision-resistant hash function.
 
-    ``QED`` **does not provide means to map a piece of data to a QED :ref:`event <qed_event_glossary>`**,
+    QED **does not provide means to map a piece of data to a QED :ref:`event <qed_event_glossary>`**,
     so the semantic of the appended data and the relation between each item
     appended is also a client responsibility.
 
