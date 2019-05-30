@@ -155,9 +155,9 @@ So, let's ask for the snapshot with that version
 
         Retreived snapshot with values:
 
-            EventDigest: 4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce
-            HyperDigest: 28b2a8d7bfeedc61b988e5bddaf260f21aee96bfe88392a0af8a06d7129ab86d
-            HistoryDigest: 9c577745b6979e1243b707d43f4ca3aa45859d5277bc37f63f4489322f1bf537
+            EventDigest: 6c5cd6775eb412207f7f71f11f09047f1475b2b7526063195b777a230fe4c2a6
+            HyperDigest: 7bd6cee5eb0b92801ed4ce58c54a76907221bb4e056165679977b16487e5f015
+            HistoryDigest: 4f95cd9fd828abe86b092e506bbffd4662d9431c5755d68eed1ba5e5156fdb13
             Version: 3
 
 .. note::
