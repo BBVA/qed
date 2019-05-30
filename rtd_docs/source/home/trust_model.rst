@@ -57,9 +57,7 @@ the event source entry that will be appended to the **QED Log**, which is the
 part of QED that stores the information needed to build the proofs. If this
 function has some collision, QED might not be able to issue a valid proof.
 
-For instance, a possible event could be:
-
-.. code-block:: javascript
+For instance, a possible event could be::
 
     {
         “operation code”: “money transfer”,
