@@ -6,18 +6,18 @@ Trust Model
 Description
 -----------
 
-Before starting to use ``QED``, users need to translate their problem of trust
+Before starting to use QED, users need to translate their problem of trust
 to a more suitable conceptual model to allow them to accurately identify which
 are the actors that take part in the relationship and what are the pieces of
 data that must be verified.
 
-``QED`` defines a very simple but flexible trust model. It is composed of
+QED defines a very simple but flexible trust model. It is composed of
 three main components:
 
 - The **information** itself to which the users want to add transparency.
 - A set of **actors** that interacts with the information in different ways.
 - A **mapping function** that translates the information space to a
-  univocal event that can serve as input for ``QED``.
+  univocal event that can serve as input for QED.
 
 It is clear that the information depends on the nature of the problem we are
 dealing with and likewise, the shape the mapping function takes is closely
@@ -29,7 +29,7 @@ or roles:
 - Information consumers.
 
 Let's see a brief example to understand better these concepts and their
-interactions with ``QED``.
+interactions with QED.
 
 Simple scenario
 ---------------
@@ -49,12 +49,12 @@ for making transfers and other one for querying them.
 .. image:: ../_static/images/qed_bank_transfers.png
     :align: center
 
-In this scenario, ``QED`` could help the provider to add transparency to its
+In this scenario, QED could help the provider to add transparency to its
 internal operations. When the client uses the bank application to order a money
 transfer, the application (provider) has to use the mapping function to
-transform every transfer data into a ``QED`` event that uniquely represents
+transform every transfer data into a QED event that uniquely represents
 the event source entry that will be appended to the **QED Log**, which is the
-part of ``QED`` that stores the information needed to build the proofs. If this
+part of QED that stores the information needed to build the proofs. If this
 function has some collision, QED might not be able to issue a valid proof.
 
 For instance, a possible event could be:
@@ -80,7 +80,7 @@ incorrect data, he will only be able to verify such incorrect data.
 
 On each append operation, the QED Log will emit a signed token or receipt,
 called **snapshot**. This snapshot will be eventually published in a
-(maybe public) **snaphots store** outside ``QED``.
+(maybe public) **snaphots store** outside QED.
 
 To provided transparency, the signed snapshot can also be delivered to
 the client, so he could later use it to verify the QED proof about such
@@ -122,7 +122,7 @@ in a way resistant to collusion.
     To have a deep comprehension of how QED achieves this ability, please
     refer to the QED's :ref:`security model <security_model>` documentation.
 
-This naïve example shows the basic usage of a ``QED`` and help to identify
+This naïve example shows the basic usage of a QED and help to identify
 the fundamental components that QED requires:
 
 - **QED Log**: where the authentication data lives.
