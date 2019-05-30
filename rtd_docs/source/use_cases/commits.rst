@@ -2,7 +2,7 @@ Commit certifcation
 ===================
 
 In this Use Case we will discuss how to certify artifacts from source code,
-building exactly what the developer intented do publish.
+building exactly what the developer intented to publish.
 
 Theory and Operation
 --------------------
@@ -45,6 +45,10 @@ of truth as valid.
 Creating transparency in a GIT repository
 -----------------------------------------
 
+.. note::
+
+    Visit 'Installation' and 'Quick start' sections before typying the following code snippets.
+
 Creating a fingerprint is crucial to allow **auditors** generate trust around
 the repository that we need to rely on.
 
@@ -71,29 +75,21 @@ fingerprint to QED.
     # pushing the fingerprint to QED server
     qed client \
         add \
-        --endpoint http://localhost:8100
-        --api-key key \
-        --insecure \
-        --event "$(cat fingerprint.json)" \
-        --log info
+        --event "$(cat fingerprint.json)"
 
-Once the QED stores the fingerprint event ``F1(SOURCE)``, It will be verified
-and proved only and only if the code retrieved is exactly same. This will prove
+Once the QED stores the fingerprint event ``F1(SOURCE)``, it will be verified
+and proved only and only if the code retrieved is exactly the same. This will prove
 untampered once the ``BUILD`` stage fetch the source code from the git repo.
 
 .. code:: shell
 
     # Verify the proof
-    # please note the --verify flag, without it it will returns the
-    # criptographic proof
+    # please note the --auto-verify flag, without this flag the operation
+    # will returns the criptographic proof
     qed client \
         membership \
-        --verify \
-        --endpoint http://localhost:8100
-        --api-key key \
-        --insecure \
         --event "$(cat fingerprint.json)" \
-        --log info \
+        --auto-verify
 
 Creating transparency in the Artifacts Repository
 -------------------------------------------------
@@ -121,11 +117,7 @@ way QED creates the transparecy.
     # pushing the artifact fingerprint to QED server
     qed client \
         add \
-        --endpoint http://localhost:8100
-        --api-key key \
-        --insecure \
-        --event "$(cat bin_fingerprint.json)" \
-        --log info
+        --event "$(cat bin_fingerprint.json)"
 
 And Finally verify the proof.
 
@@ -134,9 +126,5 @@ And Finally verify the proof.
     # Verify the proof
     qed client \
         membership \
-        --verify \
-        --endpoint http://localhost:8100
-        --api-key key \
-        --insecure \
         --event "$(cat bin_fingerprint.json)" \
-        --log info \
+        --auto-verify
