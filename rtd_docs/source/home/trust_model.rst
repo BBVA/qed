@@ -110,7 +110,7 @@ proof that verifies that:
 
 However, the client might argue that these proofs are invalid because the QED
 system is deployed on bank premises (under bank control), so someone could
-have modified something. But, QED is also resistent to this kind of attacks,
+have modified something. But, QED is also resistant to this kind of attacks,
 and cannot be tampered without being detected. Also, to avoid tampering, it
 is essential to deploy the event source, the QED Log, and the snapshot store
 in a way resistant to collusion.
@@ -120,7 +120,7 @@ in a way resistant to collusion.
     To have a deep comprehension of how QED achieves this ability, please
     refer to the QED's :ref:`security model <security_model>` documentation.
 
-This naïve example shows the basic usage of a QED, and help to identify
+This naive example shows the basic usage of a QED, and help to identify
 the fundamental components that QED requires:
 
 - **QED Log**: where the authentication data lives.
