@@ -28,7 +28,6 @@ Contents
    internals/architecture_and_components
    internals/internal_working
    internals/security_model
-   internals/internals_glossary
 
 .. toctree::
    :maxdepth: 2
