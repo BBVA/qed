@@ -53,3 +53,5 @@ FROM ubuntu:19.10
 COPY --from=0 /usr/local/bin/qed /usr/local/bin/qed
 COPY --from=0 /usr/local/bin/riot /usr/local/bin/riot
 COPY --from=0 /usr/local/bin/storage /usr/local/bin/storage
+
+RUN /usr/local/bin/qed generate signerkeys
