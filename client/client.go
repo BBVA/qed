@@ -579,7 +579,7 @@ func (c *HTTPClient) MembershipAutoVerify(eventDigest hashing.Digest, version *u
 	snapshot := &balloon.Snapshot{
 		HistoryDigest: nil,
 		HyperDigest:   nil,
-		Version:       *version,
+		Version:       uint64(0),
 		EventDigest:   eventDigest,
 	}
 

@@ -137,7 +137,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 		var err error
 
 		if params.AutoVerify {
-			fmt.Printf("\nAuto-Verifying event with: \n\n EventDigest: %x\n Version: %d\n", digest, params.Version)
+			fmt.Printf("\nAuto-Verifying event with: \n\n EventDigest: %x\n Version: %d\n", digest, proof.QueryVersion)
 			ok, err = client.MembershipAutoVerify(digest, params.Version)
 		} else {
 
@@ -148,7 +148,7 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 			}
 			if proof.Exists {
 				for historyDigest == "" {
-					historyDigest = readLine(fmt.Sprintf("Please, provide the historyDigest for version [ %d ] : ", params.Version))
+					historyDigest = readLine(fmt.Sprintf("Please, provide the historyDigest for version [ %d ] : ", proof.QueryVersion))
 				}
 			}
 			hdBytes, _ := hex.DecodeString(hyperDigest)
@@ -157,11 +157,11 @@ func runClientMembership(cmd *cobra.Command, args []string) error {
 			snapshot := &balloon.Snapshot{
 				HistoryDigest: htdBytes,
 				HyperDigest:   hdBytes,
-				Version:       *params.Version,
+				Version:       uint64(0),
 				EventDigest:   digest,
 			}
 
-			fmt.Printf("\nVerifying event with: \n\n EventDigest: %x\n HyperDigest: %x\n HistoryDigest: %x\n Version: %d\n", digest, hdBytes, htdBytes, params.Version)
+			fmt.Printf("\nVerifying event with: \n\n EventDigest: %x\n HyperDigest: %x\n HistoryDigest: %x\n Version: %d\n", digest, hdBytes, htdBytes, proof.QueryVersion)
 			ok, err = client.MembershipVerify(digest, proof, snapshot)
 		}
 
