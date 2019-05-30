@@ -7,8 +7,8 @@ Description
 -----------
 
 Before starting to use QED, users need to translate their problem of trust
-to a more suitable conceptual model to allow them to accurately identify which
-are the actors that take part in the relationship and what are the pieces of
+to a more suitable conceptual model, to allow them to accurately identify which
+are the actors that take part in the relationship, and what are the pieces of
 data that must be verified.
 
 QED defines a very simple but flexible trust model. It is composed of
@@ -17,11 +17,11 @@ three main components:
 - The **information** itself to which the users want to add transparency.
 - A set of **actors** that interacts with the information in different ways.
 - A **mapping function** that translates the information space to a
-  univocal event that can serve as input for QED.
+  univocal event that serves as input for QED.
 
 It is clear that the information depends on the nature of the problem we are
-dealing with and likewise, the shape the mapping function takes is closely
-linked to it. For their part, the actors can be grouped in three categories
+dealing with, and likewise, the mapping function definition is closely
+linked to it. Actors can be grouped in three categories
 or roles:
 
 - Sources of information.
@@ -109,10 +109,10 @@ proof that verifies that:
     :align: center
 
 However, the client might argue that these proofs are invalid because the QED
-system is deployed on bank premises and under its control so someone could
-have modified something. But, QED is also resistent to this kind of attacks
-and cannot be tampered without being detected. Also, to avoid tampering it
-is essential to deploy the event source, the QED Log and the snapshot store
+system is deployed on bank premises (under bank control), so someone could
+have modified something. But, QED is also resistent to this kind of attacks,
+and cannot be tampered without being detected. Also, to avoid tampering, it
+is essential to deploy the event source, the QED Log, and the snapshot store
 in a way resistant to collusion.
 
 .. note::
@@ -120,7 +120,7 @@ in a way resistant to collusion.
     To have a deep comprehension of how QED achieves this ability, please
     refer to the QED's :ref:`security model <security_model>` documentation.
 
-This naïve example shows the basic usage of a QED and help to identify
+This naïve example shows the basic usage of a QED, and help to identify
 the fundamental components that QED requires:
 
 - **QED Log**: where the authentication data lives.
@@ -134,7 +134,7 @@ There are other components which allow a QED system to be resistant to
 tampering:
 
 - **QED gossip network**: a network on which QED emits snapshots.
-- **QED agents**: processes that subscribe to the gossip network and execute
+- **QED agents**: processes subscribed to the gossip network, that execute
   task with the snapshot information: monitoring, auditing, etc.
 - **Notification service**: notifies stakeholders of any activity of
   interest like alerts emitted by agents.
