@@ -1,8 +1,8 @@
-Commit certifcation
-===================
+Commit certification
+====================
 
 In this Use Case we will discuss how to certify artifacts from source code,
-building exactly what the developer intented to publish.
+building exactly what the developer intended to publish.
 
 Theory and Operation
 --------------------
@@ -10,7 +10,7 @@ Theory and Operation
 .. image:: /_static/images/Uc1.png
 
 Building **trust** around storage that is unattended it's a cumbersome task.
-Create a certified untamperable repository it's near impossible to archieve.
+Create a certified untamperable repository it's near impossible to achieve.
 Not to mention third-party storages, like github.
 
 In order to create the transparency we will need some actors being the **source
@@ -47,7 +47,7 @@ Creating transparency in a GIT repository
 
 .. note::
 
-    Visit 'Installation' and 'Quick start' sections before typying the following code snippets.
+    Visit 'Installation' and 'Quick start' sections before typing the following code snippets.
 
 Creating a fingerprint is crucial to allow **auditors** generate trust around
 the repository that we need to rely on.
@@ -85,7 +85,7 @@ untampered once the ``BUILD`` stage fetch the source code from the git repo.
 
     # Verify the proof
     # please note the --auto-verify flag, without this flag the operation
-    # will returns the criptographic proof
+    # will returns the cryptographic proof
     qed client \
         membership \
         --event "$(cat fingerprint.json)" \
@@ -109,7 +109,7 @@ Once we create the ``BINARY`` in the BUILD stage we can create the fingerprint
 
 And push the binary fingerprint to QED alonside to push the binary to the Artifact
 repo. Ad you can see there is a repeating pattern of ``source-of-truth -> [QED|Untrusted-source] <- auditor`` in the
-way QED creates the transparecy.
+way QED creates the transparency.
 
 
 .. code:: shell

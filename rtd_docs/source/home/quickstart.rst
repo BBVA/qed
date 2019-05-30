@@ -97,7 +97,7 @@ has version 3 (CurrentVersion), and there is a proof for you to check it.
 
 .. note::
 
-    We print proofs as <TRUNCATED> due to these crypthograpical proofs are too long and difficult to read.
+    We print proofs as <TRUNCATED> due to these crypthographical proofs are too long and difficult to read.
 
 2.2 Getting snapshots from the snapshot store.
 ++++++++++++++++++++++++++++++++++++++++++++++
@@ -129,8 +129,8 @@ So, let's ask for the snapshot with that version
 2.3 Verifying proof (manually).
 +++++++++++++++++++++++++++++++
 
-Having the proof and the neccesary information, let's verify the former.
-The interactive process will ask you the info previously retrived.
+Having the proof and the necessary information, let's verify the former.
+The interactive process will ask you the info previously retrieved.
 
     .. code-block:: shell
 

@@ -18,7 +18,7 @@ Application
 +++++++++++
 
 - We cannot guarantee an application will use QED.
-- We can use QED capabilities to build external tooling to check the application expected behaviour.
+- We can use QED capabilities to build external tooling to check the application expected behavior.
 
 Third party
 +++++++++++
@@ -29,7 +29,7 @@ Third party
 QED log
 +++++++
 
-QED is resistant to naïve attempts to tamper with its database. A modification of a single leaf of a tree, or path is detected easily. This kind of tampering tries to harm the credibility of the system by making it complain or to avoid the validation of a correct event. *Once the QED is tampered with, there is no rollback. Only a complete rebuild can ensure its coherence.*
+QED is resistant to naive attempts to tamper with its database. A modification of a single leaf of a tree, or path is detected easily. This kind of tampering tries to harm the credibility of the system by making it complain or to avoid the validation of a correct event. *Once the QED is tampered with, there is no rollback. Only a complete rebuild can ensure its coherence.*
 
 We can alter the events stored in QED in a way that the proofs will verify only if the QED version is reset to an old version and we insert events from that version again using the QED append algorithm to regenerate all the intermediate nodes of the trees:
 
@@ -47,14 +47,14 @@ Also, even if the attack happens, it can be detected doing a full audit checking
 
 To further protect a QED deployment against such tampering, we recommend salting the QED events with a secret (which QED does not know) verifiable by the event stakeholders and recommends implementing a monitoring agent that check the snapshot store searching for duplicate QED versions.
 
-Another recommendation is to make QED clusters to block any arbitrary nonauthenticated joins, replications or from-disk recoveries.
+Another recommendation is to make QED clusters to block any arbitrary non-authenticated joins, replications or from-disk recoveries.
 
 Last, the teams or companies in charge of the QED log, agents and snapshot store should be different to avoid collusion.
 
 QED agents
 ++++++++++
 
-The agent's mission is to check the QED activities to identify anomalous behaviours and also publish the snapshots into the store.
+The agent's mission is to check the QED activities to identify anomalous behaviors and also publish the snapshots into the store.
 
 They can be tampered as any other application, making them publish altered snapshots or to omit any functionality.
 But the QED proofs verification process will detect modifications regarding the events being checked as long as the event source or QED log are untampered.

@@ -20,7 +20,10 @@ The relation between the QED log, gossip agents, and snapshot store depends on t
 * QED log emits via a gossip UDP network messages processed by the QED agents.
 * QED publisher agent pushes snapshots to the store using a given HTTP API.
 
-The relationship between the event source, third party services, and the application does not affect the QED per se, but the application must be able to map an event to a QED event univocally, because QED Log stores no data but a representation in the form of a SHA256 hash.
+The relationship between the event source, third party services, and the
+application does not affect the QED `per se`, but the application must be able to
+map an event to a QED event univocally, because QED Log stores no data but a
+representation in the form of a SHA256 hash.
 
 The application needs to talk to QED Log, either directly by its API or using one of the QED Log supported client libraries.
 
