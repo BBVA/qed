@@ -41,14 +41,14 @@ type EventsBulk struct {
 // Handler uses to parse the post params.
 type MembershipQuery struct {
 	Key     []byte
-	Version uint64
+	Version *uint64
 }
 
 // MembershipDigest is the public struct that apihttp.DigestMembership
 // Handler uses to parse the post params.
 type MembershipDigest struct {
 	KeyDigest hashing.Digest
-	Version   uint64
+	Version   *uint64
 }
 
 // Snapshot is the public struct that apihttp.Add Handler call returns.
