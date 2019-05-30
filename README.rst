@@ -26,14 +26,20 @@ Q.E.D. - Scalable, auditable and high-performance tamper-evident log
 What's Q.E.D.
 -------------
 
-``Q.E.D.`` is an open-source software that allows you to establish **trust relations with others**. It can be used in multiple scenarios:
+**QED** is an open-source software that allows you to establish
+**trust relations** by leveraging verifiable cryptographic proofs.
 
-- **Secure tamper-evident data transfers**,
-- **Tamper-evident** (system/application/business)
-- **Logging**
-- ...
+It can be used in multiple scenarios:
 
-``Q.E.D.`` **guarantees** that the system itself, even when deployed **into a non-trusted server**, cannot be modified without being detected. It also **provides verifiable cryptographic proofs** in logarithmic relation (time and size) to the number of entries.
+- Data transfers.
+- System (or application or business) logging.
+- Distributed business transactions.
+- Etc.
+
+QED **guarantees** that the system itself, even when deployed
+into a **non-trusted server**, cannot be modified without being
+detected. It also provides **verifiable cryptographic proofs**
+in logarithmic relation (time and size) to the number of entries.
 
 Why Q.E.D.
 ----------
