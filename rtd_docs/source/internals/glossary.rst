@@ -5,27 +5,6 @@ The purpose of this section is to equip the reader with necessary background
 about the most common keywords and concepts used in the development of
 verifiable (or authenticated) data structures.
 
-* :ref:`Cryptographic primitives`
-    - :ref:`Hash functions`
-    - :ref:`Digital signatures`
-* :ref:`Tree-based data structures`
-    - :ref:`Binary tree`
-        * :ref:`Perfect binary tree`
-        * :ref:`Full binary tree`
-        * :ref:`Complete binary tree`
-    - :ref:`Merkle tree`
-        * :ref:`Membership proof`
-        * :ref:`Merkle audit path`
-    - :ref:`History tree`
-        * :ref:`Persistent nature`
-        * :ref:`Incremental proof`
-    - :ref:`Binary search tree`
-    - :ref:`Heap`
-    - :ref:`Treap`
-    - :ref:`Hash treap`
-    - :ref:`Sparse Merkle tree`
-
-
 Cryptographic primitives
 ------------------------
 
