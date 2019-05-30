@@ -15,6 +15,9 @@ Furthermore the proof returned by the QED server it is a criptographic proof
 QED is a **tamper evident** storage, that is that QED it can be deployed in
 untrusted servers, because of the way QED stores the transactions.
 
+In this Use case we will try to explain in mundane terms why QED is worth the
+effort to be used as warranteer.
+
 Trust the untrustable
 ---------------------
 
@@ -57,6 +60,8 @@ In order to prevent tamperings, we use a `Merkle tree`_. Which is a
 criptographic sum between adjacent elements in a tree fashion. This allows us
 to make a lot of criptographic hashes, between the last inserted elements and
 all the previous ones.
+
+.. image:: /_static/images/Hash_Tree.svg
 
 Since the append-only storage can grow really fast, we need a way to find
 previously inserted transactions, so we use another criptographic tree, to
