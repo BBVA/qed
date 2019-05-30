@@ -1,5 +1,5 @@
 ********************************************************************
-Q.E.D. - Scalable, auditable and high-performance tamper-evident log
+QED - Scalable, auditable and high-performance tamper-evident log
 ********************************************************************
 
 .. image:: https://readthedocs.org/projects/qed/badge/?version=latest
@@ -23,9 +23,6 @@ Q.E.D. - Scalable, auditable and high-performance tamper-evident log
 .. figure:: https://raw.githubusercontent.com/BBVA/qed/master/rtd_docs/source/_static/images/qed_logo_small.png
    :align: center
 
-What's Q.E.D.
--------------
-
 **QED** is an open-source software that allows you to establish
 **trust relations** by leveraging verifiable cryptographic proofs.
 
@@ -41,10 +38,7 @@ into a **non-trusted server**, cannot be modified without being
 detected. It also provides **verifiable cryptographic proofs**
 in logarithmic relation (time and size) to the number of entries.
 
-Why Q.E.D.
-----------
-
-``Q.E.D.`` is **scalable**, **resilient** and **ops friendly**:
+QED is **scalable**, **resilient** and **ops friendly**:
 
 - Designed to manage **billions of events** per shard
 - Over **2000 operations per second** per shard under sustained load
@@ -65,12 +59,12 @@ You can find the project code at `Github <https://github.com/BBVA/qed>`_
 Authors
 -------
 
-``Q.E.D.`` was made by Hyperscale BBVA-Labs Team.
+QED was made by Hyperscale BBVA-Labs Team.
 
 License
 -------
 
-``Q.E.D.`` is Open Source and available under the `Apache 2 license <https://github.com/BBVA/qed/blob/master/LICENSE>`_.
+QED is Open Source and available under the `Apache 2 license <https://github.com/BBVA/qed/blob/master/LICENSE>`_.
 
 Contributions
 -------------
