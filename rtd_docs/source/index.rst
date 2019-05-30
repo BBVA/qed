@@ -8,7 +8,7 @@ Contents
    :maxdepth: 2
    :caption: The Project
 
-   home/overview_project
+   home/overview
    home/installation
    home/quickstart
    home/trust_model
