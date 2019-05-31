@@ -7,24 +7,23 @@ building exactly what the developer intended to publish.
 Theory and Operation
 --------------------
 
-.. image:: /_static/images/Uc1.png
-
 Building **trust** around storage that is unattended it's a cumbersome task.
 Create a certified untamperable repository it's near impossible to achieve.
 Not to mention third-party storages, like github.
 
-In order to create the transparency we will need some actors being the **source
-of truth** that **auditors** will need to detect tamperings.
+In order to create the transparency we will need some actors being the **event source** that **auditors** will need to detect tamperings.
 
 In this Use Case QED allows transparency in that regard, by allowing developers
 publish both code and a fingerprint ``F1(SOURCE)`` (more on this later...), and
 the ``F2(BINARY)``.
 
-Sources of truth
-++++++++++++++++
+.. image:: /_static/images/Uc1.png
 
-The **DEVs** acts as source of truth for the transparency of the GIT REPO,
-and the **BUILD** stage, creator of the artifact, acts as source of truth for
+Event Sources
++++++++++++++
+
+The **DEVs** acts as event source for the transparency of the GIT REPO,
+and the **BUILD** stage, creator of the artifact, acts as event source for
 the transparency of the ARTIFACT REPO.
 
 Auditors
@@ -38,8 +37,8 @@ Untrusted sources
 +++++++++++++++++
 
 Both **GIT REPO** and **ARTIFACT REPO** alongside with the **QED** are untrusted
-sources. We create the trust with the auditors that verifies the original source
-of truth as valid.
+sources. We create the trust with the auditors that verifies the original event
+source as valid.
 
 
 Creating transparency in a GIT repository
@@ -108,7 +107,7 @@ Once we create the ``BINARY`` in the BUILD stage we can create the fingerprint
     EOF
 
 And push the binary fingerprint to QED alonside to push the binary to the Artifact
-repo. Ad you can see there is a repeating pattern of ``source-of-truth -> [QED|Untrusted-source] <- auditor`` in the
+repo. Ad you can see there is a repeating pattern of ``event-source -> [QED|Untrusted-source] <- auditor`` in the
 way QED creates the transparency.
 
 
