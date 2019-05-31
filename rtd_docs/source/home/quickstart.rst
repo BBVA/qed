@@ -62,7 +62,7 @@ Once finished the Quickstart section, don't forget to clean the environment:
 .. code::
 
     $ docker-compose down
-    $ unalias qed
+    $ unalias qed_alias
 
 
 2. Adding events.
