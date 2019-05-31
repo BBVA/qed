@@ -11,6 +11,7 @@ Contents
    home/overview
    home/quickstart
    home/trust_model
+   home/faq
 
 .. toctree::
    :maxdepth: 2
