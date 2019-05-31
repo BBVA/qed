@@ -47,7 +47,8 @@ case of storing signed data (by certificate signature) into a database, to
 far more complicated approaches like blockchain-based technologies and smart
 contracts. But QED has important **advantages**  over such alternatives:
 
-- Works completely **detached** from the event source (database, logging system,...),
+- Works completely **detached** from the event source (database, logging
+  system,...),
   and so from the usual way to interact with such data.
 - Scales to reach **billions of events**.
 - Generates proofs of **membership** or non-membership in **logarithmic time**.
@@ -58,10 +59,9 @@ contracts. But QED has important **advantages**  over such alternatives:
 How
 ---
 
-QED implements a :ref:`forward-secure <forward_secure_glossary>`
-append-only persistent authenticated data structure. Each append operation
-produces as a result a cryptographic structure (a signed
-:ref:`snapshot <snapshot_glossary>`), which acts as a receipt for the operation,
+QED implements a forward-secure append-only persistent authenticated data
+structure. Each append operation produces as a result a cryptographic
+structure (a signed snapshot), which acts as a receipt for the operation,
 and can be used later to verify the following statements:
 
 - Whether or not a piece of data is on QED.
@@ -82,7 +82,7 @@ understand this point.
     QED **does not store the data itself**, only a representation of it
     produced by a collision-resistant hash function.
 
-    QED **does not provide means to map a piece of data to a QED** :ref:`event <qed_event_glossary>`,
+    QED **does not provide means to map a piece of data to a QED event**,
     so the semantic of the appended data and the relation between each item
     appended is also a client responsibility.
 
