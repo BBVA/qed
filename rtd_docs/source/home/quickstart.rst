@@ -62,7 +62,7 @@ Once finished the Quickstart section, don't forget to clean the environment:
 .. code::
 
     $ docker-compose down
-    $ unalias qed_alias
+    $ unalias qed_client
 
 
 2. Adding events.
@@ -147,7 +147,7 @@ has version 3 (CurrentVersion), and there is a proof for you to check it.
 
 This proof shows the version in which the event was inserted.
 So, let's ask for the snapshot with that version
-(it contains the information needed -"HyperDigest" and "HistoryDigest"- to verify proofs).
+(it contains the information needed **"HyperDigest"** and **"HistoryDigest"** to verify proofs).
 
     .. code::
 
