@@ -55,7 +55,7 @@ Listing there these 3 services.
 
     .. code::
 
-        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v0.2.4-docs qed client --endpoints http://qed_server_0:8800 --snapshot-store-url http://snapshotstore:8888'
+        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v0.2.4-docs qed client --endpoints http://qed_server_0:8800 --snapshot-store-url http://snapshotstore:8888 --log info'
 
 Once finished the Quickstart section, don't forget to clean the environment:
 
