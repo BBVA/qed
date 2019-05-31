@@ -5,27 +5,6 @@ The purpose of this section is to equip the reader with necessary background
 about the most common keywords and concepts used in the development of
 verifiable (or authenticated) data structures.
 
-* [Cryptographic primitives](#cryptographic-primitives)
-    - [Hash functions](#hash-functions)
-    - [Digital signatures](#digital-signatures)
-* [Tree-based data structures](#tree-based-data-structures)
-    - [Binary tree](#binary-tree)
-        * [Perfect binary tree](#perfect-binary-tree)
-        * [Full binary tree](#full-binary-tree)
-        * [Complete binary tree](#complete-binary-tree)
-    - [Merkle tree](#merkle-tree)
-        * [Membership proof](#membership-proof)
-        * [Merkle audit path](#merkle-audit-path)
-    - [History tree](#history-tree)
-        * [Persistent nature](#persistent-nature)
-        * [Incremental proof](#incremental-proof)
-    - [Binary search tree](#binary-search-tree)
-    - [Heap](#heap)
-    - [Treap](#treap)
-    - [Hash treap](#hash-treap)
-    - [Sparse Merkle tree](#sparse-merkle-tree)
-
-
 Cryptographic primitives
 ------------------------
 
@@ -35,16 +14,21 @@ building blocks for creating authenticated data structures.
 Hash functions
 ++++++++++++++
 
-A cryptographic hash function compresses an arbitray large message *m* into a
+A cryptographic hash function compresses an arbitrary large message *m* into a
 fixed size digest *h*. Due to the large space of messages mapped, collisions
 are inevitable but they must be computationally hard to find. A cryptographic
 hash function must conform with the following properties:
 
-- **Preimage resistance:** given a digest `*h* <- H(*m*)` for message *m*, it must be computationally hard to find a preimage *m'* generating *h* without knowledge of *m*.
+- **Preimage resistance:** given a digest `*h* <- H(*m*)` for message *m*, it
+  must be computationally hard to find a preimage *m'* generating *h* without
+  knowledge of *m*.
 
-- **Second preimage resistance:** given a fixed preimage *m*, it must be computationally hard to find another preimage *m' != m* such that `H(*m*) = H(*m'*)`.
+- **Second preimage resistance:** given a fixed preimage *m*, it must be
+  computationally hard to find another preimage *m' != m* such that
+  `H(*m*) = H(*m'*)`.
 
-- **Collision resistance:** it must be computationally hard to find any distinct preimages *m1* and *m2* such that `H(*m1*) = H(*m2*)`.
+- **Collision resistance:** it must be computationally hard to find any
+  distinct preimages *m1* and *m2* such that `H(*m1*) = H(*m2*)`.
 
 Digital signatures
 ------------------
@@ -87,13 +71,13 @@ A binary tree which all nodes must have two or no children.
 Complete binary tree
 ++++++++++++++++++++
 
-A binaty tree which must be filled left-to-right at the lowest level, and
+A binary tree which must be filled left-to-right at the lowest level, and
 entirely at the level above.
 
 Merkle tree
 -----------
 
-A binary tree that stores values at the lowest level of the tree and utilises
+A binary tree that stores values at the lowest level of the tree and uses
 cryptographic hash functions. While leaves compute the hash of their own
 attributes, parents derive the hash of their children’s hashes concatenated
 left-to-right. Therefore the hash rooted at a particular subtree is
