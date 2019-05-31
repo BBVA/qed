@@ -8,14 +8,17 @@ Contents
    :maxdepth: 2
    :caption: The Project
 
-   home/overview_project
-   home/installation_and_quickstart
+   home/overview
+   home/quickstart
+   home/trust_model
 
 .. toctree::
    :maxdepth: 2
-   :caption: Glossary
+   :caption: Use Cases
 
-   glossary
+   use_cases/commits
+   use_cases/documentation
+   use_cases/tweets
 
 .. toctree::
    :maxdepth: 2
@@ -23,7 +26,8 @@ Contents
 
    internals/architecture_and_components
    internals/internal_working
-   internals/internals_glossary
+   internals/security_model
+   internals/glossary
 
 .. toctree::
    :maxdepth: 2
