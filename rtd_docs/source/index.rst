@@ -19,7 +19,7 @@ Contents
 
    use_cases/commits
    use_cases/documentation
-   use_cases/tweets
+   .. use_cases/tweets
 
 .. toctree::
    :maxdepth: 2
