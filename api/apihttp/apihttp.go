@@ -19,6 +19,7 @@ package apihttp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -71,21 +72,15 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //   }
 func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
+		var err error
 		// Make sure we can only be called with an HTTP POST request.
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		if r.Body == nil {
-			http.Error(w, "Please send a request body", http.StatusBadRequest)
+		w, r, err = PostReqSanitizer(w, r)
+		if err != nil {
 			return
 		}
 
 		var event protocol.Event
-		err := json.NewDecoder(r.Body).Decode(&event)
+		err = json.NewDecoder(r.Body).Decode(&event)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -136,21 +131,15 @@ func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //	]
 func AddBulk(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
+		var err error
 		// Make sure we can only be called with an HTTP POST request.
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		if r.Body == nil {
-			http.Error(w, "Please send a request body", http.StatusBadRequest)
+		w, r, err = PostReqSanitizer(w, r)
+		if err != nil {
 			return
 		}
 
 		var eventBulk protocol.EventsBulk
-		err := json.NewDecoder(r.Body).Decode(&eventBulk)
+		err = json.NewDecoder(r.Body).Decode(&eventBulk)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -197,9 +186,8 @@ func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		var err error
 
 		// Make sure we can only be called with an HTTP POST request.
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		w, r, err = PostReqSanitizer(w, r)
+		if err != nil {
 			return
 		}
 
@@ -262,9 +250,8 @@ func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		var err error
 
 		// Make sure we can only be called with an HTTP POST request.
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		w, r, err = PostReqSanitizer(w, r)
+		if err != nil {
 			return
 		}
 
@@ -318,15 +305,15 @@ func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //   }
 func Incremental(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
 		// Make sure we can only be called with an HTTP POST request.
-		if r.Method != "POST" {
-			w.Header().Set("Allow", "POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		w, r, err = PostReqSanitizer(w, r)
+		if err != nil {
 			return
 		}
 
 		var request protocol.IncrementalRequest
-		err := json.NewDecoder(r.Body).Decode(&request)
+		err = json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -466,4 +453,19 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(out)
 	}
+}
+
+func PostReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request, error) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return w, r, errors.New("Method not allowed.")
+	}
+
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", http.StatusBadRequest)
+		return w, r, errors.New("Bad request: nil body.")
+	}
+
+	return w, r, nil
 }
