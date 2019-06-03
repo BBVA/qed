@@ -54,7 +54,7 @@ single character is changed.
 
 
 Mapping Binaries to ``F2`` event
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For this event, the SHA256 digest of the binary, will be simple and good to
 detect changes.

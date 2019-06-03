@@ -77,7 +77,7 @@ the content of the file.
 
     # Create the document event
     document_hash=$(sha256sum <document> | cut -d' ' -f1 )
-    cat > docuent_event.json <<EOF
+    cat > document_event.json <<EOF
     {
         "document_hash": "${document_hash}",
     }
