@@ -245,20 +245,6 @@ func (riot *Riot) RunOnce() {
 	newAttack(riot.Config)
 }
 
-// func postReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request) {
-// 	if r.Method != "POST" {
-// 		w.Header().Set("Allow", "POST")
-// 		w.WriteHeader(http.StatusMethodNotAllowed)
-// 		return w, r
-// 	}
-
-// 	if r.Body == nil {
-// 		http.Error(w, "Please send a request body", http.StatusBadRequest)
-// 	}
-
-// 	return w, r
-// }
-
 func (riot *Riot) MergeConf(newConf Config) Config {
 	conf := riot.Config
 	_ = mergo.Merge(&conf, newConf)
