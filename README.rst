@@ -69,4 +69,4 @@ QED is Open Source and available under the `Apache 2 license <https://github.com
 Contributions
 -------------
 
-Contributions are very welcome. See `CONTRIBUTING.md <https://github.com/BBVA/qed/blob/master/CONTRIBUTING.md>`_ or skim `existing tickets <https://github.com/BBVA/qed/issues>`_ to see where you could help out.
+Contributions are very welcome. See `docs/contribute/contributing.md <https://github.com/BBVA/qed/blob/master/docs/contribute/contributing.md>`_ or skim `existing tickets <https://github.com/BBVA/qed/issues>`_ to see where you could help out.
