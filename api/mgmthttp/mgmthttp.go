@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/raftwal"
 )
 
@@ -34,6 +35,13 @@ func NewMgmtHttp(raftBalloon raftwal.RaftBalloonApi) *http.ServeMux {
 
 func joinHandle(raftBalloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		// Make sure we can only be called with an HTTP POST request.
+		w, r, err = apihttp.PostReqSanitizer(w, r)
+		if err != nil {
+			return
+		}
+
 		body := make(map[string]interface{})
 
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
