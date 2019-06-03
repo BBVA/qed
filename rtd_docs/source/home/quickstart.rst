@@ -11,14 +11,17 @@ For each step we will use the **QED CLI** facility.
 The client will talk to the QED server and the snapshot store, so it must be
 configured for that proposal.
 
-The involved variables are the following ones, and we will use pre-defined
-values for this quickstart.
+.. note::
 
-.. code-block:: shell
+    In production deployments, the following variables are required, and you
+    need to configure it, but for this quickstart we will use the
+    pre-defined values, so *you don't need to configure it for now*.
 
-      --api-key             string  Set API Key to talk to QED Log service (default "my-key")
-      --endpoints           string  REST QED Log service endpoint list http://ip1:port1,http://ip2:port2...  (default [http://127.0.0.1:8800])
-      --snapshot-store-url  string  REST Snapshot store service endpoint http://ip:port  (default "http://127.0.0.1:8888")
+    .. code-block:: shell
+
+          --api-key             string  Set API Key to talk to QED Log service (default "my-key")
+          --endpoints           string  REST QED Log service endpoint list http://ip1:port1,http://ip2:port2...  (default [http://127.0.0.1:8800])
+          --snapshot-store-url  string  REST Snapshot store service endpoint http://ip:port  (default "http://127.0.0.1:8888")
 
 
 1. Environment set up
@@ -36,7 +39,7 @@ environment is as easy as:
 .. code::
 
     $ git clone https://github.com/BBVA/qed.git
-    $ cd deploy/docker
+    $ cd qed/deploy/docker
     $ docker-compose up -d
 
 This simple environment comprises 3 services: **QED Log server**,
@@ -51,7 +54,7 @@ Listing there these 3 services.
 
 .. important::
 
-    To use the QED client using docker (and forget about installing golang -among other stuff-), do the following:
+    To use the ``qed_client`` command using docker (and forget about installing golang -among other stuff-), do the following:
 
     .. code::
 

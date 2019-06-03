@@ -1,0 +1,19 @@
+README.md:
+
+    Q.E.D in README.md http://127.0.0.1:8080/index.html#why-q-e-d
+    remove why, put features (Alvaro)
+
+trust_model
+    quitar fondo (Alvaro)
+    flechas dobles
+
+Internal a TODO
+
+Use Case...
+
+    anadir link a quickstart
+    alon(g)side
+    qed command igual que en el quickstart
+
+    docu
+        fingerprint

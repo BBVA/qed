@@ -4,7 +4,17 @@ Certification of Documents, Emails, Contracts, etc.
 How can we create transparency about a transaction that somebody as interest to
 certify that a ``DOCUMENT`` is emitted that way?
 
-Allowing QED to store a fingerprint of the transaction ``F(DOCUMENT)``, will
+
+Theory and Operation
+--------------------
+
+.. tip::
+
+    for the sake of clarity **Document** is *anything* that could be suitable
+    to keep track of the original content, such as Emails, Contracts, Dues,
+    etc...
+
+Allowing QED to store an event of the transaction ``F(DOCUMENT)``, will
 prove that it was as intended.
 
 Furthermore the proof returned by the QED server it is a cryptographic proof
@@ -18,66 +28,76 @@ effort to be used as warranteer.
 
 .. image:: /_static/images/Uc2.png
 
+Event Source
+++++++++++++
 
-Trust the untrustable
----------------------
+Any **petitioner** interested to keep track of the tracked **DOCUMENT** Is
+considered an event source in the model.
 
-Using today's technologies are by far trusted by default. A myriad of problems
-can emerge in the neccessity to protect sensitive data, and even the when the
-maximum level of isolation and protection are in place, you can always ask
-**Who whatches the Watchmen?**
+Mapping Documents to Events
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+To create the event we can use the SHA256 digest of the content to prove
+inconsistencies across proofs.
 
-This trust dilemma is called in *distribution systems* a `Bizantine Fault
-Tolerant`_ service.
+.. note::
 
-.. _`Bizantine Fault Tolerant`: https://en.wikipedia.org/wiki/Byzantine_fault
+    Mapping example:
 
-Cryptographic proofs
---------------------
+    .. code:: json
 
-QED address this problem by using a internal tree storage that are
-*statistically impossible* to alter without detection.
-
-This is mainly because some inherent properties of the cryptographic
-algorithms we use. From the original event source is fast and coherent to
-create a *cryptographic hash* but **statistically impossible** to find other
-input that could create the same output.
-
-The other interesting property of the cryptographic hashers are the
-**sparsity** of the hashes. This mean that similar inputs provides completely
-different results, and the *distance* between those results are really wide.
-
-This both properties are *abused* in QED in order to create a tamper evident
-storage, even on untrustable environments.
+        {
+            "digest": "4b1a0b7be7b5982dc778e76adacbb6348632ff4d",
+        }
 
 
-Understanding the QED storage
-+++++++++++++++++++++++++++++
+Auditor
++++++++
 
-QED stores all the transactions in a append-only tree. this allows us to track
-the previous and future transactions that where sent to the QED server.
+To check if the retrieved document is the same as the originally emitted the
+**warranteer** service will ask QED for proofs that is untampered.
 
-In order to prevent tamperings, we use a `Merkle tree`_. Which is a
-cryptographic sum between adjacent elements in a tree fashion. This allows us
-to make a lot of cryptographic hashes, between the last inserted elements and
-all the previous ones.
+Untrusted Sources
++++++++++++++++++
 
-.. image:: /_static/images/Hash_Tree.svg
+Any **storage** that kept the document will be considered unsafe, and QED
+event proofs will provide transparency to them.
 
-Since the append-only storage can grow really fast, we need a way to find
-previously inserted transactions, so we use another cryptographic tree, to
-prevent tampering in finding the stored transactions.
+Creating transparency receiving a Document
+------------------------------------------
 
-How a Proof can be used
-+++++++++++++++++++++++
+.. warning::
 
-Once a transaction is stored, we publish the final sum of all the cryptographic
-nodes in a public, distributed storage.
+    The following snippets are atop :ref:`Quick start`. please visit it to
+    configure the required code.
 
-If the need to prove that some transaction exists we return and audit path of
-the current QED storage. Any alteration of the history will be evident and we
-can't determine if the transaction is the same as it was included in the QED
-server in first place. Only if the history is coherent the proof will be verified.
+Once we emit the ``DOCUMENT`` can create the event ``F1(DOCUMENT)`` by using
+the content of the file.
 
-A final note along the auditable proofs is that it must be verified outside the
-QED server in order to allow transparency.
+.. code:: shell
+
+    # Create the document event
+    document_hash=$(sha256sum <document> | cut -d' ' -f1 )
+    cat > docuent_event.json <<EOF
+    {
+        "document_hash": "${document_hash}",
+    }
+    EOF
+
+Push the document event to QED.
+
+.. code:: shell
+
+    # pushing the document event to QED server
+    qed_client \
+        add \
+        --event "$(cat document_event.json)"
+
+And Finally retrieve and verify the proof.
+
+.. code:: shell
+
+    # Verify the proof
+    qed_client \
+        membership \
+        --event "$(cat document_event.json)" \
+        --auto-verify
