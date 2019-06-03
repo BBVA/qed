@@ -26,17 +26,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bbva/qed/util"
-
-	"github.com/bbva/qed/hashing"
-
 	"github.com/imdario/mergo"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/spf13/cobra"
 
+	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/util"
 )
 
 const riotHelp = `---
@@ -246,19 +245,19 @@ func (riot *Riot) RunOnce() {
 	newAttack(riot.Config)
 }
 
-func postReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request) {
-	if r.Method != "POST" {
-		w.Header().Set("Allow", "POST")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return w, r
-	}
+// func postReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request) {
+// 	if r.Method != "POST" {
+// 		w.Header().Set("Allow", "POST")
+// 		w.WriteHeader(http.StatusMethodNotAllowed)
+// 		return w, r
+// 	}
 
-	if r.Body == nil {
-		http.Error(w, "Please send a request body", http.StatusBadRequest)
-	}
+// 	if r.Body == nil {
+// 		http.Error(w, "Please send a request body", http.StatusBadRequest)
+// 	}
 
-	return w, r
-}
+// 	return w, r
+// }
 
 func (riot *Riot) MergeConf(newConf Config) Config {
 	conf := riot.Config
@@ -273,10 +272,14 @@ func (riot *Riot) Serve() {
 		fmt.Fprint(w, riotHelp)
 	})
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
-		w, r = postReqSanitizer(w, r)
+		var err error
+		w, r, err = apihttp.PostReqSanitizer(w, r)
+		if err != nil {
+			return
+		}
 
 		var newConf Config
-		err := json.NewDecoder(r.Body).Decode(&newConf)
+		err = json.NewDecoder(r.Body).Decode(&newConf)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -287,10 +290,14 @@ func (riot *Riot) Serve() {
 
 	mux.HandleFunc("/plan", func(w http.ResponseWriter, r *http.Request) {
 		var wg sync.WaitGroup
-		w, r = postReqSanitizer(w, r)
+		var err error
+		w, r, err = apihttp.PostReqSanitizer(w, r)
+		if err != nil {
+			return
+		}
 
 		var plan Plan
-		err := json.NewDecoder(r.Body).Decode(&plan)
+		err = json.NewDecoder(r.Body).Decode(&plan)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
