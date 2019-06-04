@@ -13,14 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+set -x
 
-echo Cleanup...
-if [ $(uname) == "Darwin" ]; then
-    killall -9 main || exit 0
-else
-    fuser -k -n tcp 8800 8801 8802 8803 8804 || true
-fi
-sleep 5
-[ -f /var/tmp/keepme ] || rm -rf /var/tmp/demo.*
+echo Cleaning QED data and logs...
+
+rm -rf /var/tmp/qed*
+
 echo done.
 
