@@ -242,8 +242,11 @@ func (c *HTTPClient) callPrimary(method, path string, data []byte) ([]byte, erro
 		endpoint, err = c.topology.Primary()
 		if err != nil {
 			if !retried && c.discoveryEnabled {
-				_ = c.discover()
+				err = c.discover()
 				retried = true
+				if err != nil {
+					return nil, err
+				}
 				continue
 			}
 			return nil, err
@@ -267,6 +270,7 @@ func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 	var retried bool
 	var errTopology, errRequest error
 	var result []byte
+
 	for {
 		// check every endpoint available in a round-robin manner
 		endpoint, errTopology = c.topology.NextReadEndpoint(c.readPreference)
@@ -290,6 +294,7 @@ func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 	if errRequest != nil {
 		return nil, errRequest
 	}
+
 	return result, errTopology
 }
 
@@ -380,9 +385,7 @@ func (c *HTTPClient) clusterHealthCheck(timeout time.Duration) {
 				}
 			}
 		}(endpoint.URL())
-
 	}
-
 	wg.Wait()
 }
 
