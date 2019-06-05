@@ -11,10 +11,26 @@ For each step we will use the **QED CLI** facility.
 The client will talk to the QED server and the snapshot store, so it must be
 configured for that proposal.
 
+.. important::
+
+    To use the ``qed_client`` command using docker (and forget about installing golang -among other stuff-), do the following:
+
+    .. code::
+
+        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v0.2.4-docs qed client --endpoints http://qed_server_0:8800 --snapshot-store-url http://snapshotstore:8888 --log info'
+
+    Don't hesitate to check the ``qed_client`` help facility when necessary.
+
+    .. code::
+
+        $ qed_client -h
+        $ qed_client <command> -h  # Where command=(add, get, membership, incremental)
+        ...
+
 .. note::
 
     In production deployments, the following variables are required, and you
-    need to configure it, but for this quickstart we will use the
+    need to configure it. But, for this quickstart, we will use
     pre-defined values, so *you don't need to configure it for now*.
 
     .. code-block:: shell
@@ -43,22 +59,12 @@ environment is as easy as:
     $ docker-compose up -d
 
 This simple environment comprises 3 services: **QED Log server**,
-**QED Publisher agent**, and **Snapshot store**. You should be able
-to check them by typing:
+**QED Publisher agent**, and **Snapshot store**. 
+You should be able to list these 3 services by typing:
 
 .. code-block:: shell
 
     $ docker ps
-
-Listing there these 3 services.
-
-.. important::
-
-    To use the ``qed_client`` command using docker (and forget about installing golang -among other stuff-), do the following:
-
-    .. code::
-
-        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v0.2.4-docs qed client --endpoints http://qed_server_0:8800 --snapshot-store-url http://snapshotstore:8888 --log info'
 
 Once finished the Quickstart section, don't forget to clean the environment:
 
@@ -100,17 +106,10 @@ So, let's insert 4 simple events:
         HistoryDigest: 4f95cd9fd828abe86b092e506bbffd4662d9431c5755d68eed1ba5e5156fdb13
         Version: 3
 
-This operation should return only if it has been completed successfully or not.
-But currently, it returns certain info for debugging/testing purposes.
-In fact, we will retrieve this information later from the right place.
-
 .. note::
 
-    Take a look at the add help section by typing:
-
-    .. code::
-
-        $ qed_client add -h
+    This operation should return only if it has been completed successfully or not.
+    But currently it returns extra info for debugging/testing purposes.
 
 
 3. Proof of event insertion.
@@ -120,7 +119,7 @@ In fact, we will retrieve this information later from the right place.
 +++++++++++++++++++
 
 To get this proof we only need the original event.
-Therefore... has "event 0" been inserted?
+Therefore... has event "event 0" been inserted?
 
     .. code::
 
@@ -148,9 +147,8 @@ has version 3 (CurrentVersion), and there is a proof for you to check it.
 3.2 Getting snapshots from the snapshot store.
 ++++++++++++++++++++++++++++++++++++++++++++++
 
-This proof shows the version in which the event was inserted.
-So, let's ask for the snapshot with that version
-(it contains the information needed **"HyperDigest"** and **"HistoryDigest"** to verify proofs).
+To vefify the proof, we need to look for the right snapshot
+(it contains **"HyperDigest"** and **"HistoryDigest"**, the information needed to verify proofs).
 
     .. code::
 
@@ -165,18 +163,14 @@ So, let's ask for the snapshot with that version
 
 .. note::
 
-    The snapshot store is the right place to look for digests, instead of using the result of the adding step.
-
-    Take a look at the get help section by typing:
-
-    $ qed_client get -h
+    The snapshot store is the right place to look for digests, instead of using the output of the step 2.
 
 
 3.3 Verifying proof (manually).
 +++++++++++++++++++++++++++++++
 
 Having the proof and the necessary information, let's verify the former.
-The interactive process will ask you the info previously retrieved.
+The interactive process will ask you to enter the info previously retrieved.
 
     .. code::
 
@@ -194,14 +188,14 @@ The interactive process will ask you the info previously retrieved.
             ActualVersion: 0
             KeyDigest: 5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b
 
-        Please, provide the hyperDigest for current version [ 3 ]: 28b2a8d7bfeedc61b988e5bddaf260f21aee96bfe88392a0af8a06d7129ab86d
-        Please, provide the historyDigest for version [ 3 ] : b8fdd4b2146fe560f94d7a48f8bb3eaf6938f7de6ac6d05bbe033787d8b71846
+        Please, provide the hyperDigest for current version [ 3 ]: 7bd6cee5eb0b92801ed4ce58c54a76907221bb4e056165679977b16487e5f015
+        Please, provide the historyDigest for version [ 3 ] : 4f95cd9fd828abe86b092e506bbffd4662d9431c5755d68eed1ba5e5156fdb13
 
         Verifying event with:
 
             EventDigest: 5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b
-            HyperDigest: 28b2a8d7bfeedc61b988e5bddaf260f21aee96bfe88392a0af8a06d7129ab86d
-            HistoryDigest: b8fdd4b2146fe560f94d7a48f8bb3eaf6938f7de6ac6d05bbe033787d8b71846
+            HyperDigest: 7bd6cee5eb0b92801ed4ce58c54a76907221bb4e056165679977b16487e5f015
+            HistoryDigest: 4f95cd9fd828abe86b092e506bbffd4662d9431c5755d68eed1ba5e5156fdb13
             Version: 3
 
         Verify: OK
