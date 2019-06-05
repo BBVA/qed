@@ -14,12 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo Cleanup...
-if [ $(uname) == "Darwin" ]; then
-    killall -9 agent || exit 0
-else
-    fuser -k -n tcp 8301 8201 8101 18301 18201 18101 || true
-fi
-sleep 5
-echo done.
+echo Stopping agents...
+
+pids=(/var/tmp/agents-pids/*)
+
+for i in "${pids[@]}"
+do
+    pid=$(cat ${i})
+    echo "Killing ${i}: PID ${pid}"
+    pkill -9 -P ${pid}
+    sleep 2s
+done
+
+echo "Removing PID files."
+rm -f /var/tmp/agents-pids/*
+
+echo Done!
 

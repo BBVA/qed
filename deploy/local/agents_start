@@ -78,12 +78,11 @@ start() {
 	    ;;
 	esac
 	echo CONFIG $conf
-	mkdir -p /var/tmp/qed-$type-$id/
-	$QED agent $type $conf 2>&1 | tee  /var/tmp/qed-$type-$id/agent.log &
-	pids+=($!)
+	mkdir -p /var/tmp/agent-${type}-${id}/ /var/tmp/agents-pids
+	$QED agent ${type} ${conf} > /var/tmp/agent-${type}-${id}/agent.log 2>&1 &
+	echo $! > /var/tmp/agents-pids/qed-${type}-${id}.pid
+	echo -e "\n See agent ${type}-${id} logs at /var/tmp/agent-${type}-${id}/agent.log \n"
 }
-
-pids=()
 
 count=0
 for agent in "$@"
@@ -91,9 +90,4 @@ do
 	echo Starting "$agent" "$count"
 	start "$agent" "$count"
 	count=$((count+1))
-done
-
-for pid in ${pids[*]}; do
-	echo waiting for pid $pid
-	wait $pid
 done
