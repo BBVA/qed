@@ -1,47 +1,42 @@
-Certification of Documents, Emails, Contracts, etc.
-===================================================
+Certification of Documents, Emails, Agreements, etc.
+====================================================
 
-How can we create transparency about a transaction that somebody as interest to
-certify that a ``DOCUMENT`` is emitted that way?
-
+In this use case we will show how to add transparency to a particular
+transaction or agreement that got captured in a ``DOCUMENT``, by
+allowing the issuer to certify that the document has not been altered.
 
 Theory and Operation
 --------------------
 
 .. tip::
 
-    for the sake of clarity **Document** is *anything* that could be suitable
-    to keep track of the original content, such as Emails, Contracts, Dues,
+    For the sake of clarity, **Document** is anything that could be suitable
+    to keep track of the original transaction, such as Emails, Agreements, Dues,
     etc...
 
-Allowing QED to store an event of the transaction ``F(DOCUMENT)``, will
-prove that it was as intended.
-
-Furthermore the proof returned by the QED server it is a cryptographic proof
-``WARRANT`` with legal validity.
-
-QED is a **tamper evident** storage, that is that QED it can be deployed in
-untrusted servers, because of the way QED stores the transactions.
-
-In this Use case we will try to explain in mundane terms why QED is worth the
-effort to be used as warranteer.
+First of all, we need to identify what are the elements of the problem to
+address and how we can adapt them to the components defined in our
+:ref:`QED's trust model<trust_model>`: information, actors and
+mapping function(s).
 
 .. image:: /_static/images/Uc2.png
 
-Event Source
-++++++++++++
+As we can see from the figure, the information we want to add transparency to,
+is the ``DOCUMENT`` itself, which gets inserted in a particular
+``STORAGE``. This storage acts as the **information provider**, and it can be
+considered as untrusted.
 
-Any **petitioner** interested to keep track of the tracked **DOCUMENT** Is
-considered an event source in the model.
+The ``PETITIONER`` is the actor interested in keeping track of the contents
+of the document, so he takes the role of **source of information** and
+inserts the document into the storage.
 
-Mapping Documents to Events
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-To create the event we can use the SHA256 digest of the content to prove
-inconsistencies across proofs.
+Simultaneously, he uses a mapping function ``F`` to translate the
+information to a unique QED event ``F(DOCUMENT)``. He could use the
+SHA256 digest of the contents of the document.
 
 .. note::
 
-    Mapping example:
+    ``F`` output example:
 
     .. code:: json
 
@@ -50,28 +45,29 @@ inconsistencies across proofs.
         }
 
 
-Auditor
-+++++++
+Now, suppose there is a court trial that demands proofs of integrity
+to the entity in charge of keeping the document, the one we have
+called ``WARRANTEER``. This actor also have to act as the
+**information consumer** in the trust model, and thus, needs to
+have confidence in the integrity of the storage.
 
-To check if the retrieved document is the same as the originally emitted the
-**warranteer** service will ask QED for proofs that is untampered.
+To do that, it could use the same mapping function ``F`` to generate
+again the QED event and then, ask for a membership proof to the QED Log.
+Combining the resulting cryptographic proofs with the QED
+event, the ``WARRANTEER`` could verify the original information as valid.
 
-Untrusted Sources
-+++++++++++++++++
-
-Any **storage** that kept the document will be considered unsafe, and QED
-event proofs will provide transparency to them.
-
-Creating transparency receiving a Document
-------------------------------------------
+Working example
+---------------
 
 .. warning::
 
-    The following snippets are atop :ref:`Quick start`. please visit it to
-    configure the required code.
+    The following snippets assume a working QED installation. Please refer
+    to the :ref:`Quick start` page.
 
-Once we emit the ``DOCUMENT`` can create the event ``F1(DOCUMENT)`` by using
-the content of the file.
+The following snippet simulates the creation of a QED event starting from
+the ``DOCUMENT`` recently emitted. As mentioned before, we are using the
+SHA256 digest of the contents of the file as the output of the mapping
+function ``F1(DOCUMENT)`` to unambiguously identify the document.
 
 .. code:: shell
 
@@ -83,7 +79,8 @@ the content of the file.
     }
     EOF
 
-Push the document event to QED.
+Alongside inserting the document into the storage, we add the event to
+the QED Log.
 
 .. code:: shell
 
@@ -92,7 +89,9 @@ Push the document event to QED.
         add \
         --event "$(cat document_event.json)"
 
-And Finally retrieve and verify the proof.
+
+Finally, we can generate again the QED event to request a membership
+proof from QED Log and verify the proof.
 
 .. code:: shell
 
