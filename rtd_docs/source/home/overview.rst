@@ -5,7 +5,7 @@ What's QED
 ------------
 
 **QED** is an open-source software that allows you to establish
-**trust relations** by leveraging verifiable cryptographic proofs.
+**trust relationships** by leveraging verifiable cryptographic proofs.
 
 In real-life, there are countless scenarios where maintaining a chronological
 record of events and operations is considered as a general principle for
