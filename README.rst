@@ -24,7 +24,7 @@ QED - Scalable, auditable and high-performance tamper-evident log
    :align: center
 
 **QED** is an open-source software that allows you to establish
-**trust relations** by leveraging verifiable cryptographic proofs.
+**trust relationships** by leveraging verifiable cryptographic proofs.
 
 It can be used in multiple scenarios:
 
