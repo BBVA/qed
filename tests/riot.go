@@ -357,6 +357,11 @@ func newAttack(conf Config) {
 		client.SetURLs(conf.Endpoint[0], conf.Endpoint[1:]...),
 		client.SetAPIKey(conf.APIKey),
 		client.SetReadPreference(client.Any),
+		client.SetMaxRetries(1),
+		client.SetTopologyDiscovery(true),
+		client.SetHealthChecks(true),
+		client.SetHealthCheckTimeout(2*time.Second),   // default value
+		client.SetHealthCheckInterval(60*time.Second), // default value
 		client.SetAttemptToReviveEndpoints(true),
 		client.SetHasherFunction(hashing.NewSha256Hasher),
 	)

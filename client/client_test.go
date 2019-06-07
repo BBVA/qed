@@ -105,6 +105,7 @@ func TestCallPrimaryWorking(t *testing.T) {
 	require.Equal(t, 1, numRequests, "The number of requests should match")
 }
 
+// Having 1 single node returning "Internal Server error" make the request fails.
 func TestCallPrimaryFails(t *testing.T) {
 
 	log.SetLogger("TestCallPrimaryFails", log.SILENT)
@@ -134,6 +135,255 @@ func TestCallPrimaryFails(t *testing.T) {
 	require.Error(t, err, "The requests should fail")
 	require.True(t, len(resp) == 0, "The response should be empty")
 	require.Equal(t, 2, numRequests, "The number of requests should match")
+}
+
+// Having 1 single and unreachable node make the request fails.
+func TestCallPrimaryUnreachable(t *testing.T) {
+
+	log.SetLogger("TestCallPrimaryUnreachable", log.INFO)
+
+	var numRequests int
+	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		numRequests++
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(httpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary.foo", "http://secondary1.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(0),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(false),
+	)
+	require.NoError(t, err)
+
+	resp, err := client.callPrimary("GET", "/test", nil)
+	require.Error(t, err, "The requests should fail")
+	require.True(t, len(resp) == 0, "The response should be empty")
+	require.Equal(t, 1, numRequests, "The number of requests should match")
+}
+
+// Having 2 nodes with the primary being unreachable, and there is no
+// "discovery" option enabled, the request fails.
+// Healthchecks (enabled here) does not change primary.
+func TestCallPrimaryUnreachableWithHealthChecks(t *testing.T) {
+
+	log.SetLogger("TestCallPrimaryUnreachableWithHealthChecks", log.SILENT)
+
+	var alreadyRetried bool
+
+	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.Host == "primary1.foo" {
+			if !alreadyRetried {
+				if req.URL.Path == "/healthcheck" {
+					return buildResponse(http.StatusOK, ""), nil
+				}
+				alreadyRetried = true
+			}
+			return nil, errors.New("Unreachable")
+		}
+		if req.Host == "secondary1.foo" {
+			if req.URL.Path == "/healthcheck" {
+				return buildResponse(http.StatusOK, ""), nil
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("OK")),
+				Header:     make(http.Header),
+			}, nil
+		}
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(httpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary1.foo", "http://secondary1.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(0),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(true),
+	)
+	require.NoError(t, err)
+
+	resp, err := client.callPrimary("GET", "/test", nil)
+	require.Error(t, err, "The requests should fail")
+	require.True(t, len(resp) == 0, "The response should be empty")
+}
+
+// Having 2 nodes with the primary being unreachable, and with
+// "discovery" option enabled, there should be a leader election and the
+// request should go to the new primary.
+func TestCallPrimaryUnreachableWithDiscovery(t *testing.T) {
+
+	log.SetLogger("TestCallPrimaryUnreachableWithDiscovery", log.SILENT)
+
+	var numRequests int
+	var alreadyRetried bool
+
+	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.Host == "primary1.foo" {
+			numRequests++
+			if !alreadyRetried {
+				if req.URL.Path == "/info/shards" {
+					info := protocol.Shards{
+						NodeId:    "primary1",
+						LeaderId:  "primary1",
+						URIScheme: "http",
+						Shards: map[string]protocol.ShardDetail{
+							"primary1": protocol.ShardDetail{
+								NodeId:   "primary1",
+								HTTPAddr: "primary1.foo",
+							},
+							"secondary1": protocol.ShardDetail{
+								NodeId:   "secondary1",
+								HTTPAddr: "secondary1.foo",
+							},
+						},
+					}
+					body, _ := json.Marshal(info)
+					return buildResponse(http.StatusOK, string(body)), nil
+				}
+				alreadyRetried = true
+			}
+			return nil, errors.New("Unreachable")
+		}
+		if req.Host == "secondary1.foo" {
+			numRequests++
+			if req.URL.Path == "/info/shards" {
+				info := protocol.Shards{
+					NodeId:    "secondary1",
+					LeaderId:  "secondary1",
+					URIScheme: "http",
+					Shards: map[string]protocol.ShardDetail{
+						"secondary1": protocol.ShardDetail{
+							NodeId:   "secondary1",
+							HTTPAddr: "secondary1.foo",
+						},
+					},
+				}
+				body, _ := json.Marshal(info)
+				return buildResponse(http.StatusOK, string(body)), nil
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("OK")),
+				Header:     make(http.Header),
+			}, nil
+		}
+		numRequests++
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(httpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary1.foo", "http://secondary1.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(0),
+		SetTopologyDiscovery(true),
+		SetHealthChecks(false),
+	)
+	require.NoError(t, err)
+
+	// Mark node as dead after NewHTTPClient to simulate a primary failure.
+	client.topology.primary.MarkAsDead()
+
+	resp, err := client.callPrimary("GET", "/test", nil)
+	require.NoError(t, err, "The requests should not fail")
+	require.True(t, len(resp) > 0, "The response should not be empty")
+	require.Equal(t, 3, numRequests, "The number of requests should match")
+}
+
+// Having 2 nodes with the primary being unreachable, and with
+// "discovery" and "healthcheck" options enabled, there should be a leader election and the
+// request should go to the new primary.
+// Actually HealthCheck does nothing, since the nodes never get recovered in this test.
+func TestCallPrimaryUnreachableWithDiscoveryAndHealtChecks(t *testing.T) {
+
+	log.SetLogger("TestCallPrimaryUnreachableWithDiscoveryAndHealtChecks", log.SILENT)
+
+	var alreadyRetried bool
+
+	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.Host == "primary1.foo" {
+			if !alreadyRetried {
+				if req.URL.Path == "/healthcheck" {
+					alreadyRetried = true // Only 1st healt-check is allowed (httpClient creation)
+					return buildResponse(http.StatusOK, ""), nil
+				}
+				if req.URL.Path == "/info/shards" {
+					info := protocol.Shards{
+						NodeId:    "primary1",
+						LeaderId:  "primary1",
+						URIScheme: "http",
+						Shards: map[string]protocol.ShardDetail{
+							"primary1": protocol.ShardDetail{
+								NodeId:   "primary1",
+								HTTPAddr: "primary1.foo",
+							},
+							"secondary1": protocol.ShardDetail{
+								NodeId:   "secondary1",
+								HTTPAddr: "secondary1.foo",
+							},
+						},
+					}
+					body, _ := json.Marshal(info)
+					return buildResponse(http.StatusOK, string(body)), nil
+				}
+				// alreadyRetried = true
+			}
+			return nil, errors.New("Unreachable")
+		}
+		if req.Host == "secondary1.foo" {
+			if req.URL.Path == "/healthcheck" {
+				return buildResponse(http.StatusOK, ""), nil
+			}
+			if req.URL.Path == "/info/shards" {
+				info := protocol.Shards{
+					NodeId:    "secondary1",
+					LeaderId:  "secondary1",
+					URIScheme: "http",
+					Shards: map[string]protocol.ShardDetail{
+						"secondary1": protocol.ShardDetail{
+							NodeId:   "secondary1",
+							HTTPAddr: "secondary1.foo",
+						},
+					},
+				}
+				body, _ := json.Marshal(info)
+				return buildResponse(http.StatusOK, string(body)), nil
+			}
+
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("OK")),
+				Header:     make(http.Header),
+			}, nil
+		}
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(httpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary1.foo", "http://secondary1.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(0),
+		SetTopologyDiscovery(true),
+		SetHealthChecks(true),
+	)
+	require.NoError(t, err)
+
+	// Mark node as dead after NewHTTPClient to simulate a primary failure.
+	client.topology.primary.MarkAsDead()
+
+	resp, err := client.callPrimary("GET", "/test", nil)
+	require.NoError(t, err, "The requests should not fail")
+	require.True(t, len(resp) > 0, "The response should not be empty")
 }
 
 func TestCallAnyPrimaryFails(t *testing.T) {

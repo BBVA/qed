@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 # Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
 
@@ -14,12 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-echo Cleanup...
-if [ $(uname) == "Darwin" ]; then
-    killall -9 agent || exit 0
-else
-    fuser -k -n tcp 8301 8201 8101 18301 18201 18101 || true
-fi
-sleep 5
+echo Cleaning QED data and logs...
+
+rm -rf /var/tmp/qed*
+
 echo done.
 

@@ -236,26 +236,32 @@ func (c *HTTPClient) callPrimary(method, path string, data []byte) ([]byte, erro
 
 	var endpoint *endpoint
 	var err error
-	var retried bool
+	var discoveryRetried, healthRetried bool
 	for {
 		// we always send POST requests to the primary endpoint
 		endpoint, err = c.topology.Primary()
-		if err != nil {
-			if !retried && c.discoveryEnabled {
-				_ = c.discover()
-				retried = true
+
+		if err == ErrPrimaryDead {
+			if c.healthCheckEnabled && !healthRetried {
+				c.clusterHealthCheck(c.healthCheckTimeout)
+				healthRetried = true
+				continue
+			}
+			healthRetried = true
+		}
+
+		if err == ErrNoPrimary || (err == ErrPrimaryDead && healthRetried) {
+			if c.discoveryEnabled && !discoveryRetried {
+				err = c.discover()
+				discoveryRetried = true
+				if err != nil {
+					return nil, err
+				}
 				continue
 			}
 			return nil, err
 		}
 
-		if !retried && endpoint.IsDead() {
-			if c.healthCheckEnabled {
-				c.clusterHealthCheck(c.healthCheckTimeout)
-			}
-			retried = true
-			continue
-		}
 		break
 	}
 	return c.doReq(method, endpoint, path, data)
@@ -267,6 +273,7 @@ func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 	var retried bool
 	var errTopology, errRequest error
 	var result []byte
+
 	for {
 		// check every endpoint available in a round-robin manner
 		endpoint, errTopology = c.topology.NextReadEndpoint(c.readPreference)
@@ -290,6 +297,7 @@ func (c *HTTPClient) callAny(method, path string, data []byte) ([]byte, error) {
 	if errRequest != nil {
 		return nil, errRequest
 	}
+
 	return result, errTopology
 }
 
@@ -314,8 +322,8 @@ func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data 
 	resp, err := c.retrier.DoReq(req)
 	if err != nil {
 		log.Infof("Request error: %v\n", err)
-		log.Infof("%s is dead\n", endpoint)
 		endpoint.MarkAsDead()
+		log.Infof("%s is dead\n", endpoint)
 		return nil, err
 	}
 
@@ -350,11 +358,11 @@ func (c *HTTPClient) clusterHealthCheck(timeout time.Duration) {
 		endpoint := e
 		// the goroutines execute the health-check HTTP request and sets status
 		go func(endpointURL string) {
+			defer wg.Done()
 
 			// Run a HEAD request against QED with a timeout
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
-			defer wg.Done()
 
 			req, err := http.NewRequest("HEAD", endpointURL+"/healthcheck", nil)
 			if err != nil {
@@ -366,6 +374,7 @@ func (c *HTTPClient) clusterHealthCheck(timeout time.Duration) {
 			if err != nil {
 				log.Infof("%s is dead", endpoint.URL())
 				endpoint.MarkAsDead()
+				return
 			}
 			if resp != nil {
 				status := resp.StatusCode
@@ -380,9 +389,7 @@ func (c *HTTPClient) clusterHealthCheck(timeout time.Duration) {
 				}
 			}
 		}(endpoint.URL())
-
 	}
-
 	wg.Wait()
 }
 
