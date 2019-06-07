@@ -176,14 +176,11 @@ func (b *Balloon) RefreshVersion() error {
 	return nil
 }
 
-func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
+func (b *Balloon) Add(eventDigest hashing.Digest) (*Snapshot, []*storage.Mutation, error) {
 
 	// Get version
 	version := b.version
 	b.version++
-
-	// Hash event
-	eventDigest := b.hasher.Do(event)
 
 	// Update trees
 	var historyDigest hashing.Digest
@@ -221,17 +218,14 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 	return snapshot, mutations, nil
 }
 
-func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, error) {
+func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*storage.Mutation, error) {
 
 	// Get version
 	version := b.version
-	b.version += uint64(len(bulk))
+	b.version += uint64(len(eventBulkDigest))
 
-	var eventBulkDigest []hashing.Digest
 	var eventVersions []uint64
-	for i, event := range bulk {
-		// Hash event
-		eventBulkDigest = append(eventBulkDigest, b.hasher.Do(event))
+	for i, _ := range eventBulkDigest {
 		eventVersions = append(eventVersions, version+uint64(i))
 	}
 
