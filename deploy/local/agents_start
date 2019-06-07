@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+#  Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+if ! which envsubst
+then
+    echo -e "Please install envsubst. OSX -> brew install gettext ; brew link --force gettext"
+    exit 1
+fi
+
+CGO_LDFLAGS_ALLOW='.*'
+QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
+
+# Agent options
+AGENT_CONFIG=()
+AGENT_CONFIG+=('--log debug')
+AGENT_CONFIG+=('--bind-addr 127.0.0.1:810${i}')
+AGENT_CONFIG+=('--metrics-addr 127.0.0.1:1810${i}')
+AGENT_CONFIG+=('--start-join 127.0.0.1:8400')
+
+# Notifier options
+NOTIFIER_CONFIG=()
+NOTIFIER_CONFIG+=('--notifier-endpoint http://127.0.0.1:8888/alert')
+
+# Snapshot store options
+STORE_CONFIG=()
+STORE_CONFIG+=('--store-endpoint http://127.0.0.1:8888')
+
+# Task manager options
+TASKS_CONFIG=()
+TASKS_CONFIG+=("")
+
+# QED client options
+QED_CONFIG=()
+QED_CONFIG+=("--qed-endpoints http://127.0.0.1:8800")
+
+
+MONITOR_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" "${QED_CONFIG[@]}")
+MONITOR_CONFIG+=('--role monitor')
+MONITOR_CONFIG+=('--node-name monitor${i}')
+
+PUBLISHER_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" )
+PUBLISHER_CONFIG+=('--role publisher')
+PUBLISHER_CONFIG+=('--node-name publisher${i}')
+
+AUDITOR_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" "${QED_CONFIG[@]}")
+AUDITOR_CONFIG+=('--role auditor')
+AUDITOR_CONFIG+=('--node-name auditor${i}')
+
+start() {
+	local type="$1"
+	local id="$2"
+
+	case "$type" in
+	"monitor")
+		conf=$(echo "${MONITOR_CONFIG[@]}"| i=$id envsubst )
+		;;
+	"publisher")
+		conf=$(echo "${PUBLISHER_CONFIG[@]}"| i=$id envsubst )
+		;;
+	"auditor")
+		conf=$(echo "${AUDITOR_CONFIG[@]}"| i=$id envsubst )
+		;;
+	*)
+	    echo Unknown agent type. Please choose monitor, publisher or auditor
+	    return -1
+	    ;;
+	esac
+	echo CONFIG $conf
+	mkdir -p /var/tmp/agent-${type}-${id}/ /var/tmp/agents-pids
+	$QED agent ${type} ${conf} > /var/tmp/agent-${type}-${id}/agent.log 2>&1 &
+	echo $! > /var/tmp/agents-pids/qed-${type}-${id}.pid
+	echo -e "\n See agent ${type}-${id} logs at /var/tmp/agent-${type}-${id}/agent.log \n"
+}
+
+count=0
+for agent in "$@"
+do
+	echo Starting "$agent" "$count"
+	start "$agent" "$count"
+	count=$((count+1))
+done
