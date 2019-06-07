@@ -87,7 +87,6 @@ func TestStart(t *testing.T) {
 	})
 
 }
-
 func TestStartCluster(t *testing.T) {
 	b0, a0 := newServerSetup(0, false)
 	b1, a1 := newServerSetup(1, false)
@@ -103,11 +102,11 @@ func TestStartCluster(t *testing.T) {
 
 	let(t, "Start three servers", func(t *testing.T) {
 		err := b0()
-		spec.NoError(t, err, "Error starting node 0")
-		err = b1()
 		spec.NoError(t, err, "Error starting node 1")
-		err = b2()
+		err = b1()
 		spec.NoError(t, err, "Error starting node 2")
+		err = b2()
+		spec.NoError(t, err, "Error starting node 3")
 	})
 
 	let(t, "Check the cluster topology", func(t *testing.T) {
@@ -116,7 +115,7 @@ func TestStartCluster(t *testing.T) {
 		retry(3, 2*time.Second, func() error {
 			var subErr error
 			retry(3, 2*time.Second, func() error {
-				resp, subErr = doReq("GET", "http://localhost:8802/info/shards", "APIKey", nil)
+				resp, subErr = doReq("GET", "http://localhost:8800/info/shards", "APIKey", nil)
 				return subErr
 			})
 			if subErr != nil {
@@ -127,20 +126,21 @@ func TestStartCluster(t *testing.T) {
 				return mainErr
 			}
 
-			buff, mainErr := ioutil.ReadAll(resp.Body)
-			if subErr != nil {
-				return subErr
+			buff, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return err
 			}
 			defer resp.Body.Close()
 
 			m := make(map[string]interface{})
-			mainErr = json.Unmarshal(buff, &m)
-			if mainErr != nil {
+			err = json.Unmarshal(buff, &m)
+			if err != nil {
+				mainErr = fmt.Errorf("error decoding info: %v", err)
 				return mainErr
 			}
-			shards := m["shards"].(map[string]interface{})
-			if len(shards) != 3 {
-				mainErr = fmt.Errorf("not enought shards")
+			shards := len(m["shards"].(map[string]interface{}))
+			if shards != 3 {
+				mainErr = fmt.Errorf("not enought shards: %v", shards)
 				return mainErr
 			}
 			return nil
@@ -148,4 +148,3 @@ func TestStartCluster(t *testing.T) {
 		spec.NoError(t, mainErr, "There should be no error")
 	})
 }
-
