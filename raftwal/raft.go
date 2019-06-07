@@ -95,6 +95,7 @@ type RaftBalloon struct {
 	snapshotsCh chan *protocol.Snapshot // channel to publish snapshots
 
 	metrics *raftBalloonMetrics
+	hasherF func() hashing.Hasher
 }
 
 // NewRaftBalloon returns a new RaftBalloon.
@@ -115,8 +116,11 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, snapshots
 	// 	return nil, fmt.Errorf("cannot create a new rocksdb stable store: %s", err)
 	// }
 
+	// Set hashing function
+	hasherF := hashing.NewSha256Hasher
+
 	// Instantiate balloon FSM
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	fsm, err := NewBalloonFSM(store, hasherF)
 	if err != nil {
 		return nil, fmt.Errorf("new balloon fsm: %s", err)
 	}
@@ -128,6 +132,7 @@ func NewRaftBalloon(path, addr, id string, store storage.ManagedStore, snapshots
 		done:        make(chan struct{}),
 		fsm:         fsm,
 		snapshotsCh: snapshotsCh,
+		hasherF:     hasherF,
 	}
 
 	rb.store.db = store
@@ -368,11 +373,12 @@ func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interf
 
 /*
 	RaftBalloon API implements the Ballon API in the RAFT system
-
 */
-
 func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
-	cmd := &commands.AddEventCommand{Event: event}
+	// Hash events
+	eventHash := b.hasherF().Do(event)
+	// Create and apply command.
+	cmd := &commands.AddEventCommand{Hash: eventHash}
 	resp, err := b.raftApply(commands.AddEventCommandType, cmd)
 	if err != nil {
 		return nil, err
@@ -389,7 +395,13 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 }
 
 func (b *RaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
-	cmd := &commands.AddEventsBulkCommand{Events: bulk}
+	// Hash events
+	var eventHashBulk []hashing.Digest
+	for _, event := range bulk {
+		eventHashBulk = append(eventHashBulk, b.hasherF().Do(event))
+	}
+	// Create and apply command.
+	cmd := &commands.AddEventsBulkCommand{Hashes: eventHashBulk}
 	resp, err := b.raftApply(commands.AddEventsBulkCommandType, cmd)
 	if err != nil {
 		return nil, err
