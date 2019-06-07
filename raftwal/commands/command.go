@@ -19,6 +19,7 @@ package commands
 import (
 	"bytes"
 
+	"github.com/bbva/qed/hashing"
 	"github.com/hashicorp/go-msgpack/codec"
 )
 
@@ -34,11 +35,11 @@ const (
 )
 
 type AddEventCommand struct {
-	Event []byte
+	Hash hashing.Digest
 }
 
 type AddEventsBulkCommand struct {
-	Events [][]byte
+	Hashes []hashing.Digest
 }
 
 type MetadataSetCommand struct {

@@ -202,9 +202,9 @@ func newRaftLog(index, term uint64, command []byte) *raft.Log {
 func newRaftCommand(commandType commands.CommandType, content interface{}) (data []byte) {
 	switch commandType {
 	case commands.AddEventCommandType:
-		data, _ = commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{Event: content.([]byte)})
+		data, _ = commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{Hash: content.(hashing.Digest)})
 	case commands.AddEventsBulkCommandType:
-		data, _ = commands.Encode(commands.AddEventsBulkCommandType, &commands.AddEventsBulkCommand{Events: content.([][]byte)})
+		data, _ = commands.Encode(commands.AddEventsBulkCommandType, &commands.AddEventsBulkCommand{Hashes: content.([]hashing.Digest)})
 	default:
 		data = nil
 	}

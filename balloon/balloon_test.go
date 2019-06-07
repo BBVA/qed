@@ -43,7 +43,7 @@ func TestAdd(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := uint64(0); i < 9; i++ {
-		snapshot, mutations, err := balloon.Add(rand.Bytes(128))
+		snapshot, mutations, err := balloon.Add(hashing.Digest(rand.Bytes(128)))
 		require.NoError(t, err)
 
 		err = store.Mutate(mutations)
@@ -77,7 +77,12 @@ func TestAddBulk(t *testing.T) {
 		[]byte("All's right with the world!"),
 	}
 
-	snapshotBulk, mutations, err := balloon.AddBulk(events)
+	var eventHashes []hashing.Digest
+	for _, event := range events {
+		eventHashes = append(eventHashes, balloon.hasher.Do(event))
+	}
+
+	snapshotBulk, mutations, err := balloon.AddBulk(eventHashes)
 	require.NoError(t, err)
 
 	err = store.Mutate(mutations)
@@ -350,7 +355,7 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 	b.ResetTimer()
 	b.N = 2000000
 	for i := 0; i < b.N; i++ {
-		events := [][]byte{rand.Bytes(128)}
+		events := []hashing.Digest{rand.Bytes(128)}
 		_, mutations, err := balloon.AddBulk(events)
 		require.NoError(b, err)
 		require.NoError(b, store.Mutate(mutations))
