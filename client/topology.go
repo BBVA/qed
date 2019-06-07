@@ -77,6 +77,9 @@ func (t *topology) Primary() (*endpoint, error) {
 	if t.primary == nil {
 		return nil, ErrNoPrimary
 	}
+	if t.primary.IsDead() {
+		return t.primary, ErrPrimaryDead
+	}
 	return t.primary, nil
 }
 

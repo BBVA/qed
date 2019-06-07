@@ -25,6 +25,9 @@ var (
 	// ErrNoPrimary is raised when no QED primary node is available.
 	ErrNoPrimary = errors.New("no QED primary node available")
 
+	// ErrNoPrimary is raised when the current QED primary node is dead.
+	ErrPrimaryDead = errors.New("current QED primary node is dead")
+
 	// ErrRetry is raised when a request cannot be executed after
 	// the configured number of retries.
 	ErrRetry = errors.New("cannot connect after serveral retries")

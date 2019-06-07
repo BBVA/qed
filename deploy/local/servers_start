@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #  Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,17 +32,19 @@ LEADER_CONFIG+=('--node-id server${i}')
 LEADER_CONFIG+=('--private-key-path /var/tmp/qed_ed25519')
 LEADER_CONFIG+=('--raft-addr 127.0.0.1:850${i}')
 LEADER_CONFIG+=('--raft-path /var/tmp/qed${i}/wal')
-LEADER_CONFIG+=('--enable-profiling')
 
 FOLLOWER_CONFIG=("${LEADER_CONFIG[@]}")
-FOLLOWER_CONFIG+=('--raft-addr-join 127.0.0.1:8700')
+FOLLOWER_CONFIG+=('--raft-join-addr 127.0.0.1:8700')
 FOLLOWER_CONFIG+=('--gossip-join-addr 127.0.0.1:8400')
 
-pids=()
+# Port 6060 conflict if followers and leader have the following option enabled.
+LEADER_CONFIG+=('--enable-profiling')
 
-n="$1"
-if [ -z $n ]; then
-	n=0
+# Get num followers.
+followers="$1"
+if [ -z $followers ]; then
+	followers=0
+	echo -e "\n Starting QED standalone \n"
 fi
 
 if ! which envsubst
@@ -51,21 +53,20 @@ then
     exit 1
 fi
 
-mkdir -p /var/tmp/qed-log-0
+# Start leader
+mkdir -p /var/tmp/qed-pids /var/tmp/qed-log-0
 leader=$(echo ${LEADER_CONFIG[@]} | i=0 envsubst )
-$QED server start $leader 2>&1 | tee  /var/tmp/qed-log-0/server.log &
-pids+=($!)
+$QED server start $leader > /var/tmp/qed-log-0/server.log 2>&1 &
+echo $! > /var/tmp/qed-pids/qed-log-0.pid
+echo -e "\n See Qed server logs at /var/tmp/qed-log-0/server.log \n"
 sleep 3s
 
-for id in $(seq 1 1 $n); do
-	mkdir -p /var/tmp/qed${id}
+# Start followers
+for id in $(seq 1 1 $followers); do
+	mkdir -p /var/tmp/qed-log-${id}
 	follower=$(echo ${FOLLOWER_CONFIG[@]} | i=$id envsubst )
-	$QED server start $follower 2>&1 | tee  /var/tmp/qed-log-${id}/server.log &
-	pids+=($!)
+	$QED server start $follower > /var/tmp/qed-log-${id}/server.log 2>&1 &
+	echo $! > /var/tmp/qed-pids/qed-log-${id}.pid
+	echo -e "\n See Qed follower-${id} logs at /var/tmp/qed-log-${id}/server.log \n"
 	sleep 3s
-done
-
-for pid in ${pids[*]}; do
-	echo waiting for pid $pid
-	wait $pid
 done

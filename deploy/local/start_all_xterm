@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #  Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
 export CGO_LDFLAGS_ALLOW='.*'
 xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/testutils/notifierstore.go" &
 
-xterm -hold -e "bash start_server" &
+xterm -hold -e "bash servers_start" &
 
 sleep 3s
 
