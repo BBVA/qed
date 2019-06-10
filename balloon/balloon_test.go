@@ -42,8 +42,11 @@ func TestAdd(t *testing.T) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(t, err)
 
+	hasher := hashing.NewSha256Hasher()
+
 	for i := uint64(0); i < 9; i++ {
-		snapshot, mutations, err := balloon.Add(hashing.Digest(rand.Bytes(128)))
+		eventHash := hasher.Do(rand.Bytes(128))
+		snapshot, mutations, err := balloon.Add(eventHash)
 		require.NoError(t, err)
 
 		err = store.Mutate(mutations)
@@ -66,6 +69,8 @@ func TestAddBulk(t *testing.T) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(t, err)
 
+	hasher := hashing.NewSha256Hasher()
+
 	events := [][]byte{
 		[]byte("The year’s at the spring,"),
 		[]byte("And day's at the morn;"),
@@ -79,7 +84,7 @@ func TestAddBulk(t *testing.T) {
 
 	var eventHashes []hashing.Digest
 	for _, event := range events {
-		eventHashes = append(eventHashes, balloon.hasher.Do(event))
+		eventHashes = append(eventHashes, hasher.Do(event))
 	}
 
 	snapshotBulk, mutations, err := balloon.AddBulk(eventHashes)
@@ -109,6 +114,8 @@ func TestQueryMembershipConsistency(t *testing.T) {
 		{nil, uint64(42), false},
 	}
 
+	hasher := hashing.NewSha256Hasher()
+
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 
@@ -116,7 +123,7 @@ func TestQueryMembershipConsistency(t *testing.T) {
 		require.NoError(t, err)
 
 		if c.key != nil {
-			_, mutations, err := balloon.Add(c.key)
+			_, mutations, err := balloon.Add(hasher.Do(c.key))
 			require.NoErrorf(t, err, "Error adding event %d", i)
 			err = store.Mutate(mutations)
 			require.NoError(t, err)
@@ -151,6 +158,8 @@ func TestQueryMembership(t *testing.T) {
 		{nil, false},
 	}
 
+	hasher := hashing.NewSha256Hasher()
+
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 
@@ -158,7 +167,7 @@ func TestQueryMembership(t *testing.T) {
 		require.NoError(t, err)
 
 		if c.key != nil {
-			_, mutations, err := balloon.Add(c.key)
+			_, mutations, err := balloon.Add(hasher.Do(c.key))
 			require.NoErrorf(t, err, "Error adding event %d", i)
 			err = store.Mutate(mutations)
 			require.NoError(t, err)
@@ -190,6 +199,8 @@ func TestQueryConsistencyProof(t *testing.T) {
 		{uint64(0), uint64(30), uint64(600), false},
 	}
 
+	hasher := hashing.NewFakeXorHasher()
+
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
@@ -197,7 +208,8 @@ func TestQueryConsistencyProof(t *testing.T) {
 		require.NoError(t, err)
 
 		for j := 0; j <= int(c.additions); j++ {
-			_, mutations, err := balloon.Add(util.Uint64AsBytes(uint64(j)))
+			eventHash := hasher.Do(util.Uint64AsBytes(uint64(j)))
+			_, mutations, err := balloon.Add(eventHash)
 			require.NoErrorf(t, err, "Error adding event %d", j)
 			err = store.Mutate(mutations)
 			require.NoError(t, err)
@@ -230,10 +242,11 @@ func TestAddQueryAndVerify(t *testing.T) {
 	b, err := NewBalloon(store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
-	event := hashing.Digest("Never knows best")
+	event := []byte("Never knows best")
+	hasher := hashing.NewSha256Hasher()
 
 	// Add event
-	snapshot, mutations, err := b.Add(event)
+	snapshot, mutations, err := b.Add(hasher.Do(event))
 	require.NoError(t, err)
 	err = store.Mutate(mutations)
 	require.NoError(t, err)
@@ -257,10 +270,13 @@ func TestCacheWarmingUp(t *testing.T) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(t, err)
 
+	hasher := hashing.NewSha256Hasher()
+
 	// add 100 elements
 	var lastSnapshot *Snapshot
 	for i := uint64(0); i < 100; i++ {
-		snapshot, mutations, err := balloon.Add(util.Uint64AsBytes(i))
+		eventHash := hasher.Do(util.Uint64AsBytes(i))
+		snapshot, mutations, err := balloon.Add(eventHash)
 		require.NoError(t, err)
 		lastSnapshot = snapshot
 		err = store.Mutate(mutations)
@@ -322,6 +338,8 @@ func BenchmarkAddRocksDB(b *testing.B) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
+	hasher := hashing.NewSha256Hasher()
+
 	balloonMetrics := metrics_utils.CustomRegister(AddTotal)
 	srvCloseF := metrics_utils.StartMetricsServer(balloonMetrics, store)
 	defer srvCloseF()
@@ -330,7 +348,7 @@ func BenchmarkAddRocksDB(b *testing.B) {
 	b.N = 2000000
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
-		_, mutations, err := balloon.Add(event)
+		_, mutations, err := balloon.Add(hasher.Do(event))
 		require.NoError(b, err)
 		require.NoError(b, store.Mutate(mutations))
 		AddTotal.Inc()
@@ -348,6 +366,8 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
+	hasher := hashing.NewSha256Hasher()
+
 	balloonMetrics := metrics_utils.CustomRegister(AddTotal)
 	srvCloseF := metrics_utils.StartMetricsServer(balloonMetrics, store)
 	defer srvCloseF()
@@ -355,7 +375,7 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 	b.ResetTimer()
 	b.N = 2000000
 	for i := 0; i < b.N; i++ {
-		events := []hashing.Digest{rand.Bytes(128)}
+		events := []hashing.Digest{hasher.Do(rand.Bytes(128))}
 		_, mutations, err := balloon.AddBulk(events)
 		require.NoError(b, err)
 		require.NoError(b, store.Mutate(mutations))
@@ -374,11 +394,14 @@ func BenchmarkQueryRocksDB(b *testing.B) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
+	hasher := hashing.NewSha256Hasher()
+
 	b.N = 1000000
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
+		eventHash := hasher.Do(event)
 		events = append(events, event)
-		_, mutations, _ := balloon.Add(event)
+		_, mutations, _ := balloon.Add(eventHash)
 		_ = store.Mutate(mutations)
 	}
 
@@ -400,11 +423,14 @@ func BenchmarkQueryRocksDBParallel(b *testing.B) {
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
+	hasher := hashing.NewSha256Hasher()
+
 	b.N = 1000000
 	for i := 0; i < b.N; i++ {
 		event := rand.Bytes(128)
+		eventHash := hasher.Do(event)
 		events = append(events, event)
-		_, mutations, _ := balloon.Add(event)
+		_, mutations, _ := balloon.Add(eventHash)
 		_ = store.Mutate(mutations)
 	}
 
