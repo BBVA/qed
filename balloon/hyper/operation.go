@@ -47,7 +47,6 @@ const (
 	collectValueCode
 	collectHashCode
 	getFromPathCode
-	useHashCode
 	noOpCode
 )
 
@@ -189,16 +188,6 @@ func getFromPath(pos position) *operation {
 				log.Fatalf("Oops, something went wrong. Invalid position in audit path")
 			}
 			return hash
-		},
-	}
-}
-
-func useHash(pos position, digest []byte) *operation {
-	return &operation{
-		Code: useHashCode,
-		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			return digest
 		},
 	}
 }

@@ -43,13 +43,6 @@ type Balloon struct {
 	hasher      hashing.Hasher
 }
 
-func min(x, y uint16) uint16 {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// create trees
@@ -66,7 +59,7 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 	}
 
 	// update version
-	balloon.RefreshVersion()
+	_ = balloon.RefreshVersion()
 
 	return balloon, nil
 }
