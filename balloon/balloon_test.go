@@ -349,7 +349,6 @@ func BenchmarkAddRocksDB(b *testing.B) {
 		require.NoError(b, store.Mutate(mutations))
 		AddTotal.Inc()
 	}
-
 }
 
 func BenchmarkAddBulkRocksDB(b *testing.B) {
@@ -376,7 +375,6 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 		require.NoError(b, store.Mutate(mutations))
 		AddTotal.Inc()
 	}
-
 }
 
 func BenchmarkQueryRocksDB(b *testing.B) {
@@ -404,7 +402,6 @@ func BenchmarkQueryRocksDB(b *testing.B) {
 		_, err := balloon.QueryMembershipConsistency(e, uint64(i))
 		require.NoError(b, err)
 	}
-
 }
 
 func BenchmarkQueryRocksDBParallel(b *testing.B) {
@@ -438,5 +435,4 @@ func BenchmarkQueryRocksDBParallel(b *testing.B) {
 			require.NoError(b, err)
 		}
 	})
-
 }
