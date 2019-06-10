@@ -199,12 +199,18 @@ func newRaftLog(index, term uint64, command []byte) *raft.Log {
 	return &raft.Log{Index: index, Term: term, Type: raft.LogCommand, Data: command}
 }
 
+// Content interface: because it can be []uint8 or [][]uint8, depending on "add" or "addbulk".
+// We need to convert both types to "hasing.Digest" or "[]hashing.Digest" respectively.
 func newRaftCommand(commandType commands.CommandType, content interface{}) (data []byte) {
 	switch commandType {
 	case commands.AddEventCommandType:
-		data, _ = commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{Hash: content.(hashing.Digest)})
+		data, _ = commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{Hash: hashing.Digest(content.([]byte))})
 	case commands.AddEventsBulkCommandType:
-		data, _ = commands.Encode(commands.AddEventsBulkCommandType, &commands.AddEventsBulkCommand{Hashes: content.([]hashing.Digest)})
+		var hashes []hashing.Digest
+		for _, c := range content.([][]byte) {
+			hashes = append(hashes, hashing.Digest(c))
+		}
+		data, _ = commands.Encode(commands.AddEventsBulkCommandType, &commands.AddEventsBulkCommand{Hashes: hashes})
 	default:
 		data = nil
 	}
