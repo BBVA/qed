@@ -217,13 +217,8 @@ func (b *Balloon) Add(eventDigest hashing.Digest) (*Snapshot, []*storage.Mutatio
 func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*storage.Mutation, error) {
 
 	// Get version
-	version := b.version
+	initialVersion := b.version
 	b.version += uint64(len(eventBulkDigest))
-
-	var eventVersions []uint64
-	for i, _ := range eventBulkDigest {
-		eventVersions = append(eventVersions, version+uint64(i))
-	}
 
 	// Update trees
 	var historyDigests []hashing.Digest
@@ -233,11 +228,11 @@ func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*sto
 	wg.Add(1)
 
 	go func() {
-		historyDigests, historyMutations, historyErr = b.historyTree.AddBulk(eventBulkDigest, eventVersions)
+		historyDigests, historyMutations, historyErr = b.historyTree.AddBulk(eventBulkDigest, initialVersion)
 		wg.Done()
 	}()
 
-	hyperDigest, mutations, hyperErr := b.hyperTree.AddBulk(eventBulkDigest, eventVersions)
+	hyperDigest, mutations, hyperErr := b.hyperTree.AddBulk(eventBulkDigest, initialVersion)
 
 	wg.Wait()
 
@@ -257,7 +252,7 @@ func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*sto
 			EventDigest:   eventBulkDigest[i],
 			HistoryDigest: historyDigests[i],
 			HyperDigest:   hyperDigest,
-			Version:       eventVersions[i],
+			Version:       initialVersion + uint64(i),
 		})
 	}
 
