@@ -31,7 +31,6 @@ import (
 	"github.com/bbva/qed/crypto"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/server"
-	"github.com/bbva/qed/testutils/keys"
 	"github.com/bbva/qed/testutils/notifierstore"
 	"github.com/bbva/qed/testutils/scope"
 )
@@ -115,8 +114,8 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 	conf.RaftPath = pathDB + "raft"
 	conf.PrivateKeyPath = signPath
 	if tls {
-		conf.SSLCertificate = tlsPath + "/cert.pem"
-		conf.SSLCertificateKey = tlsPath + "/key.pem"
+		conf.SSLCertificate = tlsPath + "/qed_cert.pem"
+		conf.SSLCertificateKey = tlsPath + "/qed_key.pem"
 	}
 	conf.EnableTLS = tls
 
@@ -146,7 +145,7 @@ func newServerSetup(id int, tls bool) (func() error, func() error) {
 			return err
 		}
 		if tls {
-			tlsPath, err = keys.GenerateTlsCert(path)
+			tlsPath, err = crypto.NewTlsCerts(path)
 			if err != nil {
 				return err
 			}
