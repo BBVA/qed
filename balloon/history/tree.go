@@ -56,13 +56,13 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	return rh, visitor.Result(), nil
 }
 
-func (t *HistoryTree) AddBulk(eventDigests []hashing.Digest, versions []uint64) ([]hashing.Digest, []*storage.Mutation, error) {
+func (t *HistoryTree) AddBulk(eventDigests []hashing.Digest, initialVersion uint64) ([]hashing.Digest, []*storage.Mutation, error) {
 
 	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryTable)
 
 	rootHashes := make([]hashing.Digest, 0)
 	for i, e := range eventDigests {
-		rootHashes = append(rootHashes, pruneToInsert(versions[i], e).Accept(visitor))
+		rootHashes = append(rootHashes, pruneToInsert(initialVersion+uint64(i), e).Accept(visitor))
 	}
 
 	return rootHashes, visitor.Result(), nil
