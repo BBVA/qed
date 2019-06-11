@@ -87,6 +87,55 @@ func TestStart(t *testing.T) {
 	})
 
 }
+func TestStartTls(t *testing.T) {
+	before, after := newServerSetup(0, true)
+	let, report := spec.New()
+	defer func() {
+		after()
+		t.Logf(report())
+	}()
+	err := before()
+	spec.NoError(t, err, "Error starting server")
+	let(t, "Test availability of qed server", func(t *testing.T) {
+		let(t, "Query info endpoint", func(t *testing.T) {
+			var resp *http.Response
+			var err error
+			retry(3, 2*time.Second, func() error {
+				resp, err = doReq("GET", "https://localhost:8800/info", "APIKey", nil)
+				return err
+			})
+			spec.NoError(t, err, "Subprocess must not exit with non-zero status")
+			spec.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
+		})
+
+		let(t, "Query to unexpected context", func(t *testing.T) {
+			var resp *http.Response
+			var err error
+			retry(3, 1*time.Second, func() error {
+				resp, err = doReq("GET", "https://localhost:8800/xD", "APIKey", nil)
+				return err
+			})
+			spec.NoError(t, err, "Error getting response from server")
+			spec.Equal(t, resp.StatusCode, http.StatusNotFound, "Server should respond with http status code 404")
+
+		})
+	})
+
+	let(t, "Test availability of metrics server", func(t *testing.T) {
+		let(t, "Query metrics endpoint", func(t *testing.T) {
+			var resp *http.Response
+			var err error
+			retry(3, 1*time.Second, func() error {
+				resp, err = doReq("GET", "http://localhost:8600/metrics", "APIKey", nil)
+				return err
+			})
+			spec.NoError(t, err, "Subprocess must not exit with non-zero status")
+			spec.Equal(t, resp.StatusCode, http.StatusOK, "Server should respond with http status code 200")
+		})
+
+	})
+
+}
 func TestStartCluster(t *testing.T) {
 	b0, a0 := newServerSetup(0, false)
 	b1, a1 := newServerSetup(1, false)
