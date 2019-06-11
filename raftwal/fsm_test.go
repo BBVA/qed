@@ -21,10 +21,12 @@ func TestApplyAdd(t *testing.T) {
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	raftBalloonHasherF := hashing.NewSha256Hasher
+	h := raftBalloonHasherF()
+	fsm, err := NewBalloonFSM(store, raftBalloonHasherF)
 	require.NoError(t, err)
 
-	event := []byte("All's right with the world")
+	event := h.Do([]byte("All's right with the world"))
 	command := newRaftCommand(commands.AddEventCommandType, event)
 
 	tests := []struct {
@@ -50,7 +52,9 @@ func TestApplyAddBulk(t *testing.T) {
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	raftBalloonHasherF := hashing.NewSha256Hasher
+	h := raftBalloonHasherF()
+	fsm, err := NewBalloonFSM(store, raftBalloonHasherF)
 	require.NoError(t, err)
 
 	events := [][]byte{
@@ -63,7 +67,12 @@ func TestApplyAddBulk(t *testing.T) {
 		[]byte("God's in his heaven—"),
 		[]byte("All's right with the world!"),
 	}
-	command := newRaftCommand(commands.AddEventsBulkCommandType, events)
+	var eventDigests []hashing.Digest
+	for _, e := range events {
+		eventDigests = append(eventDigests, h.Do(e))
+	}
+
+	command := newRaftCommand(commands.AddEventsBulkCommandType, eventDigests)
 
 	tests := []struct {
 		log           *raft.Log
@@ -88,10 +97,12 @@ func TestSnapshot(t *testing.T) {
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	raftBalloonHasherF := hashing.NewSha256Hasher
+	h := raftBalloonHasherF()
+	fsm, err := NewBalloonFSM(store, raftBalloonHasherF)
 	require.NoError(t, err)
 
-	command := newRaftCommand(commands.AddEventCommandType, []byte("All's right with the world"))
+	command := newRaftCommand(commands.AddEventCommandType, h.Do([]byte("All's right with the world")))
 	fsm.Apply(newRaftLog(0, 0, command))
 
 	// happy path
@@ -116,7 +127,8 @@ func TestRestore(t *testing.T) {
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	raftBalloonHasherF := hashing.NewSha256Hasher
+	fsm, err := NewBalloonFSM(store, raftBalloonHasherF)
 	require.NoError(t, err)
 
 	require.NoError(t, fsm.Restore(&fakeRC{}))
@@ -129,10 +141,12 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	raftBalloonHasherF := hashing.NewSha256Hasher
+	h := raftBalloonHasherF()
+	fsm, err := NewBalloonFSM(store, raftBalloonHasherF)
 	require.NoError(t, err)
 
-	command := newRaftCommand(commands.AddEventCommandType, []byte("All's right with the world"))
+	command := newRaftCommand(commands.AddEventCommandType, h.Do([]byte("All's right with the world")))
 	fsm.Apply(newRaftLog(0, 0, command))
 
 	fsmsnap, err := fsm.Snapshot()
@@ -162,7 +176,7 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	defer close2F()
 
 	// New FSMStore
-	fsm2, err := NewBalloonFSM(store2, hashing.NewSha256Hasher)
+	fsm2, err := NewBalloonFSM(store2, raftBalloonHasherF)
 	require.NoError(t, err)
 
 	err = fsm2.Restore(r)
@@ -180,14 +194,16 @@ func BenchmarkApplyAdd(b *testing.B) {
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/fsm_bench.db")
 	defer closeF()
 
-	fsm, err := NewBalloonFSM(store, hashing.NewSha256Hasher)
+	raftBalloonHasherF := hashing.NewSha256Hasher
+	h := raftBalloonHasherF()
+	fsm, err := NewBalloonFSM(store, raftBalloonHasherF)
 	defer fsm.Close()
 	require.NoError(b, err)
 
 	b.ResetTimer()
 	b.N = 2000000
 	for i := 0; i < b.N; i++ {
-		command := newRaftCommand(commands.AddEventCommandType, rand.Bytes(128))
+		command := newRaftCommand(commands.AddEventCommandType, h.Do(rand.Bytes(128)))
 		log := newRaftLog(uint64(i), uint64(1), command)
 		resp := fsm.Apply(log)
 		require.NoError(b, resp.(*fsmAddResponse).error)
@@ -199,18 +215,12 @@ func newRaftLog(index, term uint64, command []byte) *raft.Log {
 	return &raft.Log{Index: index, Term: term, Type: raft.LogCommand, Data: command}
 }
 
-// Content interface: because it can be []uint8 or [][]uint8, depending on "add" or "addbulk".
-// We need to convert both types to "hasing.Digest" or "[]hashing.Digest" respectively.
 func newRaftCommand(commandType commands.CommandType, content interface{}) (data []byte) {
 	switch commandType {
 	case commands.AddEventCommandType:
-		data, _ = commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{Hash: hashing.Digest(content.([]byte))})
+		data, _ = commands.Encode(commands.AddEventCommandType, &commands.AddEventCommand{EventDigest: content.(hashing.Digest)})
 	case commands.AddEventsBulkCommandType:
-		var hashes []hashing.Digest
-		for _, c := range content.([][]byte) {
-			hashes = append(hashes, hashing.Digest(c))
-		}
-		data, _ = commands.Encode(commands.AddEventsBulkCommandType, &commands.AddEventsBulkCommand{Hashes: hashes})
+		data, _ = commands.Encode(commands.AddEventsBulkCommandType, &commands.AddEventsBulkCommand{EventDigests: content.([]hashing.Digest)})
 	default:
 		data = nil
 	}

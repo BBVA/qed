@@ -35,11 +35,11 @@ const (
 )
 
 type AddEventCommand struct {
-	Hash hashing.Digest
+	EventDigest hashing.Digest
 }
 
 type AddEventsBulkCommand struct {
-	Hashes []hashing.Digest
+	EventDigests []hashing.Digest
 }
 
 type MetadataSetCommand struct {
