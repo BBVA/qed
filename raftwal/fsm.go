@@ -150,7 +150,7 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 		}
 		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
 		if fsm.state.shouldApply(newState) {
-			return fsm.applyAdd(cmd.Hash, newState)
+			return fsm.applyAdd(cmd.EventDigest, newState)
 		}
 		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 
@@ -160,9 +160,9 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 			return &fsmAddBulkResponse{error: err}
 		}
 		// INFO: after applying a bulk there will be a jump in term version due to balloon version mapping.
-		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + uint64(len(cmd.Hashes)-1)}
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + uint64(len(cmd.EventDigests)-1)}
 		if fsm.state.shouldApply(newState) {
-			return fsm.applyAddBulk(cmd.Hashes, newState)
+			return fsm.applyAddBulk(cmd.EventDigests, newState)
 		}
 		return &fsmAddBulkResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 

@@ -59,7 +59,10 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 	}
 
 	// update version
-	_ = balloon.RefreshVersion()
+	err := balloon.RefreshVersion()
+	if err != nil {
+		return nil, err
+	}
 
 	return balloon, nil
 }

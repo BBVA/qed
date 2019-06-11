@@ -376,9 +376,9 @@ func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interf
 */
 func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	// Hash events
-	eventHash := b.hasherF().Do(event)
+	eventDigest := b.hasherF().Do(event)
 	// Create and apply command.
-	cmd := &commands.AddEventCommand{Hash: eventHash}
+	cmd := &commands.AddEventCommand{EventDigest: eventDigest}
 	resp, err := b.raftApply(commands.AddEventCommandType, cmd)
 	if err != nil {
 		return nil, err
@@ -401,7 +401,7 @@ func (b *RaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
 		eventHashBulk = append(eventHashBulk, b.hasherF().Do(event))
 	}
 	// Create and apply command.
-	cmd := &commands.AddEventsBulkCommand{Hashes: eventHashBulk}
+	cmd := &commands.AddEventsBulkCommand{EventDigests: eventHashBulk}
 	resp, err := b.raftApply(commands.AddEventsBulkCommandType, cmd)
 	if err != nil {
 		return nil, err
