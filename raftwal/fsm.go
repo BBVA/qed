@@ -150,7 +150,7 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 		}
 		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
 		if fsm.state.shouldApply(newState) {
-			return fsm.applyAdd(cmd.Event, newState)
+			return fsm.applyAdd(cmd.EventDigest, newState)
 		}
 		return &fsmAddResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 
@@ -160,9 +160,9 @@ func (fsm *BalloonFSM) Apply(l *raft.Log) interface{} {
 			return &fsmAddBulkResponse{error: err}
 		}
 		// INFO: after applying a bulk there will be a jump in term version due to balloon version mapping.
-		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + uint64(len(cmd.Events)-1)}
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + uint64(len(cmd.EventDigests)-1)}
 		if fsm.state.shouldApply(newState) {
-			return fsm.applyAddBulk(cmd.Events, newState)
+			return fsm.applyAddBulk(cmd.EventDigests, newState)
 		}
 		return &fsmAddBulkResponse{error: fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 
@@ -263,9 +263,9 @@ func (fsm *BalloonFSM) Close() error {
 	return nil
 }
 
-func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
+func (fsm *BalloonFSM) applyAdd(eventHash hashing.Digest, state *fsmState) *fsmAddResponse {
 
-	snapshot, mutations, err := fsm.balloon.Add(event)
+	snapshot, mutations, err := fsm.balloon.Add(eventHash)
 	if err != nil {
 		return &fsmAddResponse{error: err}
 	}
@@ -285,9 +285,9 @@ func (fsm *BalloonFSM) applyAdd(event []byte, state *fsmState) *fsmAddResponse {
 	return &fsmAddResponse{snapshot: snapshot}
 }
 
-func (fsm *BalloonFSM) applyAddBulk(events [][]byte, state *fsmState) *fsmAddBulkResponse {
+func (fsm *BalloonFSM) applyAddBulk(hashes []hashing.Digest, state *fsmState) *fsmAddBulkResponse {
 
-	snapshotBulk, mutations, err := fsm.balloon.AddBulk(events)
+	snapshotBulk, mutations, err := fsm.balloon.AddBulk(hashes)
 	if err != nil {
 		return &fsmAddBulkResponse{error: err}
 	}

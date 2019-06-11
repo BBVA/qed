@@ -43,13 +43,6 @@ type Balloon struct {
 	hasher      hashing.Hasher
 }
 
-func min(x, y uint16) uint16 {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// create trees
@@ -66,7 +59,10 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 	}
 
 	// update version
-	balloon.RefreshVersion()
+	err := balloon.RefreshVersion()
+	if err != nil {
+		return nil, err
+	}
 
 	return balloon, nil
 }
@@ -176,14 +172,11 @@ func (b *Balloon) RefreshVersion() error {
 	return nil
 }
 
-func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
+func (b *Balloon) Add(eventDigest hashing.Digest) (*Snapshot, []*storage.Mutation, error) {
 
 	// Get version
 	version := b.version
 	b.version++
-
-	// Hash event
-	eventDigest := b.hasher.Do(event)
 
 	// Update trees
 	var historyDigest hashing.Digest
@@ -221,19 +214,11 @@ func (b *Balloon) Add(event []byte) (*Snapshot, []*storage.Mutation, error) {
 	return snapshot, mutations, nil
 }
 
-func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, error) {
+func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*storage.Mutation, error) {
 
 	// Get version
-	version := b.version
-	b.version += uint64(len(bulk))
-
-	var eventBulkDigest []hashing.Digest
-	var eventVersions []uint64
-	for i, event := range bulk {
-		// Hash event
-		eventBulkDigest = append(eventBulkDigest, b.hasher.Do(event))
-		eventVersions = append(eventVersions, version+uint64(i))
-	}
+	initialVersion := b.version
+	b.version += uint64(len(eventBulkDigest))
 
 	// Update trees
 	var historyDigests []hashing.Digest
@@ -243,11 +228,11 @@ func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, erro
 	wg.Add(1)
 
 	go func() {
-		historyDigests, historyMutations, historyErr = b.historyTree.AddBulk(eventBulkDigest, eventVersions)
+		historyDigests, historyMutations, historyErr = b.historyTree.AddBulk(eventBulkDigest, initialVersion)
 		wg.Done()
 	}()
 
-	hyperDigest, mutations, hyperErr := b.hyperTree.AddBulk(eventBulkDigest, eventVersions)
+	hyperDigest, mutations, hyperErr := b.hyperTree.AddBulk(eventBulkDigest, initialVersion)
 
 	wg.Wait()
 
@@ -267,7 +252,7 @@ func (b *Balloon) AddBulk(bulk [][]byte) ([]*Snapshot, []*storage.Mutation, erro
 			EventDigest:   eventBulkDigest[i],
 			HistoryDigest: historyDigests[i],
 			HyperDigest:   hyperDigest,
-			Version:       eventVersions[i],
+			Version:       initialVersion + uint64(i),
 		})
 	}
 
