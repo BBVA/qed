@@ -75,14 +75,14 @@ func TestAddBulk(t *testing.T) {
 
 	testCases := []struct {
 		eventDigests     []hashing.Digest
-		versions         []uint64
+		initialVersion   uint64
 		expectedRootHash hashing.Digest
 	}{
 		{
 			[]hashing.Digest{
 				hashing.Digest{0x0},
 			},
-			[]uint64{0},
+			uint64(0),
 			hashing.Digest{0x0},
 		},
 		{
@@ -91,7 +91,7 @@ func TestAddBulk(t *testing.T) {
 				hashing.Digest{0x4}, hashing.Digest{0x5}, hashing.Digest{0x6}, hashing.Digest{0x7},
 				hashing.Digest{0x8}, hashing.Digest{0x9},
 			},
-			[]uint64{0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
+			uint64(0),
 			hashing.Digest{0x1},
 		},
 	}
@@ -102,7 +102,7 @@ func TestAddBulk(t *testing.T) {
 	tree := NewHyperTree(hashing.NewFakeXorHasher, store, cache.NewSimpleCache(10))
 
 	for i, c := range testCases {
-		rootHash, mutations, err := tree.AddBulk(c.eventDigests, c.versions)
+		rootHash, mutations, err := tree.AddBulk(c.eventDigests, c.initialVersion)
 		require.NoErrorf(t, err, "This should not fail in test %d", i)
 		err = tree.store.Mutate(mutations)
 		require.NoErrorf(t, err, "Error inserting mutations in test %d", i)
@@ -158,7 +158,7 @@ func TestConsistencyBetweenAddAndAddBulk(t *testing.T) {
 		}
 
 		// Add Bulk
-		rootHashBulk, mutations, err := addBulkTree.AddBulk(c.eventDigests, c.versions)
+		rootHashBulk, mutations, err := addBulkTree.AddBulk(c.eventDigests, c.versions[0])
 		require.NoErrorf(t, err, "This should not fail in test %d", i)
 		require.NoErrorf(t, addBulkTree.store.Mutate(mutations), "Error inserting mutations in test %d", i)
 
@@ -435,7 +435,7 @@ func BenchmarkAddBulk(b *testing.B) {
 
 	bulkSize := uint64(20)
 	eventDigests := make([]hashing.Digest, bulkSize)
-	versions := make([]uint64, bulkSize)
+	initialVersion := uint64(0)
 
 	b.ResetTimer()
 	b.N = 200000000
@@ -447,10 +447,10 @@ func BenchmarkAddBulk(b *testing.B) {
 		event := append(rand.Bytes(32), index...)
 
 		eventDigests[idx] = hasher.Do(event)
-		versions[idx] = i
 
 		if idx == bulkSize-1 {
-			_, mutations, err := tree.AddBulk(eventDigests, versions)
+			_, mutations, err := tree.AddBulk(eventDigests, initialVersion)
+			initialVersion = i + 1
 			require.NoError(b, err)
 			require.NoError(b, store.Mutate(mutations))
 			AddTotal.Add(float64(bulkSize))
