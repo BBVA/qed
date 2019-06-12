@@ -100,6 +100,12 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 
 	log.SetLogger("publisher", agentConfig.Log)
 
+	// URL parse
+	err := checkPublisherParams(conf)
+	if err != nil {
+		return err
+	}
+
 	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
 	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
@@ -115,6 +121,23 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 
 	agent.Start()
 	util.AwaitTermSignal(agent.Shutdown)
+	return nil
+}
+
+func checkPublisherParams(conf *publisherConfig) error {
+	// URL parse
+	for _, e := range conf.Notifier.Endpoint {
+		err := urlParse(e)
+		if err != nil {
+			return err
+		}
+	}
+	for _, e := range conf.Store.Endpoint {
+		err := urlParse(e)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -148,7 +171,7 @@ func (p publisherFactory) New(ctx context.Context) gossip.Task {
 			_, err := a.Cache.Get(signedSnap.Signature)
 			if err != nil {
 				log.Debugf("PublishingTask: add snapshot to be published")
-				a.Cache.Set(signedSnap.Signature, []byte{0x0}, 0)
+				_ = a.Cache.Set(signedSnap.Signature, []byte{0x0}, 0)
 				batch.Snapshots = append(batch.Snapshots, signedSnap)
 			}
 		}

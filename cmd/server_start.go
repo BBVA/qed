@@ -29,7 +29,7 @@ import (
 
 var serverStart *cobra.Command = &cobra.Command{
 	Use:   "start",
-	Short: "Stars  QED log service",
+	Short: "Stars QED Log service",
 	Run:   runServerStart,
 }
 
@@ -70,4 +70,3 @@ func runServerStart(cmd *cobra.Command, args []string) {
 	log.Debug("Stopping server, about to exit...")
 
 }
-
