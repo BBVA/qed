@@ -36,11 +36,32 @@ three agents into the distribution:
 	  throught the  gossip network
 	* Publisher agent: publish snapshots to the snapshot store`,
 	TraverseChildren: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// URL parsing
+		var err error
+		advertiseAddress, _ := cmd.Flags().GetString("advertise-addr")
+		bindAddress, _ := cmd.Flags().GetString("bind-addr")
+		gossipStartJoin, _ := cmd.Flags().GetStringSlice("start-join")
+		for _, e := range gossipStartJoin {
+			err = urlParse(e)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = urlParse(advertiseAddress)
+		if err != nil {
+			return err
+		}
+
+		return urlParse(bindAddress)
+	},
 }
 
-var agentCtx context.Context = configAgent()
+var agentCtx context.Context
 
 func init() {
+	agentCtx = configAgent()
 	agentCmd.SilenceUsage = true
 	agentCmd.MarkFlagRequired("bind-addr")
 	agentCmd.MarkFlagRequired("metrics-addr")

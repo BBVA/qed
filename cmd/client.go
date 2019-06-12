@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
@@ -30,11 +31,26 @@ var clientCmd *cobra.Command = &cobra.Command{
 	Use:              "client",
 	Short:            "Provdes access to the QED log client",
 	TraverseChildren: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// URL parsing
+		snapshotStoreURL, _ := cmd.Flags().GetString("snapshot-store-url")
+		endpoints, _ := cmd.Flags().GetStringSlice("endpoints")
+		fmt.Println(snapshotStoreURL, endpoints)
+		for _, e := range endpoints {
+			err := urlParse(e)
+			if err != nil {
+				return err
+			}
+		}
+
+		return urlParse(snapshotStoreURL)
+	},
 }
 
-var clientCtx context.Context = configClient()
+var clientCtx context.Context
 
 func init() {
+	clientCtx = configClient()
 	Root.AddCommand(clientCmd)
 }
 
@@ -46,6 +62,5 @@ func configClient() context.Context {
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
-
 	return context.WithValue(Ctx, k("client.config"), conf)
 }
