@@ -80,17 +80,21 @@ func runServerStart(cmd *cobra.Command, args []string) error {
 
 func checkServerParams(conf *server.Config) error {
 	var err error
+
 	err = urlParseNoSchemaRequired(conf.GossipAddr, conf.HTTPAddr, conf.MetricsAddr, conf.MgmtAddr, conf.ProfilingAddr, conf.RaftAddr)
 	if err != nil {
 		return err
 	}
+
 	err = urlParseNoSchemaRequired(conf.GossipJoinAddr...)
 	if err != nil {
 		return err
 	}
+
 	err = urlParseNoSchemaRequired(conf.RaftJoinAddr...)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

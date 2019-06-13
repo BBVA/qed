@@ -53,20 +53,18 @@ func configClient() context.Context {
 
 func runClient(cmd *cobra.Command, args []string) error {
 	var err error
-	// URL parsing
-	snapshotStoreURL, err := cmd.Flags().GetString("snapshot-store-url")
-	if err != nil {
-		return err
-	}
-	endpoints, err := cmd.Flags().GetStringSlice("endpoints")
-	if err != nil {
-		return err
-	}
 
+	endpoints, _ := cmd.Flags().GetStringSlice("endpoints")
 	err = urlParse(endpoints...)
 	if err != nil {
 		return err
 	}
 
-	return urlParse(snapshotStoreURL)
+	snapshotStoreURL, _ := cmd.Flags().GetString("snapshot-store-url")
+	err = urlParse(snapshotStoreURL)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
