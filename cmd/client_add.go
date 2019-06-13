@@ -78,8 +78,8 @@ func runClientAdd(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("\nReceived snapshot with values:\n\n")
 	fmt.Printf(" EventDigest: %x\n", snapshot.EventDigest)
-	fmt.Printf(" HyperDigest: %x\n", snapshot.HyperDigest)
 	fmt.Printf(" HistoryDigest: %x\n", snapshot.HistoryDigest)
+	fmt.Printf(" HyperDigest: %x\n", snapshot.HyperDigest)
 	fmt.Printf(" Version: %d\n\n", snapshot.Version)
 
 	return nil
