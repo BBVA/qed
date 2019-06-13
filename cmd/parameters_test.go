@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,30 +28,34 @@ func TestUrlParse(t *testing.T) {
 
 	testCases := []struct {
 		endpoints     []string
-		expectedError error
+		expectedError string
 	}{
 		{
 			endpoints:     []string{"http://localhost", "http://localhost:8080", "https://127.0.0.1", "https://127.0.0.1:8080"},
-			expectedError: nil,
+			expectedError: "",
 		},
 		{
 			endpoints:     []string{"localhost", "127.0.0.1", "http//localhost"},
-			expectedError: errors.New(errMissingURLScheme),
+			expectedError: errMissingURLScheme,
 		},
 		{
 			endpoints:     []string{"http://", "https:/localhost", "http://:8080", "localhost:8080"},
-			expectedError: errors.New(errMissingURLHost),
+			expectedError: errMissingURLHost,
 		},
 		{
 			endpoints:     []string{"127.0.0.1:8080"},
-			expectedError: errors.New(errMalformedURL),
+			expectedError: errMalformedURL,
 		},
 	}
 
 	for _, c := range testCases {
 		for _, e := range c.endpoints {
 			err := urlParse(e)
-			require.Equal(t, err, c.expectedError, "Errors do not match")
+			if c.expectedError == "" {
+				require.NoError(t, err, "Unexpected error")
+				break
+			}
+			require.Equal(t, err, errors.New(fmt.Sprintf("%s in %s.", c.expectedError, e)), "Errors do not match")
 		}
 	}
 }
@@ -59,26 +64,30 @@ func TestUrlParseNoSchemaRequired(t *testing.T) {
 
 	testCases := []struct {
 		endpoints     []string
-		expectedError error
+		expectedError string
 	}{
 		{
 			endpoints:     []string{"localhost", "localhost:8080", "127.0.0.1", "127.0.0.1:8080"},
-			expectedError: nil,
+			expectedError: "",
 		},
 		{
 			endpoints:     []string{""},
-			expectedError: errors.New(errMissingURLHost),
+			expectedError: errMissingURLHost,
 		},
 		{
 			endpoints:     []string{"http://localhost:8080"},
-			expectedError: errors.New(errUnexpectedScheme),
+			expectedError: errUnexpectedScheme,
 		},
 	}
 
 	for _, c := range testCases {
 		for _, e := range c.endpoints {
 			err := urlParseNoSchemaRequired(e)
-			require.Equal(t, err, c.expectedError, "Errors do not match")
+			if c.expectedError == "" {
+				require.NoError(t, err, "Unexpected error")
+				break
+			}
+			require.Equal(t, err, errors.New(fmt.Sprintf("%s in %s.", c.expectedError, e)), "Errors do not match")
 		}
 	}
 }
