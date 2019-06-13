@@ -20,44 +20,53 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 )
 
 const (
 	errMalformedURL     = "Malformed URL"
 	errMissingURLScheme = "Missing URL Scheme"
 	errMissingURLHost   = "Missing URL Host"
+	errUnexpectedScheme = "Unexpected URL Scheme"
 )
 
-func urlParse(endpoint string) error {
-	url, err := url.Parse(endpoint)
+func urlParse(endpoints ...string) error {
+	for _, endpoint := range endpoints {
+		url, err := url.Parse(endpoint)
 
-	if err != nil {
-		return errors.New(fmt.Sprintf("%s", errMalformedURL))
+		if err != nil {
+			return errors.New(fmt.Sprintf("%s", errMalformedURL))
+		}
+
+		if url.Scheme == "" {
+			return errors.New(errMissingURLScheme)
+		}
+
+		if url.Hostname() == "" {
+			return errors.New(errMissingURLHost)
+		}
 	}
-
-	if url.Scheme == "" {
-		fmt.Printf("%s in %s\n", errMissingURLScheme, endpoint)
-		return errors.New(errMissingURLScheme)
-	}
-
-	if url.Hostname() == "" {
-		return errors.New(errMissingURLHost)
-	}
-
 	return nil
 }
 
-func urlParseNoSchemaRequired(endpoint string) error {
-	endpoint = "http://" + endpoint
-	url, err := url.Parse(endpoint)
+func urlParseNoSchemaRequired(endpoints ...string) error {
+	for _, endpoint := range endpoints {
 
-	if err != nil {
-		return errors.New(errMalformedURL)
+		if strings.Index(endpoint, "://") != -1 {
+			return errors.New(errUnexpectedScheme)
+		}
+
+		// Add fake scheme to get an expected result from url.Parse
+		endpoint = "http://" + endpoint
+		url, err := url.Parse(endpoint)
+
+		if err != nil {
+			return errors.New(errMalformedURL)
+		}
+
+		if url.Hostname() == "" {
+			return errors.New(errMissingURLHost)
+		}
 	}
-
-	if url.Hostname() == "" {
-		return errors.New(errMissingURLHost)
-	}
-
 	return nil
 }

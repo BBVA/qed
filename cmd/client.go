@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
@@ -35,12 +34,10 @@ var clientCmd *cobra.Command = &cobra.Command{
 		// URL parsing
 		snapshotStoreURL, _ := cmd.Flags().GetString("snapshot-store-url")
 		endpoints, _ := cmd.Flags().GetStringSlice("endpoints")
-		fmt.Println(snapshotStoreURL, endpoints)
-		for _, e := range endpoints {
-			err := urlParse(e)
-			if err != nil {
-				return err
-			}
+
+		err := urlParse(endpoints...)
+		if err != nil {
+			return err
 		}
 
 		return urlParse(snapshotStoreURL)
