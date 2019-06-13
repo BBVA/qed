@@ -35,12 +35,14 @@ three agents into the distribution:
 	* Auditor agent: verifies QED membership proofs of the snapshots received
 	  throught the  gossip network
 	* Publisher agent: publish snapshots to the snapshot store`,
-	TraverseChildren: true,
+	TraverseChildren:  true,
+	PersistentPreRunE: runAgent,
 }
 
-var agentCtx context.Context = configAgent()
+var agentCtx context.Context
 
 func init() {
+	agentCtx = configAgent()
 	agentCmd.SilenceUsage = true
 	agentCmd.MarkFlagRequired("bind-addr")
 	agentCmd.MarkFlagRequired("metrics-addr")
@@ -58,4 +60,29 @@ func configAgent() context.Context {
 	}
 
 	return context.WithValue(Ctx, k("agent.config"), conf)
+}
+
+func runAgent(cmd *cobra.Command, args []string) error {
+	// URL parsing
+	var err error
+
+	gossipStartJoin, _ := cmd.Flags().GetStringSlice("start-join")
+	err = urlParse(gossipStartJoin...)
+	if err != nil {
+		return err
+	}
+
+	bindAddress, _ := cmd.Flags().GetString("bind-addr")
+	err = urlParseNoSchemaRequired(bindAddress)
+	if err != nil {
+		return err
+	}
+
+	advertiseAddress, _ := cmd.Flags().GetString("advertise-addr")
+	err = urlParse(advertiseAddress)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
