@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-// Package cli implements the command line commands qed and server.
+// Package cmd implements the command line commands qed and server.
 package cmd
 
 import (

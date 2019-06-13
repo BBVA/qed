@@ -65,10 +65,10 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 // The following statuses are expected:
 // If everything is alright, the HTTP status is 201 and the body contains:
 //   {
-//     "HyperDigest": "mHzXvSE/j7eFmNObvC7PdtQTmd4W0q/FPHmiYEjL0eM=",
-//     "HistoryDigest": "Kpbn+7P4XrZi2hKpdhA7freUicZdUsU6GqmUk0vDJ8A=",
-//     "Version": 1,
-//     "Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
+//     "EventDigest":   "5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b",
+//     "HistoryDigest": "b8fdd4b2146fe560f94d7a48f8bb3eaf6938f7de6ac6d05bbe033787d8b71846",
+//     "HyperDigest":   "6a050f12acfc22989a7681f901a68ace8a9a3672428f8a877f4d21568123a0cb",
+//     "Version": 0
 //   }
 func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -116,16 +116,16 @@ func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
 // If everything is alright, the HTTP status is 201 and the body contains:
 //   [
 //		{
-//			"HyperDigest": "mHzXvSE/j7eFmNObvC7PdtQTmd4W0q/FPHmiYEjL0eM=",
-//			"HistoryDigest": "Kpbn+7P4XrZi2hKpdhA7freUicZdUsU6GqmUk0vDJ8A=",
-//			"Version": 1,
-//			"Event": "VGhpcyBpcyBteSBmaXJzdCBldmVudA=="
+//     		"EventDigest":   "5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b",
+//     		"HistoryDigest": "b8fdd4b2146fe560f94d7a48f8bb3eaf6938f7de6ac6d05bbe033787d8b71846",
+//     		"HyperDigest":   "6a050f12acfc22989a7681f901a68ace8a9a3672428f8a877f4d21568123a0cb",
+//     		"Version": 0
 //		},
 //		{
-//			"HyperDigest": "mHzXvSE/j7eFmNObvC7PdtQTmd4W0q/FPHmiYEjL0eM=",
-//			"HistoryDigest": "reUicZdUsU6GqmUk0vDJ8A=Kpbn+7P4XrZi2hKpdhA7f",
-//			"Version": 2,
-//			"Event": "pcyBteSBmaXJzdCBldmVudAVGhpcyB=="
+//     		"EventDigest":   "5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b",
+//     		"HistoryDigest": "4f95cd9fd828abe86b092e506bbffd4662d9431c5755d68eed1ba5e5156fdb13",
+//     		"HyperDigest":   "7bd6cee5eb0b92801ed4ce58c54a76907221bb4e056165679977b16487e5f015",
+//     		"Version": 1
 //		},
 //		...
 //	]
@@ -166,19 +166,20 @@ func AddBulk(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	}
 }
 
-// Membership returns a membershipProof from the system
+// Membership returns the membership proof for a given event
 // The http post url is:
 //   POST /proofs/membership
 //
 // The following statuses are expected:
-// If everything is alright, the HTTP status is 201 and the body contains:
+// If everything is alright, the HTTP status is 200 and the body contains:
 //   {
-//     "key": "TG9yZW0gaXBzdW0gZGF0dW0gbm9uIGNvcnJ1cHR1bSBlc3QK",
-//     "keyDigest": "NDRkMmY3MjEzYjlhMTI4ZWRhZjQzNWFhNjcyMzUxMGE0YTRhOGY5OWEzOWNiYTVhN2FhMWI5OWEwYTlkYzE2NCAgLQo=",
-//     "isMember": "true",
-//     "proofs": ["<truncated for clarity in docs>"],
-//     "queryVersion": "1",
-//     "actualVersion": "2",
+// 		"Exists": 			true,
+// 		"HyperProof":		"<truncated for clarity in docs>"],
+// 		"HistoryProof":		"<truncated for clarity in docs>"],
+// 		"CurrentVersion":	3,
+// 		"QueryVersion": 	3,
+// 		"ActualVersion":	0,
+// 		"KeyDigest":		"5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b"
 //   }
 func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -227,7 +228,7 @@ func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	}
 }
 
-// DigestMembership returns a membershipProof from the system
+// DigestMembership returns the membership proof for a given event digest
 // The http post url is:
 //   POST /proofs/digest-membership
 //
@@ -235,14 +236,15 @@ func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 // with the keyDigest which is the digest of the event.
 //
 // The following statuses are expected:
-// If everything is alright, the HTTP status is 201 and the body contains:
+// If everything is alright, the HTTP status is 200 and the body contains:
 //   {
-//     "key": "TG9yZW0gaXBzdW0gZGF0dW0gbm9uIGNvcnJ1cHR1bSBlc3QK",
-//     "keyDigest": "NDRkMmY3MjEzYjlhMTI4ZWRhZjQzNWFhNjcyMzUxMGE0YTRhOGY5OWEzOWNiYTVhN2FhMWI5OWEwYTlkYzE2NCAgLQo=",
-//     "isMember": "true",
-//     "proofs": ["<truncated for clarity in docs>"],
-//     "queryVersion": "1",
-//     "actualVersion": "2",
+// 		"Exists": 			true,
+// 		"HyperProof":		"<truncated for clarity in docs>"],
+// 		"HistoryProof":		"<truncated for clarity in docs>"],
+// 		"CurrentVersion":	3,
+// 		"QueryVersion": 	3,
+// 		"ActualVersion":	0,
+// 		"KeyDigest":		"5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b"
 //   }
 func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -292,16 +294,16 @@ func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	}
 }
 
-// Incremental returns an incrementalProof from the system
+// Incremental returns an incremental proof for between initial and end events
 // The http post url is:
 //   POST /proofs/incremental
 //
 // The following statuses are expected:
-// If everything is alright, the HTTP status is 201 and the body contains:
+// If everything is alright, the HTTP status is 200 and the body contains:
 //   {
-//     "start": "2",
-//     "end": "8",
-//     "auditPath": ["<truncated for clarity in docs>"]
+//     "Start": "2",
+//     "End": "8",
+//     "AuditPath": ["<truncated for clarity in docs>"]
 //   }
 func Incremental(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -340,9 +342,9 @@ func Incremental(api raftwal.RaftBalloonApi) http.HandlerFunc {
 }
 
 // AuthHandlerMiddleware function is an HTTP handler wrapper that performs
-// simple authorization tasks. Currently only checks that Api-Key it's present.
+// simple authorization tasks. Currently only checks that Api-Key is present.
 //
-// If not present will raise a `http.StatusUnauthorized` errror.
+// If Api-Key is not present, it will raise a `http.StatusUnauthorized` errror.
 func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -357,9 +359,13 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 }
 
 // NewApiHttp returns a new *http.ServeMux containing the current API handlers.
-//	/health-check -> HealthCheckHandler
-//	/events -> Add
-//	/proofs/membership -> Membership
+//	/events -> Add event operation
+//	/events/bulk -> Add event bulk operation
+//	/health-check -> Qed server healthcheck
+//	/info/shards -> Qed cluster information
+//	/proofs/membership -> Membership query using event
+//	/proofs/digest-membership -> Membership query using event digest
+//	/proofs/incremental -> Incremental query
 func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 
 	api := http.NewServeMux()
@@ -412,6 +418,27 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 	}
 }
 
+// InfoShardsHandler returns information about QED shards.
+// The http post url is:
+//   GET /info/shards
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 200 and the body contains:
+//   {
+//		"NodeId":    "node01",
+//		"LeaderId":  "node01",
+// 		"URIScheme": "http",
+// 		"Shards":   {
+//			{
+// 				"NodeId":   "node01",
+// 				"HTTPAddr": "http://127.0.0.1:8800"
+//			},
+//			{
+// 				"NodeId":   "node02",
+// 				"HTTPAddr": "http://127.0.0.1:8801"
+// 			}
+//		}
+//   }
 func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
@@ -455,6 +482,7 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	}
 }
 
+// PostReqSanitizer function checks that certain request info exists and it is correct.
 func PostReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request, error) {
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
