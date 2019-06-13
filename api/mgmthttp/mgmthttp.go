@@ -14,6 +14,7 @@
    limitations under the License.
 */
 
+// Package mgmthttp implements the Raft management HTTP API public interface.
 package mgmthttp
 
 import (
@@ -25,8 +26,7 @@ import (
 )
 
 // NewMgmtHttp will return a mux server with the endpoint required to
-// tamper the server. it's a internal debug implementation. Running a server
-// with this enabled will run useless the qed server.
+// join the raft cluster.
 func NewMgmtHttp(raftBalloon raftwal.RaftBalloonApi) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/join", joinHandle(raftBalloon))
