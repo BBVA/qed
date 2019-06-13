@@ -114,21 +114,21 @@ func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //
 // The following statuses are expected:
 // If everything is alright, the HTTP status is 201 and the body contains:
-//   [
-//		{
-//     		"EventDigest":   "5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b",
-//     		"HistoryDigest": "b8fdd4b2146fe560f94d7a48f8bb3eaf6938f7de6ac6d05bbe033787d8b71846",
-//     		"HyperDigest":   "6a050f12acfc22989a7681f901a68ace8a9a3672428f8a877f4d21568123a0cb",
-//     		"Version": 0
-//		},
-//		{
-//     		"EventDigest":   "5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b",
-//     		"HistoryDigest": "4f95cd9fd828abe86b092e506bbffd4662d9431c5755d68eed1ba5e5156fdb13",
-//     		"HyperDigest":   "7bd6cee5eb0b92801ed4ce58c54a76907221bb4e056165679977b16487e5f015",
-//     		"Version": 1
-//		},
-//		...
-//	]
+// [
+//  {
+//    "EventDigest":   "5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b",
+//    "HistoryDigest": "b8fdd4b2146fe560f94d7a48f8bb3eaf6938f7de6ac6d05bbe033787d8b71846",
+//    "HyperDigest":   "6a050f12acfc22989a7681f901a68ace8a9a3672428f8a877f4d21568123a0cb",
+//    "Version": 0
+//  },
+//  {
+//    "EventDigest":   "5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b",
+//    "HistoryDigest": "4f95cd9fd828abe86b092e506bbffd4662d9431c5755d68eed1ba5e5156fdb13",
+//    "HyperDigest":   "7bd6cee5eb0b92801ed4ce58c54a76907221bb4e056165679977b16487e5f015",
+//    "Version": 1
+//	},
+//	...
+// ]
 func AddBulk(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
@@ -172,15 +172,15 @@ func AddBulk(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //
 // The following statuses are expected:
 // If everything is alright, the HTTP status is 200 and the body contains:
-//   {
-// 		"Exists": 			true,
-// 		"HyperProof":		"<truncated for clarity in docs>"],
-// 		"HistoryProof":		"<truncated for clarity in docs>"],
-// 		"CurrentVersion":	3,
-// 		"QueryVersion": 	3,
-// 		"ActualVersion":	0,
-// 		"KeyDigest":		"5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b"
-//   }
+// {
+// 	"Exists":           true,
+// 	"HyperProof":		"<truncated for clarity in docs>"],
+// 	"HistoryProof":		"<truncated for clarity in docs>"],
+// 	"CurrentVersion":	3,
+// 	"QueryVersion": 	3,
+//  "ActualVersion":	0,
+// 	"KeyDigest":		"5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b"
+// }
 func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var proof *balloon.MembershipProof
@@ -237,15 +237,15 @@ func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //
 // The following statuses are expected:
 // If everything is alright, the HTTP status is 200 and the body contains:
-//   {
-// 		"Exists": 			true,
-// 		"HyperProof":		"<truncated for clarity in docs>"],
-// 		"HistoryProof":		"<truncated for clarity in docs>"],
-// 		"CurrentVersion":	3,
-// 		"QueryVersion": 	3,
-// 		"ActualVersion":	0,
-// 		"KeyDigest":		"5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b"
-//   }
+// {
+//  "Exists": 			true,
+//  "HyperProof":		"<truncated for clarity in docs>"],
+//  "HistoryProof":		"<truncated for clarity in docs>"],
+//  "CurrentVersion":	3,
+//  "QueryVersion": 	3,
+//  "ActualVersion":	0,
+//  "KeyDigest":		"5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b"
+// }
 func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var proof *balloon.MembershipProof
@@ -424,21 +424,21 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 //
 // The following statuses are expected:
 // If everything is alright, the HTTP status is 200 and the body contains:
-//   {
-//		"NodeId":    "node01",
-//		"LeaderId":  "node01",
-// 		"URIScheme": "http",
-// 		"Shards":   {
-//			{
-// 				"NodeId":   "node01",
-// 				"HTTPAddr": "http://127.0.0.1:8800"
-//			},
-//			{
-// 				"NodeId":   "node02",
-// 				"HTTPAddr": "http://127.0.0.1:8801"
-// 			}
-//		}
+// {
+//  "NodeId":    "node01",
+//  "LeaderId":  "node01",
+//  "URIScheme": "http",
+//  "Shards": {
+//    {
+// 	    "NodeId":   "node01",
+// 		"HTTPAddr": "http://127.0.0.1:8800"
+//    },
+//    {
+//      "NodeId":   "node02",
+// 	    "HTTPAddr": "http://127.0.0.1:8801"
+//    }
 //   }
+// }
 func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
