@@ -53,7 +53,7 @@ func TestUrlParse(t *testing.T) {
 			err := urlParse(e)
 			if c.expectedError == "" {
 				require.NoError(t, err, "Unexpected error")
-				break
+				continue
 			}
 			require.Equal(t, err, errors.New(fmt.Sprintf("%s in %s.", c.expectedError, e)), "Errors do not match")
 		}
@@ -67,15 +67,19 @@ func TestUrlParseNoSchemaRequired(t *testing.T) {
 		expectedError string
 	}{
 		{
-			endpoints:     []string{"localhost", "localhost:8080", "127.0.0.1", "127.0.0.1:8080"},
+			endpoints:     []string{"localhost:8080", "127.0.0.1:8080"},
 			expectedError: "",
+		},
+		{
+			endpoints:     []string{"localhost", "127.0.0.1"},
+			expectedError: errMissingURLPort,
 		},
 		{
 			endpoints:     []string{""},
 			expectedError: errMissingURLHost,
 		},
 		{
-			endpoints:     []string{"http://localhost:8080"},
+			endpoints:     []string{"http://localhost:8080", "http://localhost", "https://127.0.0.1:8080", "https://127.0.0.1"},
 			expectedError: errUnexpectedScheme,
 		},
 	}
@@ -85,7 +89,7 @@ func TestUrlParseNoSchemaRequired(t *testing.T) {
 			err := urlParseNoSchemaRequired(e)
 			if c.expectedError == "" {
 				require.NoError(t, err, "Unexpected error")
-				break
+				continue
 			}
 			require.Equal(t, err, errors.New(fmt.Sprintf("%s in %s.", c.expectedError, e)), "Errors do not match")
 		}
