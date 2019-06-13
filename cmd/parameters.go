@@ -35,15 +35,15 @@ func urlParse(endpoints ...string) error {
 		url, err := url.Parse(endpoint)
 
 		if err != nil {
-			return errors.New(fmt.Sprintf("%s", errMalformedURL))
+			return errors.New(fmt.Sprintf("%s in %s.", errMalformedURL, endpoint))
 		}
 
 		if url.Scheme == "" {
-			return errors.New(errMissingURLScheme)
+			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLScheme, endpoint))
 		}
 
 		if url.Hostname() == "" {
-			return errors.New(errMissingURLHost)
+			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLHost, endpoint))
 		}
 	}
 	return nil
@@ -53,19 +53,19 @@ func urlParseNoSchemaRequired(endpoints ...string) error {
 	for _, endpoint := range endpoints {
 
 		if strings.Index(endpoint, "://") != -1 {
-			return errors.New(errUnexpectedScheme)
+			return errors.New(fmt.Sprintf("%s in %s.", errUnexpectedScheme, endpoint))
 		}
 
 		// Add fake scheme to get an expected result from url.Parse
-		endpoint = "http://" + endpoint
-		url, err := url.Parse(endpoint)
+		newEndpoint := "http://" + endpoint
+		url, err := url.Parse(newEndpoint)
 
 		if err != nil {
-			return errors.New(errMalformedURL)
+			return errors.New(fmt.Sprintf("%s in %s.", errMalformedURL, endpoint))
 		}
 
 		if url.Hostname() == "" {
-			return errors.New(errMissingURLHost)
+			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLHost, endpoint))
 		}
 	}
 	return nil
