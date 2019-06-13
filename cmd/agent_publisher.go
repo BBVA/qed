@@ -125,18 +125,15 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 }
 
 func checkPublisherParams(conf *publisherConfig) error {
-	// URL parse
-	for _, e := range conf.Notifier.Endpoint {
-		err := urlParse(e)
-		if err != nil {
-			return err
-		}
+	var err error
+	err = urlParse(conf.Notifier.Endpoint...)
+	if err != nil {
+		return err
 	}
-	for _, e := range conf.Store.Endpoint {
-		err := urlParse(e)
-		if err != nil {
-			return err
-		}
+
+	err = urlParse(conf.Store.Endpoint...)
+	if err != nil {
+		return err
 	}
 	return nil
 }
