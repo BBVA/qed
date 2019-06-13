@@ -118,6 +118,12 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 
 	log.SetLogger("monitor", agentConfig.Log)
 
+	// URL parse
+	err := checkMonitorParams(conf)
+	if err != nil {
+		return err
+	}
+
 	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
@@ -143,6 +149,25 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 	QedMonitorInstancesCount.Inc()
 
 	util.AwaitTermSignal(agent.Shutdown)
+	return nil
+}
+
+func checkMonitorParams(conf *monitorConfig) error {
+	var err error
+	err = urlParse(conf.Notifier.Endpoint...)
+	if err != nil {
+		return err
+	}
+
+	err = urlParse(conf.Store.Endpoint...)
+	if err != nil {
+		return err
+	}
+
+	err = urlParse(conf.Qed.Endpoints...)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

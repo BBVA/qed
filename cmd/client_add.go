@@ -17,10 +17,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
+	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 )
 
@@ -30,19 +32,34 @@ var clientAddCmd *cobra.Command = &cobra.Command{
 	RunE:  runClientAdd,
 }
 
-var clientAddEvent string
+var clientAddCtx context.Context
+
+type addParams struct {
+	Event string `desc:"QED event to insert to QED"`
+}
 
 func init() {
 
-	clientAddCmd.Flags().StringVar(&clientAddEvent, "event", "", "Event to append to QED")
-	clientAddCmd.MarkFlagRequired("event")
-
+	clientAddCtx = configClientAdd()
 	clientCmd.AddCommand(clientAddCmd)
+}
+
+func configClientAdd() context.Context {
+
+	conf := &addParams{}
+
+	err := gpflag.ParseTo(conf, clientAddCmd.PersistentFlags())
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
+	return context.WithValue(Ctx, k("client.add.params"), conf)
 }
 
 func runClientAdd(cmd *cobra.Command, args []string) error {
 
-	if clientAddEvent == "" {
+	params := clientAddCtx.Value(k("client.add.params")).(*addParams)
+
+	if params.Event == "" {
 		return fmt.Errorf("Event must not be empty!")
 	}
 
@@ -54,7 +71,7 @@ func runClientAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	snapshot, err := client.Add(clientAddEvent)
+	snapshot, err := client.Add(params.Event)
 	if err != nil {
 		return err
 	}

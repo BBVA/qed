@@ -27,14 +27,16 @@ import (
 )
 
 var clientCmd *cobra.Command = &cobra.Command{
-	Use:              "client",
-	Short:            "Provdes access to the QED log client",
-	TraverseChildren: true,
+	Use:               "client",
+	Short:             "Provdes access to the QED log client",
+	TraverseChildren:  true,
+	PersistentPreRunE: runClient,
 }
 
-var clientCtx context.Context = configClient()
+var clientCtx context.Context
 
 func init() {
+	clientCtx = configClient()
 	Root.AddCommand(clientCmd)
 }
 
@@ -46,6 +48,23 @@ func configClient() context.Context {
 	if err != nil {
 		log.Fatalf("err: %v", err)
 	}
-
 	return context.WithValue(Ctx, k("client.config"), conf)
+}
+
+func runClient(cmd *cobra.Command, args []string) error {
+	var err error
+
+	endpoints, _ := cmd.Flags().GetStringSlice("endpoints")
+	err = urlParse(endpoints...)
+	if err != nil {
+		return err
+	}
+
+	snapshotStoreURL, _ := cmd.Flags().GetString("snapshot-store-url")
+	err = urlParse(snapshotStoreURL)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

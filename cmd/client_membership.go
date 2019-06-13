@@ -43,7 +43,6 @@ It also verifies the proofs provided by the server if flag enabled.`,
 }
 
 var clientMembershipCtx context.Context
-var isVersionSet bool
 
 func init() {
 	clientMembershipCtx = configClientMembership()

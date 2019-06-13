@@ -114,6 +114,12 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 
 	log.SetLogger("auditor", agentConfig.Log)
 
+	// URL parse
+	err := checkAuditorParams(conf)
+	if err != nil {
+		return err
+	}
+
 	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
@@ -136,6 +142,26 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 	QedAuditorInstancesCount.Inc()
 
 	util.AwaitTermSignal(agent.Shutdown)
+	return nil
+}
+
+func checkAuditorParams(conf *auditorConfig) error {
+	var err error
+	err = urlParse(conf.Notifier.Endpoint...)
+	if err != nil {
+		return err
+	}
+
+	err = urlParse(conf.Store.Endpoint...)
+	if err != nil {
+		return err
+	}
+
+	err = urlParse(conf.Qed.Endpoints...)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
