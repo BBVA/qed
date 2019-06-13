@@ -29,18 +29,24 @@ import (
 
 var serverStart *cobra.Command = &cobra.Command{
 	Use:   "start",
-	Short: "Stars  QED log service",
-	Run:   runServerStart,
+	Short: "Stars QED Log service",
+	RunE:  runServerStart,
 }
 
 func init() {
 	serverCmd.AddCommand(serverStart)
 }
 
-func runServerStart(cmd *cobra.Command, args []string) {
+func runServerStart(cmd *cobra.Command, args []string) error {
 	var err error
 
 	conf := serverCtx.Value(k("server.config")).(*server.Config)
+
+	// URL parse
+	err = checkServerParams(conf)
+	if err != nil {
+		return err
+	}
 
 	if conf.SSLCertificate != "" && conf.SSLCertificateKey != "" {
 		if _, err := os.Stat(conf.SSLCertificate); os.IsNotExist(err) {
@@ -69,5 +75,26 @@ func runServerStart(cmd *cobra.Command, args []string) {
 
 	log.Debug("Stopping server, about to exit...")
 
+	return nil
 }
 
+func checkServerParams(conf *server.Config) error {
+	var err error
+
+	err = urlParseNoSchemaRequired(conf.GossipAddr, conf.HTTPAddr, conf.MetricsAddr, conf.MgmtAddr, conf.ProfilingAddr, conf.RaftAddr)
+	if err != nil {
+		return err
+	}
+
+	err = urlParseNoSchemaRequired(conf.GossipJoinAddr...)
+	if err != nil {
+		return err
+	}
+
+	err = urlParseNoSchemaRequired(conf.RaftJoinAddr...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
