@@ -58,8 +58,7 @@ func urlParseNoSchemaRequired(endpoints ...string) error {
 		}
 
 		// Add fake scheme to get an expected result from url.Parse
-		newEndpoint := "http://" + endpoint
-		url, err := url.Parse(newEndpoint)
+		url, err := url.Parse("http://" + endpoint)
 
 		if err != nil {
 			return errors.New(fmt.Sprintf("%s in %s.", errMalformedURL, endpoint))

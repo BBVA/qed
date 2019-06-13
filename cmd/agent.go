@@ -35,26 +35,8 @@ three agents into the distribution:
 	* Auditor agent: verifies QED membership proofs of the snapshots received
 	  throught the  gossip network
 	* Publisher agent: publish snapshots to the snapshot store`,
-	TraverseChildren: true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// URL parsing
-		var err error
-		advertiseAddress, _ := cmd.Flags().GetString("advertise-addr")
-		bindAddress, _ := cmd.Flags().GetString("bind-addr")
-		gossipStartJoin, _ := cmd.Flags().GetStringSlice("start-join")
-
-		err = urlParse(gossipStartJoin...)
-		if err != nil {
-			return err
-		}
-
-		err = urlParseNoSchemaRequired(bindAddress)
-		if err != nil {
-			return err
-		}
-
-		return urlParse(advertiseAddress)
-	},
+	TraverseChildren:  true,
+	PersistentPreRunE: runAgent,
 }
 
 var agentCtx context.Context
@@ -78,4 +60,33 @@ func configAgent() context.Context {
 	}
 
 	return context.WithValue(Ctx, k("agent.config"), conf)
+}
+
+func runAgent(cmd *cobra.Command, args []string) error {
+	// URL parsing
+	var err error
+	advertiseAddress, err := cmd.Flags().GetString("advertise-addr")
+	if err != nil {
+		return err
+	}
+	bindAddress, err := cmd.Flags().GetString("bind-addr")
+	if err != nil {
+		return err
+	}
+	gossipStartJoin, err := cmd.Flags().GetStringSlice("start-join")
+	if err != nil {
+		return err
+	}
+
+	err = urlParse(gossipStartJoin...)
+	if err != nil {
+		return err
+	}
+
+	err = urlParseNoSchemaRequired(bindAddress)
+	if err != nil {
+		return err
+	}
+
+	return urlParse(advertiseAddress)
 }
