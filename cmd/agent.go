@@ -42,19 +42,18 @@ three agents into the distribution:
 		advertiseAddress, _ := cmd.Flags().GetString("advertise-addr")
 		bindAddress, _ := cmd.Flags().GetString("bind-addr")
 		gossipStartJoin, _ := cmd.Flags().GetStringSlice("start-join")
-		for _, e := range gossipStartJoin {
-			err = urlParse(e)
-			if err != nil {
-				return err
-			}
-		}
 
-		err = urlParse(advertiseAddress)
+		err = urlParse(gossipStartJoin...)
 		if err != nil {
 			return err
 		}
 
-		return urlParse(bindAddress)
+		err = urlParseNoSchemaRequired(bindAddress)
+		if err != nil {
+			return err
+		}
+
+		return urlParse(advertiseAddress)
 	},
 }
 

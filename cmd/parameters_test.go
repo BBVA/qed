@@ -18,7 +18,6 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -50,7 +49,6 @@ func TestUrlParse(t *testing.T) {
 
 	for _, c := range testCases {
 		for _, e := range c.endpoints {
-			fmt.Printf("Input: %v ", e)
 			err := urlParse(e)
 			require.Equal(t, err, c.expectedError, "Errors do not match")
 		}
@@ -67,13 +65,13 @@ func TestUrlParseNoSchemaRequired(t *testing.T) {
 			endpoints:     []string{"localhost", "localhost:8080", "127.0.0.1", "127.0.0.1:8080"},
 			expectedError: nil,
 		},
-		// {
-		// 	endpoints:     []string{"http//localhost"},
-		// 	expectedError: errors.New(errMissingURLScheme),
-		// },
 		{
-			endpoints:     []string{""}, // , "http://:8080"},
+			endpoints:     []string{""},
 			expectedError: errors.New(errMissingURLHost),
+		},
+		{
+			endpoints:     []string{"http://localhost:8080"},
+			expectedError: errors.New(errUnexpectedScheme),
 		},
 	}
 

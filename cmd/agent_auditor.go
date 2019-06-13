@@ -146,25 +146,22 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 }
 
 func checkAuditorParams(conf *auditorConfig) error {
-	// URL parse
-	for _, e := range conf.Notifier.Endpoint {
-		err := urlParse(e)
-		if err != nil {
-			return err
-		}
+	var err error
+	err = urlParse(conf.Notifier.Endpoint...)
+	if err != nil {
+		return err
 	}
-	for _, e := range conf.Store.Endpoint {
-		err := urlParse(e)
-		if err != nil {
-			return err
-		}
+
+	err = urlParse(conf.Store.Endpoint...)
+	if err != nil {
+		return err
 	}
-	for _, e := range conf.Qed.Endpoints {
-		err := urlParse(e)
-		if err != nil {
-			return err
-		}
+
+	err = urlParse(conf.Qed.Endpoints...)
+	if err != nil {
+		return err
 	}
+
 	return nil
 }
 
