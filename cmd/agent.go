@@ -65,28 +65,24 @@ func configAgent() context.Context {
 func runAgent(cmd *cobra.Command, args []string) error {
 	// URL parsing
 	var err error
-	advertiseAddress, err := cmd.Flags().GetString("advertise-addr")
-	if err != nil {
-		return err
-	}
-	bindAddress, err := cmd.Flags().GetString("bind-addr")
-	if err != nil {
-		return err
-	}
-	gossipStartJoin, err := cmd.Flags().GetStringSlice("start-join")
-	if err != nil {
-		return err
-	}
 
+	gossipStartJoin, _ := cmd.Flags().GetStringSlice("start-join")
 	err = urlParse(gossipStartJoin...)
 	if err != nil {
 		return err
 	}
 
+	bindAddress, _ := cmd.Flags().GetString("bind-addr")
 	err = urlParseNoSchemaRequired(bindAddress)
 	if err != nil {
 		return err
 	}
 
-	return urlParse(advertiseAddress)
+	advertiseAddress, _ := cmd.Flags().GetString("advertise-addr")
+	err = urlParse(advertiseAddress)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

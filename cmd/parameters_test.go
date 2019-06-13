@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 
@@ -55,7 +54,7 @@ func TestUrlParse(t *testing.T) {
 				require.NoError(t, err, "Unexpected error")
 				continue
 			}
-			require.Equal(t, err, errors.New(fmt.Sprintf("%s in %s.", c.expectedError, e)), "Errors do not match")
+			require.Equal(t, err, fmt.Errorf("%s in %s", c.expectedError, e), "Errors do not match")
 		}
 	}
 }
@@ -91,7 +90,7 @@ func TestUrlParseNoSchemaRequired(t *testing.T) {
 				require.NoError(t, err, "Unexpected error")
 				continue
 			}
-			require.Equal(t, err, errors.New(fmt.Sprintf("%s in %s.", c.expectedError, e)), "Errors do not match")
+			require.Equal(t, err, fmt.Errorf("%s in %s", c.expectedError, e), "Errors do not match")
 		}
 	}
 }

@@ -17,18 +17,17 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 )
 
 const (
-	errMalformedURL     = "Malformed URL"
-	errMissingURLScheme = "Missing URL Scheme"
-	errMissingURLHost   = "Missing URL Host"
-	errMissingURLPort   = "Missing URL Port"
-	errUnexpectedScheme = "Unexpected URL Scheme"
+	errMalformedURL     = "malformed URL"
+	errMissingURLScheme = "missing URL Scheme"
+	errMissingURLHost   = "missing URL Host"
+	errMissingURLPort   = "missing URL Port"
+	errUnexpectedScheme = "unexpected URL Scheme"
 )
 
 func urlParse(endpoints ...string) error {
@@ -36,15 +35,15 @@ func urlParse(endpoints ...string) error {
 		url, err := url.Parse(endpoint)
 
 		if err != nil {
-			return errors.New(fmt.Sprintf("%s in %s.", errMalformedURL, endpoint))
+			return fmt.Errorf("%s in %s", errMalformedURL, endpoint)
 		}
 
 		if url.Scheme == "" {
-			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLScheme, endpoint))
+			return fmt.Errorf("%s in %s", errMissingURLScheme, endpoint)
 		}
 
 		if url.Hostname() == "" {
-			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLHost, endpoint))
+			return fmt.Errorf("%s in %s", errMissingURLHost, endpoint)
 		}
 	}
 	return nil
@@ -53,23 +52,23 @@ func urlParse(endpoints ...string) error {
 func urlParseNoSchemaRequired(endpoints ...string) error {
 	for _, endpoint := range endpoints {
 
-		if strings.Index(endpoint, "://") != -1 {
-			return errors.New(fmt.Sprintf("%s in %s.", errUnexpectedScheme, endpoint))
+		if strings.Contains(endpoint, "://") {
+			return fmt.Errorf("%s in %s", errUnexpectedScheme, endpoint)
 		}
 
 		// Add fake scheme to get an expected result from url.Parse
 		url, err := url.Parse("http://" + endpoint)
 
 		if err != nil {
-			return errors.New(fmt.Sprintf("%s in %s.", errMalformedURL, endpoint))
+			return fmt.Errorf("%s in %s", errMalformedURL, endpoint)
 		}
 
 		if url.Hostname() == "" {
-			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLHost, endpoint))
+			return fmt.Errorf("%s in %s", errMissingURLHost, endpoint)
 		}
 
 		if url.Port() == "" {
-			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLPort, endpoint))
+			return fmt.Errorf("%s in %s", errMissingURLPort, endpoint)
 		}
 	}
 	return nil
