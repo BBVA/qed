@@ -27,6 +27,7 @@ const (
 	errMalformedURL     = "Malformed URL"
 	errMissingURLScheme = "Missing URL Scheme"
 	errMissingURLHost   = "Missing URL Host"
+	errMissingURLPort   = "Missing URL Port"
 	errUnexpectedScheme = "Unexpected URL Scheme"
 )
 
@@ -66,6 +67,10 @@ func urlParseNoSchemaRequired(endpoints ...string) error {
 
 		if url.Hostname() == "" {
 			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLHost, endpoint))
+		}
+
+		if url.Port() == "" {
+			return errors.New(fmt.Sprintf("%s in %s.", errMissingURLPort, endpoint))
 		}
 	}
 	return nil
