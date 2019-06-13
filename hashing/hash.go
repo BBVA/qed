@@ -14,6 +14,7 @@
    limitations under the License.
 */
 
+// Package hashing implements different hashers and their funcionality.
 package hashing
 
 import (
@@ -32,17 +33,21 @@ type Hasher interface {
 	Len() uint16
 }
 
+// XorHasher implements the Hasher interface and computes a 2 bit hash
+// function. Handy for testing hash tree implementations.
 type XorHasher struct{}
 
 func NewXorHasher() Hasher {
 	return new(XorHasher)
 }
 
+// Salted function adds a seed to the input data before hashing it.
 func (x XorHasher) Salted(salt []byte, data ...[]byte) Digest {
 	data = append(data, salt)
 	return x.Do(data...)
 }
 
+// Do function hashes input data using the XOR hash function.
 func (x XorHasher) Do(data ...[]byte) Digest {
 	var result byte
 	for _, elem := range data {
@@ -54,12 +59,16 @@ func (x XorHasher) Do(data ...[]byte) Digest {
 	}
 	return []byte{result}
 }
+
+// Len function returns the size of the resulting hash.
 func (s XorHasher) Len() uint16 { return uint16(8) }
 
 type KeyHasher struct {
 	underlying hash.Hash
 }
 
+// NewBlake2bHasher implements the Hasher interface and computes a 256 bit hash
+// function using the Blake2 hashing algorithm.
 func NewBlake2bHasher() Hasher {
 	hasher, err := blake2b.New256(nil)
 	if err != nil {
@@ -68,23 +77,28 @@ func NewBlake2bHasher() Hasher {
 	return &KeyHasher{underlying: hasher}
 }
 
+// NewSha256Hasher implements the Hasher interface and computes a 256 bit hash
+// function using the SHA256 hashing algorithm.
 func NewSha256Hasher() Hasher {
 	return &KeyHasher{underlying: sha256.New()}
 }
 
+// Salted function adds a seed to the input data before hashing it.
 func (s *KeyHasher) Salted(salt []byte, data ...[]byte) Digest {
 	data = append(data, salt)
 	return s.Do(data...)
 }
 
+// Do function hashes input data using the hashing function given by the KeyHasher.
 func (s *KeyHasher) Do(data ...[]byte) Digest {
 	s.underlying.Reset()
 	for i := 0; i < len(data); i++ {
-		s.underlying.Write(data[i])
+		_, _ = s.underlying.Write(data[i])
 	}
 	return s.underlying.Sum(nil)[:]
 }
 
+// Len function returns the size of the resulting hash.
 func (s KeyHasher) Len() uint16 { return uint16(256) }
 
 // PearsonHasher implements the Hasher interface and computes a 8 bit hash
@@ -95,11 +109,13 @@ func NewPearsonHasher() Hasher {
 	return new(PearsonHasher)
 }
 
+// Salted function adds a seed to the input data before hashing it.
 func (h *PearsonHasher) Salted(salt []byte, data ...[]byte) Digest {
 	data = append(data, salt)
 	return h.Do(data...)
 }
 
+// Do function hashes input data using the Pearson hash function.
 func (p *PearsonHasher) Do(data ...[]byte) Digest {
 	lookupTable := [...]uint8{
 		// 0-255 shuffled in any (random) order suffices
@@ -137,20 +153,29 @@ func (p *PearsonHasher) Do(data ...[]byte) Digest {
 	return Digest{r}
 
 }
+
+// Len function returns the size of the resulting hash.
 func (p PearsonHasher) Len() uint16 { return uint16(8) }
 
+// FakeHasher implements the Hasher interface and computes a hash
+// function depending on the caller.
+// Here, 'Salted' function does nothing but act as a passthrough to 'Do' function.
+// Handy for testing hash tree implementations.
 type FakeHasher struct {
 	underlying Hasher
 }
 
+// Salted function directly hashes data, similarly to Do function.
 func (h *FakeHasher) Salted(salt []byte, data ...[]byte) Digest {
 	return h.underlying.Do(data...)
 }
 
+// Do function hashes input data using the hashing function given by the KeyHasher.
 func (h *FakeHasher) Do(data ...[]byte) Digest {
 	return h.underlying.Do(data...)
 }
 
+// Len function returns the size of the resulting hash.
 func (h FakeHasher) Len() uint16 {
 	return h.underlying.Len()
 }
