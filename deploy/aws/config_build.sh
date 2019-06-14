@@ -14,9 +14,7 @@ pub=$(_readlink ./config_files)
 tdir=$(mktemp -d /tmp/qed_build.XXX)
 
 sign_path=${pub}
-cert_path=${pub}/server.crt
-key_path=${pub}/server.key
-node_path=${pub}/node_exporter
+cert_path=${pub}
 
 (
 cd ${tdir}
@@ -34,37 +32,9 @@ if [ ! -f ${sign_path} ]; then
     $QED generate signerkeys --path ${sign_path}
 fi
 
-if [ ! -f ${cert_path} ] && [ ! -f ${key_path} ]; then
-
-    #build shared server cert
-    openssl req \
-        -newkey rsa:2048 \
-        -nodes \
-        -days 3650 \
-        -x509 \
-        -keyout ca.key \
-        -out ca.crt \
-        -subj "/CN=*"
-    openssl req \
-        -newkey rsa:2048 \
-        -nodes \
-        -keyout server.key \
-        -out server.csr \
-        -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*"
-    openssl x509 \
-        -req \
-        -days 365 \
-        -sha256 \
-        -in server.csr \
-        -CA ca.crt \
-        -CAkey ca.key \
-        -CAcreateserial \
-        -out server.crt \
-        -extfile <(echo subjectAltName = IP:127.0.0.1)
-
-    cp server.crt ${cert_path}
-    cp server.key ${key_path}
-
+if [ ! -f ${sign_path} ]; then
+    #build shared signing key
+    $QED generate tlscerts --path ${cert_path} --host 127.0.0.1
 fi
 
 )
