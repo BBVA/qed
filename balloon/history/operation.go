@@ -19,7 +19,7 @@ package history
 import (
 	"fmt"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 )
 
 type operation interface {

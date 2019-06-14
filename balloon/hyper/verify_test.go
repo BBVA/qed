@@ -19,7 +19,7 @@ package hyper
 import (
 	"testing"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

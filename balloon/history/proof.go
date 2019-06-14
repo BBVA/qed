@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
 )

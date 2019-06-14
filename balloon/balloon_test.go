@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	"github.com/bbva/qed/testutils/rand"

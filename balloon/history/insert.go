@@ -17,7 +17,7 @@
 package history
 
 import (
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 )
 
 func pruneToInsert(version uint64, eventDigest hashing.Digest) operation {

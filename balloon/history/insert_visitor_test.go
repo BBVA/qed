@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/stretchr/testify/assert"
 )

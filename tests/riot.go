@@ -33,7 +33,7 @@ import (
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
 )
