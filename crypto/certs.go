@@ -22,17 +22,16 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"math/big"
 	"net"
 	"os"
 	"time"
 )
 
-func NewTlsCerts(path, hostname string) (string, string, string, error) {
+func NewTlsCerts(path, host string) (string, string, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	notBefore := time.Now()
@@ -41,7 +40,7 @@ func NewTlsCerts(path, hostname string) (string, string, string, error) {
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	template := x509.Certificate{
@@ -56,41 +55,46 @@ func NewTlsCerts(path, hostname string) (string, string, string, error) {
 		BasicConstraintsValid: true,
 	}
 
-	ip := net.ParseIP(hostname)
-	template.IPAddresses = append(template.IPAddresses, ip)
+	ip := net.ParseIP(host)
+	// Check if host parameter is DNSName or IPAddr
+	if ip == nil {
+		template.DNSNames = append(template.DNSNames, host)
+	} else {
+		template.IPAddresses = append(template.IPAddresses, ip)
+	}
 	template.IsCA = true
 	template.KeyUsage |= x509.KeyUsageCertSign
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	certOut, err := os.Create(path + "/qed_cert.pem")
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	if err := certOut.Close(); err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	keyOut, err := os.OpenFile(path+"/qed_key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 	block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}
 	if err := pem.Encode(keyOut, block); err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
 	if err := keyOut.Close(); err != nil {
-		return "", "", "", err
+		return "", "", err
 	}
 
-	return fmt.Sprintf("%v", certOut), fmt.Sprintf("%v", keyOut), hostname, nil
+	return certOut.Name(), keyOut.Name(), nil
 }

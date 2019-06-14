@@ -37,10 +37,10 @@ func runGenerateTlsCerts(cmd *cobra.Command, args []string) {
 
 	conf := generateCtx.Value(k("generate.config")).(*GenerateConfig)
 
-	certs, err := crypto.NewTlsCerts(conf.Path)
+	cert, key, err := crypto.NewTlsCerts(conf.Path, conf.Hostname)
 	if err != nil {
 		fmt.Errorf("Error: %v\n", err)
 	}
-	fmt.Printf("New Tls certificates generated at:\n%v\n", certs)
+	fmt.Printf("New Tls certificates generated at:\n%v\n%v\n", cert, key)
 
 }
