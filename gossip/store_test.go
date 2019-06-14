@@ -43,7 +43,7 @@ func TestDefaultStore(t *testing.T) {
 	conf.Endpoint = append(conf.Endpoint, server.URL)
 	store := NewRestSnapshotStoreFromConfig(conf)
 
-	store.PutBatch(&protocol.BatchSnapshots{})
+	_ = store.PutBatch(&protocol.BatchSnapshots{})
 
 	time.Sleep(1 * time.Second)
 

@@ -93,7 +93,6 @@ type SimpleTasksManager struct {
 	taskCh   chan Task
 	quitCh   chan bool
 	ticker   *time.Ticker
-	timeout  time.Duration
 	maxTasks int
 }
 

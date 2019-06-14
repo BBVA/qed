@@ -42,7 +42,7 @@ func TestMessageBus(t *testing.T) {
 		Payload: nil,
 	}
 	mb.Subscribe(BatchMessageType, &ts, 1)
-	mb.Publish(m1)
+	_ = mb.Publish(m1)
 	m2 := <-ts.ch
 	require.Equal(t, m2, m1, "Messages should match")
 }
