@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 	metrics_utils "github.com/bbva/qed/testutils/metrics"

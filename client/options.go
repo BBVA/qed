@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 )
 
 // HTTPClientOptionF is a function that configures an HTTPClient.

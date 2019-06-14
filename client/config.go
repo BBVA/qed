@@ -19,7 +19,7 @@ package client
 import (
 	"time"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 )
 
 // ReadPref specifies the preferred type of node in the cluster

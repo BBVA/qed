@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 )
 
 type computeHashVisitor struct {
