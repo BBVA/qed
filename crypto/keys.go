@@ -13,6 +13,7 @@
    limitations under the License.
 */
 
+// Package crypto implements key generators.
 package crypto
 
 import (
@@ -23,8 +24,8 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
+// NewEd25519SignerKeysFile generates a new private/public signer key.
 func NewEd25519SignerKeysFile(path string) (string, string, error) {
-	// Generate a new private/public signer keys for QED server
 	outPriv := path + "/qed_ed25519"
 	outPub := outPriv + ".pub"
 
