@@ -97,7 +97,7 @@ func (d *BatchProcessor) wasProcessed(b *protocol.BatchSnapshots) bool {
 	if err == nil {
 		return true
 	}
-	d.a.Cache.Set(digest, []byte{0x1}, 0)
+	_ = d.a.Cache.Set(digest, []byte{0x1}, 0)
 	return false
 }
 
@@ -139,7 +139,7 @@ func (d *BatchProcessor) Subscribe(id int, ch <-chan *Message) {
 					}
 				}
 
-				d.a.Out.Publish(msg)
+				_ = d.a.Out.Publish(msg)
 			case <-d.quitCh:
 				return
 			}

@@ -30,7 +30,7 @@ func setupTopology(size int) *Topology {
 		port := uint16(9000 + i)
 		role := roles[i%len(roles)]
 		peer := NewPeer(name, "127.0.0.1", port, role)
-		topology.Update(peer)
+		_ = topology.Update(peer)
 	}
 	return topology
 }
@@ -39,12 +39,12 @@ func TestUpdateAndDeleteTopology(t *testing.T) {
 	topology := NewTopology()
 
 	peer := NewPeer("auditor", "127.0.0.1", 9000, "auditor")
-	topology.Update(peer)
+	_ = topology.Update(peer)
 
 	auditors := topology.Get("auditor")
 	require.Truef(t, 1 == auditors.Size(), "The topology must include one auditor")
 
-	topology.Delete(peer)
+	_ = topology.Delete(peer)
 
 	auditors = topology.Get("auditor")
 	require.Truef(t, 0 == auditors.Size(), "The topology must include zero auditor")

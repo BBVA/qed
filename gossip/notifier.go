@@ -94,7 +94,7 @@ func NewSimpleNotifier(endpoint []string, size int, dialTimeout, readTimeout tim
 					return nil, err
 				}
 				// timeout reading from the connection
-				conn.SetDeadline(time.Now().Add(readTimeout))
+				_ = conn.SetDeadline(time.Now().Add(readTimeout))
 				return conn, nil
 			},
 		}}

@@ -33,7 +33,7 @@ func TestMessageEncodeDecode(t *testing.T) {
 
 	buff, err := m1.Encode()
 	require.NoError(t, err, "Encoding must end succesfully")
-	m2.Decode(buff)
+	_ = m2.Decode(buff)
 	require.Equal(t, &m2, m1, "Messages must be equal")
 
 }

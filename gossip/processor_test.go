@@ -68,7 +68,7 @@ func TestBatchProcessorLoop(t *testing.T) {
 		}
 	}()
 
-	a.In.Publish(m1)
+	_ = a.In.Publish(m1)
 
 	wg.Wait()
 }
@@ -99,8 +99,8 @@ func TestBatchProcessorWasProcessed(t *testing.T) {
 		Payload: buf,
 	}
 
-	a.In.Publish(m1)
-	a.In.Publish(m1)
+	_ = a.In.Publish(m1)
+	_ = a.In.Publish(m1)
 	// give time for the scheduler to route all the messages
 	time.Sleep(1 * time.Second)
 
@@ -148,7 +148,7 @@ func TestBatchProcessorRegisterMetrics(t *testing.T) {
 		panic(err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, _ := ioutil.ReadAll(resp.Body)
 	found := strings.Index(string(body), "fakeCounterMetric")
 
 	require.True(t, found > 0, "Metric not found!")
