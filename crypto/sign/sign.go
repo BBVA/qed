@@ -14,6 +14,8 @@
    limitations under the License.
 */
 
+// Package sign implements funcionality to create signers, which are
+// able to sign messages and verify signed messages.
 package sign
 
 import (
@@ -25,6 +27,8 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
+// Signer is the interface implemented by any value that has Sign and Verify methods.
+// Signers are able to sign messages and verify them using a signature.
 type Signer interface {
 	Sign(message []byte) ([]byte, error)
 	Verify(message, sig []byte) (bool, error)
@@ -35,6 +39,7 @@ type Ed25519Signer struct {
 	publicKey  ed25519.PublicKey
 }
 
+// NewEd25519Signer creates an ed25519 signer from scratch.
 func NewEd25519Signer() Signer {
 
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
@@ -49,6 +54,8 @@ func NewEd25519Signer() Signer {
 
 }
 
+// NewEd25519SignerFromFile creates an ed25519 signer using existing private and
+// public keys. It also checks that keys are usable.
 func NewEd25519SignerFromFile(privateKeyPath string) (Signer, error) {
 
 	privateKeyBytes, err := ioutil.ReadFile(privateKeyPath)

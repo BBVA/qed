@@ -33,12 +33,12 @@ import (
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/mgmthttp"
+	"github.com/bbva/qed/crypto/sign"
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
-	"github.com/bbva/qed/sign"
 	"github.com/bbva/qed/storage/rocks"
 )
 
