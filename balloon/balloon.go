@@ -14,6 +14,10 @@
    limitations under the License.
 */
 
+// Package balloon implements functionality to build balloons (a layer that comprises hyper
+// and history trees, among other stuff), control their life cycle
+// and operate them: add event digests (or bulk of event digests), ask for proofs of
+// membership or consistency, etc..
 package balloon
 
 import (
@@ -33,6 +37,8 @@ var (
 	BalloonVersionKey = []byte("version")
 )
 
+// Balloon exposes the necesary API to interact with
+// the hyper and history trees.
 type Balloon struct {
 	version uint64
 	hasherF func() hashing.Hasher
@@ -40,9 +46,9 @@ type Balloon struct {
 
 	historyTree *history.HistoryTree
 	hyperTree   *hyper.HyperTree
-	hasher      hashing.Hasher
 }
 
+// NewBalloon function instanciates a balloon given a storage and a hasher function.
 func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
 
 	// create trees
@@ -55,7 +61,6 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 		store:       store,
 		historyTree: historyTree,
 		hyperTree:   hyperTree,
-		hasher:      hasherF(),
 	}
 
 	// update version
@@ -80,20 +85,21 @@ type Verifiable interface {
 	Verify(key []byte, expectedDigest hashing.Digest) bool
 }
 
-// MembershipProof is the struct that is required to make a Exisitance Proof.
-// It has both Hyper and History AuditPaths, if it exists in first place and
-// burrent balloon version, event actual version and query version.
+// MembershipProof is the struct required to verify an event existence proof.
+// It has both Hyper and History AuditPaths, if the event exists, along with
+// current balloon version, event version, and query version.
 type MembershipProof struct {
 	Exists         bool
 	HyperProof     *hyper.QueryProof
 	HistoryProof   *history.MembershipProof
 	CurrentVersion uint64
 	QueryVersion   uint64
-	ActualVersion  uint64 //required for consistency proof
+	ActualVersion  uint64
 	KeyDigest      hashing.Digest
 	Hasher         hashing.Hasher
 }
 
+// NewMembershipProof function instanciates an membership proof given the required parameters.
 func NewMembershipProof(exists bool, hyperProof *hyper.QueryProof, historyProof *history.MembershipProof, currentVersion, queryVersion, actualVersion uint64, keyDigest hashing.Digest, Hasher hashing.Hasher) *MembershipProof {
 
 	return &MembershipProof{
@@ -135,12 +141,16 @@ func (p MembershipProof) Verify(event []byte, snapshot *Snapshot) bool {
 	return p.DigestVerify(p.Hasher.Do(event), snapshot)
 }
 
+// IncrementalProof is the struct required to verify a consistency proof between two events.
+// It has the History AuditPath, and the start and end versions which corresponds to
+// these events.
 type IncrementalProof struct {
 	Start, End uint64
 	AuditPath  history.AuditPath
 	Hasher     hashing.Hasher
 }
 
+// NewIcrementalProof function instanciates an incremental proof given the required parameters.
 func NewIncrementalProof(start, end uint64, auditPath history.AuditPath, hasher hashing.Hasher) *IncrementalProof {
 	return &IncrementalProof{
 		start,
@@ -150,15 +160,21 @@ func NewIncrementalProof(start, end uint64, auditPath history.AuditPath, hasher 
 	}
 }
 
+// Verify verifies a proof and answer from QueryMembership. Returns true if the
+// answer and proof are correct and consistent, otherwise false.
+// Run by a client on input that should be verified.
 func (p IncrementalProof) Verify(snapshotStart, snapshotEnd *Snapshot) bool {
 	ip := history.NewIncrementalProof(p.Start, p.End, p.AuditPath, p.Hasher)
 	return ip.Verify(snapshotStart.HistoryDigest, snapshotEnd.HistoryDigest)
 }
 
+// Version function returns the current (last) balloon version.
 func (b Balloon) Version() uint64 {
 	return b.version
 }
 
+// RefreshVersion function gets the last stored version from the history-tree table
+// and updates balloon's version.
 func (b *Balloon) RefreshVersion() error {
 	// get last stored version
 	kv, err := b.store.GetLast(storage.HistoryTable)
@@ -172,6 +188,9 @@ func (b *Balloon) RefreshVersion() error {
 	return nil
 }
 
+// Add funcion inserts an event hash into the history and hyper trees, creates a snapshot
+// with these insertions results, and returns the snapshot along with certain mutations to
+// do to the persistent storage.
 func (b *Balloon) Add(eventDigest hashing.Digest) (*Snapshot, []*storage.Mutation, error) {
 
 	// Get version
@@ -214,6 +233,9 @@ func (b *Balloon) Add(eventDigest hashing.Digest) (*Snapshot, []*storage.Mutatio
 	return snapshot, mutations, nil
 }
 
+// AddBulk funcion inserts a bulk of event hashes into the history and hyper trees, creates an
+// array of snapshots with these insertions results, and returns the array of snapshots along
+// with certain mutations to do to the persistent storage.
 func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*storage.Mutation, error) {
 
 	// Get version
@@ -259,6 +281,9 @@ func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*sto
 	return snapshotBulk, mutations, nil
 }
 
+// QueryDigestMembership function is used when an event digest is given to ask for a membership proof
+// against a certain balloon version.
+// It asks the hyper tree for this proof and returns the proof if there is no error.
 func (b Balloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
 
 	var proof MembershipProof
@@ -305,6 +330,8 @@ func (b Balloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, vers
 	return &proof, nil
 }
 
+// QueryMembership function is used when an event is given to ask for a membership proof against a
+// certain balloon version. It just hashes the event and ask QueryDigestMembershipConsistency.
 func (b Balloon) QueryMembershipConsistency(event []byte, version uint64) (*MembershipProof, error) {
 	// We need a new instance of the hasher because the b.hasher cannot be
 	// used concurrently, and we support concurrent queries
@@ -312,6 +339,9 @@ func (b Balloon) QueryMembershipConsistency(event []byte, version uint64) (*Memb
 	return b.QueryDigestMembershipConsistency(hasher.Do(event), version)
 }
 
+// QueryDigestMembership function is used when an event digest is given to ask for a membership proof
+// against the latest balloon version.
+// It asks the hyper tree for this proof and returns the proof if there is no error.
 func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest) (*MembershipProof, error) {
 
 	var proof MembershipProof
@@ -354,6 +384,8 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest) (*MembershipPro
 	return &proof, nil
 }
 
+// QueryMembership function is used when an event is given to ask for a membership proof against the
+// latest balloon version. It just hashes the event and ask QueryDigestMembership.
 func (b Balloon) QueryMembership(event []byte) (*MembershipProof, error) {
 	// We need a new instance of the hasher because the b.hasher cannot be
 	// used concurrently, and we support concurrent queries
@@ -361,6 +393,8 @@ func (b Balloon) QueryMembership(event []byte) (*MembershipProof, error) {
 	return b.QueryDigestMembership(hasher.Do(event))
 }
 
+// QueryConsistency function asks the history tree for an incremental proof, and returns
+// the proof if there is no error. Previously, it checks that the given parameters are correct.
 func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
 
 	var proof IncrementalProof
@@ -382,6 +416,7 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 	return &proof, nil
 }
 
+// Close function closes both history and hyper trees, and restarts balloon version.
 func (b *Balloon) Close() {
 	b.historyTree.Close()
 	b.hyperTree.Close()
