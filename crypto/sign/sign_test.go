@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	assert "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func testSign(t *testing.T, signer Signer) {
@@ -30,16 +30,17 @@ func testSign(t *testing.T, signer Signer) {
 	sig, _ := signer.Sign(message)
 	result, _ := signer.Verify(message, sig)
 
-	assert.True(t, result, "Must be verified")
+	require.True(t, result, "Must be verified")
 
 }
+
 func TestEdSign(t *testing.T) { testSign(t, NewEd25519Signer()) }
 
 func syncBenchmark(b *testing.B, signer Signer, iterations int) {
 
 	b.N = iterations
 	for i := 0; i < b.N; i++ {
-		signer.Sign([]byte(fmt.Sprintf("send reinforcements, we're going to advance %d", b.N)))
+		_, _ = signer.Sign([]byte(fmt.Sprintf("send reinforcements, we're going to advance %d", b.N)))
 	}
 
 }
@@ -54,7 +55,7 @@ func asyncBenchmark(b *testing.B, signer Signer, numRoutines, iterations int) {
 			for {
 				select {
 				case msg := <-data:
-					signer.Sign([]byte(fmt.Sprintf("send reinforcements, we're going to advance %s", msg)))
+					_, _ = signer.Sign([]byte(fmt.Sprintf("send reinforcements, we're going to advance %s", msg)))
 				case <-close:
 					return
 				}
