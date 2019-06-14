@@ -53,7 +53,7 @@ func retry(tries int, delay time.Duration, fn func() error) int {
 }
 
 // This function makes an http request
-func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Response, error) {
+func doReq(method string, url, apiKey string, insecure bool, payload *strings.Reader) (*http.Response, error) {
 	var err error
 	if payload == nil {
 		payload = strings.NewReader("")
@@ -65,6 +65,10 @@ func doReq(method string, url, apiKey string, payload *strings.Reader) (*http.Re
 
 	req.Header.Set("Api-Key", apiKey)
 	req.Header.Set("Content-Type", "application/json")
+	transport := http.DefaultTransport.(*http.Transport)
+	transport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: insecure,
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -133,7 +137,7 @@ func newServerSetup(id int, tls bool) (func() error, func() error) {
 	var err error
 
 	before := func() error {
-		var tlsPath string
+		var path string
 
 		path, err = ioutil.TempDir("", "e2e-qed-")
 		if err != nil {
@@ -144,13 +148,15 @@ func newServerSetup(id int, tls bool) (func() error, func() error) {
 		if err != nil {
 			return err
 		}
+		conf := configQedServer(id, path, signKeyPath, path, tls)
 		if tls {
-			tlsPath, err = crypto.NewTlsCerts(path)
+			_, _, err = crypto.NewTlsCerts(path, "localhost")
 			if err != nil {
 				return err
 			}
+
 		}
-		conf := configQedServer(id, path, signKeyPath, tlsPath, tls)
+
 		srv, err = server.NewServer(conf)
 		if err != nil {
 			return err
@@ -173,6 +179,7 @@ func newServerSetup(id int, tls bool) (func() error, func() error) {
 // Always check for the error.
 func newQedClient(id int) (*client.HTTPClient, error) {
 	// QED client
+
 	transport := http.DefaultTransport.(*http.Transport)
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false}
 	httpClient := http.DefaultClient
