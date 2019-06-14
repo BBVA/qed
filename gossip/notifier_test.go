@@ -45,7 +45,7 @@ func TestDefaultAlert(t *testing.T) {
 	notificator.Start()
 	defer notificator.Stop()
 
-	notificator.Alert("test alert")
+	_ = notificator.Alert("test alert")
 	time.Sleep(1 * time.Second)
 
 	require.True(t, called, "Server must be called from alerter")

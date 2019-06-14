@@ -64,7 +64,7 @@ func TestJoin(t *testing.T) {
 		require.Equal(t, c.expectedContactedHosts, result, "Wrong expected contacted hosts in test %d.", i)
 		require.Equal(t, c.expectedErr, err, "Wrong expected error in test %d.", i)
 	}
-	a.Shutdown()
+	_ = a.Shutdown()
 }
 
 func TestLeave(t *testing.T) {
@@ -113,5 +113,5 @@ func TestLeave(t *testing.T) {
 		require.Equal(t, c.expectedErr, err, "Wrong expected error in test %d.", i)
 		require.Equal(t, c.finalStatus, a.Self.Status, "Wrong expected status in test %d.", i)
 	}
-	a.Shutdown()
+	_ = a.Shutdown()
 }

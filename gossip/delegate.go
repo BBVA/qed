@@ -32,14 +32,14 @@ type eventDelegate struct {
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
 	peer := ParsePeer(n)
 	peer.Status = AgentStatusAlive
-	e.agent.topology.Update(peer)
+	_ = e.agent.topology.Update(peer)
 	log.Debugf("member joined: %+v ", peer)
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 	peer := ParsePeer(n)
-	e.agent.topology.Delete(peer)
+	_ = e.agent.topology.Delete(peer)
 	log.Debugf("member left:  %+v", peer)
 }
 
@@ -48,7 +48,7 @@ func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
 	// ignore
 	peer := ParsePeer(n)
-	e.agent.topology.Update(peer)
+	_ = e.agent.topology.Update(peer)
 	log.Debugf("member updated: %+v ", peer)
 }
 
@@ -83,7 +83,7 @@ func (d *agentDelegate) NotifyMsg(msg []byte) {
 	if err != nil {
 		log.Infof("Agent Deletage unable to decode gossip message!: %v", err)
 	}
-	d.agent.In.Publish(m)
+	_ = d.agent.In.Publish(m)
 }
 
 // GetBroadcasts is called when user data messages can be broadcast.

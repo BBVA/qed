@@ -67,7 +67,7 @@ func NewRestSnapshotStore(endpoint []string, dialTimeout, readTimeout time.Durat
 					return nil, err
 				}
 				// timeout reading from the connection
-				conn.SetDeadline(time.Now().Add(readTimeout))
+				_ = conn.SetDeadline(time.Now().Add(readTimeout))
 				return conn, nil
 			},
 		}}

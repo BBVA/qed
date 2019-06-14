@@ -26,7 +26,7 @@ func TestRunLen(t *testing.T) {
 	tm := NewSimpleTasksManager(100*time.Millisecond, 1)
 	tm.Start()
 	executions := 0
-	tm.Add(func() error {
+	_ = tm.Add(func() error {
 		executions++
 		return nil
 	})
