@@ -19,7 +19,7 @@ package balloon
 import (
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 )
 
 func NewFakeQueryProof(shouldVerify bool, value []byte, hasher hashing.Hasher) *hyper.QueryProof {

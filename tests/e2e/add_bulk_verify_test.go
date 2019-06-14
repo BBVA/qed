@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/testutils/rand"

@@ -29,7 +29,7 @@ import (
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/crypto"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/keys"
 	"github.com/bbva/qed/testutils/notifierstore"

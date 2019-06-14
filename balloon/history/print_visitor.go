@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 )
 
 type printVisitor struct {

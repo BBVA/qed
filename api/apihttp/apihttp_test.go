@@ -29,7 +29,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/testutils/rand"

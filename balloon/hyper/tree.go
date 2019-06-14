@@ -14,6 +14,7 @@
    limitations under the License.
 */
 
+// Package hyper implements the available operations in the hyper-tree (sparse merkel tree).
 package hyper
 
 import (
@@ -22,7 +23,7 @@ import (
 	"github.com/bbva/qed/log"
 
 	"github.com/bbva/qed/balloon/cache"
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )

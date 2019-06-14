@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/hashing"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/testutils/rand"
