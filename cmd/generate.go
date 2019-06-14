@@ -25,14 +25,14 @@ import (
 )
 
 type GenerateConfig struct {
-	Path     string // Path to the private key file used to sign snapshots.
-	Hostname string // Hostname of IPAddr for which the certificates will be generated.
+	Path string // Path to the private key file used to sign snapshots.
+	Host string // DNSName or IPAddr for which the certificates will be generated.
 }
 
 func GenerateDefaultConfig() *GenerateConfig {
 	return &GenerateConfig{
-		Path:     "/var/tmp",
-		Hostname: "127.0.0.1",
+		Path: "/var/tmp",
+		Host: "127.0.0.1",
 	}
 }
 
