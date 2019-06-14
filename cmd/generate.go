@@ -25,8 +25,11 @@ import (
 )
 
 type GenerateConfig struct {
-	Path string // Path to the private key file used to sign snapshots.
-	Host string // DNSName or IPAddr for which the certificates will be generated.
+	// Path to the private key file used to sign snapshots.
+	Path string `desc:"Set custom output directory"`
+
+	// DNSName or IPAddr for which the certificates will be generated.
+	Host string `desc:"Set custom DNS name or IP address for new certificates"`
 }
 
 func GenerateDefaultConfig() *GenerateConfig {
