@@ -94,3 +94,39 @@ func TestUrlParseNoSchemaRequired(t *testing.T) {
 		}
 	}
 }
+
+func TestUrlParseNoSchemaOrPortRequired(t *testing.T) {
+
+	testCases := []struct {
+		endpoints     []string
+		expectedError string
+	}{
+		{
+			endpoints:     []string{"localhost:8080", "127.0.0.1:8080"},
+			expectedError: errNoPortRequired,
+		},
+		{
+			endpoints:     []string{"localhost", "127.0.0.1"},
+			expectedError: "",
+		},
+		{
+			endpoints:     []string{""},
+			expectedError: errMissingURLHost,
+		},
+		{
+			endpoints:     []string{"http://localhost:8080", "http://localhost", "https://127.0.0.1:8080", "https://127.0.0.1"},
+			expectedError: errNoShemaRequired,
+		},
+	}
+
+	for _, c := range testCases {
+		for _, e := range c.endpoints {
+			err := urlParseNoSchemaOrPortRequired(e)
+			if c.expectedError == "" {
+				require.NoError(t, err, "Unexpected error")
+				continue
+			}
+			require.Equal(t, err, fmt.Errorf("%s in %s", c.expectedError, e), "Errors do not match")
+		}
+	}
+}

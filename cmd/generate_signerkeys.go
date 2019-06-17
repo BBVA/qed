@@ -26,18 +26,22 @@ import (
 var generateSignerKeys *cobra.Command = &cobra.Command{
 	Use:   "signerkeys",
 	Short: "Generate Signer Keys",
-	Run:   runGenerateSignerKeys,
+	RunE:  runGenerateSignerKeys,
 }
 
 func init() {
 	generateCmd.AddCommand(generateSignerKeys)
 }
 
-func runGenerateSignerKeys(cmd *cobra.Command, args []string) {
+func runGenerateSignerKeys(cmd *cobra.Command, args []string) error {
 
 	conf := generateCtx.Value(k("generate.config")).(*GenerateConfig)
 
-	pubKey, priKey, _ := crypto.NewEd25519SignerKeysFile(conf.Path)
+	pubKey, priKey, err := crypto.NewEd25519SignerKeysFile(conf.Path)
+	if err != nil {
+		return err
+	}
 	fmt.Printf("New signer keys generated at:\n%v\n%v\n", pubKey, priKey)
 
+	return nil
 }

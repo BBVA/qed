@@ -26,21 +26,27 @@ import (
 var generateSelfSignedCert *cobra.Command = &cobra.Command{
 	Use:   "self-signed-cert",
 	Short: "Generate Self Signed Certificates",
-	Run:   runGenerateTlsCerts,
+	RunE:  runSelfSignedCert,
 }
 
 func init() {
 	generateCmd.AddCommand(generateSelfSignedCert)
 }
 
-func runGenerateTlsCerts(cmd *cobra.Command, args []string) {
-
+func runSelfSignedCert(cmd *cobra.Command, args []string) error {
+	var err error
 	conf := generateCtx.Value(k("generate.config")).(*GenerateConfig)
+
+	err = urlParseNoSchemaOrPortRequired(conf.Host)
+	if err != nil {
+		return err
+	}
 
 	cert, key, err := crypto.NewSelfSignedCert(conf.Path, conf.Host)
 	if err != nil {
 		fmt.Errorf("Error: %v\n", err)
 	}
-	fmt.Printf("New Tls certificates generated at:\n%v\n%v\n", cert, key)
+	fmt.Printf("New Self Signed Certtifiates generated at:\n%v\n%v\n", cert, key)
 
+	return nil
 }
