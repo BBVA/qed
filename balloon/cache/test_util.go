@@ -85,7 +85,10 @@ func NewFakeKVPairReader(numElems uint64) *FakeKVPairReader {
 
 func (r *FakeKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
 	for n = 0; r.Remaining > 0 && n < len(buffer); n++ {
-		buffer[n] = &storage.KVPair{util.Uint64AsBytes(r.index), rand.Bytes(8)}
+		buffer[n] = &storage.KVPair{
+			Key:   util.Uint64AsBytes(r.index),
+			Value: rand.Bytes(8),
+		}
 		r.Remaining--
 		r.index++
 	}

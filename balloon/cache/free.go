@@ -28,12 +28,15 @@ type FreeCache struct {
 	cached *freecache.Cache
 }
 
+// NewFreeCache funtion returns a new cache with a parametrized size.
 func NewFreeCache(initialSize int) *FreeCache {
 	cache := freecache.NewCache(initialSize)
 	debug.SetGCPercent(20)
 	return &FreeCache{cached: cache}
 }
 
+// Get function returns the value of a given key in cache, and a boolean showing if
+// the key is or is not present.
 func (c FreeCache) Get(key []byte) ([]byte, bool) {
 	value, err := c.cached.Get(key)
 	if err != nil {
@@ -42,10 +45,12 @@ func (c FreeCache) Get(key []byte) ([]byte, bool) {
 	return value, true
 }
 
+// Put function adds a new key/value pair to the cache.
 func (c *FreeCache) Put(key []byte, value []byte) {
-	c.cached.Set(key, value, 0)
+	_ = c.cached.Set(key, value, 0)
 }
 
+// Fill function inserts a bulk of key/value elements into the cache.
 func (c *FreeCache) Fill(r storage.KVPairReader) (err error) {
 	defer r.Close()
 	for {
@@ -56,17 +61,21 @@ func (c *FreeCache) Fill(r storage.KVPairReader) (err error) {
 		}
 		for _, entry := range entries {
 			if entry != nil {
-				c.cached.Set(entry.Key, entry.Value, 0)
+				_ = c.cached.Set(entry.Key, entry.Value, 0)
 			}
 		}
 	}
 	return nil
 }
 
+// Size function returns the number of items currently in the cache.
 func (c FreeCache) Size() int {
 	return int(c.cached.EntryCount())
 }
 
+// Equal function checks if every element from current cache (C) exists
+// in the cache to compare (O). It does not check that every element from (O)
+// exists in current cache (C).
 func (c FreeCache) Equal(o *FreeCache) bool {
 	it := c.cached.NewIterator()
 	entry := it.Next()

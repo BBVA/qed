@@ -13,6 +13,9 @@ type entry struct {
 	value []byte
 }
 
+// LruReadThroughCache implemets a "Last Recent Used" cache with a storage backend.
+// Therefore, "writes" are done in-memory, but "reads" are done checking the storage.
+// It uses an "evictList" for the LRU functionality.
 type LruReadThroughCache struct {
 	table     storage.Table
 	store     storage.Store
@@ -21,6 +24,7 @@ type LruReadThroughCache struct {
 	evictList *list.List
 }
 
+// NewLruReadThroughCache returns a new cacheSize cache with an asociated storage.
 func NewLruReadThroughCache(table storage.Table, store storage.Store, cacheSize uint16) *LruReadThroughCache {
 	return &LruReadThroughCache{
 		table:     table,
@@ -31,6 +35,8 @@ func NewLruReadThroughCache(table storage.Table, store storage.Store, cacheSize 
 	}
 }
 
+// Get function returns the value of a given key in cache. If it is not present, it looks
+// on the storage. Finally it returns a boolean showing if the key is or is not present.
 func (c LruReadThroughCache) Get(key []byte) ([]byte, bool) {
 	var k [lruKeySize]byte
 	copy(k[:], key)
@@ -46,6 +52,8 @@ func (c LruReadThroughCache) Get(key []byte) ([]byte, bool) {
 	return e.Value.(*entry).value, ok
 }
 
+// Put function adds a new key/value element to the in-memory cache, or updates it if it
+// exists. It also updates the LRU eviction list.
 func (c *LruReadThroughCache) Put(key []byte, value []byte) {
 	var k [lruKeySize]byte
 	copy(k[:], key)
@@ -68,6 +76,7 @@ func (c *LruReadThroughCache) Put(key []byte, value []byte) {
 	}
 }
 
+// Fill function inserts a bulk of key/value elements into the cache.
 func (c *LruReadThroughCache) Fill(r storage.KVPairReader) (err error) {
 	defer r.Close()
 	for {
@@ -103,6 +112,7 @@ func (c *LruReadThroughCache) Fill(r storage.KVPairReader) (err error) {
 	return nil
 }
 
+// Size function returns the number of items currently in the cache.
 func (c *LruReadThroughCache) Size() int {
 	return c.evictList.Len()
 }

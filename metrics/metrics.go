@@ -14,6 +14,8 @@
    limitations under the License.
 */
 
+// Package metrics implements an HTTP metrics server along with its
+// life cycle: start, shutdown, and register metrics.
 package metrics
 
 import (
