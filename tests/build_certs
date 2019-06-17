@@ -33,14 +33,6 @@ cert_path=${pub}
 (
 cd ${tdir}
 
-if [ ! -f ${node_path} ]; then (
-    version=0.17.0
-    folder=node_exporter-${version}.linux-amd64
-    link=https://github.com/prometheus/node_exporter/releases/download/v${version}/${folder}.tar.gz
-    wget -qO- ${link} | tar xvz -C ./
-    cp ${folder}/node_exporter ${node_path}
-) fi
-
 if [ ! -f ${sign_path} ]; then
     #build shared signing key
     $QED generate signerkeys --path ${sign_path}
@@ -50,5 +42,4 @@ if [ ! -f ${sign_path} ]; then
     #build shared signing key
     $QED generate tlscerts --path ${cert_path} --host 127.0.0.1
 fi
-
 )
