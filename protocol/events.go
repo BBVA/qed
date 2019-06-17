@@ -14,11 +14,12 @@
    limitations under the License.
 */
 
+// Package protocol defines the information types required and expected when
+// interacting with QED.
 package protocol
 
 import (
 	"encoding/json"
-	"net"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
@@ -33,6 +34,8 @@ type Event struct {
 	Event []byte
 }
 
+// EventBulk is the public struct that AddBulk handler function uses to
+// parse the post params.
 type EventsBulk struct {
 	Events [][]byte
 }
@@ -59,6 +62,17 @@ type Snapshot struct {
 	Version       uint64
 }
 
+func (b *Snapshot) Encode() ([]byte, error) {
+	return json.Marshal(b)
+}
+
+func (b *Snapshot) Decode(msg []byte) error {
+	err := json.Unmarshal(msg, b)
+	return err
+}
+
+// SignedSnapshot is the public struct that apihttp.Add Handler call returns.
+// It is comprised of a Snapshot and a signature.
 type SignedSnapshot struct {
 	Snapshot  *Snapshot
 	Signature []byte
@@ -73,23 +87,11 @@ func (b *SignedSnapshot) Decode(msg []byte) error {
 	return err
 }
 
+// BatchSnapshots is information structure that QED sends to Agents, and
+// Agents to alerts/snapshot store.
+// It is comprised of an array of Signed Snapshots.
 type BatchSnapshots struct {
 	Snapshots []*SignedSnapshot
-}
-
-type Source struct {
-	Addr net.IP
-	Port uint16
-	Role string
-}
-
-func (b *Snapshot) Encode() ([]byte, error) {
-	return json.Marshal(b)
-}
-
-func (b *Snapshot) Decode(msg []byte) error {
-	err := json.Unmarshal(msg, b)
-	return err
 }
 
 func (b *BatchSnapshots) Encode() ([]byte, error) {
@@ -101,6 +103,7 @@ func (b *BatchSnapshots) Decode(msg []byte) error {
 	return err
 }
 
+// MembershipResult is the information structure needed or a Membership proof.
 type MembershipResult struct {
 	Exists         bool
 	Hyper          map[string]hashing.Digest
@@ -112,11 +115,13 @@ type MembershipResult struct {
 	Key            []byte
 }
 
+// IncrementalRequest is the information structure needed to ask for an incremental request.
 type IncrementalRequest struct {
 	Start uint64
 	End   uint64
 }
 
+// IncrementalResponse is the information structure expected from an incremental proof request.
 type IncrementalResponse struct {
 	Start     uint64
 	End       uint64
@@ -145,7 +150,7 @@ func ToMembershipResult(key []byte, mp *balloon.MembershipProof) *MembershipResu
 }
 
 // ToBaloonProof translate public protocol.MembershipResult to internal
-// balloon.Proof.
+// balloon.MembershipProof.
 func ToBalloonProof(mr *MembershipResult, hasherF func() hashing.Hasher) *balloon.MembershipProof {
 
 	historyProof := history.NewMembershipProof(
@@ -176,6 +181,8 @@ func ToBalloonProof(mr *MembershipResult, hasherF func() hashing.Hasher) *balloo
 
 }
 
+// ToIncrementalResponse translates internal api balloon.IncrementalProof to the
+// public struct protocol.IncrementalResponse.
 func ToIncrementalResponse(proof *balloon.IncrementalProof) *IncrementalResponse {
 	return &IncrementalResponse{
 		proof.Start,
@@ -184,6 +191,8 @@ func ToIncrementalResponse(proof *balloon.IncrementalProof) *IncrementalResponse
 	}
 }
 
+// ToIncrementalProof translate public protocol.IncrementalResponse to internal
+// balloon.IncrementalProof.
 func ToIncrementalProof(ir *IncrementalResponse, hasherF func() hashing.Hasher) *balloon.IncrementalProof {
 	return balloon.NewIncrementalProof(ir.Start, ir.End, history.ParseAuditPath(ir.AuditPath), hasherF())
 }
