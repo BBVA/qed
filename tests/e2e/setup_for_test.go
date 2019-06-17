@@ -150,7 +150,7 @@ func newServerSetup(id int, tls bool) (func() error, func() error) {
 		}
 		conf := configQedServer(id, path, signKeyPath, path, tls)
 		if tls {
-			_, _, err = crypto.NewTlsCerts(path, "localhost")
+			_, _, err = crypto.NewSelfSignedCert(path, "localhost")
 			if err != nil {
 				return err
 			}

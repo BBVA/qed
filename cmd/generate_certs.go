@@ -23,21 +23,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var generateTlsCerts *cobra.Command = &cobra.Command{
-	Use:   "tlscerts",
-	Short: "Generate Tls Certificates",
+var generateSelfSignedCert *cobra.Command = &cobra.Command{
+	Use:   "self-signed-cert",
+	Short: "Generate Self Signed Certificates",
 	Run:   runGenerateTlsCerts,
 }
 
 func init() {
-	generateCmd.AddCommand(generateTlsCerts)
+	generateCmd.AddCommand(generateSelfSignedCert)
 }
 
 func runGenerateTlsCerts(cmd *cobra.Command, args []string) {
 
 	conf := generateCtx.Value(k("generate.config")).(*GenerateConfig)
 
-	cert, key, err := crypto.NewTlsCerts(conf.Path, conf.Host)
+	cert, key, err := crypto.NewSelfSignedCert(conf.Path, conf.Host)
 	if err != nil {
 		fmt.Errorf("Error: %v\n", err)
 	}
