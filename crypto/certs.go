@@ -28,7 +28,7 @@ import (
 	"time"
 )
 
-func NewTlsCerts(path, host string) (string, string, error) {
+func NewSelfSignedCert(path, host string) (string, string, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return "", "", err
