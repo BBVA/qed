@@ -23,11 +23,13 @@ const (
 	Https Scheme = "https"
 )
 
+// ShardDetail is the information required to define a Shard.
 type ShardDetail struct {
 	NodeId   string `json:"nodeId"`
 	HTTPAddr string `json:"httpAddr"`
 }
 
+// Shards is the public struct that apihttp.InfoShardsHandler call returns.
 type Shards struct {
 	NodeId    string                 `json:"nodeId"`
 	LeaderId  string                 `json:"leaderId"`
