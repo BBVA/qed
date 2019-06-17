@@ -24,14 +24,18 @@ import (
 
 const keySize = 34
 
+// SimpleCache is a fixed size in-memory map of byte array as key and values.
 type SimpleCache struct {
 	cached map[[keySize]byte][]byte
 }
 
+// NewSimpleCache returns an empty SimpleCache of 'initialSize' size.
 func NewSimpleCache(initialSize uint64) *SimpleCache {
 	return &SimpleCache{make(map[[keySize]byte][]byte, initialSize)}
 }
 
+// Get function returns the value of a given key in cache, and a boolean showing if
+// the key is or is not present.
 func (c SimpleCache) Get(key []byte) ([]byte, bool) {
 	var k [keySize]byte
 	copy(k[:], key)
@@ -39,12 +43,14 @@ func (c SimpleCache) Get(key []byte) ([]byte, bool) {
 	return value, ok
 }
 
+// Put function adds a key/value element to the SimpleCache.
 func (c *SimpleCache) Put(key []byte, value []byte) {
 	var k [keySize]byte
 	copy(k[:], key)
 	c.cached[k] = value
 }
 
+// Fill function inserts a bulk of key/value elements into the cache.
 func (c *SimpleCache) Fill(r storage.KVPairReader) (err error) {
 	defer r.Close()
 	for {
@@ -64,10 +70,14 @@ func (c *SimpleCache) Fill(r storage.KVPairReader) (err error) {
 	return nil
 }
 
+// Size function returns the number of items currently in the cache.
 func (c SimpleCache) Size() int {
 	return len(c.cached)
 }
 
+// Equal function checks if every element from current cache (C) exists
+// in the cache to compare (O). It does not check that every element from (O)
+// exists in current cache (C).
 func (c SimpleCache) Equal(o *SimpleCache) bool {
 	for k, v1 := range c.cached {
 		v2, ok := o.cached[k]

@@ -45,7 +45,7 @@ func TestPassThroughCache(t *testing.T) {
 	for i, c := range testCases {
 		if c.cached {
 			err := store.Mutate([]*storage.Mutation{
-				{table, c.key, c.value},
+				{Table: table, Key: c.key, Value: c.value},
 			})
 			require.NoError(t, err)
 		}
