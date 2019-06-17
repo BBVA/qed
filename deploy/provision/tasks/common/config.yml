@@ -23,6 +23,6 @@
     creates: config_files/qed_ed25519
 
 - name: Create SSL certs
-  shell: > GOOS="" GOARCH="" $QED generate tlscerts --path config_files --host 127.0.0.1
+  shell: > GOOS="" GOARCH="" $QED generate self-signed-cert --path config_files --host 127.0.0.1
 
   
