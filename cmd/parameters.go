@@ -28,6 +28,8 @@ const (
 	errMissingURLHost   = "missing URL Host"
 	errMissingURLPort   = "missing URL Port"
 	errUnexpectedScheme = "unexpected URL Scheme"
+	errNoShemaRequired  = "URL Schema is not required"
+	errNoPortRequired   = "Port is not required"
 )
 
 // urlParse function checks that given string parameters are valid URLs for
@@ -73,6 +75,31 @@ func urlParseNoSchemaRequired(endpoints ...string) error {
 
 		if url.Port() == "" {
 			return fmt.Errorf("%s in %s", errMissingURLPort, endpoint)
+		}
+	}
+	return nil
+}
+
+func urlParseNoSchemaOrPortRequired(endpoints ...string) error {
+	for _, endpoint := range endpoints {
+
+		if strings.Contains(endpoint, "://") {
+			return fmt.Errorf("%s in %s", errNoShemaRequired, endpoint)
+		}
+
+		// Add fake scheme to get an expected result from url.Parse
+		url, err := url.Parse("http://" + endpoint)
+
+		if err != nil {
+			return fmt.Errorf("%s in %s", errMalformedURL, endpoint)
+		}
+
+		if url.Hostname() == "" {
+			return fmt.Errorf("%s in %s", errMissingURLHost, endpoint)
+		}
+
+		if url.Port() != "" {
+			return fmt.Errorf("%s in %s", errNoPortRequired, endpoint)
 		}
 	}
 	return nil
