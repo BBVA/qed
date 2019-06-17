@@ -14,6 +14,8 @@
    limitations under the License.
 */
 
+// Package cache implements the interface to interact with a cache.
+// There are 4 implemented caches: freecache, lru, passthrough, and simple cache.
 package cache
 
 import (

@@ -20,11 +20,13 @@ import (
 	"github.com/bbva/qed/storage"
 )
 
+// PassThroughCache is not a cache itself. It stores data directly on disk.
 type PassThroughCache struct {
 	table storage.Table
 	store storage.Store
 }
 
+// NewPassThroughCache initializes a cache with the given underlaying storage.
 func NewPassThroughCache(table storage.Table, store storage.Store) *PassThroughCache {
 	return &PassThroughCache{
 		table: table,
@@ -32,6 +34,8 @@ func NewPassThroughCache(table storage.Table, store storage.Store) *PassThroughC
 	}
 }
 
+// Get function returns the value of a given key by looking for it on storage.
+// It also returns a boolean showing if the key is or is not present.
 func (c PassThroughCache) Get(key []byte) ([]byte, bool) {
 	pair, err := c.store.Get(c.table, key)
 	if err != nil {
