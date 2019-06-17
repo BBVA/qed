@@ -28,6 +28,12 @@ import (
 	"time"
 )
 
+// NewSelfSignedCert generates a new Tls certificate and private key.
+// First parameter is the full path to the output directory where the
+// certificate and the key be stored. The second one is the host
+// (DNSName or IPAddr) for which we are signing the certificate.
+// The function output is the full path to our new certificate and
+// private key. Eg: (/var/tmp/qed_ed25519, /var/tmp/qed_ed25519.pub, nil)
 func NewSelfSignedCert(path, host string) (string, string, error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
