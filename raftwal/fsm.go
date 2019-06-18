@@ -33,15 +33,19 @@ import (
 	"github.com/hashicorp/raft"
 )
 
+// fsmGenericResponse is used when an unexpected output is received from
+// any operation.
 type fsmGenericResponse struct {
 	error error
 }
 
+// fsmAddResponse is the output data structure from an add operation.
 type fsmAddResponse struct {
 	snapshot *balloon.Snapshot
 	error    error
 }
 
+// fsmAddBulkResponse is the output data structure from an addBulk operation.
 type fsmAddBulkResponse struct {
 	snapshotBulk []*balloon.Snapshot
 	error        error
@@ -75,6 +79,8 @@ func loadState(s storage.ManagedStore) (*fsmState, error) {
 	return &state, err
 }
 
+// NewBalloonFSM function creates a balloon with stored in a given storage, and tries to recover
+// the FSM state from disk.
 func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*BalloonFSM, error) {
 
 	b, err := balloon.NewBalloon(store, hasherF)
@@ -96,22 +102,31 @@ func NewBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 	}, nil
 }
 
+// QueryDigestMembershipConsistency acts as a passthrough when an event digest is given to
+// request a membership proof against a certain balloon version.
 func (fsm *BalloonFSM) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
 	return fsm.balloon.QueryDigestMembershipConsistency(keyDigest, version)
 }
 
+// QueryMembershipConsistency acts as a passthrough when an event is given to request a
+// membership proof against a certain balloon version.
 func (fsm *BalloonFSM) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	return fsm.balloon.QueryMembershipConsistency(event, version)
 }
 
+// QueryDigestMembership acts as a passthrough when an event digest is given to request a
+// membership proof against the last balloon version.
 func (fsm *BalloonFSM) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
 	return fsm.balloon.QueryDigestMembership(keyDigest)
 }
 
+// QueryMembership acts as a passthrough when an event is given to request a membership proof
+// against the last balloon version.
 func (fsm *BalloonFSM) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
 	return fsm.balloon.QueryMembership(event)
 }
 
+// QueryConsistency acts as a passthrough when requesting an incremental proof.
 func (fsm *BalloonFSM) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	return fsm.balloon.QueryConsistency(start, end)
 }
@@ -258,6 +273,7 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	return fsm.balloon.RefreshVersion()
 }
 
+// Close function closes
 func (fsm *BalloonFSM) Close() error {
 	fsm.balloon.Close()
 	return nil
