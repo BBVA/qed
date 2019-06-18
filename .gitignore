@@ -33,8 +33,8 @@ TODO.md
 *.out
 
 # User Documentation builds
-rtd_docs/build/
-rtd_docs/source/_build/
+docs/build/
+docs/source/_build/
 
 # Custom editor or IDE project settings
 .idea
