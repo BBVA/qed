@@ -34,14 +34,6 @@ func NewBPlusTreeStore() *BPlusTreeStore {
 	return &BPlusTreeStore{btree.New(2)}
 }
 
-type KVItem struct {
-	Key, Value []byte
-}
-
-func (p KVItem) Less(b btree.Item) bool {
-	return bytes.Compare(p.Key, b.(KVItem).Key) < 0
-}
-
 func (s *BPlusTreeStore) Mutate(mutations []*storage.Mutation) error {
 	for _, m := range mutations {
 		key := append([]byte{m.Table.Prefix()}, m.Key...)
@@ -96,6 +88,35 @@ func (s BPlusTreeStore) GetAll(table storage.Table) storage.KVPairReader {
 	return NewBPlusKVPairReader(table, s.db)
 }
 
+func (s BPlusTreeStore) Close() error {
+	s.db.Clear(false)
+	return nil
+}
+
+func (s BPlusTreeStore) Backup(w io.Writer, id uint64) error {
+	panic("Not implemented")
+}
+
+func (s BPlusTreeStore) Load(r io.Reader) error {
+	panic("Not implemented")
+}
+
+func (s BPlusTreeStore) Snapshot() (uint64, error) {
+	panic("Not implemented")
+}
+
+func (s BPlusTreeStore) RegisterMetrics(registry metrics.Registry) {
+	panic("Not implemented")
+}
+
+type KVItem struct {
+	Key, Value []byte
+}
+
+func (p KVItem) Less(b btree.Item) bool {
+	return bytes.Compare(p.Key, b.(KVItem).Key) < 0
+}
+
 type BPlusKVPairReader struct {
 	prefix  byte
 	db      *btree.BTree
@@ -130,25 +151,4 @@ func (r *BPlusKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
 
 func (r *BPlusKVPairReader) Close() {
 	r.db = nil
-}
-
-func (s BPlusTreeStore) Close() error {
-	s.db.Clear(false)
-	return nil
-}
-
-func (s BPlusTreeStore) Backup(w io.Writer, id uint64) error {
-	panic("Not implemented")
-}
-
-func (s BPlusTreeStore) Load(r io.Reader) error {
-	panic("Not implemented")
-}
-
-func (s BPlusTreeStore) Snapshot() (uint64, error) {
-	panic("Not implemented")
-}
-
-func (s BPlusTreeStore) RegisterMetrics(registry metrics.Registry) {
-	panic("Not implemented")
 }

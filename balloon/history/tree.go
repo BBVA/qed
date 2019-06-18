@@ -14,6 +14,9 @@
    limitations under the License.
 */
 
+// Package history implements the history tree (a merkel tree, append only structure)
+// life cycle, its operations, different visitors to navigate the tree, as well as
+// the functionality of request and verify membership and incremental proofs.
 package history
 
 import (
@@ -45,6 +48,9 @@ func NewHistoryTree(hasherF func() hashing.Hasher, store storage.Store, cacheSiz
 	}
 }
 
+// Add function adds an event digest into the history tree.
+// It builds an insert visitor, calculates the expected root hash, and returns it along
+// with the storage mutations to be done at balloon level.
 func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
 
 	// log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
@@ -56,6 +62,9 @@ func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.D
 	return rh, visitor.Result(), nil
 }
 
+// AddBulk function adds a bulk of event digests (one after another) into the history tree.
+// It builds an insert visitor, calculates the expected bulk of root hashes, and returns them along
+// with the storage mutations to be done at balloon level.
 func (t *HistoryTree) AddBulk(eventDigests []hashing.Digest, initialVersion uint64) ([]hashing.Digest, []*storage.Mutation, error) {
 
 	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryTable)
@@ -69,6 +78,8 @@ func (t *HistoryTree) AddBulk(eventDigests []hashing.Digest, initialVersion uint
 
 }
 
+// ProveMembership function builds the membership proof of the given index against the given
+// version. It builds an audit-path visitor to build the proof.
 func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, error) {
 
 	//log.Debugf("Proving membership for index %d with version %d", index, version)
@@ -85,6 +96,8 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 	return proof, nil
 }
 
+// ProveConsistency function builds the incremental proof between the given event versions.
+// It builds an audit-path visitor to build the proof.
 func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, error) {
 
 	//log.Debugf("Proving consistency between versions %d and %d", start, end)
@@ -98,6 +111,7 @@ func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, er
 	return proof, nil
 }
 
+// Close function resets history tree's write and read caches, and hasher.
 func (t *HistoryTree) Close() {
 	t.hasher = nil
 	t.writeCache = nil

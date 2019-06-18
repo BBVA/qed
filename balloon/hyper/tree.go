@@ -14,7 +14,9 @@
    limitations under the License.
 */
 
-// Package hyper implements the available operations in the hyper-tree (sparse merkel tree).
+// Package hyper implements the history tree (a sparse merkel tree)
+// life cycle, its operations, as well as
+// the functionality of request and verify a membersip proof.
 package hyper
 
 import (
@@ -73,6 +75,9 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 	return tree
 }
 
+// Add function adds an event digest into the hyper tree.
+// It builds a stack of operations and then interpret it to calculates the expected
+// root hash, and returns it along with the storage mutations to be done at balloon level.
 func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
 	t.Lock()
 	defer t.Unlock()
@@ -96,6 +101,9 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	return rh, ctx.Mutations, nil
 }
 
+// AddBulk function adds a bulk of event digests into the hyper tree.
+// It builds a stack of operations and then interpret it to calculates the expected
+// root hash, and returns it along with the storage mutations to be done at balloon level.
 func (t *HyperTree) AddBulk(eventDigests []hashing.Digest, initialVersion uint64) (hashing.Digest, []*storage.Mutation, error) {
 	t.Lock()
 	defer t.Unlock()
@@ -122,6 +130,9 @@ func (t *HyperTree) AddBulk(eventDigests []hashing.Digest, initialVersion uint64
 	return rh, ctx.Mutations, nil
 }
 
+// QueryMembership function builds the membership proof of the given event digest.
+// It builds a stack of operations and then interpret it to generate and return the audit
+// path.
 func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryProof, err error) {
 	t.Lock()
 	defer t.Unlock()
@@ -144,6 +155,8 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	return NewQueryProof(eventDigest, ctx.Value, ctx.AuditPath, t.hasherF()), nil
 }
 
+// RebuildCache function reads the hypercache rocksDB table to create indexes and cache.
+// It builds a stack of operations and then interpret it to rebuild the cache.
 func (t *HyperTree) RebuildCache() {
 	t.Lock()
 	defer t.Unlock()
@@ -183,6 +196,7 @@ func (t *HyperTree) RebuildCache() {
 
 }
 
+// Close function resets all hyper tree stuff.
 func (t *HyperTree) Close() {
 	t.Lock()
 	defer t.Unlock()
