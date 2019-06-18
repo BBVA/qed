@@ -20,7 +20,7 @@ QED - Scalable, auditable and high-performance tamper-evident log
 
 
 
-.. figure:: https://raw.githubusercontent.com/BBVA/qed/master/rtd_docs/source/_static/images/qed_logo_small.png
+.. figure:: https://raw.githubusercontent.com/BBVA/qed/master/docs/source/_static/images/qed_logo_small.png
    :align: center
 
 **QED** is an open-source software that allows you to establish
@@ -69,4 +69,4 @@ QED is Open Source and available under the `Apache 2 license <https://github.com
 Contributions
 -------------
 
-Contributions are very welcome. See `docs/contribute/contributing.md <https://github.com/BBVA/qed/blob/master/docs/contribute/contributing.md>`_ or skim `existing tickets <https://github.com/BBVA/qed/issues>`_ to see where you could help out.
+Contributions are very welcome. See `docs/source/contributing/contributing.rst <https://github.com/BBVA/qed/blob/master/docs/source/contributing/contributing.rst>`_ or skim `existing tickets <https://github.com/BBVA/qed/issues>`_ to see where you could help out.
