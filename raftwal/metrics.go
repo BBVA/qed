@@ -24,6 +24,7 @@ const namespace = "qed"
 // subsystem associated with metrics for raft balloon
 const subSystem = "raft_balloon"
 
+// raftBalloonMetrics is the definition of the set of metrics retrieved in raft.
 type raftBalloonMetrics struct {
 	Version                 prometheus.GaugeFunc
 	Adds                    prometheus.Counter

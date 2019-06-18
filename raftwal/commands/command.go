@@ -14,6 +14,7 @@
    limitations under the License.
 */
 
+// Package commands defines the Raft log entries command types.
 package commands
 
 import (
@@ -34,19 +35,23 @@ const (
 	MetadataDeleteCommandType
 )
 
+// AddEventCommand is used when inserting a single event digest.
 type AddEventCommand struct {
 	EventDigest hashing.Digest
 }
 
+// AddEventsBulkCommand is used when inserting a bulk of event digests.
 type AddEventsBulkCommand struct {
 	EventDigests []hashing.Digest
 }
 
+// MetadataSetCommand in used when adding metadata to a raft node.
 type MetadataSetCommand struct {
 	Id   string
 	Data map[string]string
 }
 
+// MetadataDeleteCommand in used when deleting metadata from a raft node.
 type MetadataDeleteCommand struct {
 	Id string
 }
