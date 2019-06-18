@@ -32,6 +32,12 @@ Contents
 
 .. toctree::
    :maxdepth: 2
+   :caption: Contributing
+
+   contributing/contributing
+
+.. toctree::
+   :maxdepth: 2
    :caption: References
 
    references
