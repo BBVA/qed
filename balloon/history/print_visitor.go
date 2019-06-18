@@ -28,10 +28,6 @@ type printVisitor struct {
 	height uint16
 }
 
-func newPrintVisitor(height uint16) *printVisitor {
-	return &printVisitor{tokens: make([]string, 1), height: height}
-}
-
 func (v *printVisitor) Result() string {
 	return fmt.Sprintf("\n%s", strings.Join(v.tokens[:], "\n"))
 }

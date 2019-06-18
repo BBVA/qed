@@ -377,38 +377,6 @@ func (s *RocksDBStore) GetLast(table storage.Table) (*storage.KVPair, error) {
 	return nil, storage.ErrKeyNotFound
 }
 
-type RocksDBKVPairReader struct {
-	it *rocksdb.Iterator
-}
-
-func NewRocksDBKVPairReader(cfHandle *rocksdb.ColumnFamilyHandle, db *rocksdb.DB) *RocksDBKVPairReader {
-	opts := rocksdb.NewDefaultReadOptions()
-	opts.SetFillCache(false)
-	it := db.NewIteratorCF(opts, cfHandle)
-	it.SeekToFirst()
-	return &RocksDBKVPairReader{it}
-}
-
-func (r *RocksDBKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
-	for n = 0; r.it.Valid() && n < len(buffer); r.it.Next() {
-		keySlice := r.it.Key()
-		valueSlice := r.it.Value()
-		key := make([]byte, keySlice.Size())
-		value := make([]byte, valueSlice.Size())
-		copy(key, keySlice.Data())
-		copy(value, valueSlice.Data())
-		keySlice.Free()
-		valueSlice.Free()
-		buffer[n] = &storage.KVPair{Key: key, Value: value}
-		n++
-	}
-	return n, err
-}
-
-func (r *RocksDBKVPairReader) Close() {
-	r.it.Close()
-}
-
 func (s *RocksDBStore) GetAll(table storage.Table) storage.KVPairReader {
 	return NewRocksDBKVPairReader(s.cfHandles[table], s.db)
 }
@@ -599,4 +567,36 @@ func writeTo(entry *pb.KVPair, w io.Writer) error {
 	}
 	_, err = w.Write(buf)
 	return err
+}
+
+type RocksDBKVPairReader struct {
+	it *rocksdb.Iterator
+}
+
+func NewRocksDBKVPairReader(cfHandle *rocksdb.ColumnFamilyHandle, db *rocksdb.DB) *RocksDBKVPairReader {
+	opts := rocksdb.NewDefaultReadOptions()
+	opts.SetFillCache(false)
+	it := db.NewIteratorCF(opts, cfHandle)
+	it.SeekToFirst()
+	return &RocksDBKVPairReader{it}
+}
+
+func (r *RocksDBKVPairReader) Read(buffer []*storage.KVPair) (n int, err error) {
+	for n = 0; r.it.Valid() && n < len(buffer); r.it.Next() {
+		keySlice := r.it.Key()
+		valueSlice := r.it.Value()
+		key := make([]byte, keySlice.Size())
+		value := make([]byte, valueSlice.Size())
+		copy(key, keySlice.Data())
+		copy(value, valueSlice.Data())
+		keySlice.Free()
+		valueSlice.Free()
+		buffer[n] = &storage.KVPair{Key: key, Value: value}
+		n++
+	}
+	return n, err
+}
+
+func (r *RocksDBKVPairReader) Close() {
+	r.it.Close()
 }

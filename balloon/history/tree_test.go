@@ -312,7 +312,7 @@ func TestProveMembership(t *testing.T) {
 
 	for _, c := range testCases {
 		_, mutations, err := tree.Add(c.eventDigest, c.index)
-		store.Mutate(mutations)
+		_ = store.Mutate(mutations)
 		require.NoError(t, err)
 	}
 
@@ -425,7 +425,7 @@ func TestProveConsistency(t *testing.T) {
 		index := uint64(i)
 		_, mutations, err := tree.Add(c.eventDigest, index)
 		require.NoError(t, err)
-		store.Mutate(mutations)
+		_ = store.Mutate(mutations)
 
 		start := uint64(max(0, i-1))
 		end := index
@@ -495,7 +495,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	for i, c := range testCases {
 		_, mutations, err := tree.Add(c.eventDigest, c.index)
 		require.NoError(t, err)
-		store.Mutate(mutations)
+		_ = store.Mutate(mutations)
 
 		proof, err := tree.ProveConsistency(c.index, c.index)
 		require.NoError(t, err)
