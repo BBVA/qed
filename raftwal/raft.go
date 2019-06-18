@@ -14,6 +14,10 @@
    limitations under the License.
 */
 
+// Package raftwall implements the RaftBalloon life cycle and functionality.
+// RaftBalloon means the raft layer above a single balloon, where consensus
+// and raft-cluster information operations occurs.
+// All balloon operations pass throught this layer.
 package raftwal
 
 import (
@@ -279,6 +283,7 @@ func (b *RaftBalloon) WaitForLeader(timeout time.Duration) (string, error) {
 	}
 }
 
+// Returns whether current node is leader or not.
 func (b *RaftBalloon) IsLeader() bool {
 	return b.raft.api.State() == raft.Leader
 }
@@ -359,6 +364,7 @@ func (b *RaftBalloon) remove(id string) error {
 	return err
 }
 
+// applies a command into the Raft.
 func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interface{}, error) {
 	buf, err := commands.Encode(t, cmd)
 	if err != nil {
@@ -374,6 +380,10 @@ func (b *RaftBalloon) raftApply(t commands.CommandType, cmd interface{}) (interf
 /*
 	RaftBalloon API implements the Ballon API in the RAFT system
 */
+
+// Add function applies an add operation into a Raft balloon.
+// As a result, it returns a shapshot, but previously it sends the snapshot
+// to the agents channel, in order to be published/queried.
 func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	// Hash events
 	eventDigest := b.hasherF().Do(event)
@@ -394,6 +404,9 @@ func (b *RaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
 	return snapshot, nil
 }
 
+// AddBulk function applies an add bulk operation into a Raft balloon.
+// As a result, it returns a bulk of shapshots, but previously it sends each snapshot
+// of the bulk to the agents channel, in order to be published/queried.
 func (b *RaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
 	// Hash events
 	var eventHashBulk []hashing.Digest
@@ -420,26 +433,35 @@ func (b *RaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
 	return snapshotBulk, nil
 }
 
+// QueryDigestMembershipConsistency acts as a passthrough when an event digest is given to
+// request a membership proof against a certain balloon version.
 func (b *RaftBalloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
 	b.metrics.DigestMembershipQueries.Inc()
 	return b.fsm.QueryDigestMembershipConsistency(keyDigest, version)
 }
 
+// QueryMembershipConsistency acts as a passthrough when an event is given to request a
+// membership proof against a certain balloon version.
 func (b *RaftBalloon) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
 	b.metrics.MembershipQueries.Inc()
 	return b.fsm.QueryMembershipConsistency(event, version)
 }
 
+// QueryDigestMembership acts as a passthrough when an event digest is given to request a
+// membership proof against the last balloon version.
 func (b *RaftBalloon) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
 	b.metrics.DigestMembershipQueries.Inc()
 	return b.fsm.QueryDigestMembership(keyDigest)
 }
 
+// QueryMembership acts as a passthrough when an event is given to request a membership proof
+// against the last balloon version.
 func (b *RaftBalloon) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
 	b.metrics.MembershipQueries.Inc()
 	return b.fsm.QueryMembership(event)
 }
 
+// QueryConsistency acts as a passthrough when requesting an incremental proof.
 func (b *RaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
 	b.metrics.IncrementalQueries.Inc()
 	return b.fsm.QueryConsistency(start, end)
@@ -510,7 +532,8 @@ func (b *RaftBalloon) SetMetadata(nodeInvolved string, md map[string]string) err
 	return resp.(*fsmGenericResponse).error
 }
 
-// TODO Improve info structure.
+// Info function returns Raft current node info plus certain raft cluster
+// info. Used in /info/shard.
 func (b *RaftBalloon) Info() map[string]interface{} {
 	m := make(map[string]interface{})
 	m["nodeID"] = b.ID()
@@ -519,6 +542,7 @@ func (b *RaftBalloon) Info() map[string]interface{} {
 	return m
 }
 
+// RegisterMetrics register raft metrics: prometheus collectors and storage metrics.
 func (b *RaftBalloon) RegisterMetrics(registry metrics.Registry) {
 	if registry != nil {
 		b.store.rocksStore.RegisterMetrics(registry)
