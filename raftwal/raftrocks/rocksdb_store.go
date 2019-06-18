@@ -14,6 +14,9 @@
    limitations under the License.
 */
 
+// Package raftrocks provides access to RocksDB for Raft to store and retrieve
+// log entries. It also provides key/value storage, and can be used as
+// a LogStore and StableStore.
 package raftrocks
 
 import (

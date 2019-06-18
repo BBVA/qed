@@ -336,6 +336,7 @@ func (m *blockCacheMetrics) collectors() []prometheus.Collector {
 	}
 }
 
+// bloomFilterMetrics are a set of metrics concerned with bloom filters.
 type bloomFilterMetrics struct {
 	Useful           prometheus.GaugeFunc
 	FullPositive     prometheus.GaugeFunc
@@ -383,6 +384,7 @@ func (m *bloomFilterMetrics) collectors() []prometheus.Collector {
 	}
 }
 
+// memtableMetrics are a set of metrics concerned with rocksDB memtable.
 type memtableMetrics struct {
 	Hit  prometheus.GaugeFunc
 	Miss prometheus.GaugeFunc
@@ -419,6 +421,8 @@ func (m *memtableMetrics) collectors() []prometheus.Collector {
 	}
 }
 
+// getsMetrics are a set of metrics concerned with rocksDB SST Level0 (L0)
+// and upper levels.
 type getsMetrics struct {
 	HitL0      prometheus.GaugeFunc
 	HitL1      prometheus.GaugeFunc
@@ -466,6 +470,7 @@ func (m *getsMetrics) collectors() []prometheus.Collector {
 	}
 }
 
+// ioMetrics are a set of metrics concerned with IO.
 type ioMetrics struct {
 	KeysWritten       prometheus.GaugeFunc
 	KeysRead          prometheus.GaugeFunc
@@ -601,6 +606,7 @@ func (m *ioMetrics) collectors() []prometheus.Collector {
 	}
 }
 
+// compressMetrics are a set of metrics concerned with rocksDB data compression.
 type compressMetrics struct {
 	NumberBlockCompressed    prometheus.GaugeFunc
 	NumberBlockDecompressed  prometheus.GaugeFunc
@@ -648,6 +654,7 @@ func (m *compressMetrics) collectors() []prometheus.Collector {
 	}
 }
 
+// perTableMetrics are a set of metrics concerned with rocksDB tables.
 type perTableMetrics struct {
 	NumFilesAtLevelN                []prometheus.GaugeFunc
 	NumImmutableMemtables           prometheus.GaugeFunc
