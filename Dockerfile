@@ -24,21 +24,11 @@ RUN apt update -qq && apt install -qq -y autoconf cmake
 
 # Build C deps. 
 # This step acts as cache to avoid recompiling when Go code changes.
-RUN git clone https://github.com/BBVA/qed.git /tmp/qed  &&\
-    cd /tmp/qed                                         &&\
+RUN git clone https://github.com/BBVA/qed.git .         &&\
     git submodule update --init --recursive             &&\
     cd c-deps                                           &&\
-    ./builddeps.sh
-
-# Warm Go modules cache.
-RUN cd /tmp/qed      &&\
+    ./builddeps.sh                                      &&\
     go mod download
-
-# Copy QED source from current working dir. 
-COPY . /go/src/github.com/bbva/qed
-
-# Move C deps to current working dir.
-RUN mv /tmp/qed/c-deps/* c-deps/
 
 # Build QED, Storage binary and riot
 RUN go build -o /usr/local/bin/qed                                   &&\
@@ -46,7 +36,7 @@ RUN go build -o /usr/local/bin/qed                                   &&\
     go build -o /usr/local/bin/storage testutils/notifierstore.go
 
 # Clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/qed
+RUN rm -rf /var/lib/apt/lists/*
 
 FROM ubuntu:19.10
 
