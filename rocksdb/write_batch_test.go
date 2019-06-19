@@ -19,6 +19,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -122,4 +123,41 @@ func TestDeleteRange(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, actualVal4, val4)
 
+}
+
+func TestWriteBatchHandler(t *testing.T) {
+
+	db := newTestDB(t, "TestWriteBatch", nil)
+	defer db.Close()
+
+	var (
+		key1   = []byte("key1")
+		value1 = []byte("val1")
+		key2   = []byte("key2")
+	)
+	wo := NewDefaultWriteOptions()
+	require.NoError(t, db.Put(wo, key2, []byte("foo")))
+
+	// create and fill the write batch
+	wb := NewWriteBatch()
+	defer wb.Destroy()
+	wb.Put(key1, value1)
+
+	// add log data
+	version := util.Uint64AsBytes(1)
+	wb.PutLogData(version, len(version))
+
+	// iterate with handler
+	handler := &VersionExtractorHandler{}
+	wb.Iterate(handler)
+	require.Equal(t, util.BytesAsUint64(version), handler.Version)
+
+}
+
+type VersionExtractorHandler struct {
+	Version uint64
+}
+
+func (h *VersionExtractorHandler) LogData(blob []byte) {
+	h.Version = util.BytesAsUint64(blob)
 }

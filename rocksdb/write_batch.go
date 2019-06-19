@@ -16,7 +16,8 @@
 
 package rocksdb
 
-// #include <rocksdb/c.h>
+// #include "extended.h"
+// #include "rocksdb/c.h"
 import "C"
 
 // WriteBatch holds a collection of updates to apply atomically to a DB.
@@ -32,11 +33,18 @@ import "C"
 //
 type WriteBatch struct {
 	c *C.rocksdb_writebatch_t
+
+	handler *C.rocksdb_writebatch_handler_t
 }
 
 // NewWriteBatch create a WriteBatch object.
 func NewWriteBatch() *WriteBatch {
-	return &WriteBatch{c: C.rocksdb_writebatch_create()}
+	return NewNativeWriteBatch(C.rocksdb_writebatch_create())
+}
+
+// NewNativeWriteBatch create a WriteBatch object.
+func NewNativeWriteBatch(c *C.rocksdb_writebatch_t) *WriteBatch {
+	return &WriteBatch{c: c}
 }
 
 // Put stores the mapping "key->value" in the database.
@@ -82,8 +90,6 @@ func (wb *WriteBatch) DeleteRangeCF(cf *ColumnFamilyHandle, beginKey, endKey []b
 	C.rocksdb_writebatch_delete_range_cf(wb.c, cf.c, cBeginKey, C.size_t(len(beginKey)), cEndKey, C.size_t(len(endKey)))
 }
 
-// WriteBatch implementation of DeleteRange() // TODO
-
 // Merge "value" with the existing value of "key" in the database.
 // "key->merge(existing, value)"
 func (wb *WriteBatch) Merge(key, value []byte) {
@@ -110,8 +116,80 @@ func (wb *WriteBatch) Count() int {
 	return int(C.rocksdb_writebatch_count(wb.c))
 }
 
+<<<<<<< HEAD
+=======
+// Data returns the serialized version of this batch.
+func (wb *WriteBatch) Data() []byte {
+	var cSize C.size_t
+	cValue := C.rocksdb_writebatch_data(wb.c, &cSize)
+	return charToBytes(cValue, cSize)
+}
+
+// PutLogData appends a blob of arbitrary size to the records in this batch.
+// The blob will be stored in the transaction log but not in any other files.
+// In particular, it will not be persisted to the SST files. When iterating
+// over this WriteBatch,  WriteBatch::Handler::LogData will be called with the contents
+// of the blob as it is encountered. Blobs, puts, deletes, and merges will be
+// encountered in the same order in which they were inserted. The blob will
+// NOT consume sequence number(s) and will NOT increase the count of the batch
+//
+// Example application: add timestamps to the transaction log for use in
+// replication.
+func (wb *WriteBatch) PutLogData(blob []byte, size int) {
+	C.rocksdb_writebatch_put_log_data(wb.c, bytesToChar(blob), C.size_t(size))
+}
+
+// Iterate iterates over the contents of the batch while calling methods
+// of the registered handler.
+func (wb *WriteBatch) Iterate(handler WriteBatchHandler) {
+	if nativeHandler, ok := handler.(nativeWriteBatchHandler); ok {
+		wb.handler = nativeHandler.c
+	} else {
+		idx := registerWriteBatchHandler(handler)
+		wb.handler = C.rocksdb_writebatch_handler_create_ext(C.uintptr_t(idx))
+	}
+	C.rocksdb_writebatch_iterate_ext(wb.c, wb.handler)
+}
+
+>>>>>>> 2decf65... Implement bindings for the write batch handler
 // Destroy deallocates the WriteBatch object.
 func (wb *WriteBatch) Destroy() {
+	if wb.handler != nil {
+		C.rocksdb_writebatch_handler_destroy(wb.handler)
+		wb.handler = nil
+	}
 	C.rocksdb_writebatch_destroy(wb.c)
 	wb.c = nil
+}
+
+// WriteBatchHandler is used to iterate over the contents of a batch.
+type WriteBatchHandler interface {
+	LogData(blob []byte)
+}
+
+// NewNativeWriteBatchHandler creates a WriteBatchHandler object.
+func NewNativeWriteBatchHandler(c *C.rocksdb_writebatch_handler_t) WriteBatchHandler {
+	return nativeWriteBatchHandler{c}
+}
+
+type nativeWriteBatchHandler struct {
+	c *C.rocksdb_writebatch_handler_t
+}
+
+func (h nativeWriteBatchHandler) LogData(blob []byte) {}
+
+var writeBatchHandlers = NewCOWList()
+
+type writeBatchHandlerWrapper struct {
+	handler WriteBatchHandler
+}
+
+func registerWriteBatchHandler(h WriteBatchHandler) int {
+	return writeBatchHandlers.Append(writeBatchHandlerWrapper{h})
+}
+
+//export rocksdb_writebatch_handler_log_data
+func rocksdb_writebatch_handler_log_data(idx int, cBlob *C.char, cBlobSize C.size_t) {
+	blob := charToBytes(cBlob, cBlobSize)
+	writeBatchHandlers.Get(idx).(writeBatchHandlerWrapper).handler.LogData(blob)
 }
