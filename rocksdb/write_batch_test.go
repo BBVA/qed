@@ -127,16 +127,10 @@ func TestDeleteRange(t *testing.T) {
 
 func TestWriteBatchHandler(t *testing.T) {
 
-	db := newTestDB(t, "TestWriteBatch", nil)
-	defer db.Close()
-
 	var (
 		key1   = []byte("key1")
 		value1 = []byte("val1")
-		key2   = []byte("key2")
 	)
-	wo := NewDefaultWriteOptions()
-	require.NoError(t, db.Put(wo, key2, []byte("foo")))
 
 	// create and fill the write batch
 	wb := NewWriteBatch()
@@ -160,4 +154,26 @@ type VersionExtractorHandler struct {
 
 func (h *VersionExtractorHandler) LogData(blob []byte) {
 	h.Version = util.BytesAsUint64(blob)
+}
+
+func TestWriteBatchSerialization(t *testing.T) {
+
+	var (
+		key1   = []byte("key1")
+		value1 = []byte("val1")
+	)
+
+	// create and fill the write batch
+	wb := NewWriteBatch()
+	defer wb.Destroy()
+	wb.Put(key1, value1)
+
+	// add log data
+	version := util.Uint64AsBytes(1)
+	wb.PutLogData(version, len(version))
+
+	serialized := wb.Data()
+	deserialized := WriteBatchFrom(serialized)
+	require.Equal(t, serialized, deserialized.Data())
+
 }

@@ -47,6 +47,11 @@ func NewNativeWriteBatch(c *C.rocksdb_writebatch_t) *WriteBatch {
 	return &WriteBatch{c: c}
 }
 
+// WriteBatchFrom creates a write batch from a serialized WriteBatch.
+func WriteBatchFrom(data []byte) *WriteBatch {
+	return NewNativeWriteBatch(C.rocksdb_writebatch_create_from(bytesToChar(data), C.size_t(len(data))))
+}
+
 // Put stores the mapping "key->value" in the database.
 func (wb *WriteBatch) Put(key, value []byte) {
 	cKey := bytesToChar(key)
@@ -128,7 +133,7 @@ func (wb *WriteBatch) Data() []byte {
 // PutLogData appends a blob of arbitrary size to the records in this batch.
 // The blob will be stored in the transaction log but not in any other files.
 // In particular, it will not be persisted to the SST files. When iterating
-// over this WriteBatch,  WriteBatch::Handler::LogData will be called with the contents
+// over this WriteBatch, WriteBatch::Handler::LogData will be called with the contents
 // of the blob as it is encountered. Blobs, puts, deletes, and merges will be
 // encountered in the same order in which they were inserted. The blob will
 // NOT consume sequence number(s) and will NOT increase the count of the batch
