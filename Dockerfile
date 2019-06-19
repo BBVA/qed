@@ -42,7 +42,7 @@ RUN mv /tmp/qed/c-deps/* c-deps/
 
 # Build QED, Storage binary and riot
 RUN go build -o /usr/local/bin/qed                                   &&\
-    go build -o /usr/local/bin/riot tests/riot.go                    &&\
+    go build -o /usr/local/bin/riot testutils/riot/riot.go           &&\
     go build -o /usr/local/bin/storage testutils/notifierstore.go
 
 # Clean
