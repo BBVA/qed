@@ -23,6 +23,7 @@
 #include "rocksdb/options.h"
 #include "rocksdb/utilities/backupable_db.h"
 #include "rocksdb/status.h"
+#include "rocksdb/write_batch.h"
 
 using rocksdb::DB;
 using rocksdb::ColumnFamilyHandle;
@@ -33,6 +34,7 @@ using rocksdb::Options;
 using rocksdb::Cache;
 using rocksdb::NewLRUCache;
 using rocksdb::Slice;
+using rocksdb::WriteBatch;
 using std::shared_ptr;
 using rocksdb::BackupEngine;
 using rocksdb::BackupInfo;
@@ -50,6 +52,20 @@ struct rocksdb_column_family_handle_t  { ColumnFamilyHandle* rep; };
 struct rocksdb_backup_engine_t   { BackupEngine*     rep; };
 struct rocksdb_backup_engine_info_t { std::vector<BackupInfo> rep; };
 struct rocksdb_restore_options_t { RestoreOptions rep; };
+struct rocksdb_writebatch_t { WriteBatch rep; };
+
+struct rocksdb_writebatch_handler_t : public WriteBatch::Handler {
+    void* state_;
+    void (*destructor_)(void*);
+    void (*log_data_)(void*, const char* blob, size_t length);
+
+    ~rocksdb_writebatch_handler_t() override { (*destructor_)(state_); }
+
+    void LogData(const Slice& blob) override {
+        (*log_data_)(state_, blob.data(), blob.size());
+    }
+
+};
 
 void rocksdb_options_set_atomic_flush(
     rocksdb_options_t* opts, unsigned char value) {
@@ -75,6 +91,34 @@ rocksdb_slicetransform_t* rocksdb_slicetransform_create_ext(uintptr_t idx) {
     	(const char* (*)(void*))(rocksdb_slicetransform_name));
 }
 
+rocksdb_writebatch_handler_t* rocksdb_writebatch_handler_create(
+    void* state,
+    void (*destructor)(void*),
+    void (*log_data)(void*, const char* blob, size_t length)) {
+
+    rocksdb_writebatch_handler_t* result = new rocksdb_writebatch_handler_t;
+    result->state_ = state;
+    result->destructor_ = destructor;
+    result->log_data_ = log_data;
+    return result;
+}
+
+rocksdb_writebatch_handler_t* rocksdb_writebatch_handler_create_ext(uintptr_t idx) {
+    return rocksdb_writebatch_handler_create(
+        (void*)idx,
+        rocksdb_destruct_handler,
+        (void (*)(void*, const char*, size_t))(rocksdb_writebatch_handler_log_data));
+}
+
+void rocksdb_writebatch_handler_destroy(rocksdb_writebatch_handler_t* handler) {
+    delete handler;
+}
+
+void rocksdb_writebatch_iterate_ext(
+    rocksdb_writebatch_t* b, 
+    rocksdb_writebatch_handler_t* h) {
+    b->rep.Iterate(h);
+}
 
 /* Backup */
 
