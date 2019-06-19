@@ -23,7 +23,7 @@
   with_items:
     - config_files/bin/qed ../../
     - config_files/bin/storage ../../testutils/notifierstore.go
-    - config_files/bin/riot ../../tests/riot.go
+    - config_files/bin/riot ../../testutils/riot/riot.go
   when: ansible_system == 'Linux'
 
 - name: Build QED, Inmemory Storage and Riot binaries for Linux, on MacOS
