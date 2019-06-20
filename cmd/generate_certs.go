@@ -44,7 +44,7 @@ func runSelfSignedCert(cmd *cobra.Command, args []string) error {
 
 	cert, key, err := crypto.NewSelfSignedCert(conf.Path, conf.Host)
 	if err != nil {
-		fmt.Errorf("Error: %v\n", err)
+		return fmt.Errorf("Error: %v", err)
 	}
 	fmt.Printf("New Self Signed Certtifiates generated at:\n%v\n%v\n", cert, key)
 

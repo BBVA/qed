@@ -44,7 +44,7 @@ func runCsr(cmd *cobra.Command, args []string) error {
 
 	cert, key, err := crypto.NewCsrRequest(conf.Path, conf.Host)
 	if err != nil {
-		fmt.Errorf("Error: %v\n", err)
+		return fmt.Errorf("Error: %v", err)
 	}
 	fmt.Printf("New Certificate Signing Request and Private Key generated at:\n%v\n%v\n", cert, key)
 

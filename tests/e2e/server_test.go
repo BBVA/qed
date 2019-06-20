@@ -189,7 +189,7 @@ func TestStartCluster(t *testing.T) {
 			}
 			shards := len(m["shards"].(map[string]interface{}))
 			if shards != 3 {
-				mainErr = fmt.Errorf("not enought shards: %v", shards)
+				mainErr = fmt.Errorf("not enough shards: %v", shards)
 				return mainErr
 			}
 			return nil
