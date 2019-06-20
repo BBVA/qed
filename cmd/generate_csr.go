@@ -37,9 +37,9 @@ func runCsr(cmd *cobra.Command, args []string) error {
 	var err error
 	conf := generateCtx.Value(k("generate.config")).(*GenerateConfig)
 
-	err = urlParseNoSchemaOrPortRequired(conf.Host)
+	err = isValidFQDN(conf.Host)
 	if err != nil {
-		return err
+		return fmt.Errorf("Invalid FQDN: %v", err)
 	}
 
 	cert, key, err := crypto.NewCsrRequest(conf.Path, conf.Host)
