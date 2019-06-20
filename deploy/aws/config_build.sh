@@ -48,7 +48,7 @@ fi
 
 if [ ! -f ${sign_path} ]; then
     #build shared signing key
-    $QED generate self-signed-cert --path ${cert_path} --host 127.0.0.1
+    $QED generate self-signed-cert --path ${cert_path} --host qed.awesome.aws
 fi
 
 )

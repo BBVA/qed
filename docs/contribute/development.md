@@ -13,7 +13,7 @@ go run main.go generate signerkeys
 
 
 # Generation of self-signed(x509) public key (PEM-encodings qed_key.pem|qed_cert.pem)
-go run main.go generate self-signed-cert --host 127.0.0.1
+go run main.go generate self-signed-cert --host qed.awesome.lan
 ```
 
 ## Useful commands

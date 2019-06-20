@@ -35,7 +35,7 @@ type GenerateConfig struct {
 func GenerateDefaultConfig() *GenerateConfig {
 	return &GenerateConfig{
 		Path: "/var/tmp",
-		Host: "127.0.0.1",
+		Host: "localhost",
 	}
 }
 
