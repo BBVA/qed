@@ -94,3 +94,79 @@ func TestUrlParseNoSchemaRequired(t *testing.T) {
 		}
 	}
 }
+
+func TestIsValidFQDN(t *testing.T) {
+
+	testCases := []struct {
+		fqdn          []string
+		expectedError string
+	}{
+		{
+			fqdn: []string{
+				"a..bc",
+				"xn--d1aacihrobi6i.xn--p1ai",
+			},
+			expectedError: errFQDNTrailing,
+		},
+		{
+			fqdn: []string{
+				"a.b",
+			},
+			expectedError: errTLDLen,
+		},
+		{
+			fqdn: []string{
+				"ec2-35-160-210-253.us-west-2-.compute.amazonaws.com",
+				"-ec2-35-160-210-253.us-west-2-.compute.amazonaws.com",
+			},
+			expectedError: errFQDNHyp,
+		},
+		{
+			fqdn: []string{
+				"ec2_35$160%210-253.us-west-2.compute.amazonaws.com",
+				"ec235160210-253.us-west-2.compute.@mazonaws.com",
+			},
+			expectedError: errFQDNInvalid,
+		},
+		{
+			fqdn: []string{
+				"ec2-35-160-210-253.us-west-2.compute.amazonaws.com.",
+				".ec2-35-160-210-253.us-west-2.compute.amazonaws.com",
+				".ec2-35-160-210-253.us-west-2.compute.amazonaws.com.",
+				"acme.net.",
+			},
+			expectedError: errFQDNEmptyDot,
+		},
+		{
+			fqdn: []string{
+				"label.name.321",
+				"so-me.na-me.567",
+			},
+			expectedError: errTLDLet,
+		},
+		{
+			fqdn: []string{
+				"a23456789-123456789-123456789-123456789-123456789-123456789-1234.b23.com",
+				"b23.a23456789-123456789-123456789-123456789-123456789-123456789-1234.com",
+			},
+			expectedError: errFQDNLabelLen,
+		},
+		{
+			fqdn: []string{
+				"a23456789-a23456789-a234567890.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a2345678.com.",
+			},
+			expectedError: errFQDNLen,
+		},
+	}
+
+	for _, c := range testCases {
+		for _, e := range c.fqdn {
+			err := isValidFQDN(e)
+			if c.expectedError == "" {
+				require.NoError(t, err, "Unexpected error")
+				continue
+			}
+			require.Equal(t, err, fmt.Errorf("%s in %s", c.expectedError, e), "Errors do not match")
+		}
+	}
+}
