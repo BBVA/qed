@@ -82,10 +82,6 @@ func isLetDigHyp(s rune) bool {
 	return isLetDig(s) || isHyphen(s)
 }
 
-func maxFQDNLen(s string) bool {
-	return 63 > len(s) || 253 > len(s)
-}
-
 func trailingDotHyp(s string) bool {
 	return strings.Contains(s, "..") || strings.Contains(s, "--")
 }
@@ -135,7 +131,7 @@ func isValidFQDN(fqdn string) error {
 	}
 
 	// Check if FQDN have valid length.
-	if 253 < len(fqdn) {
+	if len(fqdn) > 253 {
 		return fmt.Errorf("%s in %s", errFQDNLen, fqdn)
 	}
 
@@ -143,7 +139,7 @@ func isValidFQDN(fqdn string) error {
 		l := components[c]
 
 		// Check if label have valid length.
-		if 63 < len(l) {
+		if len(l) > 63 {
 			return fmt.Errorf("%s in %s", errFQDNLabelLen, fqdn)
 		}
 
