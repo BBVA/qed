@@ -23,30 +23,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var generateSignerKeys *cobra.Command = &cobra.Command{
-	Use:   "signerkeys",
-	Short: "Generate Signer Keys",
-	RunE:  runGenerateSignerKeys,
+var generateCsrRequest *cobra.Command = &cobra.Command{
+	Use:   "csr",
+	Short: "Generate Certificate Signing Request",
+	RunE:  runCsr,
 }
 
 func init() {
-	generateCmd.AddCommand(generateSignerKeys)
+	generateCmd.AddCommand(generateCsrRequest)
 }
 
-func runGenerateSignerKeys(cmd *cobra.Command, args []string) error {
+func runCsr(cmd *cobra.Command, args []string) error {
 	var err error
 	conf := generateCtx.Value(k("generate.config")).(*GenerateConfig)
 
 	err = isValidFQDN(conf.Host)
 	if err != nil {
-		return fmt.Errorf("%v", err)
+		return fmt.Errorf("Invalid FQDN: %v", err)
 	}
 
-	pubKey, priKey, err := crypto.NewEd25519SignerKeysFile(conf.Path)
+	cert, key, err := crypto.NewCsrRequest(conf.Path, conf.Host)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error: %v", err)
 	}
-	fmt.Printf("New signer keys generated at:\n%v\n%v\n", pubKey, priKey)
+	fmt.Printf("New Certificate Signing Request and Private Key generated at:\n%v\n%v\n", cert, key)
 
 	return nil
 }
