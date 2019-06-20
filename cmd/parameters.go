@@ -30,6 +30,8 @@ const (
 	errUnexpectedScheme = "unexpected URL Scheme"
 )
 
+// urlParse function checks that given string parameters are valid URLs for
+// REST requests: schema + hostname [ + port ]
 func urlParse(endpoints ...string) error {
 	for _, endpoint := range endpoints {
 		url, err := url.Parse(endpoint)
@@ -49,6 +51,8 @@ func urlParse(endpoints ...string) error {
 	return nil
 }
 
+// urlParse function checks that given string parameters are valid IPs for
+// binding services: hostname + port. No schema is required.
 func urlParseNoSchemaRequired(endpoints ...string) error {
 	for _, endpoint := range endpoints {
 

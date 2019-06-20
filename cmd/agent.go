@@ -67,7 +67,7 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	var err error
 
 	gossipStartJoin, _ := cmd.Flags().GetStringSlice("start-join")
-	err = urlParse(gossipStartJoin...)
+	err = urlParseNoSchemaRequired(gossipStartJoin...)
 	if err != nil {
 		return err
 	}
