@@ -25,6 +25,9 @@ import (
 )
 
 // NewEd25519SignerKeysFile generates a new private/public signer key.
+// Input parameter is the full path to the output directory where the keys
+// will be stored. The function output is the full path to our new signer keys
+// and an error. Eg: (/var/tmp/qed_ed25519, /var/tmp/qed_ed25519.pub, nil)
 func NewEd25519SignerKeysFile(path string) (string, string, error) {
 	outPriv := path + "/qed_ed25519"
 	outPub := outPriv + ".pub"

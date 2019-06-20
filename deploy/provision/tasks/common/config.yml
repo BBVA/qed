@@ -23,32 +23,6 @@
     creates: config_files/qed_ed25519
 
 - name: Create SSL certs
-  shell: >
-    openssl req \
-        -newkey rsa:2048 \
-        -nodes \
-        -days 3650 \
-        -x509 \
-        -keyout config_files/ca.key \
-        -out config_files/ca.crt \
-        -subj "/CN=*"
-    openssl req \
-        -newkey rsa:2048 \
-        -nodes \
-        -keyout config_files/server.key \
-        -out config_files/server.csr \
-        -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=*"
-    openssl x509 \
-        -req \
-        -days 365 \
-        -sha256 \
-        -in config_files/server.csr \
-        -CA config_files/ca.crt \
-        -CAkey config_files/ca.key \
-        -CAcreateserial \
-        -out config_files/server.crt \
-        ## Not present in all OpenSSL version 
-        ## -extfile <(echo subjectAltName = IP:127.0.0.1)
-  args:
-    creates: config_files/server.crt
+  shell: GOOS="" GOARCH="" $QED generate self-signed-cert --path config_files --host qed.awesome.lan
+
   
