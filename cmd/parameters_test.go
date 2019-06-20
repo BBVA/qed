@@ -95,33 +95,73 @@ func TestUrlParseNoSchemaRequired(t *testing.T) {
 	}
 }
 
-func TestUrlParseNoSchemaOrPortRequired(t *testing.T) {
+func TestIsValidFQDN(t *testing.T) {
 
 	testCases := []struct {
-		endpoints     []string
+		fqdn          []string
 		expectedError string
 	}{
 		{
-			endpoints:     []string{"localhost:8080", "127.0.0.1:8080"},
-			expectedError: errNoPortRequired,
+			fqdn: []string{
+				"a..bc",
+				"xn--d1aacihrobi6i.xn--p1ai",
+			},
+			expectedError: errFQDNTrailing,
 		},
 		{
-			endpoints:     []string{"localhost", "127.0.0.1"},
-			expectedError: "",
+			fqdn: []string{
+				"a.b",
+			},
+			expectedError: errTLDLen,
 		},
 		{
-			endpoints:     []string{""},
-			expectedError: errMissingURLHost,
+			fqdn: []string{
+				"ec2-35-160-210-253.us-west-2-.compute.amazonaws.com",
+				"-ec2-35-160-210-253.us-west-2-.compute.amazonaws.com",
+			},
+			expectedError: errFQDNHyp,
 		},
 		{
-			endpoints:     []string{"http://localhost:8080", "http://localhost", "https://127.0.0.1:8080", "https://127.0.0.1"},
-			expectedError: errNoShemaRequired,
+			fqdn: []string{
+				"ec2_35$160%210-253.us-west-2.compute.amazonaws.com",
+				"ec235160210-253.us-west-2.compute.@mazonaws.com",
+			},
+			expectedError: errFQDNInvalid,
+		},
+		{
+			fqdn: []string{
+				"ec2-35-160-210-253.us-west-2.compute.amazonaws.com.",
+				".ec2-35-160-210-253.us-west-2.compute.amazonaws.com",
+				".ec2-35-160-210-253.us-west-2.compute.amazonaws.com.",
+				"acme.net.",
+			},
+			expectedError: errFQDNEmptyDot,
+		},
+		{
+			fqdn: []string{
+				"label.name.321",
+				"so-me.na-me.567",
+			},
+			expectedError: errTLDLet,
+		},
+		{
+			fqdn: []string{
+				"a23456789-123456789-123456789-123456789-123456789-123456789-1234.b23.com",
+				"b23.a23456789-123456789-123456789-123456789-123456789-123456789-1234.com",
+			},
+			expectedError: errFQDNLabelLen,
+		},
+		{
+			fqdn: []string{
+				"a23456789-a23456789-a234567890.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a23456789.a2345678.com.",
+			},
+			expectedError: errFQDNLen,
 		},
 	}
 
 	for _, c := range testCases {
-		for _, e := range c.endpoints {
-			err := urlParseNoSchemaOrPortRequired(e)
+		for _, e := range c.fqdn {
+			err := isValidFQDN(e)
 			if c.expectedError == "" {
 				require.NoError(t, err, "Unexpected error")
 				continue
