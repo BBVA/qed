@@ -77,8 +77,9 @@ incorrect data, he will only be able to verify such incorrect data.
     :align: center
 
 On each append operation, the QED Log will emit a signed token or receipt,
-called **snapshot**. This snapshot will be eventually published in a
-(maybe public) **snaphots store** outside QED.
+called **snapshot**, that captures the full state of the log at a particular
+version. This snapshot will be eventually published in a (maybe public)
+**snaphots store** outside QED.
 
 To provided transparency, the signed snapshot can also be delivered to
 the client, so he could later use it to verify the QED proof about such
