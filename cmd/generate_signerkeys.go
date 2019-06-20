@@ -34,8 +34,13 @@ func init() {
 }
 
 func runGenerateSignerKeys(cmd *cobra.Command, args []string) error {
-
+	var err error
 	conf := generateCtx.Value(k("generate.config")).(*GenerateConfig)
+
+	err = isValidFQDN(conf.Host)
+	if err != nil {
+		return fmt.Errorf("%v", err)
+	}
 
 	pubKey, priKey, err := crypto.NewEd25519SignerKeysFile(conf.Path)
 	if err != nil {
