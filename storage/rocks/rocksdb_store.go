@@ -450,6 +450,7 @@ func (s *RocksDBStore) Backup(w io.Writer, id uint64) error {
 	if err != nil {
 		return err
 	}
+	defer checkDB.Close()
 
 	// open a new iterator and dump every key
 	ro := rocksdb.NewDefaultReadOptions()
