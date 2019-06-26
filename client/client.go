@@ -704,3 +704,13 @@ func (c *HTTPClient) IncrementalAutoVerify(
 	// Verify
 	return c.IncrementalVerify(proof, &startSnapshot, &endSnapshot)
 }
+
+// Backup function ...
+func (c *HTTPClient) Backup(path string) error {
+	return nil
+}
+
+// Restore function ...
+func (c *HTTPClient) Restore(path string) error {
+	return nil
+}
