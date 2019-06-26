@@ -23,7 +23,7 @@ import (
 
 func TestWriteBatch(t *testing.T) {
 
-	db := newTestDB(t, "TestWriteBatch", nil)
+	db, _ := newTestDB(t, "TestWriteBatch", nil)
 	defer db.Close()
 
 	var (
@@ -60,7 +60,7 @@ func TestWriteBatch(t *testing.T) {
 
 func TestDeleteRange(t *testing.T) {
 
-	db := newTestDB(t, "TestDeleteRange", nil)
+	db, _ := newTestDB(t, "TestDeleteRange", nil)
 	defer db.Close()
 
 	wo := NewDefaultWriteOptions()

@@ -23,13 +23,13 @@ import (
 )
 
 func TestOpenDB(t *testing.T) {
-	db := newTestDB(t, "TestOpenDB", nil)
+	db, _ := newTestDB(t, "TestOpenDB", nil)
 	defer db.Close()
 }
 
 func TestDBCRUD(t *testing.T) {
 
-	db := newTestDB(t, "TestDBCRUD", nil)
+	db, _ := newTestDB(t, "TestDBCRUD", nil)
 	defer db.Close()
 
 	var (
