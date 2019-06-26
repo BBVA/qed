@@ -24,7 +24,7 @@ import (
 
 func TestIterator(t *testing.T) {
 
-	db := newTestDB(t, "TestIterator", nil)
+	db, _ := newTestDB(t, "TestIterator", nil)
 	defer db.Close()
 
 	// insert keys

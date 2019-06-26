@@ -31,7 +31,7 @@ func TestStatsLevel(t *testing.T) {
 func TestStatsGetTickerCount(t *testing.T) {
 
 	stats := NewStatistics()
-	db := newTestDB(t, "TestStatsGetTickerCount", func(opts *Options) {
+	db, _ := newTestDB(t, "TestStatsGetTickerCount", func(opts *Options) {
 		opts.SetStatistics(stats)
 	})
 	defer db.Close()
@@ -54,7 +54,7 @@ func TestStatsGetTickerCount(t *testing.T) {
 func TestGetAndResetTickerCount(t *testing.T) {
 
 	stats := NewStatistics()
-	db := newTestDB(t, "TestGetAndResetTickerCount", func(opts *Options) {
+	db, _ := newTestDB(t, "TestGetAndResetTickerCount", func(opts *Options) {
 		opts.SetStatistics(stats)
 	})
 	defer db.Close()
@@ -81,7 +81,7 @@ func TestGetHistogramData(t *testing.T) {
 	t.Skip() // not working
 
 	stats := NewStatistics()
-	db := newTestDB(t, "TestGetHistogramData", func(opts *Options) {
+	db, _ := newTestDB(t, "TestGetHistogramData", func(opts *Options) {
 		opts.SetStatistics(stats)
 	})
 	defer db.Close()
@@ -112,7 +112,7 @@ func TestGetHistogramData(t *testing.T) {
 
 func TestReset(t *testing.T) {
 	stats := NewStatistics()
-	db := newTestDB(t, "TestReset", func(opts *Options) {
+	db, _ := newTestDB(t, "TestReset", func(opts *Options) {
 		opts.SetStatistics(stats)
 	})
 	defer db.Close()
