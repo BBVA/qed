@@ -17,6 +17,7 @@
 package rocksdb
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -43,13 +44,13 @@ func insertKeys(db *DB, total, from int) error {
 func TestBackupAndRestore(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("", "backup")
+	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
 	require.NoError(t, err)
 	err = os.RemoveAll(backupDir)
 	require.NoError(t, err)
 
 	// Create new DB and insert keys
-	db, _ := newTestDB(t, "original", nil)
+	db, dbPath := newTestDB(t, "original", nil)
 	err = insertKeys(db, 10, 0)
 	require.NoError(t, err, "Error inserting keys")
 
@@ -88,7 +89,10 @@ func TestBackupAndRestore(t *testing.T) {
 		require.NoError(t, err, "Error verifying backup.")
 	}
 
+	// On success clean dirs
 	_ = db.Close()
+	os.RemoveAll(dbPath)
+	os.RemoveAll(backupDir)
 }
 
 // Test from:
@@ -96,11 +100,11 @@ func TestBackupAndRestore(t *testing.T) {
 func TestRestore(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("", "rocksdb-backup")
+	backupDir, err := ioutil.TempDir("/var/tmp", "rocksdb-backup")
 	require.NoError(t, err)
 
 	// Create new DB and insert keys
-	db, _ := newTestDB(t, "original", nil)
+	db, dbPath := newTestDB(t, "original", nil)
 	err = insertKeys(db, 10, 0)
 	require.NoError(t, err, "Error inserting keys")
 
@@ -125,7 +129,7 @@ func TestRestore(t *testing.T) {
 	defer be2.Close()
 
 	// Restore backup to a specific path.
-	restorePath := "/tmp/restored"
+	restorePath, err := ioutil.TempDir("/var/tmp", "rocksdb-restored")
 	ro := NewRestoreOptions()
 	ro.SetKeepLogFiles(1)
 	err = be2.RestoreDBFromLatestBackup(restorePath, restorePath, ro)
@@ -143,4 +147,152 @@ func TestRestore(t *testing.T) {
 		require.Equal(t, []byte("key"+string(i)), it.Key().Data())
 		i++
 	}
+
+	// On success clean dirs
+	_ = db.Close()
+	os.RemoveAll(dbPath)
+	os.RemoveAll(backupDir)
+	os.RemoveAll(restorePath)
+}
+
+func TestRestoreExistingDB(t *testing.T) {
+	var err error
+
+	backupDir, err := ioutil.TempDir("/var/tmp", "rocksdb-backup")
+	require.NoError(t, err)
+
+	// Create new DB and insert keys
+	db, dbPath := newTestDB(t, "original", nil)
+	err = insertKeys(db, 10, 0)
+	require.NoError(t, err, "Error inserting keys")
+
+	fo := NewDefaultFlushOptions()
+	db.Flush(fo)
+	fo.Destroy()
+
+	// Create a backup-engine.
+	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
+	require.NoError(t, err)
+	require.NotNil(t, be)
+
+	// Backup DB and close backup-engine.
+	err = be.CreateNewBackup(db)
+	require.NoError(t, err)
+	be.Close()
+
+	// Create a different backup engine pointing to backup dir.
+	be2, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
+	require.NoError(t, err)
+	require.NotNil(t, be2)
+	defer be2.Close()
+
+	restorePath, err := ioutil.TempDir("/var/tmp", "rocksdb-restored")
+	db2 := newTestDBfromPath(t, restorePath, nil)
+	db2.Close()
+
+	// Restore backup to a specific path.
+	ro := NewRestoreOptions()
+	ro.SetKeepLogFiles(1)
+	err = be2.RestoreDBFromLatestBackup(restorePath, restorePath, ro)
+	require.NoError(t, err)
+
+	// Create the new DB from restored path.
+	db2 = newTestDBfromPath(t, restorePath, nil)
+	defer db2.Close()
+
+	// Check keys from restored DB.
+	it := db2.NewIterator(NewDefaultReadOptions())
+	defer it.Close()
+	i := 0
+	for it.SeekToFirst(); it.Valid(); it.Next() {
+		require.Equal(t, []byte("key"+string(i)), it.Key().Data())
+		i++
+	}
+
+	// On success clean dirs
+	fo.Destroy()
+	_ = db.Close()
+	os.RemoveAll(dbPath)
+	os.RemoveAll(backupDir)
+	os.RemoveAll(restorePath)
+}
+func TestMultiBackupRestore(t *testing.T) {
+	var err error
+
+	backupDir, err := ioutil.TempDir("/var/tmp", "rocksdb-backup")
+	require.NoError(t, err)
+
+	// Create new DB and insert keys
+	db, dbPath := newTestDB(t, "original", nil)
+	err = insertKeys(db, 10, 0)
+	require.NoError(t, err, "Error inserting keys")
+
+	fo := NewDefaultFlushOptions()
+	db.Flush(fo)
+	// fo.Destroy()
+
+	// Create a backup-engine.
+	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
+	require.NoError(t, err)
+	require.NotNil(t, be)
+
+	// Backup DB and close backup-engine.
+	err = be.CreateNewBackup(db)
+	require.NoError(t, err)
+
+	// Restore backup to a specific path.
+	restorePath, err := ioutil.TempDir("/var/tmp", "rocksdb-restored")
+	ro := NewRestoreOptions()
+	ro.SetKeepLogFiles(1)
+	err = be.RestoreDBFromLatestBackup(restorePath, restorePath, ro)
+	require.NoError(t, err)
+	defer be.Close()
+
+	// Create the new DB from restored path.
+	db2 := newTestDBfromPath(t, restorePath, nil)
+	defer db2.Close()
+
+	// Check keys from restored DB.
+	it := db2.NewIterator(NewDefaultReadOptions())
+	defer it.Close()
+	i := 0
+	for it.SeekToFirst(); it.Valid(); it.Next() {
+		fmt.Println(i)
+		require.Equal(t, []byte("key"+string(i)), it.Key().Data())
+		i++
+	}
+
+	// Insert more keys
+	err = insertKeys(db, 10, 10)
+
+	// Backup DB.
+	be, err = OpenBackupEngine(NewDefaultOptions(), backupDir)
+	err = be.CreateNewBackup(db)
+	require.NoError(t, err)
+
+	// Restore backup to a specific path.
+	err = be.RestoreDBFromLatestBackup(restorePath, restorePath, ro)
+	require.NoError(t, err)
+
+	// Open DB2 for read only from restored path.
+	db2, err = OpenDBForReadOnly(restorePath, NewDefaultOptions(), true)
+	defer db2.Close()
+	require.NoError(t, err)
+
+	it = db2.NewIterator(NewDefaultReadOptions())
+	defer it.Close()
+
+	i = 0
+	for it.SeekToFirst(); it.Valid(); it.Next() {
+		require.Equal(t, []byte("key"+string(i)), it.Key().Data())
+		fmt.Println(i)
+		i++
+	}
+
+	// On success clean dirs
+	fo.Destroy()
+	_ = db.Close()
+	os.RemoveAll(dbPath)
+	os.RemoveAll(backupDir)
+	os.RemoveAll(restorePath)
 }
