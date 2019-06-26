@@ -24,7 +24,7 @@ import (
 )
 
 func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) (*DB, string) {
-	path, err := ioutil.TempDir("", "rocksdb-"+name)
+	path, err := ioutil.TempDir("/var/tmp", "rocksdb-"+name)
 	require.NoError(t, err)
 
 	opts := NewDefaultOptions()
