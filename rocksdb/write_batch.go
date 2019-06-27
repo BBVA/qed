@@ -17,8 +17,13 @@
 package rocksdb
 
 // #include "extended.h"
+// #include <stdlib.h>
 // #include "rocksdb/c.h"
 import "C"
+
+import (
+	"unsafe"
+)
 
 // WriteBatch holds a collection of updates to apply atomically to a DB.
 //
@@ -33,8 +38,6 @@ import "C"
 //
 type WriteBatch struct {
 	c *C.rocksdb_writebatch_t
-
-	handler *C.rocksdb_writebatch_handler_t
 }
 
 // NewWriteBatch create a WriteBatch object.
@@ -121,8 +124,6 @@ func (wb *WriteBatch) Count() int {
 	return int(C.rocksdb_writebatch_count(wb.c))
 }
 
-<<<<<<< HEAD
-=======
 // Data returns the serialized version of this batch.
 func (wb *WriteBatch) Data() []byte {
 	var cSize C.size_t
@@ -144,57 +145,69 @@ func (wb *WriteBatch) PutLogData(blob []byte, size int) {
 	C.rocksdb_writebatch_put_log_data(wb.c, bytesToChar(blob), C.size_t(size))
 }
 
-// Iterate iterates over the contents of the batch while calling methods
-// of the registered handler.
-func (wb *WriteBatch) Iterate(handler WriteBatchHandler) {
-	if nativeHandler, ok := handler.(nativeWriteBatchHandler); ok {
-		wb.handler = nativeHandler.c
-	} else {
-		idx := registerWriteBatchHandler(handler)
-		wb.handler = C.rocksdb_writebatch_handler_create_ext(C.uintptr_t(idx))
+// GetLogData retrieves the blob appended to this batch.
+func (wb *WriteBatch) GetLogData(extractor *LogDataExtractor) []byte {
+	if extractor != nil {
+		C.rocksdb_writebatch_iterate_ext(wb.c, extractor.c)
+		return extractor.Blob
 	}
-	C.rocksdb_writebatch_iterate_ext(wb.c, wb.handler)
+	return nil
 }
 
->>>>>>> 2decf65... Implement bindings for the write batch handler
 // Destroy deallocates the WriteBatch object.
 func (wb *WriteBatch) Destroy() {
-	if wb.handler != nil {
-		C.rocksdb_writebatch_handler_destroy(wb.handler)
-		wb.handler = nil
-	}
 	C.rocksdb_writebatch_destroy(wb.c)
 	wb.c = nil
 }
 
 // WriteBatchHandler is used to iterate over the contents of a batch.
 type WriteBatchHandler interface {
+	ID() string
 	LogData(blob []byte)
 }
 
-// NewNativeWriteBatchHandler creates a WriteBatchHandler object.
-func NewNativeWriteBatchHandler(c *C.rocksdb_writebatch_handler_t) WriteBatchHandler {
-	return nativeWriteBatchHandler{c}
-}
-
-type nativeWriteBatchHandler struct {
-	c *C.rocksdb_writebatch_handler_t
-}
-
-func (h nativeWriteBatchHandler) LogData(blob []byte) {}
-
-var writeBatchHandlers = NewCOWList()
-
-type writeBatchHandlerWrapper struct {
-	handler WriteBatchHandler
-}
-
-func registerWriteBatchHandler(h WriteBatchHandler) int {
-	return writeBatchHandlers.Append(writeBatchHandlerWrapper{h})
-}
+var writeBatchHandlers = NewRegistry()
 
 //export rocksdb_writebatch_handler_log_data
-func rocksdb_writebatch_handler_log_data(idx int, cBlob *C.char, cBlobSize C.size_t) {
+func rocksdb_writebatch_handler_log_data(cIdx *C.char, cBlob *C.char, cBlobSize C.size_t) {
 	blob := charToBytes(cBlob, cBlobSize)
-	writeBatchHandlers.Get(idx).(writeBatchHandlerWrapper).handler.LogData(blob)
+	idx := C.GoString(cIdx)
+	writeBatchHandlers.Lookup(idx).(WriteBatchHandler).LogData(blob)
+}
+
+// LogDataExtractor extracts metadata from a WriteBatch.
+type LogDataExtractor struct {
+	id   string
+	Blob []byte
+	c    *C.rocksdb_writebatch_handler_t
+}
+
+// NewLogDataExtractor creates a new LogDataExtractor.
+func NewLogDataExtractor(id string) *LogDataExtractor {
+	idx := C.CString(id)
+	defer C.free(unsafe.Pointer(idx))
+	extractor := &LogDataExtractor{
+		id:   id,
+		Blob: make([]byte, 0),
+		c:    C.rocksdb_writebatch_handler_create_ext(idx),
+	}
+	writeBatchHandlers.Register(id, extractor)
+	return extractor
+}
+
+// ID returns the unique identifier of this WriteBatchHandler.
+func (e *LogDataExtractor) ID() string {
+	return e.id
+}
+
+// LogData is a callback for the LogData.
+func (e *LogDataExtractor) LogData(blob []byte) {
+	e.Blob = append(blob[:0:0], blob...)
+}
+
+// Destroy destroys de LogDataExtractor.
+func (e *LogDataExtractor) Destroy() {
+	writeBatchHandlers.Unregister(e.ID())
+	C.rocksdb_writebatch_handler_destroy(e.c)
+	e.Blob = nil
 }

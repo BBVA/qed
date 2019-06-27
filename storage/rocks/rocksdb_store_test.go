@@ -239,6 +239,65 @@ func TestSnapshotLoad(t *testing.T) {
 
 }
 
+func TestFetchSnapshot(t *testing.T) {
+	store, closeF := openRocksDBStore(t)
+	defer closeF()
+
+	// insert
+	numElems := uint64(10)
+	tables := []storage.Table{storage.HistoryTable, storage.HyperTable}
+	for j, table := range tables {
+		for i := uint64(0); i < numElems; i++ {
+			key := util.Uint64AsBytes(i)
+			var vers []byte
+			if j == 1 {
+				vers = util.Uint64AsBytes(uint64(1) + i)
+			} else {
+				vers = util.Uint64AsBytes(i)
+			}
+			err := store.Mutate(
+				[]*storage.Mutation{
+					{Table: table, Key: key, Value: key},
+				},
+				vers,
+			)
+			require.NoError(t, err)
+		}
+	}
+
+	// create snapshot
+	ioBuf := bytes.NewBufferString("")
+	until, err := store.Snapshot2()
+	require.Nil(t, err)
+	require.Equal(t, numElems*uint64(len(tables)), until)
+
+	// fetch snapshot
+	require.NoError(t, store.FetchSnapshot(ioBuf, until))
+
+	// load snapshot in another instance
+	restore, recloseF := openRocksDBStore(t)
+	defer recloseF()
+	require.NoError(t, restore.LoadSnapshot(ioBuf, 0))
+
+	// check elements
+	for _, table := range tables {
+		reader := store.GetAll(table)
+		for {
+			entries := make([]*storage.KVPair, 1000)
+			n, _ := reader.Read(entries)
+			if n == 0 {
+				break
+			}
+			for i := 0; i < n; i++ {
+				kv, err := restore.Get(table, entries[i].Key)
+				require.NoError(t, err)
+				require.Equal(t, entries[i].Value, kv.Value, "The values should match")
+			}
+		}
+		reader.Close()
+	}
+}
+
 func openRocksDBStore(t require.TestingT) (*RocksDBStore, func()) {
 	path := mustTempDir()
 	store, err := NewRocksDBStore(filepath.Join(path, "rockdsdb_store_test.db"))
