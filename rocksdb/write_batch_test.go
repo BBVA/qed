@@ -18,6 +18,7 @@ package rocksdb
 import (
 	"os"
 	"testing"
+	"fmt"
 
 	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
@@ -125,7 +126,7 @@ func TestDeleteRange(t *testing.T) {
 
 }
 
-func TestWriteBatchHandler(t *testing.T) {
+func TestGetLogData(t *testing.T) {
 
 	var (
 		key1   = []byte("key1")
@@ -141,19 +142,11 @@ func TestWriteBatchHandler(t *testing.T) {
 	version := util.Uint64AsBytes(1)
 	wb.PutLogData(version, len(version))
 
-	// iterate with handler
-	handler := &VersionExtractorHandler{}
-	wb.Iterate(handler)
-	require.Equal(t, util.BytesAsUint64(version), handler.Version)
+	// get log data
+	extractor := NewLogDataExtractor("version")
+	wb.GetLogData(extractor)
+	require.Equal(t, version, extractor.Blob)
 
-}
-
-type VersionExtractorHandler struct {
-	Version uint64
-}
-
-func (h *VersionExtractorHandler) LogData(blob []byte) {
-	h.Version = util.BytesAsUint64(blob)
 }
 
 func TestWriteBatchSerialization(t *testing.T) {
@@ -175,5 +168,11 @@ func TestWriteBatchSerialization(t *testing.T) {
 	serialized := wb.Data()
 	deserialized := WriteBatchFrom(serialized)
 	require.Equal(t, serialized, deserialized.Data())
+
+	extractor := NewLogDataExtractor("version")
+	defer extractor.Destroy()
+	require.Equal(t, version, deserialized.GetLogData(extractor))
+
+	fmt.Println(deserialized.GetLogData(extractor))
 
 }

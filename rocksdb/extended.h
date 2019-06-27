@@ -88,7 +88,7 @@ extern rocksdb_writebatch_handler_t* rocksdb_writebatch_handler_create(
     void (*destructor)(void*),
     void (*log_data)(void*, const char* blob, size_t length));
 
-extern rocksdb_writebatch_handler_t* rocksdb_writebatch_handler_create_ext(uintptr_t idx);
+extern rocksdb_writebatch_handler_t* rocksdb_writebatch_handler_create_ext(const char* idx);
 
 extern void rocksdb_writebatch_handler_destroy(rocksdb_writebatch_handler_t*);
 
