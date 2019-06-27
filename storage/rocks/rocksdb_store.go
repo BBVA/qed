@@ -27,6 +27,7 @@ import (
 	"github.com/bbva/qed/rocksdb"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/pb"
+	"github.com/bbva/qed/util"
 )
 
 type RocksDBStore struct {
@@ -95,6 +96,7 @@ func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
+	globalOpts.SetWalSizeLimitMb(1 << 20)
 	//globalOpts.SetMaxOpenFiles(1000)
 	globalOpts.SetEnv(env)
 	// We build a LRU cache with a high pool ratio of 0.4 (40%). The lower pool
@@ -337,6 +339,7 @@ func getFsmStateTableOpts() *rocksdb.Options {
 func (s *RocksDBStore) Mutate(mutations []*storage.Mutation) error {
 	batch := rocksdb.NewWriteBatch()
 	defer batch.Destroy()
+	batch.PutLogData(metadata, len(metadata))
 	for _, m := range mutations {
 		batch.PutCF(s.cfHandles[m.Table], m.Key, m.Value)
 	}
@@ -539,6 +542,15 @@ func (s *RocksDBStore) DeleteBackup(backupID uint32) error {
 }
 
 // Dump dumps a protobuf-encoded list of all entries in the database into the
+// Snapshot2 takes a snapshot of the store, and returns the
+// sequence number of the last applied batch. The sequence
+// number can be used as upper limit when fetching transactions
+// from the WAL.
+func (s *RocksDBStore) Snapshot2() (uint64, error) {
+	return s.db.GetLatestSequenceNumber(), nil
+}
+
+// Backup dumps a protobuf-encoded list of all entries in the database into the
 // given writer, that are newer than the specified version.
 func (s *RocksDBStore) Dump(w io.Writer, id uint64) error {
 
@@ -601,6 +613,84 @@ func (s *RocksDBStore) Dump(w io.Writer, id uint64) error {
 	return nil
 }
 
+func (s *RocksDBStore) FetchSnapshot(w io.Writer, until uint64) error {
+
+	walIt, err := s.db.GetUpdatesSince(0) // we start on the first available seq_num
+	if err != nil {
+		return err
+	}
+	defer walIt.Close()
+
+	//extractor := rocksdb.NewLogDataExtractor("version")
+	//defer extractor.Destroy()
+
+	for ; walIt.Valid(); walIt.Next() {
+
+		batch, seqNum := walIt.GetBatch()
+		defer batch.Destroy()
+		if seqNum > until {
+			break
+		}
+
+		//fmt.Println(batch.Data(), seqNum)
+		//fmt.Println(batch.GetLogData(extractor))
+
+		batchRaw := batch.Data()
+		if err := binary.Write(w, binary.LittleEndian, uint64(len(batchRaw))); err != nil {
+			return err
+		}
+		_, err = w.Write(batchRaw)
+
+	}
+
+	return nil
+}
+
+// LoadSnapshot reads a list of serialized batches from a reader,
+// rehydrates them and write to the database if they are ahead
+// the version specified with the parameter.
+// This method should be called on a database that is not running
+// any other concurrent transactions while it is running.
+func (s *RocksDBStore) LoadSnapshot(r io.Reader, lastVersion uint64) error {
+
+	wo := rocksdb.NewDefaultWriteOptions()
+	br := bufio.NewReaderSize(r, 16<<10)
+
+	versionBytes := util.Uint64AsBytes(lastVersion)
+	extractor := rocksdb.NewLogDataExtractor("version")
+	defer extractor.Destroy()
+
+	for {
+		var data uint64
+		err := binary.Read(br, binary.LittleEndian, &data)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		unmarshalBuf := make([]byte, data)
+		if _, err = io.ReadFull(br, unmarshalBuf[:data]); err != nil {
+			return err
+		}
+
+		batch := rocksdb.WriteBatchFrom(unmarshalBuf)
+		defer batch.Destroy()
+
+		blob := batch.GetLogData(extractor)
+		// skip transactions behind the last version
+		if bytes.Compare(versionBytes, blob) <= 0 {
+			err = s.db.Write(wo, batch)
+			if err != nil {
+				return nil
+			}
+		}
+	}
+
+	return nil
+
+}
+
 // Load reads a protobuf-encoded list of all entries from a reader and writes
 // them to the database. This can be used to restore the database from a dump
 // made by calling DB.Dump().
@@ -650,6 +740,12 @@ func (s *RocksDBStore) Load(r io.Reader) error {
 	}
 
 	return nil
+}
+
+// LastWALSequenceNumber returns the sequence number of the
+// last transaction applied to the WAL.
+func (s *RocksDBStore) LastWALSequenceNumber() uint64 {
+	return s.db.GetLatestSequenceNumber()
 }
 
 func (s *RocksDBStore) RegisterMetrics(registry metrics.Registry) {

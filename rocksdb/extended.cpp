@@ -103,7 +103,7 @@ rocksdb_writebatch_handler_t* rocksdb_writebatch_handler_create(
     return result;
 }
 
-rocksdb_writebatch_handler_t* rocksdb_writebatch_handler_create_ext(uintptr_t idx) {
+rocksdb_writebatch_handler_t* rocksdb_writebatch_handler_create_ext(const char* idx) {
     return rocksdb_writebatch_handler_create(
         (void*)idx,
         rocksdb_destruct_handler,
