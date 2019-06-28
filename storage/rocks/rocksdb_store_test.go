@@ -239,39 +239,32 @@ func TestSnapshotLoad(t *testing.T) {
 
 }
 
-func TestFetchSnapshot(t *testing.T) {
+func TestFetchAndLoadSnapshot(t *testing.T) {
 	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	// insert
-	numElems := uint64(10)
+	numElems := uint64(100)
 	tables := []storage.Table{storage.HistoryTable, storage.HyperTable}
 	for j, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
-			var vers []byte
-			if j == 1 {
-				vers = util.Uint64AsBytes(uint64(1) + i)
-			} else {
-				vers = util.Uint64AsBytes(i)
-			}
 			err := store.Mutate(
 				[]*storage.Mutation{
 					{Table: table, Key: key, Value: key},
 				},
-				vers,
+				util.Uint64AsBytes(numElems * uint64(j) + i),
 			)
 			require.NoError(t, err)
 		}
 	}
 
-	// create snapshot
-	ioBuf := bytes.NewBufferString("")
-	until, err := store.Snapshot2()
-	require.Nil(t, err)
+	// get last WAL seq num	
+	until := store.LastWALSequenceNumber()
 	require.Equal(t, numElems*uint64(len(tables)), until)
 
 	// fetch snapshot
+	ioBuf := bytes.NewBufferString("")
 	require.NoError(t, store.FetchSnapshot(ioBuf, until))
 
 	// load snapshot in another instance
@@ -295,6 +288,104 @@ func TestFetchSnapshot(t *testing.T) {
 			}
 		}
 		reader.Close()
+	}
+}
+
+func TestFetchAndLoadUntilSeqNum(t *testing.T) {
+	store, closeF := openRocksDBStore(t)
+	defer closeF()
+
+	numElems := uint64(100)
+	// insert
+	for i := uint64(0); i < numElems; i++ {
+		key := util.Uint64AsBytes(i)
+		err := store.Mutate(
+			[]*storage.Mutation{
+				{Table: storage.HistoryTable, Key: key, Value: key},
+			},
+			key,
+		)
+		require.NoError(t, err)
+	}
+
+	// set last WAL seq num
+	until := uint64(1)
+
+	// fetch snapshot
+	ioBuf := bytes.NewBufferString("")
+	require.NoError(t, store.FetchSnapshot(ioBuf, until))
+
+	// load snapshot in another instance
+	restore, recloseF := openRocksDBStore(t)
+	defer recloseF()
+	require.NoError(t, restore.LoadSnapshot(ioBuf, 0))
+
+	// check elements
+	reader := store.GetAll(storage.HistoryTable)
+	defer reader.Close()
+	entries := make([]*storage.KVPair, numElems)
+	n, _ := reader.Read(entries)
+	require.Equal(t, numElems, uint64(n))
+
+	for i := uint64(0); i < until; i++ {
+		kv, err := restore.Get(storage.HistoryTable, entries[i].Key)
+		require.NoError(t, err)
+		require.Equal(t, entries[i].Value, kv.Value, "The values should match")
+	}
+	for i := until; i < numElems; i++ {
+		_, err := restore.Get(storage.HistoryTable, entries[i].Key)
+		require.Error(t, err)
+		require.Equal(t, storage.ErrKeyNotFound, err, "The error should match")
+	}
+}
+
+func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
+	store, closeF := openRocksDBStore(t)
+	defer closeF()
+
+	numElems := uint64(100)
+	lastVersion := numElems / 2
+	// insert
+	for i := uint64(0); i < numElems; i++ {
+		key := util.Uint64AsBytes(i)
+		err := store.Mutate(
+			[]*storage.Mutation{
+				{Table: storage.HistoryTable, Key: key, Value: key},
+			},
+			key,
+		)
+		require.NoError(t, err)
+	}
+
+	// get last WAL seq num	
+	until := store.LastWALSequenceNumber()
+	require.Equal(t, numElems, until)
+
+	// fetch snapshot
+	ioBuf := bytes.NewBufferString("")
+	require.NoError(t, store.FetchSnapshot(ioBuf, until))
+
+	// load snapshot in another instance
+	restore, recloseF := openRocksDBStore(t)
+	defer recloseF()
+	require.NoError(t, restore.LoadSnapshot(ioBuf, lastVersion)) // we start at the middle
+
+	// check elements
+	reader := store.GetAll(storage.HistoryTable)
+	defer reader.Close()
+	entries := make([]*storage.KVPair, numElems)
+	n, _ := reader.Read(entries)
+	require.Equal(t, numElems, uint64(n))
+	
+	for i := uint64(0); i < lastVersion; i++ {
+		_, err := restore.Get(storage.HistoryTable, entries[i].Key)
+		require.Error(t, err)
+		require.Equal(t, storage.ErrKeyNotFound, err, "The error should match")
+	}
+	for i := lastVersion; i < numElems; i++ {
+		kv, err := restore.Get(storage.HistoryTable, entries[i].Key)
+		require.NoError(t, err)
+		require.Equal(t, entries[i].Value, kv.Value, "The values should match")
 	}
 }
 
