@@ -21,6 +21,8 @@
 #include "rocksdb/db.h"
 #include "rocksdb/statistics.h"
 #include "rocksdb/options.h"
+#include "rocksdb/utilities/backupable_db.h"
+#include "rocksdb/status.h"
 
 using rocksdb::DB;
 using rocksdb::ColumnFamilyHandle;
@@ -32,6 +34,9 @@ using rocksdb::Cache;
 using rocksdb::NewLRUCache;
 using rocksdb::Slice;
 using std::shared_ptr;
+using rocksdb::BackupEngine;
+using rocksdb::BackupInfo;
+using rocksdb::Status;
 
 extern "C" {
 
@@ -41,6 +46,8 @@ struct rocksdb_histogram_data_t { rocksdb::HistogramData* rep; };
 struct rocksdb_options_t { Options rep; };
 struct rocksdb_cache_t { std::shared_ptr<Cache> rep; };
 struct rocksdb_column_family_handle_t  { ColumnFamilyHandle* rep; };
+struct rocksdb_backup_engine_t   { BackupEngine*     rep; };
+struct rocksdb_backup_engine_info_t { std::vector<BackupInfo> rep; };
 
 void rocksdb_options_set_atomic_flush(
     rocksdb_options_t* opts, unsigned char value) {
@@ -66,6 +73,58 @@ rocksdb_slicetransform_t* rocksdb_slicetransform_create_ext(uintptr_t idx) {
     	(const char* (*)(void*))(rocksdb_slicetransform_name));
 }
 
+
+/* Backup */
+
+static bool SaveError(char** errptr, const Status& s) {
+  assert(errptr != nullptr);
+  if (s.ok()) {
+    return false;
+  } else if (*errptr == nullptr) {
+    *errptr = strdup(s.ToString().c_str());
+  } else {
+    free(*errptr);
+    *errptr = strdup(s.ToString().c_str());
+  }
+  return true;
+}
+
+void rocksdb_backup_engine_create_new_backup_with_metadata(rocksdb_backup_engine_t* be,
+                                             rocksdb_t* db,
+                                             int num_metadata,
+                                             char** app_metadata,
+                                             char** errptr) {
+    std::vector<std::string> meta(num_metadata);
+    for (int i = 0; i < num_metadata; i++) {
+        meta[i] = std::string(app_metadata[i]);
+    }
+    SaveError(errptr, be->rep->CreateNewBackupWithMetadata(db->rep, meta[0]));
+}
+
+static char* CopyString(const std::string& str) {
+  char* result = reinterpret_cast<char*>(malloc(sizeof(char) * str.size()));
+  memcpy(result, str.data(), sizeof(char) * str.size());
+  return result;
+}
+
+void rocksdb_backup_engine_info_metadata(const rocksdb_backup_engine_info_t* info, 
+        int index,
+        char** metadata_list,
+        size_t* metadata_list_size){
+
+    std::vector<char*> cMetadata;
+    for (size_t i = 0; i < info->rep[index].app_metadata.size()-1  ; i++){
+        cMetadata[i] = CopyString(&info->rep[index].app_metadata[i]);
+        printf("Meta %s\n", cMetadata[i]);
+    }
+
+    size_t aux = cMetadata.size();
+    printf("AUX %d\n",sizeof(cMetadata));
+    metadata_list_size = &aux; // &cMetadata.size(); 
+    metadata_list = &cMetadata[0];
+}
+
+/* Statistics */
 
 rocksdb_statistics_t* rocksdb_create_statistics() {
     rocksdb_statistics_t* result = new rocksdb_statistics_t;

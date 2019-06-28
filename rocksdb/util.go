@@ -67,3 +67,13 @@ func charToBytes(data *C.char, len C.size_t) []byte {
 	header.Cap, header.Len, header.Data = int(len), int(len), uintptr(unsafe.Pointer(data))
 	return value
 }
+
+func charsToStrings(data **C.char, len *C.size_t) []string {
+    cLength := C.int(*len)
+    tmpslice := (*[1 << 30]*C.char)(unsafe.Pointer(data))[:cLength:cLength]
+    gostrings := make([]string, int(cLength))
+    for i, s := range tmpslice {
+        gostrings[i] = C.GoString(s)
+    }
+    return gostrings
+}
