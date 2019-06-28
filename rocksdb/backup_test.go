@@ -17,6 +17,7 @@
 package rocksdb
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -91,6 +92,51 @@ func TestBackup(t *testing.T) {
 	// On success, clean dirs.
 	err = cleanDirs(dbPath, backupDir)
 	require.NoError(t, err, "Error cleaning directories")
+}
+
+func TestBackupWithMetadata(t *testing.T) {
+	var err error
+
+	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
+	require.NoError(t, err)
+	err = os.RemoveAll(backupDir)
+	require.NoError(t, err)
+
+	// Create new DB and insert keys
+	db, dbPath := newTestDB(t, "original", nil)
+	fmt.Println(dbPath)
+	defer db.Close()
+	err = insertKeys(db, 10, 0)
+	require.NoError(t, err, "Error inserting keys")
+	_ = db.Flush(NewDefaultFlushOptions())
+
+	// Create a backup engine
+	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
+	require.NoError(t, err)
+	require.NotNil(t, be)
+	defer be.Close()
+
+	// Backup, insert more keys, and backup again.
+	metadata := []string{"foo"}
+	err = be.CreateNewBackupWithMetadata(db, metadata)
+	require.NoError(t, err)
+
+	// Get and print backup info.
+	backup_info := be.GetInfo()
+	backups := backup_info.GetCount()
+	for i := 0; i < backups; i++ {
+		fmt.Println("ID ", backup_info.GetBackupId(i))
+		fmt.Println("Num. files ", backup_info.GetNumFiles(i))
+		fmt.Println("Size ", backup_info.GetSize(i))
+		fmt.Println("Timestamp ", backup_info.GetTimestamp(i))
+		fmt.Println("Metadata ", backup_info.GetAppMetadata(i))
+		err = be.VerifyBackup(uint32(backup_info.GetBackupId(i)))
+		require.NoError(t, err, "Error verifying backup.")
+	}
+
+	// On success, clean dirs.
+	// err = cleanDirs(dbPath, backupDir)
+	// require.NoError(t, err, "Error cleaning directories")
 }
 
 // Test from:

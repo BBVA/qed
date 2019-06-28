@@ -44,7 +44,7 @@ func TestStatsGetTickerCount(t *testing.T) {
 	ro := NewDefaultReadOptions()
 	defer ro.Destroy()
 	for i := 0; i < 10; i++ {
-		db.Get(ro, key)
+		_, _ = db.Get(ro, key)
 	}
 
 	require.True(t, stats.GetTickerCount(TickerBytesRead) > 0)
@@ -67,7 +67,7 @@ func TestGetAndResetTickerCount(t *testing.T) {
 	ro := NewDefaultReadOptions()
 	defer ro.Destroy()
 	for i := 0; i < 10; i++ {
-		db.Get(ro, key)
+		_, _ = db.Get(ro, key)
 	}
 
 	read := stats.GetAndResetTickerCount(TickerBytesRead)
@@ -94,7 +94,7 @@ func TestGetHistogramData(t *testing.T) {
 	ro := NewDefaultReadOptions()
 	defer ro.Destroy()
 	for i := 0; i < 10; i++ {
-		db.Get(ro, key)
+		_, _ = db.Get(ro, key)
 	}
 
 	histogramData := stats.GetHistogramData(HistogramBytesPerRead)
@@ -125,7 +125,7 @@ func TestReset(t *testing.T) {
 	ro := NewDefaultReadOptions()
 	defer ro.Destroy()
 	for i := 0; i < 10; i++ {
-		db.Get(ro, key)
+		_, _ = db.Get(ro, key)
 	}
 
 	read := stats.GetAndResetTickerCount(TickerBytesRead)
