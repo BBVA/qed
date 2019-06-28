@@ -100,7 +100,7 @@ func TestDeleteRange(t *testing.T) {
 	batch := NewWriteBatch()
 	defer batch.Destroy()
 	batch.DeleteRange(key2, key4)
-	db.Write(wo, batch)
+	_ = db.Write(wo, batch)
 
 	actualVal1, err = db.GetBytes(ro, key1)
 	require.NoError(t, err)

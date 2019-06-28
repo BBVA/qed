@@ -172,7 +172,7 @@ func TestDeleteRangeCF(t *testing.T) {
 	batch := NewWriteBatch()
 	defer batch.Destroy()
 	batch.DeleteRangeCF(cfh[0], key2, key4) // only keys from "defaul" cf
-	db.Write(wo, batch)
+	_ = db.Write(wo, batch)
 
 	actualVal1, err = db.GetBytesCF(ro, cfh[0], key1)
 	require.NoError(t, err)

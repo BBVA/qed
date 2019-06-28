@@ -18,8 +18,11 @@ package rocksdb
 
 // #include <stdlib.h>
 // #include "rocksdb/c.h"
+// #include "extended.h"
 import "C"
 import (
+	"fmt"
+	"reflect"
 	"errors"
 	"unsafe"
 )
@@ -55,6 +58,19 @@ func (b *BackupEngineInfo) GetSize(index int) int64 {
 // GetNumFiles gets the number of files in the backup index.
 func (b *BackupEngineInfo) GetNumFiles(index int) int32 {
 	return int32(C.rocksdb_backup_engine_info_number_files(b.c, C.int(index)))
+}
+
+// GetAppMetadata gets the backup associated metadata.
+func (b *BackupEngineInfo) GetAppMetadata(index int) []string {
+	metadataList := make([]*C.char, 0)
+	var metadataListSize *C.size_t
+
+	sH := (*reflect.SliceHeader)(unsafe.Pointer(&metadataList))
+	metadataListToChar := (**C.char)(unsafe.Pointer(sH.Data))
+
+	C.rocksdb_backup_engine_info_metadata(b.c, C.int(index), metadataListToChar, metadataListSize)
+	fmt.Println("LIST SIZE ", metadataListSize)
+	return charsToStrings(metadataListToChar, metadataListSize)
 }
 
 // Destroy destroys the backup engine info instance.
@@ -125,6 +141,27 @@ func (b *BackupEngine) CreateNewBackup(db *DB) error {
 	var cErr *C.char
 
 	C.rocksdb_backup_engine_create_new_backup(b.c, db.c, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+
+	return nil
+}
+
+// same as CreateNewBackup, but stores extra application metadata
+// Flush will always trigger if 2PC is enabled.
+// If write-ahead logs are disabled, set flush_before_backup=true to
+// avoid losing unflushed key/value pairs from the memtable.
+func (b *BackupEngine) CreateNewBackupWithMetadata(db *DB, metadata []string) error {
+	var cErr *C.char
+
+	cMetadata := make([]*C.char,len(metadata))
+	for i, m := range metadata{
+		cMetadata[i] = C.CString(m)
+	}
+
+	C.rocksdb_backup_engine_create_new_backup_with_metadata(b.c, db.c, C.int(len(metadata)), &cMetadata[0], &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
