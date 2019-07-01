@@ -24,6 +24,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func setupDB(t *testing.T) (*DB, string, *BackupEngine, string) {
+	var err error
+
+	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
+	require.NoError(t, err)
+	err = os.RemoveAll(backupDir)
+	require.NoError(t, err)
+
+	// Create new DB and insert keys
+	db, dbPath := newTestDB(t, "original", nil)
+	err = insertKeys(db, 10, 0)
+	require.NoError(t, err, "Error inserting keys")
+	_ = db.Flush(NewDefaultFlushOptions())
+
+	// Create a backup engine
+	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
+	require.NoError(t, err)
+	require.NotNil(t, be)
+
+	return db, dbPath, be, backupDir
+}
+
 func insertKeys(db *DB, total, from int) error {
 	wo := NewDefaultWriteOptions()
 	for i := from; i < from+total; i++ {
@@ -52,22 +74,8 @@ func cleanDirs(dirs ...string) error {
 func TestBackup(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
-	require.NoError(t, err)
-	err = os.RemoveAll(backupDir)
-	require.NoError(t, err)
-
-	// Create new DB and insert keys
-	db, dbPath := newTestDB(t, "original", nil)
+	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
-	err = insertKeys(db, 10, 0)
-	require.NoError(t, err, "Error inserting keys")
-	_ = db.Flush(NewDefaultFlushOptions())
-
-	// Create a backup engine
-	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
-	require.NoError(t, err)
-	require.NotNil(t, be)
 	defer be.Close()
 
 	// Backup, insert more keys, and backup again.
@@ -96,22 +104,8 @@ func TestBackup(t *testing.T) {
 func TestBackupWithMetadata(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
-	require.NoError(t, err)
-	err = os.RemoveAll(backupDir)
-	require.NoError(t, err)
-
-	// Create new DB and insert keys
-	db, dbPath := newTestDB(t, "original", nil)
+	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
-	err = insertKeys(db, 10, 0)
-	require.NoError(t, err, "Error inserting keys")
-	_ = db.Flush(NewDefaultFlushOptions())
-
-	// Create a backup engine
-	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
-	require.NoError(t, err)
-	require.NotNil(t, be)
 	defer be.Close()
 
 	// Backup DB with certain metadata.
@@ -136,25 +130,11 @@ func TestBackupWithMetadata(t *testing.T) {
 func TestMetadataInBackupWithoutMetadata(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
-	require.NoError(t, err)
-	err = os.RemoveAll(backupDir)
-	require.NoError(t, err)
-
-	// Create new DB and insert keys
-	db, dbPath := newTestDB(t, "original", nil)
+	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
-	err = insertKeys(db, 10, 0)
-	require.NoError(t, err, "Error inserting keys")
-	_ = db.Flush(NewDefaultFlushOptions())
-
-	// Create a backup engine
-	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
-	require.NoError(t, err)
-	require.NotNil(t, be)
 	defer be.Close()
 
-	// Backup DB without metadata.
+	// Backup DB WITHOUT metadata.
 	err = be.CreateNewBackup(db)
 	require.NoError(t, err)
 
@@ -177,25 +157,13 @@ func TestMetadataInBackupWithoutMetadata(t *testing.T) {
 func TestRestore(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("/var/tmp", "rocksdb-backup")
-	require.NoError(t, err)
-
-	// Create new DB and insert keys
-	db, dbPath := newTestDB(t, "original", nil)
+	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
-	err = insertKeys(db, 10, 0)
-	require.NoError(t, err, "Error inserting keys")
-	_ = db.Flush(NewDefaultFlushOptions())
-
-	// Create a backup-engine.
-	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
-	require.NoError(t, err)
-	require.NotNil(t, be)
+	defer be.Close()
 
 	// Backup DB
 	err = be.CreateNewBackup(db)
 	require.NoError(t, err)
-	defer be.Close()
 
 	// Restore backup to a specific path.
 	restorePath, _ := ioutil.TempDir("/var/tmp", "rocksdb-restored")
@@ -225,20 +193,11 @@ func TestRestore(t *testing.T) {
 func TestBackupAndRestoreInAnEmptyExistingDB(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("/var/tmp", "rocksdb-backup")
-	require.NoError(t, err)
-
-	// Create the original DB and insert keys.
-	db, dbPath := newTestDB(t, "original", nil)
+	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
-	err = insertKeys(db, 10, 0)
-	require.NoError(t, err, "Error inserting keys")
-	_ = db.Flush(NewDefaultFlushOptions())
+	defer be.Close()
 
-	// Create a backup-engine, and backup the original DB.
-	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
-	require.NoError(t, err)
-	require.NotNil(t, be)
+	// Backup the original DB.
 	err = be.CreateNewBackup(db)
 	require.NoError(t, err)
 
@@ -275,21 +234,11 @@ func TestBackupAndRestoreInAnEmptyExistingDB(t *testing.T) {
 func TestMultipleBackupsAndRestores(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("/var/tmp", "rocksdb-backup")
-	require.NoError(t, err)
-
-	// Create the original DB and insert keys.
-	db, dbPath := newTestDB(t, "original", nil)
+	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
-	err = insertKeys(db, 10, 0)
-	require.NoError(t, err, "Error inserting keys")
-	_ = db.Flush(NewDefaultFlushOptions())
-
-	// Create a backup-engine and backup the original DB.
-	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
 	defer be.Close()
-	require.NoError(t, err)
-	require.NotNil(t, be)
+
+	// Backup the original DB.
 	err = be.CreateNewBackup(db)
 	require.NoError(t, err)
 
