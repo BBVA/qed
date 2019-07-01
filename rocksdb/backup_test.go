@@ -117,7 +117,7 @@ func TestBackupWithMetadata(t *testing.T) {
 	defer be.Close()
 
 	// Backup, insert more keys, and backup again.
-	metadata := []string{"foo"}
+	metadata := []string{"foo=bar"}
 	err = be.CreateNewBackupWithMetadata(db, metadata)
 	require.NoError(t, err)
 
@@ -125,18 +125,14 @@ func TestBackupWithMetadata(t *testing.T) {
 	backup_info := be.GetInfo()
 	backups := backup_info.GetCount()
 	for i := 0; i < backups; i++ {
-		fmt.Println("ID ", backup_info.GetBackupId(i))
-		fmt.Println("Num. files ", backup_info.GetNumFiles(i))
-		fmt.Println("Size ", backup_info.GetSize(i))
-		fmt.Println("Timestamp ", backup_info.GetTimestamp(i))
-		fmt.Println("Metadata ", backup_info.GetAppMetadata(i))
 		err = be.VerifyBackup(uint32(backup_info.GetBackupId(i)))
 		require.NoError(t, err, "Error verifying backup.")
+		require.Equal(t, metadata, backup_info.GetAppMetadata(i), "Metadatas don't match")
 	}
 
 	// On success, clean dirs.
-	// err = cleanDirs(dbPath, backupDir)
-	// require.NoError(t, err, "Error cleaning directories")
+	err = cleanDirs(dbPath, backupDir)
+	require.NoError(t, err, "Error cleaning directories")
 }
 
 // Test from:
