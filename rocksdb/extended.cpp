@@ -91,29 +91,14 @@ static bool SaveError(char** errptr, const Status& s) {
 
 void rocksdb_backup_engine_create_new_backup_with_metadata(rocksdb_backup_engine_t* be,
                                              rocksdb_t* db,
-                                             int num_metadata,
-                                             char** app_metadata,
+                                             char* app_metadata,
                                              char** errptr) {
-    std::vector<std::string> meta(num_metadata);
-    for (int i = 0; i < num_metadata; i++) {
-        meta[i] = std::string(app_metadata[i]);
-    }
-    SaveError(errptr, be->rep->CreateNewBackupWithMetadata(db->rep, meta[0]));
+    SaveError(errptr, be->rep->CreateNewBackupWithMetadata(db->rep, std::string(app_metadata)));
 }
 
-static char* CopyString(const std::string& str) {
-  char* result = reinterpret_cast<char*>(malloc(sizeof(char) * str.size()));
-  memcpy(result, str.data(), sizeof(char) * str.size());
-  return result;
-}
-
-void rocksdb_backup_engine_info_metadata(const rocksdb_backup_engine_info_t* info, 
-        int index,
-        char** metadata_list,
-        size_t* metadata_list_size){
-
-    *metadata_list_size = info->rep[index].app_metadata.length(); 
-    *metadata_list = CopyString(info->rep[index].app_metadata);
+char* rocksdb_backup_engine_info_metadata(const rocksdb_backup_engine_info_t* info, 
+        int index){
+    return strdup(info->rep[index].app_metadata.c_str());
 }
 
 /* Statistics */

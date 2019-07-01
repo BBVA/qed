@@ -59,16 +59,9 @@ func (b *BackupEngineInfo) GetNumFiles(index int) int32 {
 }
 
 // GetAppMetadata gets the backup associated metadata.
-func (b *BackupEngineInfo) GetAppMetadata(index int) []string {
-	var metadataList *C.char
-	var metadataListSize C.size_t
-
-	// 2 metodos,  list size, reservar memoria y get metadata list.
-	// C.rocksdb_backup_engine_info_metadata(b.c, C.int(index), &metadataList, &metadataListSize)
-
-	C.rocksdb_backup_engine_info_metadata(b.c, C.int(index), &metadataList, &metadataListSize)
-
-	return []string{C.GoString(metadataList)}
+func (b *BackupEngineInfo) GetAppMetadata(index int) string {
+	metadata := C.rocksdb_backup_engine_info_metadata(b.c, C.int(index))
+	return C.GoString(metadata)
 }
 
 // Destroy destroys the backup engine info instance.
@@ -151,15 +144,12 @@ func (b *BackupEngine) CreateNewBackup(db *DB) error {
 // Flush will always trigger if 2PC is enabled.
 // If write-ahead logs are disabled, set flush_before_backup=true to
 // avoid losing unflushed key/value pairs from the memtable.
-func (b *BackupEngine) CreateNewBackupWithMetadata(db *DB, metadata []string) error {
+func (b *BackupEngine) CreateNewBackupWithMetadata(db *DB, metadata string) error {
 	var cErr *C.char
+	cMetadata := C.CString(metadata)
+	defer C.free(unsafe.Pointer(cMetadata))
 
-	cMetadata := make([]*C.char,len(metadata))
-	for i, m := range metadata{
-		cMetadata[i] = C.CString(m)
-	}
-
-	C.rocksdb_backup_engine_create_new_backup_with_metadata(b.c, db.c, C.int(len(metadata)), &cMetadata[0], &cErr)
+	C.rocksdb_backup_engine_create_new_backup_with_metadata(b.c, db.c, cMetadata, &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))

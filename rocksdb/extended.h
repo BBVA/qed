@@ -69,10 +69,10 @@ extern rocksdb_slicetransform_t* rocksdb_slicetransform_create_ext(uintptr_t idx
 
 /* Backup */
 extern void rocksdb_backup_engine_create_new_backup_with_metadata(
-    rocksdb_backup_engine_t* be, rocksdb_t* db, int num_metadata, char** app_metadata, char** errptr);
+    rocksdb_backup_engine_t* be, rocksdb_t* db, char* app_metadata, char** errptr);
 
-extern void rocksdb_backup_engine_info_metadata(
-    const rocksdb_backup_engine_info_t* info, int index, char** metadata_list, size_t* metadata_list_size);
+extern char* rocksdb_backup_engine_info_metadata(
+    const rocksdb_backup_engine_info_t* info, int index);
 
 /* Statistics */
 
