@@ -17,6 +17,7 @@
 package rocksdb
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -288,5 +289,90 @@ func TestMultipleBackupsAndRestores(t *testing.T) {
 
 	// On success, clean dirs.
 	err = cleanDirs(dbPath, backupDir, restorePath)
+	require.NoError(t, err, "Error cleaning directories")
+}
+
+func TestRestoreAndOverwriteDB(t *testing.T) {
+	var err error
+
+	backupDir, err := ioutil.TempDir("/var/tmp", "rocksdb-backup")
+	require.NoError(t, err)
+
+	// Create the original DB and insert keys.
+	db, dbPath := newTestDB(t, "original", nil)
+	defer db.Close()
+	err = insertKeys(db, 10, 0)
+	require.NoError(t, err, "Error inserting keys")
+	_ = db.Flush(NewDefaultFlushOptions())
+
+	// Create a backup-engine and backup the original DB.
+	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
+	defer be.Close()
+	require.NoError(t, err)
+	require.NotNil(t, be)
+	err = be.CreateNewBackup(db)
+	require.NoError(t, err)
+
+	// Create a DB on path with restored backup.
+	db2, dbPath2 := newTestDB(t, "new", nil)
+	defer db2.Close()
+
+	// Insert more keys on the original new DB.
+	err = insertKeys(db2, 20, 0)
+	require.NoError(t, err)
+
+	// Check keys from restored DB and close it.
+	it := db2.NewIterator(NewDefaultReadOptions())
+	i := 0
+	for it.SeekToFirst(); it.Valid(); it.Next() {
+		require.Equal(t, []byte("key"+string(i)), it.Key().Data())
+		i++
+	}
+	it.Close()
+	db2.Close()
+
+	// Restore backup to a specific path.
+	ro := NewRestoreOptions()
+	ro.SetKeepLogFiles(1)
+	err = be.RestoreDBFromLatestBackup(dbPath2, dbPath2, ro)
+	require.NoError(t, err)
+
+	// Open DB2 again from restored path, and check keys.
+	db2, err = OpenDB(dbPath2, NewDefaultOptions())
+	defer db2.Close()
+	require.NoError(t, err)
+
+	it = db2.NewIterator(NewDefaultReadOptions())
+	defer it.Close()
+
+	i = 0
+	for it.SeekToFirst(); it.Valid(); it.Next() {
+		require.Equal(t, []byte("key"+string(i)), it.Key().Data())
+		i++
+	}
+
+	testCases := []struct {
+		file []string
+		expected bool
+	}{
+		{
+			file: []string{"000007.sst", "CURRENT"},
+			expected: true,
+		},
+	}
+
+	// https://github.com/facebook/rocksdb/blob/49c5a12dbee3aa65907e772b254d753c6d391da1/utilities/backupable/backupable_db_test.cc#L1394
+	// Compare restored files with the original ones
+	for _, c := range testCases  {
+		for _, f := range c.file {
+			f1, _ := ioutil.ReadFile(dbPath + "/" + f)
+			f2, _ := ioutil.ReadFile(dbPath2 + "/" + f)
+			compare := bytes.Equal(f1, f2)
+			require.Equal(t, c.expected, compare)
+		}
+	}
+
+	// On success, clean dirs.
+	err = cleanDirs(dbPath, dbPath2, backupDir)
 	require.NoError(t, err, "Error cleaning directories")
 }
