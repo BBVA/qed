@@ -21,8 +21,6 @@ package rocksdb
 // #include "extended.h"
 import "C"
 import (
-	"fmt"
-	"reflect"
 	"errors"
 	"unsafe"
 )
@@ -62,15 +60,15 @@ func (b *BackupEngineInfo) GetNumFiles(index int) int32 {
 
 // GetAppMetadata gets the backup associated metadata.
 func (b *BackupEngineInfo) GetAppMetadata(index int) []string {
-	metadataList := make([]*C.char, 0)
-	var metadataListSize *C.size_t
+	var metadataList *C.char
+	var metadataListSize C.size_t
 
-	sH := (*reflect.SliceHeader)(unsafe.Pointer(&metadataList))
-	metadataListToChar := (**C.char)(unsafe.Pointer(sH.Data))
+	// 2 metodos,  list size, reservar memoria y get metadata list.
+	// C.rocksdb_backup_engine_info_metadata(b.c, C.int(index), &metadataList, &metadataListSize)
 
-	C.rocksdb_backup_engine_info_metadata(b.c, C.int(index), metadataListToChar, metadataListSize)
-	fmt.Println("LIST SIZE ", metadataListSize)
-	return charsToStrings(metadataListToChar, metadataListSize)
+	C.rocksdb_backup_engine_info_metadata(b.c, C.int(index), &metadataList, &metadataListSize)
+
+	return []string{C.GoString(metadataList)}
 }
 
 // Destroy destroys the backup engine info instance.

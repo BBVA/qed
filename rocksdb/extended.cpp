@@ -112,16 +112,8 @@ void rocksdb_backup_engine_info_metadata(const rocksdb_backup_engine_info_t* inf
         char** metadata_list,
         size_t* metadata_list_size){
 
-    std::vector<char*> cMetadata;
-    for (size_t i = 0; i < info->rep[index].app_metadata.size()-1  ; i++){
-        cMetadata[i] = CopyString(&info->rep[index].app_metadata[i]);
-        printf("Meta %s\n", cMetadata[i]);
-    }
-
-    size_t aux = cMetadata.size();
-    printf("AUX %d\n",sizeof(cMetadata));
-    metadata_list_size = &aux; // &cMetadata.size(); 
-    metadata_list = &cMetadata[0];
+    *metadata_list_size = info->rep[index].app_metadata.length(); 
+    *metadata_list = CopyString(info->rep[index].app_metadata);
 }
 
 /* Statistics */
