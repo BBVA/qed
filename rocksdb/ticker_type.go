@@ -142,6 +142,7 @@ const (
 	// (READ_AMP_TOTAL_READ_BYTES / READ_AMP_ESTIMATE_USEFUL_BYTES)
 	//
 	// REQUIRES: ReadOptions::read_amp_bytes_per_bit to be enabled
+	
 	// TickerReadAmpEstimateUsefulBytes is the estimate of total bytes actually used.
 	TickerReadAmpEstimateUsefulBytes = TickerType(C.READ_AMP_ESTIMATE_USEFUL_BYTES)
 	// TickerReadAmpTotalReadBytes is the total size of loaded data blocks.
