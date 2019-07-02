@@ -299,17 +299,11 @@ func TestRestoreAndOverwriteDB(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create the original DB and insert keys.
-	db, dbPath := newTestDB(t, "original", nil)
+	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
-	err = insertKeys(db, 10, 0)
-	require.NoError(t, err, "Error inserting keys")
-	_ = db.Flush(NewDefaultFlushOptions())
-
-	// Create a backup-engine and backup the original DB.
-	be, err := OpenBackupEngine(NewDefaultOptions(), backupDir)
 	defer be.Close()
-	require.NoError(t, err)
-	require.NotNil(t, be)
+
+	// Create original DB backup
 	err = be.CreateNewBackup(db)
 	require.NoError(t, err)
 
@@ -317,11 +311,11 @@ func TestRestoreAndOverwriteDB(t *testing.T) {
 	db2, dbPath2 := newTestDB(t, "new", nil)
 	defer db2.Close()
 
-	// Insert more keys on the original new DB.
+	// Insert more keys on the new DB.
 	err = insertKeys(db2, 20, 0)
 	require.NoError(t, err)
 
-	// Check keys from restored DB and close it.
+	// Check keys from new DB and close it.
 	it := db2.NewIterator(NewDefaultReadOptions())
 	i := 0
 	for it.SeekToFirst(); it.Valid(); it.Next() {
@@ -331,7 +325,7 @@ func TestRestoreAndOverwriteDB(t *testing.T) {
 	it.Close()
 	db2.Close()
 
-	// Restore backup to a specific path.
+	// Restore from original DB backup to a specific path.
 	ro := NewRestoreOptions()
 	ro.SetKeepLogFiles(1)
 	err = be.RestoreDBFromLatestBackup(dbPath2, dbPath2, ro)
@@ -352,18 +346,18 @@ func TestRestoreAndOverwriteDB(t *testing.T) {
 	}
 
 	testCases := []struct {
-		file []string
+		file     []string
 		expected bool
 	}{
 		{
-			file: []string{"000007.sst", "CURRENT"},
+			file:     []string{"000007.sst", "CURRENT"},
 			expected: true,
 		},
 	}
 
 	// https://github.com/facebook/rocksdb/blob/49c5a12dbee3aa65907e772b254d753c6d391da1/utilities/backupable/backupable_db_test.cc#L1394
 	// Compare restored files with the original ones
-	for _, c := range testCases  {
+	for _, c := range testCases {
 		for _, f := range c.file {
 			f1, _ := ioutil.ReadFile(dbPath + "/" + f)
 			f2, _ := ioutil.ReadFile(dbPath2 + "/" + f)
