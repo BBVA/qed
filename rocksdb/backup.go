@@ -185,6 +185,25 @@ func (b *BackupEngine) RestoreDBFromLatestBackup(dbDir, walDir string, ro *Resto
 	return nil
 }
 
+// RestoreDBFromBackup restores a singular backup to dbDir. walDir
+// is where the write ahead logs are restored to and usually the same as dbDir.
+func (b *BackupEngine) RestoreDBFromBackup(backupID uint32, dbDir, walDir string, ro *RestoreOptions) error {
+	var cErr *C.char
+	cDbDir := C.CString(dbDir)
+	cWalDir := C.CString(walDir)
+	defer func() {
+		C.free(unsafe.Pointer(cDbDir))
+		C.free(unsafe.Pointer(cWalDir))
+	}()
+
+	C.rocksdb_backup_engine_restore_db_from_backup(b.c, C.uint(backupID), cDbDir, cWalDir, ro.c, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
 // VerifyBackup checks that each file exists and that the size of the file matches our
 // expectations. It does not check file checksum.
 // Returns Status::OK() if all checks are good

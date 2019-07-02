@@ -37,6 +37,7 @@ using std::shared_ptr;
 using rocksdb::BackupEngine;
 using rocksdb::BackupInfo;
 using rocksdb::Status;
+using rocksdb::RestoreOptions;
 
 extern "C" {
 
@@ -48,6 +49,7 @@ struct rocksdb_cache_t { std::shared_ptr<Cache> rep; };
 struct rocksdb_column_family_handle_t  { ColumnFamilyHandle* rep; };
 struct rocksdb_backup_engine_t   { BackupEngine*     rep; };
 struct rocksdb_backup_engine_info_t { std::vector<BackupInfo> rep; };
+struct rocksdb_restore_options_t { RestoreOptions rep; };
 
 void rocksdb_options_set_atomic_flush(
     rocksdb_options_t* opts, unsigned char value) {
@@ -99,6 +101,15 @@ void rocksdb_backup_engine_create_new_backup_with_metadata(rocksdb_backup_engine
 char* rocksdb_backup_engine_info_metadata(const rocksdb_backup_engine_info_t* info, 
         int index){
     return strdup(info->rep[index].app_metadata.c_str());
+}
+
+void rocksdb_backup_engine_restore_db_from_backup(
+    rocksdb_backup_engine_t* be, uint32_t backupID, const char* db_dir, const char* wal_dir,
+    const rocksdb_restore_options_t* restore_options, char** errptr) {
+  SaveError(errptr, be->rep->RestoreDBFromBackup(backupID,
+                                                 std::string(db_dir),
+                                                 std::string(wal_dir),
+                                                 restore_options->rep));
 }
 
 /* Statistics */

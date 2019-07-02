@@ -75,6 +75,7 @@ func cleanDirs(dirs ...string) error {
 func TestBackup(t *testing.T) {
 	var err error
 
+	// Create the original DB with 10 keys inserted.
 	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
 	defer be.Close()
@@ -105,6 +106,7 @@ func TestBackup(t *testing.T) {
 func TestBackupWithMetadata(t *testing.T) {
 	var err error
 
+	// Create the original DB with 10 keys inserted.
 	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
 	defer be.Close()
@@ -131,6 +133,7 @@ func TestBackupWithMetadata(t *testing.T) {
 func TestMetadataInBackupWithoutMetadata(t *testing.T) {
 	var err error
 
+	// Create the original DB with 10 keys inserted.
 	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
 	defer be.Close()
@@ -155,9 +158,10 @@ func TestMetadataInBackupWithoutMetadata(t *testing.T) {
 
 // Test from:
 // https://github.com/facebook/rocksdb/wiki/How-to-backup-RocksDB%3F#restoring-a-backup
-func TestRestore(t *testing.T) {
+func TestRestoreFromLatestBackup(t *testing.T) {
 	var err error
 
+	// Create the original DB with 10 keys inserted.
 	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
 	defer be.Close()
@@ -191,9 +195,57 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err, "Error cleaning directories")
 }
 
+func TestRestoreFromBackup(t *testing.T) {
+	var err error
+
+	// Create the original DB with 10 keys inserted.
+	db, dbPath, be, backupDir := setupDB(t)
+	defer db.Close()
+	defer be.Close()
+
+	// Backup DB, insert more keys (twice), and backup again (twice).
+	err = be.CreateNewBackup(db) // BackupID 1. Keys from 0-9.
+	require.NoError(t, err)
+	err = insertKeys(db, 10, 10)
+	require.NoError(t, err)
+	err = be.CreateNewBackup(db) // BackupID 2. Keys from 0-19.
+	require.NoError(t, err)
+	err = insertKeys(db, 10, 20)
+	require.NoError(t, err)
+	err = be.CreateNewBackup(db) // BackupID 3. Keys from 0-29.
+	require.NoError(t, err)
+
+	// Restore backup '2' to a specific path.
+	backupIDToRestore := 2
+	restorePath, _ := ioutil.TempDir("/var/tmp", "rocksdb-restored")
+	ro := NewRestoreOptions()
+	ro.SetKeepLogFiles(1)
+	err = be.RestoreDBFromBackup(uint32(backupIDToRestore), restorePath, restorePath, ro)
+	require.NoError(t, err)
+
+	// Create the new DB from restored path.
+	db2 := newTestDBfromPath(t, restorePath, nil)
+	defer db2.Close()
+
+	// Check keys from restored DB.
+	it := db2.NewIterator(NewDefaultReadOptions())
+	defer it.Close()
+	i := 0
+	for it.SeekToFirst(); it.Valid(); it.Next() {
+		require.Equal(t, []byte("key"+string(i)), it.Key().Data())
+		require.True(t, i < (backupIDToRestore*10), "There should be exactly %d keys inserted.", (backupIDToRestore * 10))
+		i++
+	}
+
+	// On success, clean dirs.
+	err = cleanDirs(dbPath, backupDir, restorePath)
+	require.NoError(t, err, "Error cleaning directories")
+}
+
 func TestBackupAndRestoreInAnEmptyExistingDB(t *testing.T) {
 	var err error
 
+	// Create the original DB with 10 keys inserted.
 	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
 	defer be.Close()
@@ -235,6 +287,7 @@ func TestBackupAndRestoreInAnEmptyExistingDB(t *testing.T) {
 func TestMultipleBackupsAndRestores(t *testing.T) {
 	var err error
 
+	// Create the original DB with 10 keys inserted.
 	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
 	defer be.Close()
@@ -295,10 +348,7 @@ func TestMultipleBackupsAndRestores(t *testing.T) {
 func TestRestoreAndOverwriteDB(t *testing.T) {
 	var err error
 
-	backupDir, err := ioutil.TempDir("/var/tmp", "rocksdb-backup")
-	require.NoError(t, err)
-
-	// Create the original DB and insert keys.
+	// Create the original DB with 10 keys inserted.
 	db, dbPath, be, backupDir := setupDB(t)
 	defer db.Close()
 	defer be.Close()
