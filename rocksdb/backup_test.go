@@ -144,11 +144,11 @@ func TestMetadataInBackupWithoutMetadata(t *testing.T) {
 
 	// Verify backup integrity, and check backup metadata.
 	backupInfo := be.GetInfo()
-	backups := backup_info.GetCount()
+	backups := backupInfo.GetCount()
 	for i := 0; i < backups; i++ {
-		err = be.VerifyBackup(uint32(backup_info.GetBackupID(i)))
+		err = be.VerifyBackup(uint32(backupInfo.GetBackupID(i)))
 		require.NoError(t, err, "Error verifying backup.")
-		require.Empty(t, backup_info.GetAppMetadata(i), "Metadata should be empty")
+		require.Empty(t, backupInfo.GetAppMetadata(i), "Metadata should be empty")
 	}
 
 	// On success, clean dirs.
