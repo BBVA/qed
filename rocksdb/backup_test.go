@@ -91,10 +91,10 @@ func TestBackup(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify backup integrity.
-	backup_info := be.GetInfo()
-	backups := backup_info.GetCount()
+	backupInfo := be.GetInfo()
+	backups := backupInfo.GetCount()
 	for i := 0; i < backups; i++ {
-		err = be.VerifyBackup(uint32(backup_info.GetBackupId(i)))
+		err = be.VerifyBackup(uint32(backupInfo.GetBackupID(i)))
 		require.NoError(t, err, "Error verifying backup.")
 	}
 
@@ -117,12 +117,12 @@ func TestBackupWithMetadata(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify backup integrity, and check backup metadata.
-	backup_info := be.GetInfo()
-	backups := backup_info.GetCount()
+	backupInfo := be.GetInfo()
+	backups := backupInfo.GetCount()
 	for i := 0; i < backups; i++ {
-		err = be.VerifyBackup(uint32(backup_info.GetBackupId(i)))
+		err = be.VerifyBackup(uint32(backupInfo.GetBackupID(i)))
 		require.NoError(t, err, "Error verifying backup.")
-		require.Equal(t, metadata, backup_info.GetAppMetadata(i), "Metadatas don't match")
+		require.Equal(t, metadata, backupInfo.GetAppMetadata(i), "Metadatas don't match")
 	}
 
 	// On success, clean dirs.
@@ -143,10 +143,10 @@ func TestMetadataInBackupWithoutMetadata(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify backup integrity, and check backup metadata.
-	backup_info := be.GetInfo()
+	backupInfo := be.GetInfo()
 	backups := backup_info.GetCount()
 	for i := 0; i < backups; i++ {
-		err = be.VerifyBackup(uint32(backup_info.GetBackupId(i)))
+		err = be.VerifyBackup(uint32(backup_info.GetBackupID(i)))
 		require.NoError(t, err, "Error verifying backup.")
 		require.Empty(t, backup_info.GetAppMetadata(i), "Metadata should be empty")
 	}
