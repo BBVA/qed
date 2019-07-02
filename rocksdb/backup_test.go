@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupDB(t *testing.T) (*DB, string, *BackupEngine, string) {
+func initialEnvironment(t *testing.T) (*DB, string, *BackupEngine, string) {
 	var err error
 
 	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
@@ -76,7 +76,7 @@ func TestBackup(t *testing.T) {
 	var err error
 
 	// Create the original DB with 10 keys inserted.
-	db, dbPath, be, backupDir := setupDB(t)
+	db, dbPath, be, backupDir := initialEnvironment(t)
 	defer db.Close()
 	defer be.Close()
 
@@ -107,7 +107,7 @@ func TestBackupWithMetadata(t *testing.T) {
 	var err error
 
 	// Create the original DB with 10 keys inserted.
-	db, dbPath, be, backupDir := setupDB(t)
+	db, dbPath, be, backupDir := initialEnvironment(t)
 	defer db.Close()
 	defer be.Close()
 
@@ -134,7 +134,7 @@ func TestMetadataInBackupWithoutMetadata(t *testing.T) {
 	var err error
 
 	// Create the original DB with 10 keys inserted.
-	db, dbPath, be, backupDir := setupDB(t)
+	db, dbPath, be, backupDir := initialEnvironment(t)
 	defer db.Close()
 	defer be.Close()
 
@@ -162,7 +162,7 @@ func TestRestoreFromLatestBackup(t *testing.T) {
 	var err error
 
 	// Create the original DB with 10 keys inserted.
-	db, dbPath, be, backupDir := setupDB(t)
+	db, dbPath, be, backupDir := initialEnvironment(t)
 	defer db.Close()
 	defer be.Close()
 
@@ -199,7 +199,7 @@ func TestRestoreFromBackup(t *testing.T) {
 	var err error
 
 	// Create the original DB with 10 keys inserted.
-	db, dbPath, be, backupDir := setupDB(t)
+	db, dbPath, be, backupDir := initialEnvironment(t)
 	defer db.Close()
 	defer be.Close()
 
@@ -246,7 +246,7 @@ func TestBackupAndRestoreInAnEmptyExistingDB(t *testing.T) {
 	var err error
 
 	// Create the original DB with 10 keys inserted.
-	db, dbPath, be, backupDir := setupDB(t)
+	db, dbPath, be, backupDir := initialEnvironment(t)
 	defer db.Close()
 	defer be.Close()
 
@@ -288,7 +288,7 @@ func TestMultipleBackupsAndRestores(t *testing.T) {
 	var err error
 
 	// Create the original DB with 10 keys inserted.
-	db, dbPath, be, backupDir := setupDB(t)
+	db, dbPath, be, backupDir := initialEnvironment(t)
 	defer db.Close()
 	defer be.Close()
 
@@ -349,7 +349,7 @@ func TestRestoreAndOverwriteDB(t *testing.T) {
 	var err error
 
 	// Create the original DB with 10 keys inserted.
-	db, dbPath, be, backupDir := setupDB(t)
+	db, dbPath, be, backupDir := initialEnvironment(t)
 	defer db.Close()
 	defer be.Close()
 
