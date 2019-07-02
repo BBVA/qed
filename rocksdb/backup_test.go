@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func initialEnvironment(t *testing.T) (*DB, string, *BackupEngine, string) {
+func initialEnvironment(t require.TestingT) (*DB, string, *BackupEngine, string) {
 	var err error
 
 	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
@@ -419,4 +419,65 @@ func TestRestoreAndOverwriteDB(t *testing.T) {
 	// On success, clean dirs.
 	err = cleanDirs(dbPath, dbPath2, backupDir)
 	require.NoError(t, err, "Error cleaning directories")
+}
+
+func BenchmarkRestoreFromLatestBackup10K(b *testing.B)  { benchmarkRestoreFromLatestBackup(10000, b) }
+func BenchmarkRestoreFromLatestBackup100K(b *testing.B) { benchmarkRestoreFromLatestBackup(100000, b) }
+func BenchmarkRestoreFromLatestBackup1M(b *testing.B)   { benchmarkRestoreFromLatestBackup(1000000, b) }
+func BenchmarkDoBackup10K(b *testing.B)                 { benchmarkDoBackup(10000, b) }
+func BenchmarkDoBackup100K(b *testing.B)                { benchmarkDoBackup(100000, b) }
+func BenchmarkDoBackup1M(b *testing.B)                  { benchmarkDoBackup(1000000, b) }
+
+func benchmarkRestoreFromLatestBackup(numKeys int, b *testing.B) {
+	var err error
+
+	// Create DB with numKeys inserted.
+	db, dbPath, be, backupDir := initialEnvironment(b)
+	defer db.Close()
+	defer be.Close()
+	err = insertKeys(db, numKeys, 10)
+
+	// Backup DB
+	err = be.CreateNewBackup(db)
+	// Set restore options
+	restorePath, _ := ioutil.TempDir("/var/tmp", "rocksdb-restored")
+	require.NoError(b, err)
+
+	ro := NewRestoreOptions()
+	ro.SetKeepLogFiles(1)
+
+	b.ResetTimer()
+	b.N = 1
+	for n := 0; n < b.N; n++ {
+		// Create the new DB from restored path.
+		err = be.RestoreDBFromLatestBackup(restorePath, restorePath, ro)
+		db2 := newTestDBfromPath(b, restorePath, nil)
+		defer db2.Close()
+	}
+
+	// On success, clean dirs.
+	err = cleanDirs(dbPath, backupDir, restorePath)
+	require.NoError(b, err, "Error cleaning directories")
+}
+
+func benchmarkDoBackup(numKeys int, b *testing.B) {
+	var err error
+
+	// Create DB with numKeys inserted.
+	db, dbPath, be, backupDir := initialEnvironment(b)
+	defer db.Close()
+	defer be.Close()
+	err = insertKeys(db, numKeys, 10)
+
+	b.ResetTimer()
+	b.N = 1
+	for n := 0; n < b.N; n++ {
+		// Backup DB
+		err = be.CreateNewBackup(db)
+		require.NoError(b, err)
+	}
+
+	// On success, clean dirs.
+	err = cleanDirs(dbPath, backupDir)
+	require.NoError(b, err, "Error cleaning directories")
 }
