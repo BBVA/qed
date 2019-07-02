@@ -42,9 +42,9 @@ func (b *BackupEngineInfo) GetTimestamp(index int) int64 {
 	return int64(C.rocksdb_backup_engine_info_timestamp(b.c, C.int(index)))
 }
 
-// GetBackupId gets an id that uniquely identifies a backup
+// GetBackupID gets an id that uniquely identifies a backup
 // regardless of its position.
-func (b *BackupEngineInfo) GetBackupId(index int) int64 {
+func (b *BackupEngineInfo) GetBackupID(index int) int64 {
 	return int64(C.rocksdb_backup_engine_info_backup_id(b.c, C.int(index)))
 }
 
@@ -140,7 +140,8 @@ func (b *BackupEngine) CreateNewBackup(db *DB) error {
 	return nil
 }
 
-// same as CreateNewBackup, but stores extra application metadata
+// CreateNewBackupWithMetadata is same as CreateNewBackup,
+// but stores extra application metadata.
 // Flush will always trigger if 2PC is enabled.
 // If write-ahead logs are disabled, set flush_before_backup=true to
 // avoid losing unflushed key/value pairs from the memtable.
