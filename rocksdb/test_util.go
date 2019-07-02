@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) (*DB, string) {
+func newTestDB(t require.TestingT, name string, applyOpts func(opts *Options)) (*DB, string) {
 	path, err := ioutil.TempDir("/var/tmp", "rocksdb-"+name)
 	require.NoError(t, err)
 
@@ -39,7 +39,7 @@ func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) (*DB, s
 	return db, path
 }
 
-func newTestDBfromPath(t *testing.T, path string, applyOpts func(opts *Options)) *DB {
+func newTestDBfromPath(t require.TestingT, path string, applyOpts func(opts *Options)) *DB {
 	opts := NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	if applyOpts != nil {
