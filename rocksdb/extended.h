@@ -74,6 +74,10 @@ extern void rocksdb_backup_engine_create_new_backup_with_metadata(
 extern char* rocksdb_backup_engine_info_metadata(
     const rocksdb_backup_engine_info_t* info, int index);
 
+extern void rocksdb_backup_engine_restore_db_from_backup(
+    rocksdb_backup_engine_t* be, uint32_t backupID, const char* db_dir, const char* wal_dir,
+    const rocksdb_restore_options_t* restore_options, char** errptr);
+
 /* Statistics */
 
 typedef enum {
