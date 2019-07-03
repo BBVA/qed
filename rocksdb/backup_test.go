@@ -18,6 +18,7 @@ package rocksdb
 
 import (
 	"bytes"
+	"flag"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -421,16 +422,30 @@ func TestRestoreAndOverwriteDB(t *testing.T) {
 	require.NoError(t, err, "Error cleaning directories")
 }
 
-func BenchmarkRestoreFromLatestBackup10K(b *testing.B)  { benchmarkRestoreFromLatestBackup(10000, b) }
-func BenchmarkRestoreFromLatestBackup100K(b *testing.B) { benchmarkRestoreFromLatestBackup(100000, b) }
-func BenchmarkRestoreFromLatestBackup1M(b *testing.B)   { benchmarkRestoreFromLatestBackup(1000000, b) }
-func BenchmarkDoBackup10K(b *testing.B)                 { benchmarkDoBackup(10000, b) }
-func BenchmarkDoBackup100K(b *testing.B)                { benchmarkDoBackup(100000, b) }
-func BenchmarkDoBackup1M(b *testing.B)                  { benchmarkDoBackup(1000000, b) }
+// Force benchmarks to run Nx iterations
+var benchTime = flag.Set("test.benchtime", "1x")
+
+func BenchmarkRestoreFromLatestBackup10K(b *testing.B) {
+	benchmarkRestoreFromLatestBackup(10000, b)
+}
+func BenchmarkRestoreFromLatestBackup100K(b *testing.B) {
+	benchmarkRestoreFromLatestBackup(100000, b)
+}
+func BenchmarkRestoreFromLatestBackup1M(b *testing.B) {
+	benchmarkRestoreFromLatestBackup(1000000, b)
+}
+func BenchmarkDoBackup10K(b *testing.B) {
+	benchmarkDoBackup(10000, b)
+}
+func BenchmarkDoBackup100K(b *testing.B) {
+	benchmarkDoBackup(100000, b)
+}
+func BenchmarkDoBackup1M(b *testing.B) {
+	benchmarkDoBackup(1000000, b)
+}
 
 func benchmarkRestoreFromLatestBackup(numKeys int, b *testing.B) {
 	var err error
-
 	// Create DB with numKeys inserted.
 	db, dbPath, be, backupDir := initialEnvironment(b)
 	defer db.Close()
@@ -462,7 +477,6 @@ func benchmarkRestoreFromLatestBackup(numKeys int, b *testing.B) {
 
 func benchmarkDoBackup(numKeys int, b *testing.B) {
 	var err error
-
 	// Create DB with numKeys inserted.
 	db, dbPath, be, backupDir := initialEnvironment(b)
 	defer db.Close()
