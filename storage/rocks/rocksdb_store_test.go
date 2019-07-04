@@ -191,7 +191,7 @@ func TestGetLast(t *testing.T) {
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
 }
 
-func TestBackupLoad(t *testing.T) {
+func TestSnapshotLoad(t *testing.T) {
 
 	store, closeF := openRocksDBStore(t)
 	defer closeF()
@@ -208,13 +208,13 @@ func TestBackupLoad(t *testing.T) {
 		}
 	}
 
-	// create backup
+	// create snapshot
 	ioBuf := bytes.NewBufferString("")
 	id, err := store.Snapshot()
 	require.Nil(t, err)
 	require.NoError(t, store.Dump(ioBuf, id))
 
-	// restore backup
+	// load snapshot
 	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
 	require.NoError(t, restore.Load(ioBuf))
