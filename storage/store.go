@@ -98,9 +98,11 @@ type Store interface {
 
 type ManagedStore interface {
 	Store
-	Backup(w io.Writer, until uint64) error
+	Dump(w io.Writer, until uint64) error
 	Snapshot() (uint64, error)
 	Load(r io.Reader) error
+	Backup(metadata string) error
+	RestoreFromBackup(backupID uint32, dbDir, walDir string) error
 	metrics.Registerer
 }
 
