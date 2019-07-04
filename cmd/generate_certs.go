@@ -25,7 +25,7 @@ import (
 
 var generateSelfSignedCert *cobra.Command = &cobra.Command{
 	Use:   "self-signed-cert",
-	Short: "Generate Self Signed Certificates",
+	Short: "Generate self-signed certificates",
 	RunE:  runSelfSignedCert,
 }
 
@@ -46,7 +46,7 @@ func runSelfSignedCert(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("Error: %v", err)
 	}
-	fmt.Printf("New Self Signed Certtifiates generated at:\n%v\n%v\n", cert, key)
+	fmt.Printf("New self-signed sertificates generated at:\n%v\n%v\n", cert, key)
 
 	return nil
 }
