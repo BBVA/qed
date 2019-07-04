@@ -273,6 +273,21 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	return fsm.balloon.RefreshVersion()
 }
 
+// Backup
+func (fsm *BalloonFSM) Backup() error {
+	fsm.restoreMu.Lock()
+	defer fsm.restoreMu.Unlock()
+
+	metadata := string(fsm.balloon.Version())
+	err := fsm.store.Backup(metadata)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Generating backup until version: %d", fsm.balloon.Version())
+
+	return nil
+}
+
 // Close function closes
 func (fsm *BalloonFSM) Close() error {
 	fsm.balloon.Close()

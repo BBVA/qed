@@ -93,7 +93,7 @@ func (s BPlusTreeStore) Close() error {
 	return nil
 }
 
-func (s BPlusTreeStore) Backup(w io.Writer, id uint64) error {
+func (s BPlusTreeStore) Dump(w io.Writer, id uint64) error {
 	panic("Not implemented")
 }
 
@@ -102,6 +102,14 @@ func (s BPlusTreeStore) Load(r io.Reader) error {
 }
 
 func (s BPlusTreeStore) Snapshot() (uint64, error) {
+	panic("Not implemented")
+}
+
+func (s BPlusTreeStore) Backup(metatada string) error {
+	panic("Not implemented")
+}
+
+func (s BPlusTreeStore) RestoreFromBackup(backupID uint32, dbDir, walDir string) error {
 	panic("Not implemented")
 }
 
