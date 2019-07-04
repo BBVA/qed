@@ -35,6 +35,7 @@ import (
 	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/raftwal/raftrocks"
 	"github.com/bbva/qed/storage"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 )
 
@@ -162,7 +163,7 @@ func (b *RaftBalloon) Open(bootstrap bool, metadata map[string]string) error {
 	// Setup Raft configuration
 	b.raft.config = raft.DefaultConfig()
 	b.raft.config.LocalID = raft.ServerID(b.id)
-	b.raft.config.Logger = log.GetLogger()
+	b.raft.config.Logger = hclog.Default()
 	b.raft.applyTimeout = 10 * time.Second
 
 	// Setup Raft communication
