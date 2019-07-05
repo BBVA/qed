@@ -196,3 +196,5 @@ func ToIncrementalResponse(proof *balloon.IncrementalProof) *IncrementalResponse
 func ToIncrementalProof(ir *IncrementalResponse, hasherF func() hashing.Hasher) *balloon.IncrementalProof {
 	return balloon.NewIncrementalProof(ir.Start, ir.End, history.ParseAuditPath(ir.AuditPath), hasherF())
 }
+
+type BackupInfo map[string]interface{}

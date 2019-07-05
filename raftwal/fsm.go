@@ -29,6 +29,7 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/storage"
+
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/raft"
 )
@@ -273,7 +274,7 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	return fsm.balloon.RefreshVersion()
 }
 
-// Backup
+// Backup ...
 func (fsm *BalloonFSM) Backup() error {
 	fsm.restoreMu.Lock()
 	defer fsm.restoreMu.Unlock()
@@ -286,6 +287,12 @@ func (fsm *BalloonFSM) Backup() error {
 	log.Debugf("Generating backup until version: %d", fsm.balloon.Version())
 
 	return nil
+}
+
+// BackupsInfo ...
+func (fsm *BalloonFSM) BackupsInfo() []storage.BackupInfo {
+	log.Debugf("Retrieving backups information")
+	return fsm.store.GetBackupsInfo()
 }
 
 // Close function closes

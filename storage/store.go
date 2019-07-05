@@ -102,6 +102,7 @@ type ManagedStore interface {
 	Snapshot() (uint64, error)
 	Load(r io.Reader) error
 	Backup(metadata string) error
+	GetBackupsInfo() []BackupInfo
 	RestoreFromBackup(backupID uint32, dbDir, walDir string) error
 	metrics.Registerer
 }
@@ -137,3 +138,5 @@ type KVRange []KVPair
 func NewKVRange() KVRange {
 	return make(KVRange, 0)
 }
+
+type BackupInfo map[string]interface{}
