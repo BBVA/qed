@@ -18,12 +18,10 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 
-	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 
 	"github.com/bbva/qed/log"
@@ -37,53 +35,26 @@ var backupCreateCmd *cobra.Command = &cobra.Command{
 
 var backupCreateCtx context.Context
 
-type createParams struct {
-	Path string `desc:"Path to save the backup"`
-}
-
 func init() {
-	backupCreateCtx = configBackupCreate()
 	backupCmd.AddCommand(backupCreateCmd)
-}
-
-func configBackupCreate() context.Context {
-
-	conf := &createParams{}
-
-	err := gpflag.ParseTo(conf, backupCreateCmd.PersistentFlags())
-	if err != nil {
-		log.Fatalf("err: %v", err)
-	}
-	return context.WithValue(Ctx, k("backup.create.params"), conf)
 }
 
 func runBackupCreate(cmd *cobra.Command, args []string) error {
 
-	params := backupCreateCtx.Value(k("backup.create.params")).(*createParams)
-
-	if params.Path == "" {
-		fmt.Println("Empty path: using default backup directory.")
-	}
-
-	config := clientCtx.Value(k("backup.config")).(*BackupConfig)
+	config := backupCtx.Value(k("backup.config")).(*BackupConfig)
 	log.SetLogger("backup", config.Log)
 
-	_, err := createBackup(config, params.Path)
+	_, err := createBackup(config)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\nBackup created at %s.\n", params.Path)
+	fmt.Println("Backup created!")
 
 	return nil
 }
 
-func createBackup(config *BackupConfig, path string) ([]byte, error) {
-
-	data, _ := json.Marshal(map[string]string{
-		"path": path,
-	})
-	fmt.Println(data)
+func createBackup(config *BackupConfig) ([]byte, error) {
 
 	// Build request
 	req, err := http.NewRequest("POST", config.Endpoint+"/backup", nil)
@@ -98,7 +69,6 @@ func createBackup(config *BackupConfig, path string) ([]byte, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Infof("Request error: %v\n", err)
-		log.Infof("%s is dead\n", config.Endpoint)
 		return nil, err
 	}
 
@@ -117,8 +87,3 @@ func createBackup(config *BackupConfig, path string) ([]byte, error) {
 
 	return bodyBytes, nil
 }
-
-// // Restore function ...
-// func (c *HTTPClient) Restore(path string) error {
-// 	return nil
-// }
