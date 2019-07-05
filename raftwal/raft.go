@@ -67,6 +67,7 @@ type RaftBalloonApi interface {
 	// Join joins the node, identified by nodeID and reachable at addr, to the cluster
 	Join(nodeID, addr string, metadata map[string]string) error
 	Info() map[string]interface{}
+	Backup() error
 }
 
 // RaftBalloon is a replicated verifiable key-value store, where changes are made via Raft consensus.
@@ -549,4 +550,8 @@ func (b *RaftBalloon) RegisterMetrics(registry metrics.Registry) {
 		b.store.rocksStore.RegisterMetrics(registry)
 	}
 	registry.MustRegister(b.metrics.collectors()...)
+}
+
+func (b *RaftBalloon) Backup() error {
+	return b.fsm.Backup()
 }
