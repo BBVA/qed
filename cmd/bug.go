@@ -146,7 +146,12 @@ func runBug(cmd *cobra.Command, args []string) error {
 	// Build issue metadata
 	buf := &bytes.Buffer{}
 	fmt.Fprint(buf, qedBugHeader)
-	debugInfo(buf)
+
+	err := debugInfo(buf)
+	if err != nil {
+		return err
+	}
+
 	body := buf.String()
 	title := conf.Desc
 
