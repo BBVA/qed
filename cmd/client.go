@@ -28,7 +28,7 @@ import (
 
 var clientCmd *cobra.Command = &cobra.Command{
 	Use:               "client",
-	Short:             "Provdes access to the QED log client",
+	Short:             "Provides access to the QED log client",
 	TraverseChildren:  true,
 	PersistentPreRunE: runClient,
 }
