@@ -33,6 +33,8 @@ import (
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/testutils/rand"
+	"github.com/bbva/qed/storage"
+
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	assert "github.com/stretchr/testify/require"
 )
@@ -139,6 +141,14 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 
 func (b fakeRaftBalloon) Info() map[string]interface{} {
 	return make(map[string]interface{})
+}
+
+func (b fakeRaftBalloon) Backup() error {
+	return nil
+}
+
+func (b fakeRaftBalloon) ListBackups() []storage.BackupInfo {
+	return nil
 }
 
 func TestHealthCheckHandler(t *testing.T) {

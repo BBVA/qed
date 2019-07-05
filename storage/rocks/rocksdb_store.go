@@ -497,6 +497,29 @@ func (s *RocksDBStore) RestoreFromBackup(backupID uint32, dbDir, walDir string) 
 	return nil
 }
 
+// GetBackupsInfo function extract backups info from a backup engine, and transforms it to
+// a
+func (s *RocksDBStore) GetBackupsInfo() []storage.BackupInfo {
+	bi := s.backupEngine.GetInfo()
+	if bi == nil {
+		return nil
+	}
+
+	listBackupInfo := make([]storage.BackupInfo, bi.GetCount())
+
+	for i := 0; i < bi.GetCount(); i++ {
+		backupInfo := make(map[string]interface{})
+		backupInfo["id"] = bi.GetBackupID(i)
+		backupInfo["timestamp"] = bi.GetTimestamp(i)
+		backupInfo["size"] = bi.GetSize(i)
+		backupInfo["num_files"] = bi.GetNumFiles(i)
+		backupInfo["metadata"] = bi.GetAppMetadata(i)
+		listBackupInfo[i] = backupInfo
+	}
+
+	return listBackupInfo
+}
+
 // Dump dumps a protobuf-encoded list of all entries in the database into the
 // given writer, that are newer than the specified version.
 func (s *RocksDBStore) Dump(w io.Writer, id uint64) error {

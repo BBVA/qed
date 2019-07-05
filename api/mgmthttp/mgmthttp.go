@@ -31,6 +31,7 @@ func NewMgmtHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/join", joinHandle(balloon))
 	mux.HandleFunc("/backup", backupHandle(balloon))
+	mux.HandleFunc("/backups", listBackupsHandle(balloon))
 	return mux
 }
 
@@ -102,6 +103,33 @@ func backupHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
+	}
+}
 
+func listBackupsHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+
+		if r.Method != "GET" {
+			w.Header().Set("Allow", "GET")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		backupList := api.ListBackups()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		out, err := json.Marshal(backupList)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(out)
 	}
 }
