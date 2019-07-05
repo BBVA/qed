@@ -27,13 +27,14 @@ import (
 
 // NewMgmtHttp will return a mux server with the endpoint required to
 // join the raft cluster.
-func NewMgmtHttp(raftBalloon raftwal.RaftBalloonApi) *http.ServeMux {
+func NewMgmtHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/join", joinHandle(raftBalloon))
+	mux.HandleFunc("/join", joinHandle(balloon))
+	mux.HandleFunc("/backup", backupHandle(balloon))
 	return mux
 }
 
-func joinHandle(raftBalloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func joinHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		// Make sure we can only be called with an HTTP POST request.
@@ -77,11 +78,30 @@ func joinHandle(raftBalloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			metadata[k] = v.(string)
 		}
 
-		if err := raftBalloon.Join(nodeID, remoteAddr, metadata); err != nil {
+		if err := api.Join(nodeID, remoteAddr, metadata); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func backupHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		// Make sure we can only be called with an HTTP POST request.
+		w, _, err = apihttp.PostReqSanitizer(w, r)
+		if err != nil {
+			return
+		}
+
+		if err := api.Backup(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+
 	}
 }
