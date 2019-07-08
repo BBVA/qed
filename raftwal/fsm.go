@@ -18,20 +18,19 @@ package raftwal
 
 import (
 	"bytes"
-
 	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
+
+	"github.com/hashicorp/go-msgpack/codec"
+	"github.com/hashicorp/raft"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/storage"
-
-	"github.com/hashicorp/go-msgpack/codec"
-	"github.com/hashicorp/raft"
 )
 
 // fsmGenericResponse is used when an unexpected output is received from
