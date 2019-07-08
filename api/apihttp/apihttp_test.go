@@ -26,6 +26,8 @@ import (
 	"testing"
 	"time"
 
+	assert "github.com/stretchr/testify/require"
+
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
@@ -34,9 +36,7 @@ import (
 	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
-
 	storage_utils "github.com/bbva/qed/testutils/storage"
-	assert "github.com/stretchr/testify/require"
 )
 
 type fakeRaftBalloon struct {

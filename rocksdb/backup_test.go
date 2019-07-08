@@ -93,6 +93,7 @@ func TestBackup(t *testing.T) {
 
 	// Verify backup integrity.
 	backupInfo := be.GetInfo()
+	defer backupInfo.Destroy()
 	backups := backupInfo.GetCount()
 	for i := 0; i < backups; i++ {
 		err = be.VerifyBackup(uint32(backupInfo.GetBackupID(i)))
@@ -119,6 +120,7 @@ func TestBackupWithMetadata(t *testing.T) {
 
 	// Verify backup integrity, and check backup metadata.
 	backupInfo := be.GetInfo()
+	defer backupInfo.Destroy()
 	backups := backupInfo.GetCount()
 	for i := 0; i < backups; i++ {
 		err = be.VerifyBackup(uint32(backupInfo.GetBackupID(i)))
@@ -145,6 +147,7 @@ func TestMetadataInBackupWithoutMetadata(t *testing.T) {
 
 	// Verify backup integrity, and check backup metadata.
 	backupInfo := be.GetInfo()
+	defer backupInfo.Destroy()
 	backups := backupInfo.GetCount()
 	for i := 0; i < backups; i++ {
 		err = be.VerifyBackup(uint32(backupInfo.GetBackupID(i)))

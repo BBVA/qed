@@ -80,7 +80,7 @@ func joinHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		if err := api.Join(nodeID, remoteAddr, metadata); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -98,7 +98,7 @@ func backupHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		}
 
 		if err := api.Backup(); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -109,16 +109,15 @@ func backupHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 func listBackupsHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
-
-		if r.Method != "GET" {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		// Make sure we can only be called with an HTTP GET request.
+		w, _, err = apihttp.GetReqSanitizer(w, r)
+		if err != nil {
 			return
 		}
 
 		backups := api.ListBackups()
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
