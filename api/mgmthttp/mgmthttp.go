@@ -116,13 +116,13 @@ func listBackupsHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		backupList := api.ListBackups()
+		backups := api.ListBackups()
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		out, err := json.Marshal(backupList)
+		out, err := json.Marshal(backups)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

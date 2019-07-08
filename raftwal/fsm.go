@@ -279,7 +279,7 @@ func (fsm *BalloonFSM) Backup() error {
 	fsm.restoreMu.Lock()
 	defer fsm.restoreMu.Unlock()
 
-	metadata := string(fsm.balloon.Version())
+	metadata := fmt.Sprintf("%d", fsm.balloon.Version())
 	err := fsm.store.Backup(metadata)
 	if err != nil {
 		return err
@@ -290,7 +290,7 @@ func (fsm *BalloonFSM) Backup() error {
 }
 
 // BackupsInfo ...
-func (fsm *BalloonFSM) BackupsInfo() []storage.BackupInfo {
+func (fsm *BalloonFSM) BackupsInfo() []*storage.BackupInfo {
 	log.Debugf("Retrieving backups information")
 	return fsm.store.GetBackupsInfo()
 }

@@ -109,7 +109,7 @@ func (s BPlusTreeStore) Backup(metatada string) error {
 	panic("Not implemented")
 }
 
-func (s *BPlusTreeStore) GetBackupsInfo() []storage.BackupInfo {
+func (s *BPlusTreeStore) GetBackupsInfo() []*storage.BackupInfo {
 	panic("Not implemented")
 }
 

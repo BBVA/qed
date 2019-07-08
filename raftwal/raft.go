@@ -68,7 +68,7 @@ type RaftBalloonApi interface {
 	Join(nodeID, addr string, metadata map[string]string) error
 	Info() map[string]interface{}
 	Backup() error
-	ListBackups() []storage.BackupInfo
+	ListBackups() []*storage.BackupInfo
 }
 
 // RaftBalloon is a replicated verifiable key-value store, where changes are made via Raft consensus.
@@ -557,6 +557,6 @@ func (b *RaftBalloon) Backup() error {
 	return b.fsm.Backup()
 }
 
-func (b *RaftBalloon) ListBackups() []storage.BackupInfo {
+func (b *RaftBalloon) ListBackups() []*storage.BackupInfo {
 	return b.fsm.BackupsInfo()
 }
