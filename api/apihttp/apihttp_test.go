@@ -26,15 +26,17 @@ import (
 	"testing"
 	"time"
 
+	assert "github.com/stretchr/testify/require"
+
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
+	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
-	assert "github.com/stretchr/testify/require"
 )
 
 type fakeRaftBalloon struct {
@@ -139,6 +141,14 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 
 func (b fakeRaftBalloon) Info() map[string]interface{} {
 	return make(map[string]interface{})
+}
+
+func (b fakeRaftBalloon) Backup() error {
+	return nil
+}
+
+func (b fakeRaftBalloon) ListBackups() []*storage.BackupInfo {
+	return nil
 }
 
 func TestHealthCheckHandler(t *testing.T) {

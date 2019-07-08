@@ -187,6 +187,29 @@ func TestAddAndRestoreSnapshot(t *testing.T) {
 	require.Error(t, e.error)
 }
 
+func TestBackup(t *testing.T) {
+	var err error
+	log.SetLogger("TestBackup", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
+	defer closeF()
+
+	raftBalloonHasherF := hashing.NewSha256Hasher
+	h := raftBalloonHasherF()
+	fsm, err := NewBalloonFSM(store, raftBalloonHasherF)
+	require.NoError(t, err)
+
+	command := newRaftCommand(commands.AddEventCommandType, h.Do([]byte("All's right with the world")))
+	fsm.Apply(newRaftLog(0, 0, command))
+
+	backupsList := fsm.BackupsInfo()
+	require.True(t, len(backupsList) == 0, "Backup list should be empty")
+	err = fsm.Backup()
+	require.NoError(t, err)
+	backupsList = fsm.BackupsInfo()
+	require.True(t, len(backupsList) == 1, "Backup list should contain 1 backup")
+}
+
 func BenchmarkApplyAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkApplyAdd", log.SILENT)

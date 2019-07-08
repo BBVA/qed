@@ -31,7 +31,7 @@ func TestCheckpoint(t *testing.T) {
 	err = os.RemoveAll(checkDir)
 	require.NoError(t, err)
 
-	db := newTestDB(t, "TestCheckpoint", nil)
+	db, _ := newTestDB(t, "TestCheckpoint", nil)
 	defer db.Close()
 
 	// insert keys
