@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -52,10 +53,9 @@ func runBackupList(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("Backup list:")
-	for i, b := range listBackupsInfo {
-		fmt.Printf("Backup %d:\tId: %b\tTimestamp: %b\t \n", i, b["id"].(float64), b["timestamp"].(float64))
+	for _, b := range listBackupsInfo {
+		fmt.Printf("Id: %d\tTimestamp: %s\tMetadata: %s\tSize(B): %d\tNum.Files: %d\t \n", b.ID, formatTimestamp(b.Timestamp), b.Metadata, b.Size, b.NumFiles)
 	}
-
 	return nil
 }
 
@@ -97,4 +97,12 @@ func listBackups(config *BackupConfig) ([]protocol.BackupInfo, error) {
 	}
 
 	return backupInfo, nil
+}
+
+func formatTimestamp(timestamp int64) string {
+	t := time.Unix(timestamp, 0)
+	// return t.String()
+	return fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d",
+		t.Year(), t.Month(), t.Day(),
+		t.Hour(), t.Minute(), t.Second())
 }
