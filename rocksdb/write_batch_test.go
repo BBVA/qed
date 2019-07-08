@@ -23,7 +23,7 @@ import (
 
 func TestWriteBatch(t *testing.T) {
 
-	db := newTestDB(t, "TestWriteBatch", nil)
+	db, _ := newTestDB(t, "TestWriteBatch", nil)
 	defer db.Close()
 
 	var (
@@ -60,7 +60,7 @@ func TestWriteBatch(t *testing.T) {
 
 func TestDeleteRange(t *testing.T) {
 
-	db := newTestDB(t, "TestDeleteRange", nil)
+	db, _ := newTestDB(t, "TestDeleteRange", nil)
 	defer db.Close()
 
 	wo := NewDefaultWriteOptions()
@@ -100,7 +100,7 @@ func TestDeleteRange(t *testing.T) {
 	batch := NewWriteBatch()
 	defer batch.Destroy()
 	batch.DeleteRange(key2, key4)
-	db.Write(wo, batch)
+	_ = db.Write(wo, batch)
 
 	actualVal1, err = db.GetBytes(ro, key1)
 	require.NoError(t, err)

@@ -441,9 +441,10 @@ func LogHandler(handle http.Handler) http.HandlerFunc {
 // }
 func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+		var err error
+		// Make sure we can only be called with an HTTP GET request.
+		w, _, err = GetReqSanitizer(w, r)
+		if err != nil {
 			return
 		}
 
@@ -493,6 +494,17 @@ func PostReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWrit
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", http.StatusBadRequest)
 		return w, r, errors.New("Bad request: nil body.")
+	}
+
+	return w, r, nil
+}
+
+// GetReqSanitizer function checks that certain request info exists and it is correct.
+func GetReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request, error) {
+	if r.Method != "GET" {
+		w.Header().Set("Allow", "GET")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return w, r, errors.New("Method not allowed.")
 	}
 
 	return w, r, nil

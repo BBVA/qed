@@ -34,6 +34,14 @@ type RocksDBStore struct {
 
 	stats *rocksdb.Statistics
 
+	// backup handler and options
+	backupEngine *rocksdb.BackupEngine
+	backupOpts   *rocksdb.Options
+	restoreOpts  *rocksdb.RestoreOptions
+
+	// column family handlers
+	cfHandles rocksdb.ColumnFamilyHandles
+
 	// checkpoints are stored in a path on the same
 	// folder as the database, so rocksdb uses hardlinks instead
 	// of copies
@@ -42,9 +50,6 @@ type RocksDBStore struct {
 	// each checkpoint is created in a subdirectory
 	// inside checkPointPath folder
 	checkpoints map[uint64]string
-
-	// column family handlers
-	cfHandles rocksdb.ColumnFamilyHandles
 
 	// global options
 	globalOpts *rocksdb.Options
@@ -68,10 +73,10 @@ type Options struct {
 }
 
 func NewRocksDBStore(path string) (*RocksDBStore, error) {
-	return NewRocksDBStoreOpts(&Options{Path: path, EnableStatistics: true})
+	return NewRocksDBStoreWithOpts(&Options{Path: path, EnableStatistics: true})
 }
 
-func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
+func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
 
 	cfNames := []string{
 		storage.DefaultTable.String(),
@@ -115,6 +120,22 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 		return nil, err
 	}
 
+	// Backup and restore stuff.
+	backupPath := opts.Path + "/backups"
+	err = os.MkdirAll(backupPath, 0755)
+	if err != nil {
+		return nil, err
+	}
+
+	backupOpts := rocksdb.NewDefaultOptions()
+	be, err := rocksdb.OpenBackupEngine(backupOpts, backupPath)
+	if err != nil {
+		return nil, err
+	}
+
+	restoreOpts := rocksdb.NewRestoreOptions()
+
+	// CheckPoint.
 	checkPointPath := opts.Path + "/checkpoints"
 	err = os.MkdirAll(checkPointPath, 0755)
 	if err != nil {
@@ -126,6 +147,9 @@ func NewRocksDBStoreOpts(opts *Options) (*RocksDBStore, error) {
 		stats:          stats,
 		cfHandles:      cfHandles,
 		blockCache:     blockCache,
+		backupEngine:   be,
+		backupOpts:     backupOpts,
+		restoreOpts:    restoreOpts,
 		checkPointPath: checkPointPath,
 		checkpoints:    make(map[uint64]string),
 		globalOpts:     globalOpts,
@@ -391,6 +415,14 @@ func (s *RocksDBStore) Close() error {
 		s.db.Close()
 	}
 
+	if s.backupOpts != nil {
+		s.backupOpts.Destroy()
+	}
+
+	if s.restoreOpts != nil {
+		s.restoreOpts.Destroy()
+	}
+
 	if s.blockCache != nil {
 		s.blockCache.Destroy()
 	}
@@ -410,6 +442,7 @@ func (s *RocksDBStore) Close() error {
 	if s.ro != nil {
 		s.ro.Destroy()
 	}
+
 	if s.wo != nil {
 		s.wo.Destroy()
 	}
@@ -432,15 +465,73 @@ func (s *RocksDBStore) Snapshot() (uint64, error) {
 		return 0, err
 	}
 	defer checkpoint.Destroy()
-	checkpoint.CreateCheckpoint(checkDir, 0)
+	err = checkpoint.CreateCheckpoint(checkDir, 0)
+	if err != nil {
+		return 0, err
+	}
 
 	s.checkpoints[id] = checkDir
 	return id, nil
 }
 
-// Backup dumps a protobuf-encoded list of all entries in the database into the
+// Backup uses the backupEngine to create backups with metadata. The backup directory has been
+// set up previously.
+func (s *RocksDBStore) Backup(metadata string) error {
+	err := s.backupEngine.CreateNewBackupWithMetadata(s.db, metadata)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Restore from latest backup gets the latest backup from the backup engine and restores
+// it to the given paths.This can be used to restore the database from a backup
+// made by calling DB.Backup().
+func (s *RocksDBStore) RestoreFromLatestBackup(dbDir, walDir string) error {
+	err := s.backupEngine.RestoreDBFromLatestBackup(dbDir, walDir, s.restoreOpts)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Restore from backup looks for the given backupID in the backup engine, gets and restores
+// it to the given paths. This can be used to restore the database from a backup
+// made by calling DB.Backup().
+func (s *RocksDBStore) RestoreFromBackup(backupID uint32, dbDir, walDir string) error {
+	err := s.backupEngine.RestoreDBFromBackup(backupID, dbDir, walDir, s.restoreOpts)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetBackupsInfo function extract backups info from a backup engine, and transforms it to
+// a
+func (s *RocksDBStore) GetBackupsInfo() []*storage.BackupInfo {
+	bi := s.backupEngine.GetInfo()
+	defer bi.Destroy()
+	if bi == nil {
+		return nil
+	}
+
+	backupsInfo := make([]*storage.BackupInfo, bi.GetCount())
+	for i := 0; i < bi.GetCount(); i++ {
+		info := &storage.BackupInfo{}
+		info.ID = bi.GetBackupID(i)
+		info.Timestamp = bi.GetTimestamp(i)
+		info.Size = bi.GetSize(i)
+		info.NumFiles = bi.GetNumFiles(i)
+		info.Metadata = bi.GetAppMetadata(i)
+		backupsInfo[i] = info
+	}
+
+	return backupsInfo
+}
+
+// Dump dumps a protobuf-encoded list of all entries in the database into the
 // given writer, that are newer than the specified version.
-func (s *RocksDBStore) Backup(w io.Writer, id uint64) error {
+func (s *RocksDBStore) Dump(w io.Writer, id uint64) error {
 
 	checkDir := s.checkpoints[id]
 
@@ -502,8 +593,8 @@ func (s *RocksDBStore) Backup(w io.Writer, id uint64) error {
 }
 
 // Load reads a protobuf-encoded list of all entries from a reader and writes
-// them to the database. This can be used to restore the database from a backup
-// made by calling DB.Backup().
+// them to the database. This can be used to restore the database from a dump
+// made by calling DB.Dump().
 //
 // DB.Load() should be called on a database that is not running any other
 // concurrent transactions while it is running.
