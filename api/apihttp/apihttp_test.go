@@ -32,8 +32,8 @@ import (
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/raftwal"
-	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/storage"
+	"github.com/bbva/qed/testutils/rand"
 
 	storage_utils "github.com/bbva/qed/testutils/storage"
 	assert "github.com/stretchr/testify/require"
@@ -147,7 +147,7 @@ func (b fakeRaftBalloon) Backup() error {
 	return nil
 }
 
-func (b fakeRaftBalloon) ListBackups() []storage.BackupInfo {
+func (b fakeRaftBalloon) ListBackups() []*storage.BackupInfo {
 	return nil
 }
 
