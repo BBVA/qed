@@ -202,8 +202,12 @@ func TestBackup(t *testing.T) {
 	command := newRaftCommand(commands.AddEventCommandType, h.Do([]byte("All's right with the world")))
 	fsm.Apply(newRaftLog(0, 0, command))
 
+	backupsList := fsm.BackupsInfo()
+	require.True(t, len(backupsList) == 0, "Backup list should be empty")
 	err = fsm.Backup()
 	require.NoError(t, err)
+	backupsList = fsm.BackupsInfo()
+	require.True(t, len(backupsList) == 1, "Backup list should contain 1 backup")
 }
 
 func BenchmarkApplyAdd(b *testing.B) {
