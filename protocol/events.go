@@ -197,4 +197,10 @@ func ToIncrementalProof(ir *IncrementalResponse, hasherF func() hashing.Hasher) 
 	return balloon.NewIncrementalProof(ir.Start, ir.End, history.ParseAuditPath(ir.AuditPath), hasherF())
 }
 
-type BackupInfo map[string]interface{}
+type BackupInfo struct {
+	ID        int64
+	Timestamp int64
+	Size      int64
+	NumFiles  int32
+	Metadata  string
+}
