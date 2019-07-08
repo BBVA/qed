@@ -415,6 +415,14 @@ func (s *RocksDBStore) Close() error {
 		s.db.Close()
 	}
 
+	if s.backupOpts != nil {
+		s.backupOpts.Destroy()
+	}
+
+	if s.restoreOpts != nil {
+		s.restoreOpts.Destroy()
+	}
+
 	if s.blockCache != nil {
 		s.blockCache.Destroy()
 	}
@@ -434,6 +442,7 @@ func (s *RocksDBStore) Close() error {
 	if s.ro != nil {
 		s.ro.Destroy()
 	}
+
 	if s.wo != nil {
 		s.wo.Destroy()
 	}
@@ -501,6 +510,7 @@ func (s *RocksDBStore) RestoreFromBackup(backupID uint32, dbDir, walDir string) 
 // a
 func (s *RocksDBStore) GetBackupsInfo() []*storage.BackupInfo {
 	bi := s.backupEngine.GetInfo()
+	defer bi.Destroy()
 	if bi == nil {
 		return nil
 	}

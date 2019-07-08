@@ -27,7 +27,7 @@ import (
 
 type BackupConfig struct {
 	// Endpoint [host:port] to ask for QED management APIs.
-	Endpoint string `desc:"Management QED Log service endpoint http://ip:port"`
+	Endpoint string `desc:"QED Log service management endpoint http://ip:port"`
 
 	// Log level
 	Log string `desc:"Set log level to info, error or debug"`
