@@ -18,19 +18,19 @@ package raftwal
 
 import (
 	"bytes"
-
 	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
+
+	"github.com/hashicorp/go-msgpack/codec"
+	"github.com/hashicorp/raft"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/raftwal/commands"
 	"github.com/bbva/qed/storage"
-	"github.com/hashicorp/go-msgpack/codec"
-	"github.com/hashicorp/raft"
 )
 
 // fsmGenericResponse is used when an unexpected output is received from
@@ -271,6 +271,27 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	// }()
 
 	return fsm.balloon.RefreshVersion()
+}
+
+// Backup ...
+func (fsm *BalloonFSM) Backup() error {
+	fsm.restoreMu.Lock()
+	defer fsm.restoreMu.Unlock()
+
+	metadata := fmt.Sprintf("%d", fsm.balloon.Version())
+	err := fsm.store.Backup(metadata)
+	if err != nil {
+		return err
+	}
+	log.Debugf("Generating backup until version: %d", fsm.balloon.Version())
+
+	return nil
+}
+
+// BackupsInfo ...
+func (fsm *BalloonFSM) BackupsInfo() []*storage.BackupInfo {
+	log.Debugf("Retrieving backups information")
+	return fsm.store.GetBackupsInfo()
 }
 
 // Close function closes

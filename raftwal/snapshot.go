@@ -32,7 +32,7 @@ type fsmSnapshot struct {
 func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 	log.Debug("Persisting snapshot...")
 	err := func() error {
-		if err := f.store.Backup(sink, f.id); err != nil {
+		if err := f.store.Dump(sink, f.id); err != nil {
 			return err
 		}
 		return sink.Close()

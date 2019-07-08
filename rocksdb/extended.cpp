@@ -21,6 +21,8 @@
 #include "rocksdb/db.h"
 #include "rocksdb/statistics.h"
 #include "rocksdb/options.h"
+#include "rocksdb/utilities/backupable_db.h"
+#include "rocksdb/status.h"
 
 using rocksdb::DB;
 using rocksdb::ColumnFamilyHandle;
@@ -32,6 +34,10 @@ using rocksdb::Cache;
 using rocksdb::NewLRUCache;
 using rocksdb::Slice;
 using std::shared_ptr;
+using rocksdb::BackupEngine;
+using rocksdb::BackupInfo;
+using rocksdb::Status;
+using rocksdb::RestoreOptions;
 
 extern "C" {
 
@@ -41,6 +47,9 @@ struct rocksdb_histogram_data_t { rocksdb::HistogramData* rep; };
 struct rocksdb_options_t { Options rep; };
 struct rocksdb_cache_t { std::shared_ptr<Cache> rep; };
 struct rocksdb_column_family_handle_t  { ColumnFamilyHandle* rep; };
+struct rocksdb_backup_engine_t   { BackupEngine*     rep; };
+struct rocksdb_backup_engine_info_t { std::vector<BackupInfo> rep; };
+struct rocksdb_restore_options_t { RestoreOptions rep; };
 
 void rocksdb_options_set_atomic_flush(
     rocksdb_options_t* opts, unsigned char value) {
@@ -66,6 +75,44 @@ rocksdb_slicetransform_t* rocksdb_slicetransform_create_ext(uintptr_t idx) {
     	(const char* (*)(void*))(rocksdb_slicetransform_name));
 }
 
+
+/* Backup */
+
+static bool SaveError(char** errptr, const Status& s) {
+  assert(errptr != nullptr);
+  if (s.ok()) {
+    return false;
+  } else if (*errptr == nullptr) {
+    *errptr = strdup(s.ToString().c_str());
+  } else {
+    free(*errptr);
+    *errptr = strdup(s.ToString().c_str());
+  }
+  return true;
+}
+
+void rocksdb_backup_engine_create_new_backup_with_metadata(rocksdb_backup_engine_t* be,
+                                             rocksdb_t* db,
+                                             char* app_metadata,
+                                             char** errptr) {
+    SaveError(errptr, be->rep->CreateNewBackupWithMetadata(db->rep, std::string(app_metadata)));
+}
+
+char* rocksdb_backup_engine_info_metadata(const rocksdb_backup_engine_info_t* info, 
+        int index){
+    return strdup(info->rep[index].app_metadata.c_str());
+}
+
+void rocksdb_backup_engine_restore_db_from_backup(
+    rocksdb_backup_engine_t* be, uint32_t backupID, const char* db_dir, const char* wal_dir,
+    const rocksdb_restore_options_t* restore_options, char** errptr) {
+  SaveError(errptr, be->rep->RestoreDBFromBackup(backupID,
+                                                 std::string(db_dir),
+                                                 std::string(wal_dir),
+                                                 restore_options->rep));
+}
+
+/* Statistics */
 
 rocksdb_statistics_t* rocksdb_create_statistics() {
     rocksdb_statistics_t* result = new rocksdb_statistics_t;
