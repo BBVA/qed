@@ -18,8 +18,9 @@ CGO_LDFLAGS_ALLOW='.*'
 QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
 reqs=$((10**10))
 
-${QED} --api-mode \
-    -l debug \
-    --apikey key \
-    --num-requests ${reqs} \
+${QED} workload                        \
+    --api-mode                         \
+    --log debug                        \
+    --api-key key                      \
+    --num-requests ${reqs}             \
     --endpoint "http://127.0.0.1:8800"

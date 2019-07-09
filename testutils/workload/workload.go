@@ -86,11 +86,10 @@ type Task struct {
 func (workload *Workload) Start(APIMode bool) {
 	if APIMode {
 		workload.Serve()
+		util.AwaitTermSignal(workload.Stop)
 	} else {
 		workload.RunOnce()
 	}
-
-	util.AwaitTermSignal(workload.Stop)
 
 	log.Debug("Stopping workload, about to exit...")
 }
