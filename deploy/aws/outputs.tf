@@ -9,8 +9,8 @@ output "prometheus" {
   value = "${module.prometheus.public_ip}"
 }
 
-output "riot" {
-  value = "${module.riot.public_ip}"
+output "workload" {
+  value = "${module.workload.public_ip}"
 }
 
 output "inmemory-storage" {

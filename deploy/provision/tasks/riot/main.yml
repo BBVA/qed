@@ -12,42 +12,42 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-- name: Copy Riot Binary
+- name: Copy workload Binary
   copy:
       dest: /var/qed/{{ item }}
       src: config_files/bin/{{ item }}
       mode: 0777
   with_items:
-    - riot
+    - workload
 
-- name: Create Riot start|stop script
+- name: Create workload start|stop script
   template:
     dest: /var/qed/{{ item }}
     src: ../../templates/{{ item }}.j2
     force: true
     mode: 0775
   with_items:
-    - riot-start.sh
-    - riot-stop.sh
+    - workload-start.sh
+    - workload-stop.sh
 
-- name: Install Riot systemd service unit file
+- name: Install workload systemd service unit file
   template:
     dest: /etc/systemd/system/{{ item }}
     src: ../../templates/{{ item }}.j2
   with_items:
-    - riot.service
-  register: riot_unit
+    - workload.service
+  register: workload_unit
 
-- name: Enable and run Riot service
+- name: Enable and run workload service
   systemd:
-    name: riot
+    name: workload
     state: started
     enabled: yes
     daemon_reload: yes
 
-- name: Restart Riot
+- name: Restart workload
   service:
-    name: riot
+    name: workload
     state: restarted
     daemon_reload: yes
-  when: riot_unit.changed
+  when: workload_unit.changed

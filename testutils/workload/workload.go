@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package main
+package workload
 
 import (
 	"context"
@@ -22,13 +22,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/imdario/mergo"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/spf13/cobra"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/metricshttp"
@@ -36,74 +34,6 @@ import (
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
-)
-
-const riotHelp = `---
-workloader:
-	this program runs as a single workloader (default) or as a server to receive
-	"plans" (Config structs) through a small web API.
-
-API:
-  /run:
-    examples:
-	  # simple add
-	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/run \
-	  -d'{"kind":"add"}'
-
-	  # complex config example
-	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/run \
-	  -d'{"kind": "incremental", "insecure":true, "endpoint": "https://qedserver:8800,qedserver1:8801"}'
-
-  /plan:
-	examples:
-	  # like a simple run
-	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
-	  -d'[[{"kind": "add"}]]'
-
-	  # secuential
-	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
-	  -d'[[{"kind": "add"}], [{"kind": "membership"}]]'
-
-	  # parallel
-	  curl -XPOST -H'Content-type: application/json' http://127.0.0.1:7700/plan \
-	  -d'[[{"kind": "add"}, {"kind": "membership"}]]'
-`
-
-var (
-	// Client
-
-	RiotEventAdd = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "riot_event_add",
-			Help: "Number of events added into the cluster.",
-		},
-	)
-	RiotEventAddFail = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "riot_event_add_fail",
-			Help: "Number of events failed to add.",
-		},
-	)
-	RiotQueryMembership = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "riot_query_membership",
-			Help: "Number of single events directly verified into the cluster.",
-		},
-	)
-	RiotQueryIncremental = prometheus.NewCounter(
-		prometheus.CounterOpts{
-			Name: "riot_query_incremental",
-			Help: "Number of range of verified events queried into the cluster.",
-		},
-	)
-	metricsList = []prometheus.Collector{
-		RiotEventAdd,
-		RiotEventAddFail,
-		RiotQueryMembership,
-		RiotQueryIncremental,
-	}
-
-	registerMetrics sync.Once
 )
 
 // Register all metrics.
@@ -118,30 +48,12 @@ func Register(r *prometheus.Registry) {
 	)
 }
 
-type Riot struct {
+type Workload struct {
 	Config Config
 
 	httpServer         *http.Server
 	metricsServer      *http.Server
 	prometheusRegistry *prometheus.Registry
-}
-
-type Config struct {
-	// general conf
-	Endpoint []string
-	APIKey   string
-	Insecure bool
-
-	// stress conf
-	Kind             string
-	Offload          bool
-	Profiling        bool
-	IncrementalDelta uint
-	Offset           uint
-	BulkSize         uint
-	NumRequests      uint
-	MaxGoRoutines    uint
-	ClusterSize      uint
 }
 
 type Plan [][]Config
@@ -171,91 +83,33 @@ type Task struct {
 	version, start, end uint64
 }
 
-func main() {
-	if err := newRiotCommand().Execute(); err != nil {
-		os.Exit(-1)
-	}
-}
-
-func newRiotCommand() *cobra.Command {
-	// Input storage.
-	var logLevel string
-	var APIMode bool
-	riot := Riot{}
-
-	cmd := &cobra.Command{
-		Use:   "riot",
-		Short: "Stresser tool for qed server",
-		Long:  riotHelp,
-		PreRun: func(cmd *cobra.Command, args []string) {
-
-			log.SetLogger("Riot", logLevel)
-
-			if riot.Config.Profiling {
-				go func() {
-					log.Info("	* Starting Riot Profiling server at :6060")
-					log.Info(http.ListenAndServe(":6060", nil))
-				}()
-			}
-
-			if !APIMode && riot.Config.Kind == "" {
-				log.Fatal("Argument `kind` is required")
-			}
-
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			riot.Start(APIMode)
-		},
-	}
-
-	f := cmd.Flags()
-
-	f.StringVarP(&logLevel, "log", "l", "debug", "Choose between log levels: silent, error, info and debug")
-	f.BoolVar(&APIMode, "api", false, "Raise a HTTP api in port 7700")
-
-	f.StringSliceVarP(&riot.Config.Endpoint, "endpoint", "e", []string{"127.0.0.1:8800"}, "The endopoint to make the load")
-	f.StringVarP(&riot.Config.APIKey, "apikey", "k", "my-key", "The key to use qed servers")
-	f.BoolVar(&riot.Config.Insecure, "insecure", false, "Allow self-signed TLS certificates")
-
-	f.StringVar(&riot.Config.Kind, "kind", "", "The kind of load to execute")
-
-	f.BoolVar(&riot.Config.Profiling, "profiling", false, "Enable Go profiling $ go tool pprof")
-	f.UintVarP(&riot.Config.IncrementalDelta, "delta", "d", 1000, "Specify delta for the IncrementalProof")
-	f.UintVar(&riot.Config.NumRequests, "n", 10e4, "Number of requests for the attack")
-	f.UintVar(&riot.Config.MaxGoRoutines, "r", 10, "Set the concurrency value")
-	f.UintVar(&riot.Config.Offset, "offset", 0, "The starting version from which we start the load")
-	f.UintVar(&riot.Config.BulkSize, "bulk-size", 20, "the size of the bulk in bulk loads (kind: bulk)")
-
-	return cmd
-}
-
-func (riot *Riot) Start(APIMode bool) {
+func (workload *Workload) Start(APIMode bool) {
 	if APIMode {
-		riot.Serve()
+		workload.Serve()
 	} else {
-		riot.RunOnce()
+		workload.RunOnce()
 	}
 
-	util.AwaitTermSignal(riot.Stop)
+	util.AwaitTermSignal(workload.Stop)
 
-	log.Debug("Stopping riot, about to exit...")
+	log.Debug("Stopping workload, about to exit...")
 }
 
-func (riot *Riot) RunOnce() {
-	newAttack(riot.Config)
+func (workload *Workload) RunOnce() {
+	newAttack(workload.Config)
 }
 
-func (riot *Riot) MergeConf(newConf Config) Config {
-	conf := riot.Config
+func (workload *Workload) MergeConf(newConf Config) Config {
+	conf := workload.Config
 	_ = mergo.Merge(&conf, newConf)
 	return conf
 }
 
-func (riot *Riot) Serve() {
+func (workload *Workload) Serve() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, riotHelp)
+		fmt.Fprint(w, WorkloadHelp)
 	})
 	mux.HandleFunc("/run", func(w http.ResponseWriter, r *http.Request) {
 		var err error
@@ -271,7 +125,7 @@ func (riot *Riot) Serve() {
 			return
 		}
 
-		newAttack(riot.MergeConf(newConf))
+		newAttack(workload.MergeConf(newConf))
 	})
 
 	mux.HandleFunc("/plan", func(w http.ResponseWriter, r *http.Request) {
@@ -293,7 +147,7 @@ func (riot *Riot) Serve() {
 			for _, conf := range batch {
 				wg.Add(1)
 				go func(conf Config) {
-					newAttack(riot.MergeConf(conf))
+					newAttack(workload.MergeConf(conf))
 					wg.Done()
 				}(conf)
 
@@ -305,39 +159,39 @@ func (riot *Riot) Serve() {
 	// Metrics server
 	r := prometheus.NewRegistry()
 	Register(r)
-	riot.prometheusRegistry = r
+	workload.prometheusRegistry = r
 	metricsMux := metricshttp.NewMetricsHTTP(r)
-	log.Debug("	* Starting Riot Metrics server at :17700")
-	riot.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
+	log.Debug("	* Starting workload Metrics server at :17700")
+	workload.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
 
 	go func() {
-		if err := riot.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
+		if err := workload.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
 			log.Errorf("Can't start metrics HTTP server: %s", err)
 		}
 	}()
 
 	// API server
-	riot.httpServer = &http.Server{Addr: ":7700", Handler: mux}
-	log.Debug("	* Starting Riot HTTP server at :7700")
+	workload.httpServer = &http.Server{Addr: ":7700", Handler: mux}
+	log.Debug("	* Starting workload HTTP server at :7700")
 	go func() {
-		if err := riot.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start Riot API HTTP server: %s", err)
+		if err := workload.httpServer.ListenAndServe(); err != http.ErrServerClosed {
+			log.Errorf("Can't start workload API HTTP server: %s", err)
 		}
 	}()
 }
 
-func (riot *Riot) Stop() error {
+func (workload *Workload) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	log.Debug("Stopping metrics server...")
-	err := riot.metricsServer.Shutdown(ctx)
+	err := workload.metricsServer.Shutdown(ctx)
 	if err != nil {
 		return err
 	}
 
 	log.Debug("Stopping HTTP server...")
-	err = riot.httpServer.Shutdown(ctx)
+	err = workload.httpServer.Shutdown(ctx)
 	if err != nil {
 		return err
 	}
@@ -346,7 +200,6 @@ func (riot *Riot) Stop() error {
 }
 
 func newAttack(conf Config) {
-
 	// QED client
 	transport := http.DefaultTransport.(*http.Transport)
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: conf.Insecure}
@@ -362,14 +215,13 @@ func newAttack(conf Config) {
 		client.SetHealthChecks(true),
 		client.SetHealthCheckTimeout(2*time.Second),   // default value
 		client.SetHealthCheckInterval(60*time.Second), // default value
-		client.SetAttemptToReviveEndpoints(true),
+		client.SetAttemptToReviveEndpoints(false),
 		client.SetHasherFunction(hashing.NewSha256Hasher),
 	)
 
 	if err != nil {
 		panic(err)
 	}
-
 	attack := Attack{
 		client:         client,
 		config:         conf,
@@ -404,29 +256,29 @@ func (a *Attack) Run() {
 					log.Debugf("Adding: %s", task.events[0])
 					_, err := a.client.Add(task.events[0])
 					if err != nil {
-						RiotEventAddFail.Inc()
+						workloadEventAddFail.Inc()
 						log.Debugf("Error adding event: version %d. Error: %s", task.version, err)
 					} else {
-						RiotEventAdd.Inc()
+						workloadEventAdd.Inc()
 					}
 				case bulk:
 					bulkSize := len(task.events)
 					log.Debugf("Inserting bulk: version %d, size %d, first event: %s", task.version, bulkSize, task.events[0])
 					_, err := a.client.AddBulk(task.events)
 					if err != nil {
-						RiotEventAddFail.Add(float64(bulkSize))
+						workloadEventAddFail.Add(float64(bulkSize))
 						log.Debugf("Error inserting bulk: version %d, size %d. Error: %s", task.version, bulkSize, err)
 					} else {
-						RiotEventAdd.Add(float64(bulkSize))
+						workloadEventAdd.Add(float64(bulkSize))
 					}
 				case membership:
 					log.Debugf("Querying membership: event %s", task.events[0])
 					_, _ = a.client.Membership([]byte(task.events[0]), &task.version)
-					RiotQueryMembership.Inc()
+					workloadQueryMembership.Inc()
 				case incremental:
 					log.Debugf("Querying incremental: start %d, end %d", task.start, task.end)
 					_, _ = a.client.Incremental(task.start, task.end)
-					RiotQueryIncremental.Inc()
+					workloadQueryIncremental.Inc()
 				}
 			}
 		}(rID)
