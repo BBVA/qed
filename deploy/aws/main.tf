@@ -122,8 +122,8 @@ module "prometheus" {
   key_path               = "${var.keypath}"
 }
 
-module "riot" {
-  source = "./modules/riot"
+module "workload" {
+  source = "./modules/workload"
 
   instance_type          = "m5.large"
   iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"

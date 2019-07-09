@@ -15,4 +15,16 @@
 #}
 #!/bin/bash
 
-killall riot || true
+ulimit -n 819200
+
+# 1000 million requests
+reqs=$((10**10))
+
+export QED_HOME=/var/qed
+nohup $QED_HOME/qed workload --api-mode \
+    --log info \
+    --apikey terraform_qed \
+    --num-requests ${reqs} \
+{% for host in groups['name_qed-0'] %}
+    --endpoint "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
+{% endfor %}

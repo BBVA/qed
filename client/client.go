@@ -136,14 +136,12 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 		healthCheckStopCh:   make(chan bool),
 		discoveryStopCh:     make(chan bool),
 	}
-
 	// Run the options on the client
 	for _, option := range options {
 		if err := option(client); err != nil {
 			return nil, err
 		}
 	}
-
 	// configure retrier
 	_ = client.setRetrier(client.maxRetries)
 
@@ -405,6 +403,7 @@ func (c *HTTPClient) discover() error {
 		}
 
 		body, err := c.doReq("GET", e, "/info/shards", nil)
+
 		if err == nil {
 			var shards protocol.Shards
 			err = json.Unmarshal(body, &shards)

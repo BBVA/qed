@@ -68,8 +68,8 @@ scrape_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
 {% endfor %}
 {% endif %}
-{% for host in groups['role_riot'] %}
-  - job_name: 'Riot{{loop.index0}}-Host'
+{% for host in groups['role_workload'] %}
+  - job_name: 'workload{{loop.index0}}-Host'
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']

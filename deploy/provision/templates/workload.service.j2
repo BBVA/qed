@@ -13,18 +13,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 #}
-#!/bin/bash
+[Unit]
+Description=workload benchmark tool
+Documentation=https://github.com/bbva/qed
+Wants=network-online.target
+After=network-online.target
 
-ulimit -n 819200
+[Service]
+User=root
+Group=root
+Restart=on-failure
+WorkingDirectory=/var/qed
+RuntimeDirectory=root
+RuntimeDirectoryMode=0750
+ExecStart=/var/qed/workload-start.sh
+ExecStop=/var/qed/workload-stop.sh
+LimitNOFILE=10000
+TimeoutStopSec=20
 
-# 1000 million requests
-reqs=$((10**10))
-
-export QED_HOME=/var/qed
-nohup $QED_HOME/riot --api \
-    --log info \
-    --apikey terraform_qed \
-    --n ${reqs} \
-{% for host in groups['name_qed-0'] %}
-    --endpoint "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
-{% endfor %}
+[Install]
+WantedBy=multi-user.target
