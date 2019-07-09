@@ -214,7 +214,7 @@ func newAttack(conf Config) {
 		client.SetHealthChecks(true),
 		client.SetHealthCheckTimeout(2*time.Second),   // default value
 		client.SetHealthCheckInterval(60*time.Second), // default value
-		client.SetAttemptToReviveEndpoints(false),
+		client.SetAttemptToReviveEndpoints(true),
 		client.SetHasherFunction(hashing.NewSha256Hasher),
 	)
 
