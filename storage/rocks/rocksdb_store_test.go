@@ -253,13 +253,13 @@ func TestFetchAndLoadSnapshot(t *testing.T) {
 				[]*storage.Mutation{
 					{Table: table, Key: key, Value: key},
 				},
-				util.Uint64AsBytes(numElems * uint64(j) + i),
+				util.Uint64AsBytes(numElems*uint64(j)+i),
 			)
 			require.NoError(t, err)
 		}
 	}
 
-	// get last WAL seq num	
+	// get last WAL seq num
 	until := store.LastWALSequenceNumber()
 	require.Equal(t, numElems*uint64(len(tables)), until)
 
@@ -270,7 +270,9 @@ func TestFetchAndLoadSnapshot(t *testing.T) {
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
-	require.NoError(t, restore.LoadSnapshot(ioBuf, 0))
+	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= 0, nil // we start from the beginning
+	}))
 
 	// check elements
 	for _, table := range tables {
@@ -318,7 +320,9 @@ func TestFetchAndLoadUntilSeqNum(t *testing.T) {
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
-	require.NoError(t, restore.LoadSnapshot(ioBuf, 0))
+	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= 0, nil // we start from the beginning
+	}))
 
 	// check elements
 	reader := store.GetAll(storage.HistoryTable)
@@ -357,7 +361,7 @@ func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// get last WAL seq num	
+	// get last WAL seq num
 	until := store.LastWALSequenceNumber()
 	require.Equal(t, numElems, until)
 
@@ -368,7 +372,9 @@ func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
-	require.NoError(t, restore.LoadSnapshot(ioBuf, lastVersion)) // we start at the middle
+	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= lastVersion, nil // we start at the middle
+	}))
 
 	// check elements
 	reader := store.GetAll(storage.HistoryTable)
@@ -376,7 +382,7 @@ func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
 	entries := make([]*storage.KVPair, numElems)
 	n, _ := reader.Read(entries)
 	require.Equal(t, numElems, uint64(n))
-	
+
 	for i := uint64(0); i < lastVersion; i++ {
 		_, err := restore.Get(storage.HistoryTable, entries[i].Key)
 		require.Error(t, err)
