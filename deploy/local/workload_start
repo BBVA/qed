@@ -13,11 +13,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-# 1000 million requests
+# Set compile flags
+CGO_LDFLAGS_ALLOW='.*'
+QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
 reqs=$((10**10))
 
-go run riot.go --api \
+${QED} --api-mode \
     -l debug \
     --apikey key \
-    --n ${reqs} \
+    --num-requests ${reqs} \
     --endpoint "http://127.0.0.1:8800"

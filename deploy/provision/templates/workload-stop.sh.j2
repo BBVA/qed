@@ -13,23 +13,6 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 #}
-[Unit]
-Description=Riot benchmark tool
-Documentation=https://github.com/bbva/qed
-Wants=network-online.target
-After=network-online.target
+#!/bin/bash
 
-[Service]
-User=root
-Group=root
-Restart=on-failure
-WorkingDirectory=/var/qed
-RuntimeDirectory=root
-RuntimeDirectoryMode=0750
-ExecStart=/var/qed/riot-start.sh
-ExecStop=/var/qed/riot-stop.sh
-LimitNOFILE=10000
-TimeoutStopSec=20
-
-[Install]
-WantedBy=multi-user.target
+killall workload || true

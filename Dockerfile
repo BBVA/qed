@@ -30,9 +30,8 @@ RUN git clone https://github.com/BBVA/qed.git .         &&\
     ./builddeps.sh                                      &&\
     go mod download
 
-# Build QED, Storage binary and riot
+# Build QED, Storage binary
 RUN go build -o /usr/local/bin/qed                                   &&\
-    go build -o /usr/local/bin/riot testutils/riot/riot.go           &&\
     go build -o /usr/local/bin/storage testutils/notifierstore.go
 
 # Clean
@@ -41,7 +40,6 @@ RUN rm -rf /var/lib/apt/lists/*
 FROM ubuntu:19.10
 
 COPY --from=0 /usr/local/bin/qed /usr/local/bin/qed
-COPY --from=0 /usr/local/bin/riot /usr/local/bin/riot
 COPY --from=0 /usr/local/bin/storage /usr/local/bin/storage
 
 RUN /usr/local/bin/qed generate signerkeys

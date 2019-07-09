@@ -24,11 +24,11 @@ $ terraform workspace new <workspace_name>
 $ terraform select <workspace_name>
 ```
 
-## Deploy QED cluster with agents, storage, Riot and monitoring
+## Deploy QED cluster with agents, storage, workload and monitoring
 ```
 $ terraform apply -auto-approve 
 ```
-## Deploy QED cluster, Riot and monitoring
+## Deploy QED cluster, workload and monitoring
 ```
 $ terraform apply -target=null_resource.qed-base
 ```
