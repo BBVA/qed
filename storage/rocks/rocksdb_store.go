@@ -506,8 +506,8 @@ func (s *RocksDBStore) RestoreFromBackup(backupID uint32, dbDir, walDir string) 
 	return nil
 }
 
-// GetBackupsInfo function extract backups info from a backup engine, and transforms it to
-// a
+// GetBackupsInfo function extract a list of backups from a backup engine, and iterate over them
+// to parse its information.
 func (s *RocksDBStore) GetBackupsInfo() []*storage.BackupInfo {
 	bi := s.backupEngine.GetInfo()
 	defer bi.Destroy()
@@ -527,6 +527,15 @@ func (s *RocksDBStore) GetBackupsInfo() []*storage.BackupInfo {
 	}
 
 	return backupsInfo
+}
+
+// DeleteBackup uses the backupEngine to delete the backup identified by backupID.
+func (s *RocksDBStore) DeleteBackup(backupID uint32) error {
+	err := s.backupEngine.DeleteBackup(backupID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Dump dumps a protobuf-encoded list of all entries in the database into the

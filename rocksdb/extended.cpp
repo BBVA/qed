@@ -112,6 +112,11 @@ void rocksdb_backup_engine_restore_db_from_backup(
                                                  restore_options->rep));
 }
 
+extern void rocksdb_backup_engine_delete_backup(
+    rocksdb_backup_engine_t* be, uint32_t backupID, char** errptr){
+  SaveError(errptr, be->rep->DeleteBackup(backupID));
+}
+
 /* Statistics */
 
 rocksdb_statistics_t* rocksdb_create_statistics() {
