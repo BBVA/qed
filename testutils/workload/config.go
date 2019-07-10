@@ -92,10 +92,10 @@ var (
 
 type Config struct {
 	// general conf
-	Endpoint []string `desc:"The endopoint to make the load"`
-	APIKey   string   `desc:"The key to use qed servers"`
-	Insecure bool     `desc:"Allow self-signed TLS certificates"`
-	Log      string   `desc:"Set log level to info, error or debug"`
+	Endpoints []string `desc:"The endopoint to make the load"`
+	APIKey    string   `desc:"The key to use qed servers"`
+	Insecure  bool     `desc:"Allow self-signed TLS certificates"`
+	Log       string   `desc:"Set log level to info, error or debug"`
 
 	// stress conf
 	APIMode          bool   `desc:"Enable API Mode"`
@@ -111,6 +111,7 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	return &Config{
+		Endpoints:        []string{"http://localhost:8800"},
 		APIMode:          false,
 		Log:              "info",
 		Kind:             "",
