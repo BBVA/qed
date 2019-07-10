@@ -36,6 +36,45 @@ type HealthCheckResponse struct {
 	Status  string `json:"status"`
 }
 
+// NewApiHttp returns a new *http.ServeMux containing the current API handlers.
+//	/health-check -> Qed server healthcheck
+//	/events -> Add event operation
+//	/events/bulk -> Add event bulk operation
+//	/proofs/membership -> Membership query using event
+//	/proofs/digest-membership -> Membership query using event digest
+//	/proofs/incremental -> Incremental query
+//	/info/shards -> Qed cluster information
+func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
+
+	api := http.NewServeMux()
+	api.HandleFunc("/healthcheck", AuthHandlerMiddleware(HealthCheckHandler))
+	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
+	api.HandleFunc("/events/bulk", AuthHandlerMiddleware(AddBulk(balloon)))
+	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
+	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
+	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
+	api.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(balloon)))
+
+	return api
+}
+
+// AuthHandlerMiddleware function is an HTTP handler wrapper that performs
+// simple authorization tasks. Currently only checks that Api-Key is present.
+//
+// If Api-Key is not present, it will raise a `http.StatusUnauthorized` errror.
+func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// Check if Api-Key header is empty
+		if r.Header.Get("Api-Key") == "" {
+			http.Error(w, "Missing Api-Key header", http.StatusUnauthorized)
+			return
+		}
+
+		handler.ServeHTTP(w, r)
+	})
+}
+
 // HealthCheckHandler checks the system status and returns it accordinly.
 // The http call it answer is:
 //	HEAD /
@@ -341,83 +380,6 @@ func Incremental(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	}
 }
 
-// AuthHandlerMiddleware function is an HTTP handler wrapper that performs
-// simple authorization tasks. Currently only checks that Api-Key is present.
-//
-// If Api-Key is not present, it will raise a `http.StatusUnauthorized` errror.
-func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		// Check if Api-Key header is empty
-		if r.Header.Get("Api-Key") == "" {
-			http.Error(w, "Missing Api-Key header", http.StatusUnauthorized)
-			return
-		}
-
-		handler.ServeHTTP(w, r)
-	})
-}
-
-// NewApiHttp returns a new *http.ServeMux containing the current API handlers.
-//	/events -> Add event operation
-//	/events/bulk -> Add event bulk operation
-//	/health-check -> Qed server healthcheck
-//	/info/shards -> Qed cluster information
-//	/proofs/membership -> Membership query using event
-//	/proofs/digest-membership -> Membership query using event digest
-//	/proofs/incremental -> Incremental query
-func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
-
-	api := http.NewServeMux()
-	api.HandleFunc("/healthcheck", AuthHandlerMiddleware(HealthCheckHandler))
-	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
-	api.HandleFunc("/events/bulk", AuthHandlerMiddleware(AddBulk(balloon)))
-	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
-	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
-	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
-	api.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(balloon)))
-
-	return api
-}
-
-type statusWriter struct {
-	http.ResponseWriter
-	status int
-	length int
-}
-
-func (w *statusWriter) WriteHeader(status int) {
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *statusWriter) Write(b []byte) (int, error) {
-	if w.status == 0 {
-		w.status = 200
-	}
-	w.length = len(b)
-	return w.ResponseWriter.Write(b)
-}
-
-// LogHandler Logs the Http Status for a request into fileHandler and returns a
-// httphandler function which is a wrapper to log the requests.
-func LogHandler(handle http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, request *http.Request) {
-		start := time.Now()
-		writer := statusWriter{w, 0, 0}
-		handle.ServeHTTP(&writer, request)
-		latency := time.Now().Sub(start)
-
-		log.Debugf("Request: lat %d %+v", latency, request)
-		if writer.status >= 400 && writer.status < 500 {
-			log.Infof("Bad Request: %d %+v", latency, request)
-		}
-		if writer.status >= 500 {
-			log.Infof("Server error: %d %+v", latency, request)
-		}
-	}
-}
-
 // InfoShardsHandler returns information about QED shards.
 // The http post url is:
 //   GET /info/shards
@@ -481,6 +443,44 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(out)
 	}
+}
+
+// LogHandler Logs the Http Status for a request into fileHandler and returns a
+// httphandler function which is a wrapper to log the requests.
+func LogHandler(handle http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, request *http.Request) {
+		start := time.Now()
+		writer := statusWriter{w, 0, 0}
+		handle.ServeHTTP(&writer, request)
+		latency := time.Now().Sub(start)
+
+		log.Debugf("Request: lat %d %+v", latency, request)
+		if writer.status >= 400 && writer.status < 500 {
+			log.Infof("Bad Request: %d %+v", latency, request)
+		}
+		if writer.status >= 500 {
+			log.Infof("Server error: %d %+v", latency, request)
+		}
+	}
+}
+
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+	length int
+}
+
+func (w *statusWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *statusWriter) Write(b []byte) (int, error) {
+	if w.status == 0 {
+		w.status = 200
+	}
+	w.length = len(b)
+	return w.ResponseWriter.Write(b)
 }
 
 // PostReqSanitizer function checks that certain request info exists and it is correct.
