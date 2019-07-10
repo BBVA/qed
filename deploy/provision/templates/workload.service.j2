@@ -27,7 +27,7 @@ WorkingDirectory=/var/qed
 RuntimeDirectory=root
 RuntimeDirectoryMode=0750
 ExecStart=/var/qed/workload-start.sh
-ExecStop=/var/qed/workload-stop.sh
+ExecStop=/bin/kill -9 $(expr $MAINPID + 1)
 LimitNOFILE=10000
 TimeoutStopSec=20
 

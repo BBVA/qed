@@ -25,7 +25,17 @@
     - config_files/bin/storage ../../testutils/notifierstore.go
   when: ansible_system == 'Linux'
 
-- name: Build QED and Inmemory Storage binaries for Linux, on MacOS
+- name: Build QED and Inmemory Storage binaries for Linux, on MacOS custom repo/branch
+  shell: >
+    {{ item }}
+  with_items:
+    - docker build -t qed/build --build-arg QED_REPO={{qed_repo}} --build-arg QED_REPO_BRANCH={{qed_repo_branch}} ../../
+    - docker run -d --name qed qed/build:latest
+    - docker cp qed:/usr/local/bin/. config_files/bin
+    - docker rm -vf qed
+  when: ansible_system == 'Darwin' and qed_repo is defined
+
+- name: Build QED and Inmemory Storage binaries for Linux, on MacOS default repo
   shell: >
     {{ item }}
   with_items:
@@ -33,4 +43,4 @@
     - docker run -d --name qed qed/build:latest
     - docker cp qed:/usr/local/bin/. config_files/bin
     - docker rm -vf qed
-  when: ansible_system == 'Darwin'
+  when: ansible_system == 'Darwin' and qed_repo is undefined
