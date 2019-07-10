@@ -12,22 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.12.1
+FROM golang:1.12.5
+
+# Allow cloning custom repo & branch for testing
+ARG QED_REPO=https://github.com/bbva/qed.git
+ARG QED_REPO_BRANCH=master
 
 ENV GO111MODULE=on
 ENV CGO_LDFLAGS_ALLOW='.*'
+ENV REPO=${QED_REPO}
+ENV BRANCH=${QED_REPO_BRANCH}
 
 WORKDIR /go/src/github.com/bbva/qed
-
 # Install deps.
 RUN apt update -qq && apt install -qq -y autoconf cmake
 
 # Build C deps. 
 # This step acts as cache to avoid recompiling when Go code changes.
-RUN git clone https://github.com/BBVA/qed.git .         &&\
-    git submodule update --init --recursive             &&\
-    cd c-deps                                           &&\
-    ./builddeps.sh                                      &&\
+RUN git clone --depth 1 -b ${BRANCH} ${REPO} .  &&\
+    git submodule update --init --recursive     &&\
+    cd c-deps                                   &&\
+    ./builddeps.sh                              &&\
     go mod download
 
 # Build QED, Storage binary
