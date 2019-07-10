@@ -321,7 +321,7 @@ func (fsm *BalloonFSM) applyAdd(eventHash hashing.Digest, state *fsmState) *fsmA
 	}
 
 	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff.Bytes()))
-	err = fsm.store.Mutate(mutations)
+	err = fsm.store.Mutate(mutations, nil)
 	if err != nil {
 		return &fsmAddResponse{error: err}
 	}
@@ -343,7 +343,7 @@ func (fsm *BalloonFSM) applyAddBulk(hashes []hashing.Digest, state *fsmState) *f
 	}
 
 	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff.Bytes()))
-	err = fsm.store.Mutate(mutations)
+	err = fsm.store.Mutate(mutations, nil)
 	if err != nil {
 		return &fsmAddBulkResponse{error: err}
 	}
