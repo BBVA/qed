@@ -17,6 +17,10 @@
   gather_facts: true
   vars_files:
     - vars.yml
+  vars:
+    # Set custom repo and branch for the docker build.
+    # - qed_repo: 'https://github.com/suizman/qed.git'
+    # - qed_repo_branch: 'cmd_workload'
   environment:
     - GOOS: linux
     - GOARCH: amd64

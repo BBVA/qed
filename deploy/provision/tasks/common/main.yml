@@ -122,7 +122,6 @@
     mode: 0775
   with_items:
     - qed-start.sh
-    - qed-stop.sh
 
 - name: Install Node Exporter systemd service unit file
   template:

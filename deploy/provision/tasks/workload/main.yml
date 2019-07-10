@@ -20,7 +20,6 @@
     mode: 0775
   with_items:
     - workload-start.sh
-    - workload-stop.sh
 
 - name: Install workload systemd service unit file
   template:
