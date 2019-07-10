@@ -12,14 +12,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-- name: Copy workload Binary
-  copy:
-      dest: /var/qed/{{ item }}
-      src: config_files/bin/{{ item }}
-      mode: 0777
-  with_items:
-    - workload
-
 - name: Create workload start|stop script
   template:
     dest: /var/qed/{{ item }}
