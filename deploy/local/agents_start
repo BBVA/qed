@@ -25,8 +25,6 @@ QED="go run $GOPATH/src/github.com/bbva/qed/main.go"
 # Agent options
 AGENT_CONFIG=()
 AGENT_CONFIG+=('--log debug')
-AGENT_CONFIG+=('--bind-addr 127.0.0.1:810${i}')
-AGENT_CONFIG+=('--metrics-addr 127.0.0.1:1810${i}')
 AGENT_CONFIG+=('--start-join 127.0.0.1:8400')
 
 # Notifier options
@@ -49,14 +47,23 @@ QED_CONFIG+=("--qed-endpoints http://127.0.0.1:8800")
 MONITOR_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" "${QED_CONFIG[@]}")
 MONITOR_CONFIG+=('--role monitor')
 MONITOR_CONFIG+=('--node-name monitor${i}')
+MONITOR_CONFIG+=('--bind-addr 127.0.0.1:810${i}')
+MONITOR_CONFIG+=('--advertise-addr 127.0.0.1:810${i}')
+MONITOR_CONFIG+=('--metrics-addr 127.0.0.1:1810${i}')
 
 PUBLISHER_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" )
 PUBLISHER_CONFIG+=('--role publisher')
 PUBLISHER_CONFIG+=('--node-name publisher${i}')
+PUBLISHER_CONFIG+=('--bind-addr 127.0.0.1:811${i}')
+PUBLISHER_CONFIG+=('--advertise-addr 127.0.0.1:811${i}')
+PUBLISHER_CONFIG+=('--metrics-addr 127.0.0.1:1811${i}')
 
 AUDITOR_CONFIG=("${AGENT_CONFIG[@]}" "${NOTIFIER_CONFIG[@]}" "${STORE_CONFIG[@]}" "${TASKS_CONFIG[@]}" "${QED_CONFIG[@]}")
 AUDITOR_CONFIG+=('--role auditor')
 AUDITOR_CONFIG+=('--node-name auditor${i}')
+AUDITOR_CONFIG+=('--bind-addr 127.0.0.1:812${i}')
+AUDITOR_CONFIG+=('--advertise-addr 127.0.0.1:812${i}')
+AUDITOR_CONFIG+=('--metrics-addr 127.0.0.1:1821${i}')
 
 start() {
 	local type="$1"
