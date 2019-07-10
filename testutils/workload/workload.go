@@ -206,7 +206,7 @@ func newAttack(conf Config) {
 	httpClient.Transport = transport
 	client, err := client.NewHTTPClient(
 		client.SetHttpClient(httpClient),
-		client.SetURLs(conf.Endpoint[0], conf.Endpoint[1:]...),
+		client.SetURLs(conf.Endpoints[0], conf.Endpoints[1:]...),
 		client.SetAPIKey(conf.APIKey),
 		client.SetReadPreference(client.Any),
 		client.SetMaxRetries(1),

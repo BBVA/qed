@@ -23,4 +23,4 @@ ${QED} workload                        \
     --log debug                        \
     --api-key key                      \
     --num-requests ${reqs}             \
-    --endpoint "http://127.0.0.1:8800"
+    --endpoints "http://127.0.0.1:8800"
