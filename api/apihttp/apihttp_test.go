@@ -87,6 +87,7 @@ func (b fakeRaftBalloon) QueryDigestMembershipConsistency(keyDigest hashing.Dige
 		Hasher:         hashing.NewFakeXorHasher(),
 	}, nil
 }
+
 func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
 	return &balloon.MembershipProof{
 		Exists:         true,
@@ -148,6 +149,10 @@ func (b fakeRaftBalloon) Backup() error {
 }
 
 func (b fakeRaftBalloon) ListBackups() []*storage.BackupInfo {
+	return nil
+}
+
+func (b fakeRaftBalloon) DeleteBackup(backupID uint32) error {
 	return nil
 }
 

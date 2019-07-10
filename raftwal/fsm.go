@@ -273,7 +273,8 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 	return fsm.balloon.RefreshVersion()
 }
 
-// Backup ...
+// Backup function calls store's backup function, passing certain metadata.
+// Previously, it gets balloon version to build this metadata.
 func (fsm *BalloonFSM) Backup() error {
 	fsm.restoreMu.Lock()
 	defer fsm.restoreMu.Unlock()
@@ -288,7 +289,13 @@ func (fsm *BalloonFSM) Backup() error {
 	return nil
 }
 
-// BackupsInfo ...
+// DeleteBackup function is a passthough to store's equivalent funcion.
+func (fsm *BalloonFSM) DeleteBackup(backupID uint32) error {
+	log.Debugf("Deleting backup %d", backupID)
+	return fsm.store.DeleteBackup(backupID)
+}
+
+// BackupsInfo function is a passthough to store's equivalent funcion.
 func (fsm *BalloonFSM) BackupsInfo() []*storage.BackupInfo {
 	log.Debugf("Retrieving backups information")
 	return fsm.store.GetBackupsInfo()

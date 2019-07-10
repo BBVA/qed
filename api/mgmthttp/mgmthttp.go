@@ -20,18 +20,19 @@ package mgmthttp
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/raftwal"
 )
 
-// NewMgmtHttp will return a mux server with the endpoint required to
-// join the raft cluster.
+// NewMgmtHttp will return a mux server with endpoints to manage different
+// QED log service features: DDBB backups, Raft membership,...
 func NewMgmtHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/join", joinHandle(balloon))
-	mux.HandleFunc("/backup", backupHandle(balloon))
-	mux.HandleFunc("/backups", listBackupsHandle(balloon))
+	mux.HandleFunc("/backup", apihttp.AuthHandlerMiddleware(ManageBackup(balloon)))
+	mux.HandleFunc("/backups", apihttp.AuthHandlerMiddleware(ListBackups(balloon)))
 	return mux
 }
 
@@ -88,25 +89,67 @@ func joinHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	}
 }
 
-func backupHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
+func ManageBackup(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var err error
-		// Make sure we can only be called with an HTTP POST request.
-		w, _, err = apihttp.PostReqSanitizer(w, r)
-		if err != nil {
+		switch r.Method {
+		case "DELETE":
+			DeleteBackup(api, w, r)
+		case "POST":
+			CreateBackup(api, w, r)
+		default:
+			w.Header().Set("Allow", "POST, DELETE")
+			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-
-		if err := api.Backup(); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func listBackupsHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
+// CreateBackup creates a backup of the RocksDB data up to now:
+// The http post url is:
+//   POST /backup
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 200 with an empty body.
+func CreateBackup(api raftwal.RaftBalloonApi, w http.ResponseWriter, r *http.Request) {
+	// Make sure we can only be called with an HTTP POST request.
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := api.Backup(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// ListBackups returns a list of backups along with each backup information.
+// The http post url is:
+//   GET /backups
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 204 and the body contains:
+// [
+//  {
+//    "ID":   1,
+//    "Timestamp": 1523653256854,
+//    "Size":   16786",
+//    "NumFiles": 4,
+//	  "Metadata": "foo"
+//  },
+//  {
+//    "ID":   2,
+//    "Timestamp": 1523653256999,
+//    "Size":   21786,
+//    "NumFiles": 4,
+//	  "Metadata": "bar"
+//	},
+//	...
+// ]
+func ListBackups(api raftwal.RaftBalloonApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		// Make sure we can only be called with an HTTP GET request.
@@ -131,4 +174,33 @@ func listBackupsHandle(api raftwal.RaftBalloonApi) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(out)
 	}
+}
+
+// DeleteBackup deletes a certain backup (given its ID) from the system:
+// The http post url is:
+//   DELETE /backup?backupID=<id>
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 204 with an empty body.
+func DeleteBackup(api raftwal.RaftBalloonApi, w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != "DELETE" {
+		w.Header().Set("Allow", "DELETE")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	b := r.URL.Query()["backupID"]
+	backupID, err := strconv.ParseUint(b[0], 10, 32)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := api.DeleteBackup(uint32(backupID)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
