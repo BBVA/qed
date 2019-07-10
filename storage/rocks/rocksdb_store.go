@@ -70,14 +70,11 @@ type RocksDBStore struct {
 type Options struct {
 	Path             string
 	EnableStatistics bool
+	WALSizeLimitMB uint64
 }
 
 func NewRocksDBStore(path string) (*RocksDBStore, error) {
-	return NewRocksDBStoreWithOpts(&Options{Path: path, EnableStatistics: true})
-}
-
-func NewRocksDBStore(path string) (*RocksDBStore, error) {
-	return NewRocksDBStoreOpts(&Options{
+	return NewRocksDBStoreWithOpts(&Options{
 		Path:             path,
 		EnableStatistics: true,
 		WALSizeLimitMB:   1 << 20,
@@ -343,7 +340,7 @@ func getFsmStateTableOpts() *rocksdb.Options {
 	return opts
 }
 
-func (s *RocksDBStore) Mutate(mutations []*storage.Mutation) error {
+func (s *RocksDBStore) Mutate(mutations []*storage.Mutation, metadata []byte) error {
 	batch := rocksdb.NewWriteBatch()
 	defer batch.Destroy()
 	// IMPORTANT: This line must go before the PutCF. For some reason, if we set it after,
