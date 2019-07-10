@@ -219,7 +219,7 @@ func newAttack(conf Config) {
 	)
 
 	if err != nil {
-		panic(err)
+		log.Errorf("New attack create HTTP Client: %s", err)
 	}
 	attack := Attack{
 		client:         client,
@@ -229,7 +229,7 @@ func newAttack(conf Config) {
 	}
 
 	if err := attack.client.Ping(); err != nil {
-		panic(err)
+		log.Errorf("New attack ping: %s", err)
 	}
 
 	attack.Run()
