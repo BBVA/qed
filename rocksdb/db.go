@@ -415,18 +415,6 @@ func (db *DB) GetUint64PropertyCF(propName string, cf *ColumnFamilyHandle) uint6
 	return uint64(cValue)
 }
 
-func (db *DB) CompactRange(start, end []byte) {
-	cStart := bytesToChar(start)
-	cLimit := bytesToChar(end)
-	C.rocksdb_compact_range(db.c, cStart, C.size_t(len(start)), cLimit, C.size_t(len(end)))
-}
-
-func (db *DB) CompactRangeWithOptions(opts *CompactionOptions, start, end []byte) {
-	cStart := bytesToChar(start)
-	cLimit := bytesToChar(end)
-	C.rocksdb_compact_range_opt(db.c, opts.c, cStart, C.size_t(len(start)), cLimit, C.size_t(len(end)))
-}
-
 // GetLatestSequenceNumber returns the sequence number of the most
 // recent transaction.
 func (db *DB) GetLatestSequenceNumber() uint64 {
