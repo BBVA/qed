@@ -169,16 +169,6 @@ rocksdb_statistics_t* rocksdb_create_statistics() {
     return result;
 }
 
-int rocksdb_property_int_cf(
-    rocksdb_t* db, rocksdb_column_family_handle_t* column_family,
-    const char* propname, uint64_t *out_val) {
-    if (db->rep->GetIntProperty(column_family->rep, Slice(propname), out_val)) {
-        return 0;
-    } else {
-        return -1;
-    }
-}
-
 void rocksdb_options_set_statistics(
     rocksdb_options_t* opts, 
     rocksdb_statistics_t* stats) {
@@ -189,13 +179,13 @@ void rocksdb_options_set_statistics(
 
 rocksdb_stats_level_t rocksdb_statistics_stats_level(
     rocksdb_statistics_t* stats) {
-        return static_cast<rocksdb_stats_level_t>(stats->rep->stats_level_);
+        return static_cast<rocksdb_stats_level_t>(stats->rep->get_stats_level());
 }
 
 void rocksdb_statistics_set_stats_level(
     rocksdb_statistics_t* stats,
     rocksdb_stats_level_t level) {
-        stats->rep->stats_level_ = static_cast<StatsLevel>(level);
+        stats->rep->set_stats_level(static_cast<StatsLevel>(level));
 }
 
 void rocksdb_statistics_reset(
