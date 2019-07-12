@@ -19,7 +19,6 @@ package e2e
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -114,8 +113,8 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 		conf.RaftJoinAddr = []string{"127.0.0.1:8700"}
 		conf.GossipJoinAddr = []string{"127.0.0.1:8400"}
 	}
-	conf.DBPath = pathDB + "data"
-	conf.RaftPath = pathDB + "raft"
+	conf.DBPath = pathDB + "/db"
+	conf.RaftPath = pathDB + "/raft"
 	conf.PrivateKeyPath = signPath
 	if tls {
 		conf.SSLCertificate = tlsPath + "/qed_cert.pem"
@@ -131,37 +130,36 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 // 	- the second one deletes the server the first one created
 // Each server instance is completely new and blank.
 // It will also generate all the needed keys for the instance.
-func newServerSetup(id int, tls bool) (func() error, func() error) {
+func newServerSetup(id int, tls bool) (func() (string, error), func() error) {
 	var srv *server.Server
 	var path string
 	var err error
 
-	before := func() error {
-		var path string
-
-		path, err = ioutil.TempDir("", "e2e-qed-")
+	before := func() (string, error) {
+		path := fmt.Sprintf("/var/tmp/e2e-qed%d", id)
+		err = os.MkdirAll(path, os.ModePerm) // ioutil.TempDir("/var/tmp", "e2e-qed-")
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		_, signKeyPath, err := crypto.NewEd25519SignerKeysFile(path)
 		if err != nil {
-			return err
+			return "", err
 		}
 		conf := configQedServer(id, path, signKeyPath, path, tls)
 		if tls {
 			_, _, err = crypto.NewSelfSignedCert(path, "localhost")
 			if err != nil {
-				return err
+				return "", err
 			}
 
 		}
 
 		srv, err = server.NewServer(conf)
 		if err != nil {
-			return err
+			return "", err
 		}
-		return srv.Start()
+		return path, srv.Start()
 	}
 
 	after := func() error {

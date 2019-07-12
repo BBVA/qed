@@ -33,7 +33,7 @@ import (
 func TestProfilingStart(t *testing.T) {
 	before, after := newServerSetup(0, false)
 	defer after()
-	err := before()
+	_, err := before()
 	spec.NoError(t, err, "Error starting server")
 	<-time.After(10 * time.Second)
 }
@@ -45,7 +45,7 @@ func TestStart(t *testing.T) {
 		after()
 		t.Logf(report())
 	}()
-	err := before()
+	_, err := before()
 	spec.NoError(t, err, "Error starting server")
 	let(t, "Test availability of qed server", func(t *testing.T) {
 		let(t, "Query info endpoint", func(t *testing.T) {
@@ -94,7 +94,7 @@ func TestStartTlsIgnoreCA(t *testing.T) {
 		after()
 		t.Logf(report())
 	}()
-	err := before()
+	_, err := before()
 	spec.NoError(t, err, "Error starting server")
 	let(t, "Test availability of qed server", func(t *testing.T) {
 		let(t, "Query info endpoint", func(t *testing.T) {
@@ -150,11 +150,11 @@ func TestStartCluster(t *testing.T) {
 	log.SetLogger("e2e", log.DEBUG)
 
 	let(t, "Start three servers", func(t *testing.T) {
-		err := b0()
+		_, err := b0()
 		spec.NoError(t, err, "Error starting node 1")
-		err = b1()
+		_, err = b1()
 		spec.NoError(t, err, "Error starting node 2")
-		err = b2()
+		_, err = b2()
 		spec.NoError(t, err, "Error starting node 3")
 	})
 
