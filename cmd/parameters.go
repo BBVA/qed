@@ -38,6 +38,7 @@ const (
 	errFQDNHyp          = "labels cannot start or end with hyphens"
 	errTLDLen           = "TLD length is not valid"
 	errTLDLet           = "TLD allow only letters"
+	errAPIKeyEmpty      = "empty value"
 )
 
 /*
@@ -62,6 +63,13 @@ name-validation, answer from JdeBP
 upper case and a through z in lower case
 <digit> ::= any one of the ten digits 0 through 9
 */
+
+func checkAPIKey(s string) error {
+	if s == "" {
+		return fmt.Errorf("Missing Api-Key: %s", errAPIKeyEmpty)
+	}
+	return nil
+}
 
 func isHyphen(s rune) bool {
 	return s == '-'

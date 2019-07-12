@@ -93,7 +93,7 @@
     - restart
     - start-storage
 
-- hosts: riot
+- hosts: workload
   remote_user: ec2-user
   gather_facts: true
   become: true
@@ -105,9 +105,9 @@
         name: "{{ item }}"
         state: restarted
       with_items:
-        - riot
+        - workload
         - exporter
-    - name: wait for raised riot port
+    - name: wait for raised workload port
       wait_for:
         port: 7700
         host: "{{ansible_hostname}}"

@@ -13,6 +13,23 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 #}
-#!/bin/bash
+[Unit]
+Description=workload benchmark tool
+Documentation=https://github.com/bbva/qed
+Wants=network-online.target
+After=network-online.target
 
-killall qed || true
+[Service]
+User=root
+Group=root
+Restart=on-failure
+WorkingDirectory=/var/qed
+RuntimeDirectory=root
+RuntimeDirectoryMode=0750
+ExecStart=/var/qed/workload-start.sh
+ExecStop=/bin/kill -9 $(expr $MAINPID + 1)
+LimitNOFILE=10000
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
