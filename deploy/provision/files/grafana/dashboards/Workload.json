@@ -78,7 +78,7 @@
         "tableColumn": "",
         "targets": [
           {
-            "expr": "sum(riot_event_add)",
+            "expr": "sum(workload_event_add)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "",
@@ -158,7 +158,7 @@
         "tableColumn": "",
         "targets": [
           {
-            "expr": "sum(riot_event_add_fail)",
+            "expr": "sum(workload_event_add_fail)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "",
@@ -238,7 +238,7 @@
         "tableColumn": "",
         "targets": [
           {
-            "expr": "sum(riot_query_membership)",
+            "expr": "sum(workload_query_membership)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "",
@@ -318,7 +318,7 @@
         "tableColumn": "",
         "targets": [
           {
-            "expr": "sum(riot_query_incremental)",
+            "expr": "sum(workload_query_incremental)",
             "format": "time_series",
             "intervalFactor": 1,
             "legendFormat": "",
@@ -376,7 +376,7 @@
       ]
     },
     "timezone": "",
-    "title": "Riot",
+    "title": "workload",
     "uid": "iT99hnZZz",
     "version": 1
   }

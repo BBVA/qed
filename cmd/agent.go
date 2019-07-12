@@ -18,6 +18,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
@@ -69,19 +70,19 @@ func runAgent(cmd *cobra.Command, args []string) error {
 	gossipStartJoin, _ := cmd.Flags().GetStringSlice("start-join")
 	err = urlParseNoSchemaRequired(gossipStartJoin...)
 	if err != nil {
-		return err
+		return fmt.Errorf("Gosspip start join: %v", err)
 	}
 
 	bindAddress, _ := cmd.Flags().GetString("bind-addr")
 	err = urlParseNoSchemaRequired(bindAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("Bind address: %v", err)
 	}
 
 	advertiseAddress, _ := cmd.Flags().GetString("advertise-addr")
-	err = urlParse(advertiseAddress)
+	err = urlParseNoSchemaRequired(advertiseAddress)
 	if err != nil {
-		return err
+		return fmt.Errorf("Advertise address: %v", err)
 	}
 
 	return nil

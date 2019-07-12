@@ -26,7 +26,7 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-resource "aws_instance" "riot" {
+resource "aws_instance" "workload" {
   count                = "1"
   ami                  = "${data.aws_ami.amazon_linux.id}"
   instance_type        = "${var.instance_type}"
@@ -43,7 +43,7 @@ resource "aws_instance" "riot" {
   }]
 
   tags {
-    Name = "qed-riot"
+    Name = "qed-workload"
     Role = "${var.role}"
     DAM_OnOff = "NO"
     Workspace = "${terraform.workspace}"

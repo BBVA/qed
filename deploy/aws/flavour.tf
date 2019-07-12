@@ -16,7 +16,7 @@ resource null_resource "qed-base" {
   triggers {
     qed = "${format("%s",module.qed.private_ip)}"
     prometheus = "${module.prometheus.private_ip}"
-    riot = "${module.riot.private_ip}"
+    workload = "${module.workload.private_ip}"
     gateway = "${aws_internet_gateway.qed.id}"
     aws_route = "${aws_route.qed.id}"
     aws_vpc_dhcp_options = "${aws_vpc_dhcp_options.qed.id}"
@@ -35,7 +35,7 @@ resource null_resource "qed-full" {
   triggers {
     qed = "${format("%s",module.qed.private_ip)}"
     prometheus = "${module.prometheus.private_ip}"
-    riot = "${module.riot.private_ip}"
+    workload = "${module.workload.private_ip}"
     auditor = "${format("%s", module.agent-auditor.private_ip)}"
     monitor = "${format("%s", module.agent-monitor.private_ip)}"
     publisher = "${format("%s", module.agent-publisher.private_ip)}"

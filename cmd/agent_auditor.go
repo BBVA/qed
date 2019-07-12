@@ -149,17 +149,17 @@ func checkAuditorParams(conf *auditorConfig) error {
 	var err error
 	err = urlParse(conf.Notifier.Endpoint...)
 	if err != nil {
-		return err
+		return fmt.Errorf("Notifier endpoint: %v", err)
 	}
 
 	err = urlParse(conf.Store.Endpoint...)
 	if err != nil {
-		return err
+		return fmt.Errorf("Store endpoint: %v", err)
 	}
 
 	err = urlParse(conf.Qed.Endpoints...)
 	if err != nil {
-		return err
+		return fmt.Errorf("QED endpoint: %v", err)
 	}
 
 	return nil
