@@ -87,7 +87,7 @@ func (fsm *balloonFSM) loadState() error {
 func newBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*balloonFSM, error) {
 
 	clusterInfo := new(ClusterInfo)
-	clusterInfo.Nodes = make(map[string]*NodeInfo)
+	clusterInfo.Nodes = make(map[string]NodeInfo)
 
 	b, err := balloon.NewBalloon(store, hasherF)
 	if err != nil {
