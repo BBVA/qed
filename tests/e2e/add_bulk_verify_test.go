@@ -49,7 +49,7 @@ func TestAddBulkAndVerify(t *testing.T) {
 		rand.RandomString(10),
 		rand.RandomString(10),
 	}
-	err := before()
+	_, err := before()
 	spec.NoError(t, err, "Error starting server")
 
 	client, err := newQedClient(0)
