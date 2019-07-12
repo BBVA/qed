@@ -34,7 +34,7 @@ func TestAddVerify(t *testing.T) {
 	defer func() { t.Logf(report()) }()
 	// log.SetLogger("", log.DEBUG)
 	event := rand.RandomString(10)
-	err := before()
+	_, err := before()
 	spec.NoError(t, err, "Error starting server")
 
 	let(t, "Add one event and get its membership proof", func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestAddVerify(t *testing.T) {
 		})
 	})
 	after()
-	err = before()
+	_, err = before()
 	spec.NoError(t, err, "Error starting server")
 	let(t, "Add two events, verify the first one", func(t *testing.T) {
 		var proof1, proof2 *balloon.MembershipProof
@@ -105,7 +105,7 @@ func TestAddVerify(t *testing.T) {
 	})
 
 	after()
-	err = before()
+	_, err = before()
 	spec.NoError(t, err, "Error starting server")
 	let(t, "Add 10 events, verify event with index i", func(t *testing.T) {
 		var p1, p2 *balloon.MembershipProof
