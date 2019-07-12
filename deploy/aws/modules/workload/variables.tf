@@ -33,7 +33,7 @@ variable "path" {
 }
 
 variable "role" {
-  default = "riot"
+  default = "workload"
 }
 
 variable "endpoint" {}

@@ -56,6 +56,7 @@ $QED_HOME/qed agent publisher \
 {% endif %}
 {% if 'role_monitor' in group_names or 'role_auditor' in group_names or 'role_publisher' in group_names %}
 --bind-addr "{{ ansible_eth0.ipv4.address }}:8100" \
+--advertise-addr "{{ ansible_eth0.ipv4.address }}:8100" \
 --metrics-addr "{{ ansible_eth0.ipv4.address }}:18100" \
 --start-join "{% for host in groups['role_qed'] %}{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400{% if not loop.last %},{% endif %}{% endfor %}" \
 {% for host in groups['role_storage'] %}

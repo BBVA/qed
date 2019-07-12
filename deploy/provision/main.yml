@@ -17,6 +17,10 @@
   gather_facts: true
   vars_files:
     - vars.yml
+  vars:
+    # Set custom repo and branch for the docker build.
+    # - qed_repo: 'https://github.com/suizman/qed.git'
+    # - qed_repo_branch: 'cmd_workload'
   environment:
     - GOOS: linux
     - GOARCH: amd64
@@ -28,7 +32,7 @@
     - include: tasks/common/config.yml
   tags:
     - install
-    - riot
+    - workload
 
 - hosts: all
   remote_user: ec2-user
@@ -49,7 +53,7 @@
       retries: 2
   tags:
     - install
-    - riot
+    - workload
 
 - hosts: all
   remote_user: ec2-user
@@ -60,7 +64,7 @@
   tags:
     - install
     - prometheus
-    - riot
+    - workload
 
 - hosts: type_aws_instance
   remote_user: ec2-user
@@ -82,16 +86,16 @@
   tags:
     - install
 
-- hosts: riot
+- hosts: workload
   remote_user: ec2-user
   become: true
   vars_files:
     - vars.yml
   tasks:
-    - include: tasks/riot/main.yml
+    - include: tasks/workload/main.yml
   tags:
     - install
-    - riot
+    - workload
 
 - hosts: inmemory-storage
   remote_user: ec2-user

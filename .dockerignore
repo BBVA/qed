@@ -3,7 +3,7 @@
 storage
 !storage
 **deploy
-**riot
+**workload
 **prometheus
 **/.git
 **/.terraform

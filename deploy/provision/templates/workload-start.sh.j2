@@ -15,4 +15,15 @@
 #}
 #!/bin/bash
 
-killall riot || true
+# 1000 million requests
+reqs=$((10**10))
+
+export QED_HOME=/var/qed
+nohup $QED_HOME/qed workload  \
+    --api-mode                \
+    --log info                \
+    --api-key terraform_qed   \
+    --num-requests ${reqs}    \
+{% for host in groups['name_qed-0'] %}
+    --endpoints "http://{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8800"
+{% endfor %}

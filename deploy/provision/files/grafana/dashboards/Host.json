@@ -487,14 +487,14 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(up{job=~\"Riot.*\"})",
+          "expr": "sum(up{job=~\"workload.*\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
         }
       ],
       "thresholds": "1,1",
-      "title": "Riot",
+      "title": "workload",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
