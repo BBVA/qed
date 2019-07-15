@@ -48,7 +48,7 @@ func TestRestoreFromBackup(t *testing.T) {
 	backupPath := serverPath + "/db/backups"
 	backupTempPath := "/var/tmp/e2e-backup"
 
-	let(t, "Start a server, add one event, create a backup, and stop server.", func(t *testing.T) {
+	let(t, "Start a QED Log server, add one event, create a backup, and stop server.", func(t *testing.T) {
 		var err error
 
 		client, err = newQedClient(0)
@@ -93,7 +93,7 @@ func TestRestoreFromBackup(t *testing.T) {
 		})
 	})
 
-	let(t, "Restore bakcup, start a new server, and check integrity.", func(t *testing.T) {
+	let(t, "Restore backup, start a new server, and check event membership.", func(t *testing.T) {
 		var err error
 
 		client, err = newQedClient(0)
@@ -106,6 +106,7 @@ func TestRestoreFromBackup(t *testing.T) {
 			spec.NoError(t, err, "Error creating backup engine.")
 
 			ro := rocksdb.NewRestoreOptions()
+			defer ro.Destroy()
 			err = be.RestoreDBFromLatestBackup(serverPath+"/db", serverPath+"/db", ro)
 			spec.NoError(t, err, "Error restoring from latest backup.")
 		})
