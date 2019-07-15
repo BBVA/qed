@@ -1,3 +1,19 @@
+/*
+   Copyright 2018-2019 Banco Bilbao Vizcaya Argentaria, S.A.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package consensus
 
 import (
@@ -28,7 +44,7 @@ type ClusteringOptions struct {
 	Addr            string   // IP address where to listen for Raft commands.
 	ClusterMgmtAddr string   // IP address where to listen for cluster GRPC operations.
 	Bootstrap       bool     // Bootstrap the cluster as a seed node if there is no existing state.
-	Peers           []string // List of cluster peer node IDs to bootstrap the cluster state.
+	Seeds           []string // List of cluster peer node IDs to bootstrap the cluster state.
 	RaftLogPath     string   // Path to Raft log store directory.
 	LogCacheSize    int      // Number of Raft log entries to cache in memory to reduce disk IO.
 	LogSnapshots    int      // Number of Raft log snapshots to retain.
@@ -48,7 +64,7 @@ func DefaultClusteringOptions() *ClusteringOptions {
 		NodeID:       "",
 		Addr:         "",
 		Bootstrap:    false,
-		Peers:        make([]string, 0),
+		Seeds:        make([]string, 0),
 		RaftLogPath:  "",
 		LogCacheSize: 512,
 		LogSnapshots: 2,
@@ -58,24 +74,10 @@ func DefaultClusteringOptions() *ClusteringOptions {
 	}
 }
 
-type NodeInfo struct {
-	NodeID          string
-	RaftAddr        string
-	ClusterMgmtAddr string
-	HTTPAddr        string
-	HTTPMgmtAddr    string
-	MetricsAddr     string
-}
-
-type ClusterInfo struct {
-	NodeID   string
-	LeaderID string
-	Nodes    map[string]NodeInfo
-}
-
 type RaftNode struct {
-	path string
-	info NodeInfo
+	path        string
+	info        *NodeInfo
+	clusterInfo *ClusterInfo
 
 	applyTimeout time.Duration
 
@@ -83,21 +85,22 @@ type RaftNode struct {
 	raftLog   *raftrocks.RocksDBStore // Underlying rocksdb-backed persistent log store
 	snapshots *raft.FileSnapshotStore // Persistent snapstop store
 
-	raft       *raft.Raft             // The consensus mechanism
-	transport  *raft.NetworkTransport // Raft network transport
-	raftConfig *raft.Config           //Config provides any necessary configuration for the Raft server.
-	grpcServer *grpc.Server
+	raft           *raft.Raft             // The consensus mechanism
+	transport      *raft.NetworkTransport // Raft network transport
+	raftConfig     *raft.Config           //Config provides any necessary configuration for the Raft server.
+	grpcServer     *grpc.Server
+	observationsCh chan raft.Observation
 
 	fsm         *balloonFSM             // Balloon's finite state machine
 	snapshotsCh chan *protocol.Snapshot // channel to publish snapshots
 
-	hasherF         func() hashing.Hasher
-	raftNodeMetrics *raftNodeMetrics // Raft node metrics.
+	hasherF func() hashing.Hasher
+	metrics *raftNodeMetrics // Raft node metrics.
 
-	metrics *raftNodeMetrics
-
+	infoMu sync.Mutex
 	sync.Mutex
 	closed bool
+	done   chan struct{}
 }
 
 func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot) (*RaftNode, error) {
@@ -105,15 +108,23 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	// We create s.raft early because once NewRaft() is called, the
 	// raft code may asynchronously invoke FSM.Apply() and FSM.Restore()
 	// So we want the object to exist so we can check on leader atomic, etc..
+	info := &NodeInfo{
+		NodeId:          opts.NodeID,
+		RaftAddr:        opts.Addr,
+		ClusterMgmtAddr: opts.ClusterMgmtAddr,
+	}
 	node := &RaftNode{
 		path: opts.RaftLogPath,
-		info: NodeInfo{
-			NodeID:          opts.NodeID,
-			RaftAddr:        opts.Addr,
-			ClusterMgmtAddr: opts.ClusterMgmtAddr,
+		info: info,
+		clusterInfo: &ClusterInfo{
+			Nodes: map[string]*NodeInfo{
+				info.NodeId: info,
+			},
 		},
-		snapshotsCh:  snapshotsCh,
-		applyTimeout: 10 * time.Second,
+		observationsCh: make(chan raft.Observation, 1),
+		snapshotsCh:    snapshotsCh,
+		applyTimeout:   10 * time.Second,
+		done:           make(chan struct{}),
 	}
 
 	// Create the log store
@@ -187,6 +198,11 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		return nil, fmt.Errorf("new raft: %s", err)
 	}
 
+	// register observer
+	observer := raft.NewObserver(node.observationsCh, true, observationsFilterFn)
+	node.raft.RegisterObserver(observer)
+	go node.startObservationsConsumer()
+
 	// start grpc server to handle requests to join the cluster
 	listener, err := net.Listen("tcp", node.info.ClusterMgmtAddr)
 	if err != nil {
@@ -194,7 +210,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	}
 	node.grpcServer = grpc.NewServer()
 	RegisterClusterServiceServer(node.grpcServer, node) // registers itself
-	go node.grpcServer.Serve(listener)
+	go node.grpcServer.Serve(listener)                  // TODO fix this!!!
 
 	// register metrics
 	node.metrics = newRaftNodeMetrics(node)
@@ -221,7 +237,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		} else {
 			log.Info("Attempting to join the cluster.")
 			// Attempt to join the cluster if we're not bootstraping.
-			err := node.AttemptToJoinCluster(opts.Peers)
+			err := node.AttemptToJoinCluster(opts.Seeds)
 			if err != nil {
 				node.Shutdown(true)
 				return nil, fmt.Errorf("failed to join Raft cluster")
@@ -231,17 +247,6 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	}
 
 	return node, nil
-}
-
-func (n *RaftNode) bootstrapCluster() error {
-	// include ourself in the cluster
-	servers := []raft.Server{
-		{
-			ID:      n.raftConfig.LocalID,
-			Address: n.transport.LocalAddr(),
-		},
-	}
-	return n.raft.BootstrapCluster(raft.Configuration{Servers: servers}).Error()
 }
 
 func (n *RaftNode) Shutdown(wait bool) error {
@@ -254,6 +259,8 @@ func (n *RaftNode) Shutdown(wait bool) error {
 		n.closed = true
 		n.Unlock()
 	}()
+
+	close(n.done)
 
 	// shutdown grpc
 	if n.grpcServer != nil {
@@ -339,18 +346,23 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 		return nil, nil
 	}
 
-	log.Infof("received join request for remote node %s at %s", req.NodeId, req.RaftAddress)
+	log.Infof("received join request for remote node %s at %s", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
 
 	// Add the node as a voter. This is idempotent. No-op if the request
 	// came from ourselves.
-	f := n.raft.AddVoter(raft.ServerID(req.NodeId), raft.ServerAddress(req.RaftAddress), 0, 0)
+	f := n.raft.AddVoter(raft.ServerID(req.NodeInfo.NodeId), raft.ServerAddress(req.NodeInfo.RaftAddr), 0, 0)
 	if err := f.Error(); err != nil {
 		return nil, err
 	}
 
-	log.Infof("node %s at %s joined successfully", req.NodeId, req.RaftAddress)
+	// update cluster info with the new node
+	n.infoMu.Lock()
+	n.clusterInfo.Nodes[req.NodeInfo.NodeId] = req.NodeInfo
+	n.infoMu.Unlock()
 
-	return &RaftJoinResponse{}, nil
+	log.Infof("node %s at %s joined successfully", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
+
+	return &RaftJoinResponse{n.clusterInfo}, nil
 }
 
 func (n *RaftNode) AttemptToJoinCluster(addrs []string) error {
@@ -364,26 +376,33 @@ func (n *RaftNode) AttemptToJoinCluster(addrs []string) error {
 
 		client := NewClusterServiceClient(conn)
 
-		_, err = client.JoinCluster(context.Background(), &RaftJoinRequest{
-			NodeId:      n.info.NodeID,
-			RaftAddress: n.info.RaftAddr,
+		resp, err := client.JoinCluster(context.Background(), &RaftJoinRequest{
+			NodeInfo: n.info,
 		})
 		if err == nil {
+			// merge cluster info
+			n.mergeClusterInfo(resp.ClusterInfo)
 			break
 		}
 	}
 	return nil
 }
 
+func (n *RaftNode) SyncClusterInfo(ctx context.Context, req *SyncClusterInfoRequest) (*SyncClusterInfoResponse, error) {
+	return &SyncClusterInfoResponse{
+		ClusterInfo: n.clusterInfo,
+	}, nil
+}
+
 // Info function returns Raft current node info.
-func (n *RaftNode) Info() NodeInfo {
+func (n *RaftNode) Info() *NodeInfo {
 	return n.info
 }
 
 // ClusterInfo function returns Raft current node info plus certain raft cluster
 // info. Used in /info/shard.
-func (n *RaftNode) ClusterInfo() ClusterInfo {
-	return ClusterInfo{} // TODO make metadata calls
+func (n *RaftNode) ClusterInfo() *ClusterInfo {
+	return n.clusterInfo
 }
 
 // RegisterMetrics register raft metrics: prometheus collectors and raftLog metrics.
@@ -392,4 +411,40 @@ func (n *RaftNode) RegisterMetrics(registry metrics.Registry) {
 		n.raftLog.RegisterMetrics(registry)
 	}
 	registry.MustRegister(n.metrics.collectors()...)
+}
+
+func (n *RaftNode) bootstrapCluster() error {
+	// include ourself in the cluster
+	servers := []raft.Server{
+		{
+			ID:      n.raftConfig.LocalID,
+			Address: n.transport.LocalAddr(),
+		},
+	}
+	return n.raft.BootstrapCluster(raft.Configuration{Servers: servers}).Error()
+}
+
+// blank string if there is no leader, or an error.
+func (n *RaftNode) leaderID() (string, error) {
+	addr := n.raft.Leader()
+	configFuture := n.raft.GetConfiguration()
+	if err := configFuture.Error(); err != nil {
+		log.Infof("failed to get raft configuration: %v", err)
+		return "", err
+	}
+	for _, srv := range configFuture.Configuration().Servers {
+		if srv.Address == raft.ServerAddress(addr) {
+			return string(srv.ID), nil
+		}
+	}
+	return "", nil
+}
+
+func (n *RaftNode) mergeClusterInfo(info *ClusterInfo) {
+	n.infoMu.Lock()
+	n.clusterInfo.LeaderId = info.LeaderId
+	for id, node := range info.Nodes {
+		n.clusterInfo.Nodes[id] = node
+	}
+	n.infoMu.Unlock()
 }

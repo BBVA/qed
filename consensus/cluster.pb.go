@@ -2,14 +2,18 @@
 // source: cluster.proto
 
 /*
-Package consensus is a generated protocol buffer package.
+	Package consensus is a generated protocol buffer package.
 
-It is generated from these files:
-	cluster.proto
+	It is generated from these files:
+		cluster.proto
 
-It has these top-level messages:
-	RaftJoinRequest
-	RaftJoinResponse
+	It has these top-level messages:
+		NodeInfo
+		ClusterInfo
+		RaftJoinRequest
+		RaftJoinResponse
+		SyncClusterInfoRequest
+		SyncClusterInfoResponse
 */
 package consensus
 
@@ -33,41 +37,157 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type RaftJoinRequest struct {
-	NodeId      string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	RaftAddress string `protobuf:"bytes,2,opt,name=raft_address,json=raftAddress,proto3" json:"raft_address,omitempty"`
+type NodeInfo struct {
+	NodeId          string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	RaftAddr        string `protobuf:"bytes,2,opt,name=raft_addr,json=raftAddr,proto3" json:"raft_addr,omitempty"`
+	ClusterMgmtAddr string `protobuf:"bytes,3,opt,name=cluster_mgmt_addr,json=clusterMgmtAddr,proto3" json:"cluster_mgmt_addr,omitempty"`
+	HttpAddr        string `protobuf:"bytes,4,opt,name=http_addr,json=httpAddr,proto3" json:"http_addr,omitempty"`
+	HttpMgmtAddr    string `protobuf:"bytes,5,opt,name=http_mgmt_addr,json=httpMgmtAddr,proto3" json:"http_mgmt_addr,omitempty"`
+	MetricsAddr     string `protobuf:"bytes,6,opt,name=metrics_addr,json=metricsAddr,proto3" json:"metrics_addr,omitempty"`
 }
 
-func (m *RaftJoinRequest) Reset()                    { *m = RaftJoinRequest{} }
-func (m *RaftJoinRequest) String() string            { return proto.CompactTextString(m) }
-func (*RaftJoinRequest) ProtoMessage()               {}
-func (*RaftJoinRequest) Descriptor() ([]byte, []int) { return fileDescriptorCluster, []int{0} }
+func (m *NodeInfo) Reset()                    { *m = NodeInfo{} }
+func (m *NodeInfo) String() string            { return proto.CompactTextString(m) }
+func (*NodeInfo) ProtoMessage()               {}
+func (*NodeInfo) Descriptor() ([]byte, []int) { return fileDescriptorCluster, []int{0} }
 
-func (m *RaftJoinRequest) GetNodeId() string {
+func (m *NodeInfo) GetNodeId() string {
 	if m != nil {
 		return m.NodeId
 	}
 	return ""
 }
 
-func (m *RaftJoinRequest) GetRaftAddress() string {
+func (m *NodeInfo) GetRaftAddr() string {
 	if m != nil {
-		return m.RaftAddress
+		return m.RaftAddr
 	}
 	return ""
 }
 
+func (m *NodeInfo) GetClusterMgmtAddr() string {
+	if m != nil {
+		return m.ClusterMgmtAddr
+	}
+	return ""
+}
+
+func (m *NodeInfo) GetHttpAddr() string {
+	if m != nil {
+		return m.HttpAddr
+	}
+	return ""
+}
+
+func (m *NodeInfo) GetHttpMgmtAddr() string {
+	if m != nil {
+		return m.HttpMgmtAddr
+	}
+	return ""
+}
+
+func (m *NodeInfo) GetMetricsAddr() string {
+	if m != nil {
+		return m.MetricsAddr
+	}
+	return ""
+}
+
+type ClusterInfo struct {
+	LeaderId string               `protobuf:"bytes,1,opt,name=leader_id,json=leaderId,proto3" json:"leader_id,omitempty"`
+	Nodes    map[string]*NodeInfo `protobuf:"bytes,2,rep,name=nodes" json:"nodes,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+func (m *ClusterInfo) Reset()                    { *m = ClusterInfo{} }
+func (m *ClusterInfo) String() string            { return proto.CompactTextString(m) }
+func (*ClusterInfo) ProtoMessage()               {}
+func (*ClusterInfo) Descriptor() ([]byte, []int) { return fileDescriptorCluster, []int{1} }
+
+func (m *ClusterInfo) GetLeaderId() string {
+	if m != nil {
+		return m.LeaderId
+	}
+	return ""
+}
+
+func (m *ClusterInfo) GetNodes() map[string]*NodeInfo {
+	if m != nil {
+		return m.Nodes
+	}
+	return nil
+}
+
+type RaftJoinRequest struct {
+	NodeInfo *NodeInfo `protobuf:"bytes,1,opt,name=node_info,json=nodeInfo" json:"node_info,omitempty"`
+}
+
+func (m *RaftJoinRequest) Reset()                    { *m = RaftJoinRequest{} }
+func (m *RaftJoinRequest) String() string            { return proto.CompactTextString(m) }
+func (*RaftJoinRequest) ProtoMessage()               {}
+func (*RaftJoinRequest) Descriptor() ([]byte, []int) { return fileDescriptorCluster, []int{2} }
+
+func (m *RaftJoinRequest) GetNodeInfo() *NodeInfo {
+	if m != nil {
+		return m.NodeInfo
+	}
+	return nil
+}
+
 type RaftJoinResponse struct {
+	ClusterInfo *ClusterInfo `protobuf:"bytes,1,opt,name=cluster_info,json=clusterInfo" json:"cluster_info,omitempty"`
 }
 
 func (m *RaftJoinResponse) Reset()                    { *m = RaftJoinResponse{} }
 func (m *RaftJoinResponse) String() string            { return proto.CompactTextString(m) }
 func (*RaftJoinResponse) ProtoMessage()               {}
-func (*RaftJoinResponse) Descriptor() ([]byte, []int) { return fileDescriptorCluster, []int{1} }
+func (*RaftJoinResponse) Descriptor() ([]byte, []int) { return fileDescriptorCluster, []int{3} }
+
+func (m *RaftJoinResponse) GetClusterInfo() *ClusterInfo {
+	if m != nil {
+		return m.ClusterInfo
+	}
+	return nil
+}
+
+type SyncClusterInfoRequest struct {
+	ClusterInfo *ClusterInfo `protobuf:"bytes,1,opt,name=cluster_info,json=clusterInfo" json:"cluster_info,omitempty"`
+}
+
+func (m *SyncClusterInfoRequest) Reset()                    { *m = SyncClusterInfoRequest{} }
+func (m *SyncClusterInfoRequest) String() string            { return proto.CompactTextString(m) }
+func (*SyncClusterInfoRequest) ProtoMessage()               {}
+func (*SyncClusterInfoRequest) Descriptor() ([]byte, []int) { return fileDescriptorCluster, []int{4} }
+
+func (m *SyncClusterInfoRequest) GetClusterInfo() *ClusterInfo {
+	if m != nil {
+		return m.ClusterInfo
+	}
+	return nil
+}
+
+type SyncClusterInfoResponse struct {
+	ClusterInfo *ClusterInfo `protobuf:"bytes,1,opt,name=cluster_info,json=clusterInfo" json:"cluster_info,omitempty"`
+}
+
+func (m *SyncClusterInfoResponse) Reset()                    { *m = SyncClusterInfoResponse{} }
+func (m *SyncClusterInfoResponse) String() string            { return proto.CompactTextString(m) }
+func (*SyncClusterInfoResponse) ProtoMessage()               {}
+func (*SyncClusterInfoResponse) Descriptor() ([]byte, []int) { return fileDescriptorCluster, []int{5} }
+
+func (m *SyncClusterInfoResponse) GetClusterInfo() *ClusterInfo {
+	if m != nil {
+		return m.ClusterInfo
+	}
+	return nil
+}
 
 func init() {
+	proto.RegisterType((*NodeInfo)(nil), "consensus.NodeInfo")
+	proto.RegisterType((*ClusterInfo)(nil), "consensus.ClusterInfo")
 	proto.RegisterType((*RaftJoinRequest)(nil), "consensus.RaftJoinRequest")
 	proto.RegisterType((*RaftJoinResponse)(nil), "consensus.RaftJoinResponse")
+	proto.RegisterType((*SyncClusterInfoRequest)(nil), "consensus.SyncClusterInfoRequest")
+	proto.RegisterType((*SyncClusterInfoResponse)(nil), "consensus.SyncClusterInfoResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -82,6 +202,7 @@ const _ = grpc.SupportPackageIsVersion4
 
 type ClusterServiceClient interface {
 	JoinCluster(ctx context.Context, in *RaftJoinRequest, opts ...grpc.CallOption) (*RaftJoinResponse, error)
+	SyncClusterInfo(ctx context.Context, in *SyncClusterInfoRequest, opts ...grpc.CallOption) (*SyncClusterInfoResponse, error)
 }
 
 type clusterServiceClient struct {
@@ -101,10 +222,20 @@ func (c *clusterServiceClient) JoinCluster(ctx context.Context, in *RaftJoinRequ
 	return out, nil
 }
 
+func (c *clusterServiceClient) SyncClusterInfo(ctx context.Context, in *SyncClusterInfoRequest, opts ...grpc.CallOption) (*SyncClusterInfoResponse, error) {
+	out := new(SyncClusterInfoResponse)
+	err := grpc.Invoke(ctx, "/consensus.ClusterService/SyncClusterInfo", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for ClusterService service
 
 type ClusterServiceServer interface {
 	JoinCluster(context.Context, *RaftJoinRequest) (*RaftJoinResponse, error)
+	SyncClusterInfo(context.Context, *SyncClusterInfoRequest) (*SyncClusterInfoResponse, error)
 }
 
 func RegisterClusterServiceServer(s *grpc.Server, srv ClusterServiceServer) {
@@ -129,6 +260,24 @@ func _ClusterService_JoinCluster_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ClusterService_SyncClusterInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncClusterInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClusterServiceServer).SyncClusterInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/consensus.ClusterService/SyncClusterInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClusterServiceServer).SyncClusterInfo(ctx, req.(*SyncClusterInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _ClusterService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "consensus.ClusterService",
 	HandlerType: (*ClusterServiceServer)(nil),
@@ -137,9 +286,119 @@ var _ClusterService_serviceDesc = grpc.ServiceDesc{
 			MethodName: "JoinCluster",
 			Handler:    _ClusterService_JoinCluster_Handler,
 		},
+		{
+			MethodName: "SyncClusterInfo",
+			Handler:    _ClusterService_SyncClusterInfo_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "cluster.proto",
+}
+
+func (m *NodeInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NodeInfo) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.NodeId) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.NodeId)))
+		i += copy(dAtA[i:], m.NodeId)
+	}
+	if len(m.RaftAddr) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.RaftAddr)))
+		i += copy(dAtA[i:], m.RaftAddr)
+	}
+	if len(m.ClusterMgmtAddr) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.ClusterMgmtAddr)))
+		i += copy(dAtA[i:], m.ClusterMgmtAddr)
+	}
+	if len(m.HttpAddr) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.HttpAddr)))
+		i += copy(dAtA[i:], m.HttpAddr)
+	}
+	if len(m.HttpMgmtAddr) > 0 {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.HttpMgmtAddr)))
+		i += copy(dAtA[i:], m.HttpMgmtAddr)
+	}
+	if len(m.MetricsAddr) > 0 {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.MetricsAddr)))
+		i += copy(dAtA[i:], m.MetricsAddr)
+	}
+	return i, nil
+}
+
+func (m *ClusterInfo) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ClusterInfo) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.LeaderId) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.LeaderId)))
+		i += copy(dAtA[i:], m.LeaderId)
+	}
+	if len(m.Nodes) > 0 {
+		for k, _ := range m.Nodes {
+			dAtA[i] = 0x12
+			i++
+			v := m.Nodes[k]
+			msgSize := 0
+			if v != nil {
+				msgSize = v.Size()
+				msgSize += 1 + sovCluster(uint64(msgSize))
+			}
+			mapSize := 1 + len(k) + sovCluster(uint64(len(k))) + msgSize
+			i = encodeVarintCluster(dAtA, i, uint64(mapSize))
+			dAtA[i] = 0xa
+			i++
+			i = encodeVarintCluster(dAtA, i, uint64(len(k)))
+			i += copy(dAtA[i:], k)
+			if v != nil {
+				dAtA[i] = 0x12
+				i++
+				i = encodeVarintCluster(dAtA, i, uint64(v.Size()))
+				n1, err := v.MarshalTo(dAtA[i:])
+				if err != nil {
+					return 0, err
+				}
+				i += n1
+			}
+		}
+	}
+	return i, nil
 }
 
 func (m *RaftJoinRequest) Marshal() (dAtA []byte, err error) {
@@ -157,17 +416,15 @@ func (m *RaftJoinRequest) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.NodeId) > 0 {
+	if m.NodeInfo != nil {
 		dAtA[i] = 0xa
 		i++
-		i = encodeVarintCluster(dAtA, i, uint64(len(m.NodeId)))
-		i += copy(dAtA[i:], m.NodeId)
-	}
-	if len(m.RaftAddress) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintCluster(dAtA, i, uint64(len(m.RaftAddress)))
-		i += copy(dAtA[i:], m.RaftAddress)
+		i = encodeVarintCluster(dAtA, i, uint64(m.NodeInfo.Size()))
+		n2, err := m.NodeInfo.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n2
 	}
 	return i, nil
 }
@@ -187,6 +444,72 @@ func (m *RaftJoinResponse) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.ClusterInfo != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(m.ClusterInfo.Size()))
+		n3, err := m.ClusterInfo.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n3
+	}
+	return i, nil
+}
+
+func (m *SyncClusterInfoRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SyncClusterInfoRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.ClusterInfo != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(m.ClusterInfo.Size()))
+		n4, err := m.ClusterInfo.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n4
+	}
+	return i, nil
+}
+
+func (m *SyncClusterInfoResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SyncClusterInfoResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.ClusterInfo != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(m.ClusterInfo.Size()))
+		n5, err := m.ClusterInfo.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n5
+	}
 	return i, nil
 }
 
@@ -199,15 +522,64 @@ func encodeVarintCluster(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *RaftJoinRequest) Size() (n int) {
+func (m *NodeInfo) Size() (n int) {
 	var l int
 	_ = l
 	l = len(m.NodeId)
 	if l > 0 {
 		n += 1 + l + sovCluster(uint64(l))
 	}
-	l = len(m.RaftAddress)
+	l = len(m.RaftAddr)
 	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	l = len(m.ClusterMgmtAddr)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	l = len(m.HttpAddr)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	l = len(m.HttpMgmtAddr)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	l = len(m.MetricsAddr)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	return n
+}
+
+func (m *ClusterInfo) Size() (n int) {
+	var l int
+	_ = l
+	l = len(m.LeaderId)
+	if l > 0 {
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	if len(m.Nodes) > 0 {
+		for k, v := range m.Nodes {
+			_ = k
+			_ = v
+			l = 0
+			if v != nil {
+				l = v.Size()
+				l += 1 + sovCluster(uint64(l))
+			}
+			mapEntrySize := 1 + len(k) + sovCluster(uint64(len(k))) + l
+			n += mapEntrySize + 1 + sovCluster(uint64(mapEntrySize))
+		}
+	}
+	return n
+}
+
+func (m *RaftJoinRequest) Size() (n int) {
+	var l int
+	_ = l
+	if m.NodeInfo != nil {
+		l = m.NodeInfo.Size()
 		n += 1 + l + sovCluster(uint64(l))
 	}
 	return n
@@ -216,6 +588,30 @@ func (m *RaftJoinRequest) Size() (n int) {
 func (m *RaftJoinResponse) Size() (n int) {
 	var l int
 	_ = l
+	if m.ClusterInfo != nil {
+		l = m.ClusterInfo.Size()
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	return n
+}
+
+func (m *SyncClusterInfoRequest) Size() (n int) {
+	var l int
+	_ = l
+	if m.ClusterInfo != nil {
+		l = m.ClusterInfo.Size()
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	return n
+}
+
+func (m *SyncClusterInfoResponse) Size() (n int) {
+	var l int
+	_ = l
+	if m.ClusterInfo != nil {
+		l = m.ClusterInfo.Size()
+		n += 1 + l + sovCluster(uint64(l))
+	}
 	return n
 }
 
@@ -232,7 +628,7 @@ func sovCluster(x uint64) (n int) {
 func sozCluster(x uint64) (n int) {
 	return sovCluster(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *RaftJoinRequest) Unmarshal(dAtA []byte) error {
+func (m *NodeInfo) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -255,10 +651,10 @@ func (m *RaftJoinRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: RaftJoinRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: NodeInfo: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RaftJoinRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: NodeInfo: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -292,7 +688,7 @@ func (m *RaftJoinRequest) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RaftAddress", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field RaftAddr", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -317,7 +713,408 @@ func (m *RaftJoinRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.RaftAddress = string(dAtA[iNdEx:postIndex])
+			m.RaftAddr = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ClusterMgmtAddr", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ClusterMgmtAddr = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HttpAddr", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.HttpAddr = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field HttpMgmtAddr", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.HttpMgmtAddr = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field MetricsAddr", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.MetricsAddr = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ClusterInfo) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClusterInfo: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClusterInfo: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field LeaderId", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.LeaderId = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Nodes", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Nodes == nil {
+				m.Nodes = make(map[string]*NodeInfo)
+			}
+			var mapkey string
+			var mapvalue *NodeInfo
+			for iNdEx < postIndex {
+				entryPreIndex := iNdEx
+				var wire uint64
+				for shift := uint(0); ; shift += 7 {
+					if shift >= 64 {
+						return ErrIntOverflowCluster
+					}
+					if iNdEx >= l {
+						return io.ErrUnexpectedEOF
+					}
+					b := dAtA[iNdEx]
+					iNdEx++
+					wire |= (uint64(b) & 0x7F) << shift
+					if b < 0x80 {
+						break
+					}
+				}
+				fieldNum := int32(wire >> 3)
+				if fieldNum == 1 {
+					var stringLenmapkey uint64
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowCluster
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						stringLenmapkey |= (uint64(b) & 0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					intStringLenmapkey := int(stringLenmapkey)
+					if intStringLenmapkey < 0 {
+						return ErrInvalidLengthCluster
+					}
+					postStringIndexmapkey := iNdEx + intStringLenmapkey
+					if postStringIndexmapkey > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapkey = string(dAtA[iNdEx:postStringIndexmapkey])
+					iNdEx = postStringIndexmapkey
+				} else if fieldNum == 2 {
+					var mapmsglen int
+					for shift := uint(0); ; shift += 7 {
+						if shift >= 64 {
+							return ErrIntOverflowCluster
+						}
+						if iNdEx >= l {
+							return io.ErrUnexpectedEOF
+						}
+						b := dAtA[iNdEx]
+						iNdEx++
+						mapmsglen |= (int(b) & 0x7F) << shift
+						if b < 0x80 {
+							break
+						}
+					}
+					if mapmsglen < 0 {
+						return ErrInvalidLengthCluster
+					}
+					postmsgIndex := iNdEx + mapmsglen
+					if mapmsglen < 0 {
+						return ErrInvalidLengthCluster
+					}
+					if postmsgIndex > l {
+						return io.ErrUnexpectedEOF
+					}
+					mapvalue = &NodeInfo{}
+					if err := mapvalue.Unmarshal(dAtA[iNdEx:postmsgIndex]); err != nil {
+						return err
+					}
+					iNdEx = postmsgIndex
+				} else {
+					iNdEx = entryPreIndex
+					skippy, err := skipCluster(dAtA[iNdEx:])
+					if err != nil {
+						return err
+					}
+					if skippy < 0 {
+						return ErrInvalidLengthCluster
+					}
+					if (iNdEx + skippy) > postIndex {
+						return io.ErrUnexpectedEOF
+					}
+					iNdEx += skippy
+				}
+			}
+			m.Nodes[mapkey] = mapvalue
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *RaftJoinRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RaftJoinRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RaftJoinRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NodeInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.NodeInfo == nil {
+				m.NodeInfo = &NodeInfo{}
+			}
+			if err := m.NodeInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -369,6 +1166,205 @@ func (m *RaftJoinResponse) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: RaftJoinResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ClusterInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ClusterInfo == nil {
+				m.ClusterInfo = &ClusterInfo{}
+			}
+			if err := m.ClusterInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SyncClusterInfoRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SyncClusterInfoRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SyncClusterInfoRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ClusterInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ClusterInfo == nil {
+				m.ClusterInfo = &ClusterInfo{}
+			}
+			if err := m.ClusterInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SyncClusterInfoResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SyncClusterInfoResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SyncClusterInfoResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ClusterInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.ClusterInfo == nil {
+				m.ClusterInfo = &ClusterInfo{}
+			}
+			if err := m.ClusterInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCluster(dAtA[iNdEx:])
@@ -498,18 +1494,33 @@ var (
 func init() { proto.RegisterFile("cluster.proto", fileDescriptorCluster) }
 
 var fileDescriptorCluster = []byte{
-	// 194 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x4d, 0xce, 0x29, 0x2d,
-	0x2e, 0x49, 0x2d, 0xd2, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x4c, 0xce, 0xcf, 0x2b, 0x4e,
-	0xcd, 0x2b, 0x2e, 0x2d, 0x56, 0xf2, 0xe5, 0xe2, 0x0f, 0x4a, 0x4c, 0x2b, 0xf1, 0xca, 0xcf, 0xcc,
-	0x0b, 0x4a, 0x2d, 0x2c, 0x4d, 0x2d, 0x2e, 0x11, 0x12, 0xe7, 0x62, 0xcf, 0xcb, 0x4f, 0x49, 0x8d,
-	0xcf, 0x4c, 0x91, 0x60, 0x54, 0x60, 0xd4, 0xe0, 0x0c, 0x62, 0x03, 0x71, 0x3d, 0x53, 0x84, 0x14,
-	0xb9, 0x78, 0x8a, 0x12, 0xd3, 0x4a, 0xe2, 0x13, 0x53, 0x52, 0x8a, 0x52, 0x8b, 0x8b, 0x25, 0x98,
-	0xc0, 0xb2, 0xdc, 0x20, 0x31, 0x47, 0x88, 0x90, 0x92, 0x10, 0x97, 0x00, 0xc2, 0xb8, 0xe2, 0x02,
-	0x90, 0x35, 0x46, 0x51, 0x5c, 0x7c, 0xce, 0x10, 0xeb, 0x83, 0x53, 0x8b, 0xca, 0x32, 0x93, 0x53,
-	0x85, 0x3c, 0xb8, 0xb8, 0x41, 0x2a, 0xa0, 0xa2, 0x42, 0x52, 0x7a, 0x70, 0xf7, 0xe8, 0xa1, 0x39,
-	0x46, 0x4a, 0x1a, 0xab, 0x1c, 0xc4, 0x64, 0x25, 0x06, 0x27, 0xe9, 0x13, 0x8f, 0xe4, 0x18, 0x2f,
-	0x3c, 0x92, 0x63, 0x7c, 0xf0, 0x48, 0x8e, 0x71, 0xc6, 0x63, 0x39, 0x86, 0x28, 0x84, 0xdf, 0x92,
-	0xd8, 0xc0, 0xbe, 0x35, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0xdc, 0x31, 0xbb, 0x18, 0xfe, 0x00,
-	0x00, 0x00,
+	// 440 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x93, 0xcd, 0x6e, 0xd3, 0x40,
+	0x14, 0x85, 0x99, 0x84, 0x04, 0xfb, 0x3a, 0x34, 0x65, 0x90, 0xda, 0xc8, 0x96, 0xac, 0xd6, 0x62,
+	0x51, 0x58, 0x58, 0x28, 0x2c, 0xf8, 0xd9, 0x41, 0x05, 0x52, 0x90, 0xc2, 0xc2, 0x61, 0x81, 0xd8,
+	0x44, 0xc6, 0x33, 0x2e, 0x16, 0xf1, 0x4c, 0x98, 0x19, 0x57, 0xca, 0x9b, 0xf0, 0x1c, 0x7d, 0x0a,
+	0x96, 0x88, 0x27, 0x40, 0xe1, 0x45, 0xd0, 0xfc, 0xb4, 0xb6, 0x4a, 0x60, 0xd3, 0x9d, 0xe7, 0x9c,
+	0xa3, 0x2f, 0xf7, 0x9e, 0xc9, 0xc0, 0xdd, 0x62, 0xd5, 0x48, 0x45, 0x45, 0xba, 0x16, 0x5c, 0x71,
+	0xec, 0x17, 0x9c, 0x49, 0xca, 0x64, 0x23, 0x93, 0x9f, 0x08, 0xbc, 0x77, 0x9c, 0xd0, 0x19, 0x2b,
+	0x39, 0x3e, 0x84, 0x3b, 0x8c, 0x13, 0xba, 0xac, 0xc8, 0x04, 0x1d, 0xa1, 0x13, 0x3f, 0x1b, 0xea,
+	0xe3, 0x8c, 0xe0, 0x08, 0x7c, 0x91, 0x97, 0x6a, 0x99, 0x13, 0x22, 0x26, 0x3d, 0x63, 0x79, 0x5a,
+	0x78, 0x49, 0x88, 0xc0, 0x8f, 0xe0, 0x9e, 0xc3, 0x2f, 0xeb, 0xb3, 0xda, 0x85, 0xfa, 0x26, 0x34,
+	0x76, 0xc6, 0xfc, 0xac, 0xb6, 0xd9, 0x08, 0xfc, 0xcf, 0x4a, 0xad, 0x6d, 0xe6, 0xb6, 0x05, 0x69,
+	0xc1, 0x98, 0x0f, 0x60, 0xcf, 0x98, 0x2d, 0x65, 0x60, 0x12, 0x23, 0xad, 0x5e, 0x21, 0x8e, 0x61,
+	0x54, 0x53, 0x25, 0xaa, 0x42, 0xda, 0xcc, 0xd0, 0x64, 0x02, 0xa7, 0xe9, 0x48, 0x72, 0x81, 0x20,
+	0x38, 0xb5, 0xbf, 0x6c, 0xf6, 0x8a, 0xc0, 0x5f, 0xd1, 0x9c, 0x50, 0xd1, 0x6e, 0xe6, 0x59, 0x61,
+	0x46, 0xf0, 0x53, 0x18, 0xe8, 0x2d, 0xe5, 0xa4, 0x77, 0xd4, 0x3f, 0x09, 0xa6, 0xc7, 0xe9, 0x55,
+	0x39, 0x69, 0x87, 0x91, 0xea, 0x92, 0xe4, 0x6b, 0xa6, 0xc4, 0x26, 0xb3, 0xf9, 0x70, 0x0e, 0xd0,
+	0x8a, 0x78, 0x1f, 0xfa, 0x5f, 0xe8, 0xc6, 0xd1, 0xf5, 0x27, 0x7e, 0x08, 0x83, 0xf3, 0x7c, 0xd5,
+	0x50, 0x53, 0x58, 0x30, 0xbd, 0xdf, 0x01, 0x5f, 0x36, 0x9e, 0xd9, 0xc4, 0x8b, 0xde, 0x33, 0x94,
+	0x9c, 0xc2, 0x38, 0xcb, 0x4b, 0xf5, 0x96, 0x57, 0x2c, 0xa3, 0x5f, 0x1b, 0x2a, 0x15, 0x7e, 0x0c,
+	0xbe, 0xbd, 0x0f, 0x56, 0x72, 0x43, 0xfe, 0x07, 0xc5, 0x63, 0xee, 0x2b, 0x99, 0xc3, 0x7e, 0x0b,
+	0x91, 0x6b, 0x1d, 0xc5, 0xcf, 0x61, 0x74, 0x79, 0x3f, 0x1d, 0xd0, 0xc1, 0xee, 0x3d, 0xb3, 0xa0,
+	0x68, 0x0f, 0xc9, 0x02, 0x0e, 0x16, 0x1b, 0x56, 0x74, 0x7d, 0x37, 0xda, 0x0d, 0xa0, 0xef, 0xe1,
+	0xf0, 0x2f, 0xe8, 0x8d, 0x47, 0x9d, 0x5e, 0x20, 0xd8, 0x73, 0xe6, 0x82, 0x8a, 0xf3, 0xaa, 0xa0,
+	0xf8, 0x0d, 0x04, 0xba, 0x08, 0xa7, 0xe2, 0xb0, 0x83, 0xb9, 0xd6, 0x74, 0x18, 0xed, 0xf4, 0xdc,
+	0x54, 0x1f, 0x60, 0x7c, 0x6d, 0x60, 0xdc, 0xfd, 0x97, 0xec, 0x6e, 0x28, 0x4c, 0xfe, 0x17, 0xb1,
+	0xe4, 0x57, 0xd1, 0xf7, 0x6d, 0x8c, 0x7e, 0x6c, 0x63, 0xf4, 0x6b, 0x1b, 0xa3, 0x6f, 0xbf, 0xe3,
+	0x5b, 0x1f, 0xdb, 0xa7, 0xf9, 0x69, 0x68, 0x1e, 0xeb, 0x93, 0x3f, 0x01, 0x00, 0x00, 0xff, 0xff,
+	0xa3, 0x2c, 0x48, 0x3e, 0xbd, 0x03, 0x00, 0x00,
 }
