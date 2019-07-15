@@ -37,6 +37,8 @@ func TestOpenAndCloseRaftNode(t *testing.T) {
 		clean()
 	}()
 
+	require.Equalf(t, 1, len(r.ClusterInfo().Nodes), "The number of nodes does not match")
+
 }
 
 func TestRaftNodeIsLeader(t *testing.T) {
@@ -49,7 +51,26 @@ func TestRaftNodeIsLeader(t *testing.T) {
 		clean()
 	}()
 
-	require.Truef(t, retryTrue(10, 200*time.Millisecond, r.IsLeader), "a single node is not leader!")
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, r.IsLeader), "a single node is not leader!")
+
+}
+
+func TestRaftNodeClusterInfo(t *testing.T) {
+
+	log.SetLogger("TestRaftNodeClusterInfo", log.SILENT)
+
+	r, clean := newNode(t, 1, true)
+	defer func() {
+		require.NoError(t, r.Shutdown(true))
+		clean()
+	}()
+
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, r.IsLeader), "a single node is not leader!")
+
+	require.Equalf(t, 1, len(r.ClusterInfo().Nodes), "The number of nodes does not match")
+	require.Equalf(t, r.Info().NodeId, r.ClusterInfo().LeaderId, "The leaderId in cluster info is correct")
 
 }
 
@@ -72,6 +93,9 @@ func TestMultiRaftNodeJoin(t *testing.T) {
 
 	err := r1.AttemptToJoinCluster([]string{r0.Info().ClusterMgmtAddr})
 	require.NoError(t, err)
+
+	require.Equalf(t, 2, len(r0.ClusterInfo().Nodes), "The number of nodes does not match")
+	require.Equalf(t, 2, len(r1.ClusterInfo().Nodes), "The number of nodes does not match")
 
 }
 
