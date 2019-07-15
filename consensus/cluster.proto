@@ -19,14 +19,37 @@ syntax = "proto3";
 package consensus;
 option go_package = "consensus";
 
-message RaftJoinRequest {
+message NodeInfo {
     string node_id = 1;
-    string raft_address = 2;
+    string raft_addr = 2;
+    string cluster_mgmt_addr = 3;
+    string http_addr = 4;
+    string http_mgmt_addr = 5;
+    string metrics_addr = 6;
 }
 
-message RaftJoinResponse {}
+message ClusterInfo {
+    string leader_id = 1;
+    map<string, NodeInfo> nodes = 2;
+}
+
+message RaftJoinRequest {
+    NodeInfo node_info = 1;
+}
+
+message RaftJoinResponse {
+    ClusterInfo cluster_info = 1;
+}
+
+message SyncClusterInfoRequest {
+    ClusterInfo cluster_info = 1;
+}
+
+message SyncClusterInfoResponse{
+    ClusterInfo cluster_info = 1;
+}
 
 service ClusterService {
-    rpc JoinCluster (RaftJoinRequest) returns (RaftJoinResponse) {}
+    rpc JoinCluster (RaftJoinRequest) returns (RaftJoinResponse);
+    rpc SyncClusterInfo (SyncClusterInfoRequest) returns (SyncClusterInfoResponse);
 }
-

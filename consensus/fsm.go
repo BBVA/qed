@@ -86,20 +86,16 @@ func (fsm *balloonFSM) loadState() error {
 // the FSM state from disk.
 func newBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*balloonFSM, error) {
 
-	clusterInfo := new(ClusterInfo)
-	clusterInfo.Nodes = make(map[string]NodeInfo)
-
 	b, err := balloon.NewBalloon(store, hasherF)
 	if err != nil {
 		return nil, err
 	}
 
 	fsm := &balloonFSM{
-		hasherF:     hasherF,
-		codec:       &codec.MsgpackHandle{},
-		store:       store,
-		balloon:     b,
-		clusterInfo: clusterInfo,
+		hasherF: hasherF,
+		codec:   &codec.MsgpackHandle{},
+		store:   store,
+		balloon: b,
 	}
 
 	err = fsm.loadState()
