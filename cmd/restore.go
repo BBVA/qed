@@ -93,6 +93,7 @@ func runRestore(cmd *cobra.Command, args []string) error {
 	}
 
 	ro := rocksdb.NewRestoreOptions()
+	defer ro.Destroy()
 
 	if params.BackupID == 0 {
 		err = be.RestoreDBFromLatestBackup(params.RestorePath, params.RestorePath, ro)
