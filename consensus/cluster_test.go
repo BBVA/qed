@@ -37,7 +37,10 @@ func TestOpenAndCloseRaftNode(t *testing.T) {
 		clean()
 	}()
 
-	require.Equalf(t, 1, len(r.ClusterInfo().Nodes), "The number of nodes does not match")
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, func() bool {
+			return len(r.ClusterInfo().Nodes) == 1
+		}), "The number of nodes does not match")
 
 }
 
@@ -67,10 +70,13 @@ func TestRaftNodeClusterInfo(t *testing.T) {
 	}()
 
 	require.Truef(t,
-		retryTrue(10, 200*time.Millisecond, r.IsLeader), "a single node is not leader!")
-
-	require.Equalf(t, 1, len(r.ClusterInfo().Nodes), "The number of nodes does not match")
-	require.Equalf(t, r.Info().NodeId, r.ClusterInfo().LeaderId, "The leaderId in cluster info is correct")
+		retryTrue(10, 200*time.Millisecond, func() bool {
+			return len(r.ClusterInfo().Nodes) == 1
+		}), "The number of nodes does not match")
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, func() bool {
+			return r.Info().NodeId == r.ClusterInfo().LeaderId
+		}), "The leaderId in cluster info is correct")
 
 }
 
@@ -94,8 +100,14 @@ func TestMultiRaftNodeJoin(t *testing.T) {
 	err := r1.AttemptToJoinCluster([]string{r0.Info().ClusterMgmtAddr})
 	require.NoError(t, err)
 
-	require.Equalf(t, 2, len(r0.ClusterInfo().Nodes), "The number of nodes does not match")
-	require.Equalf(t, 2, len(r1.ClusterInfo().Nodes), "The number of nodes does not match")
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, func() bool {
+			return len(r0.ClusterInfo().Nodes) == 2
+		}), "The number of nodes does not match")
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, func() bool {
+			return len(r1.ClusterInfo().Nodes) == 2
+		}), "The number of nodes does not match")
 
 }
 
