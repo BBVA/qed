@@ -21,7 +21,6 @@ import (
 	"io"
 	"sync"
 
-	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 
@@ -31,22 +30,36 @@ import (
 	"github.com/bbva/qed/storage"
 )
 
-type fsmApplyResponse struct {
+type fsmResponse struct {
 	err error
 }
 
 type fsmAddResponse struct {
-	fsmApplyResponse
-	snapshot *balloon.Snapshot
-}
-
-type fsmAddBulkResponse struct {
-	fsmApplyResponse
-	snapshotBulk []*balloon.Snapshot
+	fsmResponse
+	snapshot []*balloon.Snapshot
 }
 
 type fsmState struct {
 	Index, Term, BalloonVersion uint64
+}
+
+func (s *fsmState) encode() ([]byte, error) {
+	return encodeMsgPack(s)
+}
+
+func (s *fsmState) shouldApply(f *fsmState) bool {
+	if f.Term < s.Term {
+		return false
+	}
+	if f.Term == s.Term && f.Index <= s.Index {
+		return false
+	}
+
+	if f.BalloonVersion > 0 && s.BalloonVersion >= f.BalloonVersion {
+		panic(fmt.Sprintf("balloonVersion panic! old: %+v, new %+v", s, f))
+	}
+
+	return true
 }
 
 type balloonFSM struct {
@@ -59,7 +72,6 @@ type balloonFSM struct {
 	clusterInfoMu sync.RWMutex
 	clusterInfo   *ClusterInfo
 
-	codec     *codec.MsgpackHandle
 	restoreMu sync.RWMutex // Restore needs exclusive access to database.
 }
 
@@ -67,15 +79,15 @@ func (fsm *balloonFSM) loadState() error {
 	kvstate, err := fsm.store.Get(storage.FSMStateTable, storage.FSMStateTableKey)
 	if err == storage.ErrKeyNotFound {
 		log.Infof("Unable to find previous state: assuming a clean instance")
-		fsm.state = &fsmState{0, 0, 0}
+		fsm.state = new(fsmState) // &fsmState{0, 0, 0}
 		return nil
 	}
 	if err != nil {
 		return errors.Wrap(err, "loading state failed")
 	}
 	var state fsmState
-	dec := codec.NewDecoderBytes(kvstate.Value, fsm.codec)
-	if err := dec.Decode(&state); err != nil {
+	err = decodeMsgPack(kvstate.Value, &state)
+	if err != nil {
 		return errors.Wrap(err, "unable to decode state")
 	}
 	fsm.state = &state
@@ -93,7 +105,6 @@ func newBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*
 
 	fsm := &balloonFSM{
 		hasherF: hasherF,
-		codec:   &codec.MsgpackHandle{},
 		store:   store,
 		balloon: b,
 	}
@@ -136,66 +147,28 @@ func (fsm *balloonFSM) QueryConsistency(start, end uint64) (*balloon.Incremental
 	return fsm.balloon.QueryConsistency(start, end)
 }
 
-func (s *fsmState) shouldApply(f *fsmState) bool {
-	if f.Term < s.Term {
-		return false
-	}
-	if f.Term == s.Term && f.Index <= s.Index {
-		return false
-	}
-
-	if f.BalloonVersion > 0 && s.BalloonVersion >= f.BalloonVersion {
-		panic(fmt.Sprintf("balloonVersion panic! old: %+v, new %+v", s, f))
-	}
-
-	return true
-}
-
-func (fsm *balloonFSM) decodeCommand(buf []byte, out interface{}) error {
-	return codec.NewDecoderBytes(buf, fsm.codec).Decode(out)
-}
-
 // Apply applies a Raft log entry to the database.
 func (fsm *balloonFSM) Apply(l *raft.Log) interface{} {
 	// TODO should i use a restore mutex?
 
-	buf := l.Data
-	cmdType := commandType(buf[0])
+	cmd := NewCommandFromRaft(l.Data)
 
-	switch cmdType {
+	switch cmd.id {
 	case addEventCommandType:
-		var cmd addEventCommand
-		if err := fsm.decodeCommand(buf[1:], &cmd); err != nil {
-			resp := new(fsmAddResponse)
-			resp.err = err
-			return resp
+		var eventDigests []hashing.Digest
+		if err := cmd.Decode(&eventDigests); err != nil {
+			return &fsmResponse{err: err}
 		}
-		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version()}
-		if fsm.state.shouldApply(newState) {
-			return fsm.applyAdd(cmd.EventDigest, newState)
-		}
-		resp := new(fsmAddResponse)
-		resp.err = fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)
-		return resp
 
-	case addEventsBulkCommandType:
-		var cmd addEventsBulkCommand
-		if err := fsm.decodeCommand(buf[1:], &cmd); err != nil {
-			resp := new(fsmAddBulkResponse)
-			resp.err = err
-			return resp
-		}
 		// INFO: after applying a bulk there will be a jump in term version due to balloon version mapping.
-		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + uint64(len(cmd.EventDigests)-1)}
+		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + uint64(len(eventDigests)-1)}
 		if fsm.state.shouldApply(newState) {
-			return fsm.applyAddBulk(cmd.EventDigests, newState)
+			return fsm.applyAdd(eventDigests, newState)
 		}
-		resp := new(fsmAddBulkResponse)
-		resp.err = fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)
-		return resp
+		return &fsmResponse{fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
 
 	default:
-		return &fsmApplyResponse{fmt.Errorf("unknown command: %v", cmdType)}
+		return &fsmResponse{fmt.Errorf("unknown command: %v", cmd.id)}
 
 	}
 }
@@ -287,44 +260,9 @@ func (fsm *balloonFSM) Close() error {
 	return nil
 }
 
-func (fsm *balloonFSM) encodeState(state *fsmState) ([]byte, error) {
-	var buf []byte
-	enc := codec.NewEncoderBytes(&buf, fsm.codec)
-	err := enc.Encode(state)
-	return buf, err
-}
-
-func (fsm *balloonFSM) applyAdd(eventHash hashing.Digest, state *fsmState) *fsmAddResponse {
+func (fsm *balloonFSM) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmAddResponse {
 
 	resp := new(fsmAddResponse)
-
-	snapshot, mutations, err := fsm.balloon.Add(eventHash)
-	if err != nil {
-		resp.err = err
-		return resp
-	}
-
-	stateBuff, err := fsm.encodeState(state)
-	if err != nil {
-		resp.err = err
-		return resp
-	}
-
-	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff))
-	err = fsm.store.Mutate(mutations, nil)
-	if err != nil {
-		resp.err = err
-		return resp
-	}
-	fsm.state = state
-	resp.snapshot = snapshot
-
-	return resp
-}
-
-func (fsm *balloonFSM) applyAddBulk(hashes []hashing.Digest, state *fsmState) *fsmAddBulkResponse {
-
-	resp := new(fsmAddBulkResponse)
 
 	snapshotBulk, mutations, err := fsm.balloon.AddBulk(hashes)
 	if err != nil {
@@ -332,7 +270,7 @@ func (fsm *balloonFSM) applyAddBulk(hashes []hashing.Digest, state *fsmState) *f
 		return resp
 	}
 
-	stateBuff, err := fsm.encodeState(state)
+	stateBuff, err := state.encode()
 	if err != nil {
 		resp.err = err
 		return resp
@@ -345,7 +283,7 @@ func (fsm *balloonFSM) applyAddBulk(hashes []hashing.Digest, state *fsmState) *f
 		return resp
 	}
 	fsm.state = state
-	resp.snapshotBulk = snapshotBulk
+	resp.snapshot = snapshotBulk
 
 	return resp
 }
