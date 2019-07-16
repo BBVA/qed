@@ -103,6 +103,7 @@ type ManagedStore interface {
 	Load(r io.Reader) error
 	Backup(metadata string) error
 	GetBackupsInfo() []*BackupInfo
+	DeleteBackup(backupID uint32) error
 	RestoreFromBackup(backupID uint32, dbDir, walDir string) error
 	metrics.Registerer
 }

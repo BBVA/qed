@@ -17,6 +17,7 @@
 package rocksdb
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,8 +25,11 @@ import (
 
 func TestIterator(t *testing.T) {
 
-	db, _ := newTestDB(t, "TestIterator", nil)
-	defer db.Close()
+	db, path := newTestDB(t, "TestIterator", nil)
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 
 	// insert keys
 	givenKeys := [][]byte{[]byte("key1"), []byte("key2"), []byte("key3")}

@@ -18,52 +18,62 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"time"
 
+	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 
 	"github.com/bbva/qed/log"
-	"github.com/bbva/qed/protocol"
 )
 
-var backupListCmd *cobra.Command = &cobra.Command{
-	Use:   "list",
-	Short: "List QED Log backups",
-	RunE:  runBackupList,
+var backupDeleteCmd *cobra.Command = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete a QED Log backup",
+	RunE:  runBackupDelete,
 }
 
-var backupListCtx context.Context
+var backupDeleteCtx context.Context
+
+type deleteParams struct {
+	BackupID uint32 `desc:"QED backup to delete"`
+}
 
 func init() {
-	backupCmd.AddCommand(backupListCmd)
+	backupDeleteCtx = configBackupDelete()
+	backupCmd.AddCommand(backupDeleteCmd)
 }
 
-func runBackupList(cmd *cobra.Command, args []string) error {
+func configBackupDelete() context.Context {
+	conf := &deleteParams{}
+
+	err := gpflag.ParseTo(conf, backupDeleteCmd.PersistentFlags())
+	if err != nil {
+		log.Fatalf("err: %v", err)
+	}
+	return context.WithValue(Ctx, k("backup.delete.params"), conf)
+}
+
+func runBackupDelete(cmd *cobra.Command, args []string) error {
+	params := backupDeleteCtx.Value(k("backup.delete.params")).(*deleteParams)
 
 	config := backupCtx.Value(k("backup.config")).(*BackupConfig)
 	log.SetLogger("backup", config.Log)
 
-	listBackupsInfo, err := listBackups(config)
+	_, err := deleteBackup(config, params.BackupID)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Backup list:")
-	for _, b := range listBackupsInfo {
-		sizeInGB := b.Size / (1024 * 1024 * 1024)
-		fmt.Printf("Id: %d\tTimestamp: %s\tVersion: %s\tSize(GB): %d\tNum.Files: %d\t \n", b.ID, formatTimestamp(b.Timestamp), b.Metadata, sizeInGB, b.NumFiles)
-	}
+	fmt.Println("Backup deleted!")
 	return nil
 }
 
-func listBackups(config *BackupConfig) ([]protocol.BackupInfo, error) {
+func deleteBackup(config *BackupConfig, backupID uint32) ([]byte, error) {
 
 	// Build request
-	req, err := http.NewRequest("GET", config.Endpoint+"/backups", nil)
+	req, err := http.NewRequest("DELETE", config.Endpoint+"/backup?backupID="+fmt.Sprintf("%d", backupID), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -91,19 +101,5 @@ func listBackups(config *BackupConfig) ([]protocol.BackupInfo, error) {
 		return nil, fmt.Errorf("Invalid request %v", string(bodyBytes))
 	}
 
-	var backupInfo []protocol.BackupInfo
-	err = json.Unmarshal(bodyBytes, &backupInfo)
-	if err != nil {
-		return nil, err
-	}
-
-	return backupInfo, nil
-}
-
-func formatTimestamp(timestamp int64) string {
-	t := time.Unix(timestamp, 0)
-	// return t.String()
-	return fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d",
-		t.Year(), t.Month(), t.Day(),
-		t.Hour(), t.Minute(), t.Second())
+	return bodyBytes, nil
 }

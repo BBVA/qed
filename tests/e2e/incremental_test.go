@@ -34,7 +34,7 @@ func TestIncrementalConsistency(t *testing.T) {
 		after()
 		t.Logf(report())
 	}()
-	err := before()
+	_, err := before()
 	spec.NoError(t, err, "Error starting server")
 
 	let(t, "Add multiple events and verify consistency between two of them", func(t *testing.T) {

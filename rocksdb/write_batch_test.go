@@ -16,6 +16,7 @@
 package rocksdb
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,8 +24,11 @@ import (
 
 func TestWriteBatch(t *testing.T) {
 
-	db, _ := newTestDB(t, "TestWriteBatch", nil)
-	defer db.Close()
+	db, path := newTestDB(t, "TestWriteBatch", nil)
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 
 	var (
 		key1   = []byte("key1")
@@ -60,8 +64,11 @@ func TestWriteBatch(t *testing.T) {
 
 func TestDeleteRange(t *testing.T) {
 
-	db, _ := newTestDB(t, "TestDeleteRange", nil)
-	defer db.Close()
+	db, path := newTestDB(t, "TestDeleteRange", nil)
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 
 	wo := NewDefaultWriteOptions()
 	defer wo.Destroy()
