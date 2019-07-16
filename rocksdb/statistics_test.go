@@ -17,6 +17,7 @@
 package rocksdb
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,10 +32,13 @@ func TestStatsLevel(t *testing.T) {
 func TestStatsGetTickerCount(t *testing.T) {
 
 	stats := NewStatistics()
-	db, _ := newTestDB(t, "TestStatsGetTickerCount", func(opts *Options) {
+	db, path := newTestDB(t, "TestStatsGetTickerCount", func(opts *Options) {
 		opts.SetStatistics(stats)
 	})
-	defer db.Close()
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 	defer stats.Destroy()
 
 	key := []byte("some-key")
@@ -54,10 +58,13 @@ func TestStatsGetTickerCount(t *testing.T) {
 func TestGetAndResetTickerCount(t *testing.T) {
 
 	stats := NewStatistics()
-	db, _ := newTestDB(t, "TestGetAndResetTickerCount", func(opts *Options) {
+	db, path := newTestDB(t, "TestGetAndResetTickerCount", func(opts *Options) {
 		opts.SetStatistics(stats)
 	})
-	defer db.Close()
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 	defer stats.Destroy()
 
 	key := []byte("some-key")
@@ -112,10 +119,13 @@ func TestGetHistogramData(t *testing.T) {
 
 func TestReset(t *testing.T) {
 	stats := NewStatistics()
-	db, _ := newTestDB(t, "TestReset", func(opts *Options) {
+	db, path := newTestDB(t, "TestReset", func(opts *Options) {
 		opts.SetStatistics(stats)
 	})
-	defer db.Close()
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 	defer stats.Destroy()
 
 	key := []byte("some-key")

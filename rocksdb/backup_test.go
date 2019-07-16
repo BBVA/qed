@@ -31,6 +31,7 @@ func initialEnvironment(t require.TestingT) (*DB, string, *BackupEngine, string)
 
 	backupDir, err := ioutil.TempDir("/var/tmp", "backup")
 	require.NoError(t, err)
+
 	err = os.RemoveAll(backupDir)
 	require.NoError(t, err)
 
@@ -183,8 +184,10 @@ func TestRestoreFromLatestBackup(t *testing.T) {
 
 	// Create the new DB from restored path.
 	db2 := newTestDBfromPath(t, restorePath, nil)
-	defer db2.Close()
-
+	defer func() {
+		db2.Close()
+		os.RemoveAll(restorePath)
+	}()
 	// Check keys from restored DB.
 	it := db2.NewIterator(NewDefaultReadOptions())
 	defer it.Close()
@@ -229,7 +232,10 @@ func TestRestoreFromBackup(t *testing.T) {
 
 	// Create the new DB from restored path.
 	db2 := newTestDBfromPath(t, restorePath, nil)
-	defer db2.Close()
+	defer func() {
+		db2.Close()
+		os.RemoveAll(restorePath)
+	}()
 
 	// Check keys from restored DB.
 	it := db2.NewIterator(NewDefaultReadOptions())
@@ -272,7 +278,10 @@ func TestBackupAndRestoreInAnEmptyExistingDB(t *testing.T) {
 
 	// Create a DB on path with restored backup.
 	db2 = newTestDBfromPath(t, restorePath, nil)
-	defer db2.Close()
+	defer func() {
+		db2.Close()
+		os.RemoveAll(restorePath)
+	}()
 
 	// Check keys from restored DB.
 	it := db2.NewIterator(NewDefaultReadOptions())
@@ -319,6 +328,7 @@ func TestMultipleBackupsAndRestores(t *testing.T) {
 	}
 	it.Close()
 	db2.Close()
+	os.RemoveAll(restorePath)
 
 	// Insert more keys on the original DB, and backup it.
 	err = insertKeys(db, 10, 10)
@@ -332,7 +342,10 @@ func TestMultipleBackupsAndRestores(t *testing.T) {
 
 	// Open DB2 again from restored path, and check keys.
 	db2, err = OpenDB(restorePath, NewDefaultOptions())
-	defer db2.Close()
+	defer func() {
+		db2.Close()
+		os.RemoveAll(restorePath)
+	}()
 	require.NoError(t, err)
 
 	it = db2.NewIterator(NewDefaultReadOptions())
@@ -425,6 +438,37 @@ func TestRestoreAndOverwriteDB(t *testing.T) {
 	require.NoError(t, err, "Error cleaning directories")
 }
 
+func TestDeleteBackup(t *testing.T) {
+	var err error
+
+	// Create the original DB with 10 keys inserted.
+	db, dbPath, be, backupDir := initialEnvironment(t)
+	defer db.Close()
+	defer be.Close()
+
+	// Backup.
+	err = be.CreateNewBackup(db)
+	require.NoError(t, err)
+
+	// Verify backup creation.
+	backupInfo := be.GetInfo()
+	defer backupInfo.Destroy()
+	backups := backupInfo.GetCount()
+	require.True(t, backups == 1, "There must be 1 backup")
+
+	// Delete backup.
+	err = be.DeleteBackup(1)
+	require.NoError(t, err)
+
+	backupInfo = be.GetInfo()
+	backups = backupInfo.GetCount()
+	require.True(t, backups == 0, "There must be 0 backups")
+
+	// On success, clean dirs.
+	err = cleanDirs(dbPath, backupDir)
+	require.NoError(t, err, "Error cleaning directories")
+}
+
 // Force benchmarks to run Nx iterations
 var benchTime = flag.Set("test.benchtime", "1x")
 
@@ -470,7 +514,10 @@ func benchmarkRestoreFromLatestBackup(numKeys int, b *testing.B) {
 		// Create the new DB from restored path.
 		err = be.RestoreDBFromLatestBackup(restorePath, restorePath, ro)
 		db2 := newTestDBfromPath(b, restorePath, nil)
-		defer db2.Close()
+		defer func() {
+			db2.Close()
+			os.RemoveAll(restorePath)
+		}()
 	}
 
 	// On success, clean dirs.

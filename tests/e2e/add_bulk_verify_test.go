@@ -31,10 +31,6 @@ import (
 func TestAddBulkAndVerify(t *testing.T) {
 	before, after := newServerSetup(0, false)
 	let, report := spec.New()
-	defer func() {
-		_ = after()
-		t.Logf(report())
-	}()
 	log.SetLogger("e2e", log.ERROR)
 
 	events := []string{
@@ -49,8 +45,12 @@ func TestAddBulkAndVerify(t *testing.T) {
 		rand.RandomString(10),
 		rand.RandomString(10),
 	}
-	err := before()
+	_, err := before()
 	spec.NoError(t, err, "Error starting server")
+	defer func() {
+		_ = after()
+		t.Logf(report())
+	}()
 
 	client, err := newQedClient(0)
 	spec.NoError(t, err, "Error creating a new qed client")

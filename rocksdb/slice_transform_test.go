@@ -17,6 +17,7 @@
 package rocksdb
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,10 +25,13 @@ import (
 
 func TestSliceTransform(t *testing.T) {
 
-	db, _ := newTestDB(t, "TestSliceTransform", func(opts *Options) {
+	db, path := newTestDB(t, "TestSliceTransform", func(opts *Options) {
 		opts.SetPrefixExtractor(&testSliceTransform{})
 	})
-	defer db.Close()
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 
 	wo := NewDefaultWriteOptions()
 	require.NoError(t, db.Put(wo, []byte("foo1"), []byte("foo")))
@@ -48,10 +52,13 @@ func TestSliceTransform(t *testing.T) {
 }
 
 func TestFixedPrefixTransform(t *testing.T) {
-	db, _ := newTestDB(t, "TestFixedPrefixTransform", func(opts *Options) {
+	db, path := newTestDB(t, "TestFixedPrefixTransform", func(opts *Options) {
 		opts.SetPrefixExtractor(NewFixedPrefixTransform(3))
 	})
-	defer db.Close()
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 
 	wo := NewDefaultWriteOptions()
 	require.NoError(t, db.Put(wo, []byte("foo1"), []byte("foo")))

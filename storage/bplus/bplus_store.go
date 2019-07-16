@@ -113,6 +113,10 @@ func (s *BPlusTreeStore) GetBackupsInfo() []*storage.BackupInfo {
 	panic("Not implemented")
 }
 
+func (s *BPlusTreeStore) DeleteBackup(backupID uint32) error {
+	panic("Not implemented")
+}
+
 func (s BPlusTreeStore) RestoreFromBackup(backupID uint32, dbDir, walDir string) error {
 	panic("Not implemented")
 }

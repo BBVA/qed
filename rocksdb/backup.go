@@ -159,6 +159,18 @@ func (b *BackupEngine) CreateNewBackupWithMetadata(db *DB, metadata string) erro
 	return nil
 }
 
+// DeleteBackup deletes a single backup from a backup engine. 
+func (b *BackupEngine) DeleteBackup(backupID uint32) error {
+	var cErr *C.char
+
+	C.rocksdb_backup_engine_delete_backup(b.c, C.uint(backupID), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
 // GetInfo gets an object that gives information about
 // the backups that have already been taken
 func (b *BackupEngine) GetInfo() *BackupEngineInfo {
