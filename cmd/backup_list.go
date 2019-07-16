@@ -54,7 +54,8 @@ func runBackupList(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Backup list:")
 	for _, b := range listBackupsInfo {
-		fmt.Printf("Id: %d\tTimestamp: %s\tMetadata: %s\tSize(B): %d\tNum.Files: %d\t \n", b.ID, formatTimestamp(b.Timestamp), b.Metadata, b.Size, b.NumFiles)
+		sizeInGB := b.Size / (1024 * 1024 * 1024)
+		fmt.Printf("Id: %d\tTimestamp: %s\tVersion: %s\tSize(GB): %d\tNum.Files: %d\t \n", b.ID, formatTimestamp(b.Timestamp), b.Metadata, sizeInGB, b.NumFiles)
 	}
 	return nil
 }
