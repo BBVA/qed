@@ -17,37 +17,57 @@
 package consensus
 
 import (
-	"github.com/bbva/qed/crypto/hashing"
+	"bytes"
+	"fmt"
 )
 
 // commandType are commands that affect the state of the cluster,
 // and must go through raft.
-type commandType uint8
+type CommandType uint8
 
 const (
-	addEventCommandType commandType = iota // Commands which modify the database.
-	addEventsBulkCommandType
-	metadataSetCommandType
-	metadataDeleteCommandType
+	addEventCommandType CommandType = iota // Commands which modify the database.
 )
 
-// addEventCommand is used when inserting a single event digest.
-type addEventCommand struct {
-	EventDigest hashing.Digest
+type Command struct {
+	id   CommandType
+	data []byte
 }
 
-// AddEventsBulkCommand is used when inserting a bulk of event digests.
-type addEventsBulkCommand struct {
-	EventDigests []hashing.Digest
+func (c *Command) Encode(cmd interface{}) error {
+	var buf bytes.Buffer
+	buf.WriteByte(uint8(c.id))
+	data, err := encodeMsgPack(cmd)
+	if err != nil {
+		return err
+	}
+	_, err = buf.Write(data)
+	if err != nil {
+		return err
+	}
+	c.data = buf.Bytes()
+	return nil
 }
 
-// MetadataSetCommand in used when adding metadata to a raft node.
-type metadataSetCommand struct {
-	ID   string
-	Data map[string]*NodeInfo
+func (c *Command) Decode(out interface{}) error {
+	if c.data == nil {
+		return fmt.Errorf("Command is empty")
+	}
+	if c.id != CommandType(c.data[0]) {
+		return fmt.Errorf("Command type %v is not %v", c.id, CommandType(c.data[0]))
+	}
+	return decodeMsgPack(c.data[1:], out)
 }
 
-// MetadataDeleteCommand in used when deleting metadata from a raft node.
-type metadataDeleteCommand struct {
-	ID string
+func NewCommand(t CommandType) *Command {
+	return &Command{
+		id: t,
+	}
+}
+
+func NewCommandFromRaft(data []byte) *Command {
+	return &Command{
+		id:   CommandType(data[0]),
+		data: data,
+	}
 }
