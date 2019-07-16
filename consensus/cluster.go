@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -36,6 +37,16 @@ import (
 
 const (
 	leaderWaitDelay = 100 * time.Millisecond
+)
+
+var (
+	// ErrNotLeader is raised when no a raft node tries to execute an operation
+	// on a non-primary node.
+	ErrNotLeader = errors.New("Not cluster leader")
+
+	// ErrCannotJoin is raised when a node cannot join to any specified seed
+	// (e.g. not leader).
+	ErrCannotJoin = errors.New("Unable to join to the cluster")
 )
 
 // ClusteringOptions contains node options related to clustering.
@@ -87,7 +98,7 @@ type RaftNode struct {
 
 	raft           *raft.Raft             // The consensus mechanism
 	transport      *raft.NetworkTransport // Raft network transport
-	raftConfig     *raft.Config           //Config provides any necessary configuration for the Raft server.
+	raftConfig     *raft.Config           // Config provides any necessary configuration for the Raft server.
 	grpcServer     *grpc.Server
 	observationsCh chan raft.Observation
 
@@ -218,7 +229,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	// check existing state
 	existingState, err := raft.HasExistingState(logStore, node.raftLog, node.snapshots)
 	if err != nil {
-		node.Shutdown(true)
+		node.Close(true)
 		return nil, err
 	}
 	if existingState {
@@ -230,16 +241,16 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		if opts.Bootstrap {
 			log.Info("Bootstraping cluster...")
 			if err := node.bootstrapCluster(); err != nil {
-				node.Shutdown(true)
+				node.Close(true)
 				return nil, err
 			}
 			log.Info("Cluster successfully bootstraped.")
 		} else {
 			log.Info("Attempting to join the cluster.")
 			// Attempt to join the cluster if we're not bootstraping.
-			err := node.AttemptToJoinCluster(opts.Seeds)
+			err := node.attemptToJoinCluster(opts.Seeds)
 			if err != nil {
-				node.Shutdown(true)
+				node.Close(true)
 				return nil, fmt.Errorf("failed to join Raft cluster")
 			}
 			log.Info("Join operation finished successfully.")
@@ -249,7 +260,9 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	return node, nil
 }
 
-func (n *RaftNode) Shutdown(wait bool) error {
+// Close closes the RaftNode. If wait is true, waits for a graceful shutdown.
+// Once closed, a RaftNode may not be re-opened.
+func (n *RaftNode) Close(wait bool) error {
 	n.Lock()
 	if n.closed {
 		n.Unlock()
@@ -343,7 +356,7 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 	// will fail if the node is not the leader as cluster changes go
 	// through the Raft log.
 	if !n.IsLeader() {
-		return nil, nil
+		return nil, ErrNotLeader
 	}
 
 	log.Infof("received join request for remote node %s at %s", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
@@ -365,7 +378,7 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 	return &RaftJoinResponse{n.clusterInfo}, nil
 }
 
-func (n *RaftNode) AttemptToJoinCluster(addrs []string) error {
+func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 	for _, addr := range addrs {
 		log.Debug("Joining existent Raft cluster in addr: ", addr)
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
@@ -382,10 +395,10 @@ func (n *RaftNode) AttemptToJoinCluster(addrs []string) error {
 		if err == nil {
 			// merge cluster info
 			n.mergeClusterInfo(resp.ClusterInfo)
-			break
+			return nil
 		}
 	}
-	return nil
+	return ErrCannotJoin
 }
 
 func (n *RaftNode) SyncClusterInfo(ctx context.Context, req *SyncClusterInfoRequest) (*SyncClusterInfoResponse, error) {

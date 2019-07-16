@@ -17,8 +17,6 @@
 package consensus
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/raft"
 )
 
@@ -45,7 +43,6 @@ func (n *RaftNode) startObservationsConsumer() {
 					delete(n.clusterInfo.Nodes, string(peerObs.Peer.ID))
 					n.infoMu.Unlock()
 				}
-				fmt.Printf("Node: %s - %+v\n", n.info.NodeId, obs.Data)
 			case raft.LeaderObservation:
 				id, err := n.leaderID()
 				if err == nil {
