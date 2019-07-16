@@ -136,7 +136,7 @@ func newServerSetup(id int, tls bool) (func() (string, error), func() error) {
 	var err error
 
 	before := func() (string, error) {
-		path := fmt.Sprintf("/var/tmp/e2e-qed%d", id)
+		path = fmt.Sprintf("/var/tmp/e2e-qed%d", id)
 		err = os.MkdirAll(path, os.ModePerm) // ioutil.TempDir("/var/tmp", "e2e-qed-")
 		if err != nil {
 			return "", err
