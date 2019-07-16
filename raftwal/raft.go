@@ -69,6 +69,7 @@ type RaftBalloonApi interface {
 	Info() map[string]interface{}
 	Backup() error
 	ListBackups() []*storage.BackupInfo
+	DeleteBackup(backupID uint32) error
 }
 
 // RaftBalloon is a replicated verifiable key-value store, where changes are made via Raft consensus.
@@ -553,10 +554,17 @@ func (b *RaftBalloon) RegisterMetrics(registry metrics.Registry) {
 	registry.MustRegister(b.metrics.collectors()...)
 }
 
+// Backup function is a passthough to fms equivalent funcion.
 func (b *RaftBalloon) Backup() error {
 	return b.fsm.Backup()
 }
 
+// ListBackups function is a passthough to fms equivalent funcion.
 func (b *RaftBalloon) ListBackups() []*storage.BackupInfo {
 	return b.fsm.BackupsInfo()
+}
+
+// DeleteBackup function is a passthough to fms equivalent funcion.
+func (b *RaftBalloon) DeleteBackup(backupID uint32) error {
+	return b.fsm.DeleteBackup(backupID)
 }

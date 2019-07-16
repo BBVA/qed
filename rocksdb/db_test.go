@@ -17,20 +17,27 @@
 package rocksdb
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestOpenDB(t *testing.T) {
-	db, _ := newTestDB(t, "TestOpenDB", nil)
-	defer db.Close()
+	db, path := newTestDB(t, "TestOpenDB", nil)
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 }
 
 func TestDBCRUD(t *testing.T) {
 
-	db, _ := newTestDB(t, "TestDBCRUD", nil)
-	defer db.Close()
+	db, path := newTestDB(t, "TestDBCRUD", nil)
+	defer func() {
+		db.Close()
+		os.RemoveAll(path)
+	}()
 
 	var (
 		key    = []byte("key1")

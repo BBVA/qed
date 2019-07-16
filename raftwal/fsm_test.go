@@ -210,6 +210,35 @@ func TestBackup(t *testing.T) {
 	require.True(t, len(backupsList) == 1, "Backup list should contain 1 backup")
 }
 
+func TestDeleteBackup(t *testing.T) {
+	var err error
+	log.SetLogger("TestDeleteBackup", log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.db")
+	defer closeF()
+
+	raftBalloonHasherF := hashing.NewSha256Hasher
+	h := raftBalloonHasherF()
+	fsm, err := NewBalloonFSM(store, raftBalloonHasherF)
+	require.NoError(t, err)
+
+	command := newRaftCommand(commands.AddEventCommandType, h.Do([]byte("All's right with the world")))
+	fsm.Apply(newRaftLog(0, 0, command))
+
+	backupsList := fsm.BackupsInfo()
+	require.True(t, len(backupsList) == 0, "Backup list must be empty")
+	err = fsm.Backup()
+	require.NoError(t, err)
+	backupsList = fsm.BackupsInfo()
+	require.True(t, len(backupsList) == 1, "Backup list must contain 1 backup")
+	err = fsm.DeleteBackup(1)
+	require.NoError(t, err)
+	backupsList = fsm.BackupsInfo()
+	require.True(t, len(backupsList) == 0, "Backup list must be empty again")
+	err = fsm.DeleteBackup(12345)
+	require.Error(t, err, "Deleting an unknown backup must return an error")
+}
+
 func BenchmarkApplyAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkApplyAdd", log.SILENT)

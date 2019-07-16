@@ -197,6 +197,8 @@ func ToIncrementalProof(ir *IncrementalResponse, hasherF func() hashing.Hasher) 
 	return balloon.NewIncrementalProof(ir.Start, ir.End, history.ParseAuditPath(ir.AuditPath), hasherF())
 }
 
+// BackupInfo is the public struct used to parse the backup information.
+// Metadata is suposed to contains only the balloon version.
 type BackupInfo struct {
 	ID        int64
 	Timestamp int64

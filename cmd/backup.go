@@ -36,7 +36,7 @@ type BackupConfig struct {
 	APIKey string `desc:"Set API Key to talk to QED Log service"`
 }
 
-func defaultConfig() *BackupConfig {
+func defaultBackupConfig() *BackupConfig {
 	return &BackupConfig{
 		Endpoint: "http://127.0.0.1:8700",
 		APIKey:   "my-key",
@@ -59,7 +59,7 @@ func init() {
 
 func configBackup() context.Context {
 
-	conf := defaultConfig()
+	conf := defaultBackupConfig()
 
 	err := gpflag.ParseTo(conf, backupCmd.PersistentFlags())
 	if err != nil {
