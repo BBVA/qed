@@ -254,16 +254,17 @@ func TestClientToClusterWithBadEndpoint(t *testing.T) {
 	b1, a1 := newServerSetup(1, true)
 
 	let, report := spec.New()
-	defer func() {
-		a0()
-		a1()
-		t.Logf(report())
-	}()
 
 	_, err := b0()
 	spec.NoError(t, err, "Error starting node 0")
 	_, err = b1()
 	spec.NoError(t, err, "Error starting node 1")
+
+	defer func() {
+		a0()
+		a1()
+		t.Logf(report())
+	}()
 
 	let(t, "Success by extracting topology from right endpoint", func(t *testing.T) {
 

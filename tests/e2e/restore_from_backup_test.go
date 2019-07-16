@@ -66,9 +66,6 @@ func TestRestoreFromBackup(t *testing.T) {
 		})
 	})
 
-	err = after()
-	spec.NoError(t, err, "Error stoping server")
-
 	let(t, "Copy backup to the new QED server placement.", func(t *testing.T) {
 		var err error
 
@@ -81,6 +78,17 @@ func TestRestoreFromBackup(t *testing.T) {
 			err = os.RemoveAll(serverPath)
 			spec.NoError(t, err, "Error cleaning layout.")
 		})
+	})
+
+	err = after()
+	spec.NoError(t, err, "Error stoping server")
+
+	let(t, "Restore backup, start a new server, and check event membership.", func(t *testing.T) {
+		var err error
+
+		client, err = newQedClient(0)
+		spec.NoError(t, err, "Error creating qed client")
+		defer func() { client.Close() }()
 
 		let(t, "create new QED backup layout from scratch.", func(t *testing.T) {
 			err = os.MkdirAll(serverPath, os.ModePerm)
@@ -91,14 +99,6 @@ func TestRestoreFromBackup(t *testing.T) {
 			err = copyDirectory(backupTempPath, backupPath)
 			spec.NoError(t, err, "Error restoring backup folder.")
 		})
-	})
-
-	let(t, "Restore backup, start a new server, and check event membership.", func(t *testing.T) {
-		var err error
-
-		client, err = newQedClient(0)
-		spec.NoError(t, err, "Error creating qed client")
-		defer func() { client.Close() }()
 
 		let(t, "restore backup", func(t *testing.T) {
 			bo := rocksdb.NewDefaultOptions()
