@@ -279,12 +279,13 @@ func (fsm *BalloonFSM) Backup() error {
 	fsm.restoreMu.Lock()
 	defer fsm.restoreMu.Unlock()
 
-	metadata := fmt.Sprintf("%d", fsm.balloon.Version())
+	v := fsm.balloon.Version()
+	metadata := fmt.Sprintf("%d", v-1)
 	err := fsm.store.Backup(metadata)
 	if err != nil {
 		return err
 	}
-	log.Debugf("Generating backup until version: %d", fsm.balloon.Version())
+	log.Debugf("Generating backup until version: %d", v-1)
 
 	return nil
 }
