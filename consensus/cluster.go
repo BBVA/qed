@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
@@ -47,6 +48,9 @@ var (
 	// ErrCannotJoin is raised when a node cannot join to any specified seed
 	// (e.g. not leader).
 	ErrCannotJoin = errors.New("Unable to join to the cluster")
+
+	// ErrCannotSync is raised when a node cannot synchronize its cluster info.
+	ErrCannotSync = errors.New("Unable to sync cluster info")
 )
 
 // ClusteringOptions contains node options related to clustering.
@@ -102,7 +106,8 @@ type RaftNode struct {
 	grpcServer     *grpc.Server
 	observationsCh chan raft.Observation
 
-	fsm         *balloonFSM             // Balloon's finite state machine
+	balloon     *balloon.Balloon // Balloon's finite state machine
+	state       *fsmState
 	snapshotsCh chan *protocol.Snapshot // channel to publish snapshots
 
 	hasherF func() hashing.Hasher
@@ -151,20 +156,23 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	if err != nil {
 		return nil, fmt.Errorf("cannot create a new cached log store: %s", err)
 	}
+	node.db = store
+	node.raftLog = raftLog
 
 	// Set hashing function
 	hasherF := hashing.NewSha256Hasher
+	node.hasherF = hasherF
 
 	// Instantiate balloon FSM
-	fsm, err := newBalloonFSM(store, hasherF)
+	node.balloon, err = balloon.NewBalloon(store, hasherF)
 	if err != nil {
-		return nil, fmt.Errorf("new balloon fsm: %s", err)
+		return nil, err
 	}
-
-	node.db = store
-	node.raftLog = raftLog
-	node.hasherF = hasherF
-	node.fsm = fsm
+	err = node.loadState()
+	if err != nil {
+		log.Infof("There was an error recovering the FSM state!!")
+		return nil, err
+	}
 
 	// setup Raft configuration
 	conf := raft.DefaultConfig()
@@ -202,7 +210,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	}
 
 	// instantiate the raft server
-	node.raft, err = raft.NewRaft(node.raftConfig, node.fsm, logStore, node.raftLog, node.snapshots, node.transport)
+	node.raft, err = raft.NewRaft(node.raftConfig, node, logStore, node.raftLog, node.snapshots, node.transport)
 	if err != nil {
 		node.transport.Close()
 		node.raftLog.Close()
@@ -305,9 +313,9 @@ func (n *RaftNode) Close(wait bool) error {
 	}
 
 	// close fsm
-	if n.fsm != nil {
-		n.fsm.Close()
-		n.fsm = nil
+	if n.balloon != nil {
+		n.balloon.Close()
+		n.balloon = nil
 	}
 
 	// close the database
@@ -372,7 +380,12 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 	n.infoMu.Lock()
 	n.clusterInfo.Nodes[req.NodeInfo.NodeId] = req.NodeInfo
 	n.infoMu.Unlock()
-
+	cmd := newCommand(infoSetCommandType)
+	cmd.encode(n.clusterInfo)
+	_, err := n.propose(cmd)
+	if err != nil {
+		return nil, err
+	}
 	log.Infof("node %s at %s joined successfully", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
 
 	return &RaftJoinResponse{n.clusterInfo}, nil
@@ -383,6 +396,7 @@ func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 		log.Debug("Joining existent Raft cluster in addr: ", addr)
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
+			// TODO change this!! return err
 			log.Fatalf("failed to join node at %s: %s", addr, err.Error())
 		}
 		defer conn.Close()
@@ -394,17 +408,11 @@ func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 		})
 		if err == nil {
 			// merge cluster info
-			n.mergeClusterInfo(resp.ClusterInfo)
+			n.applyClusterInfo(resp.ClusterInfo)
 			return nil
 		}
 	}
 	return ErrCannotJoin
-}
-
-func (n *RaftNode) SyncClusterInfo(ctx context.Context, req *SyncClusterInfoRequest) (*SyncClusterInfoResponse, error) {
-	return &SyncClusterInfoResponse{
-		ClusterInfo: n.clusterInfo,
-	}, nil
 }
 
 // Info function returns Raft current node info.
@@ -453,11 +461,11 @@ func (n *RaftNode) leaderID() (string, error) {
 	return "", nil
 }
 
-func (n *RaftNode) mergeClusterInfo(info *ClusterInfo) {
-	n.infoMu.Lock()
-	n.clusterInfo.LeaderId = info.LeaderId
-	for id, node := range info.Nodes {
-		n.clusterInfo.Nodes[id] = node
+// applies a command into the Raft.
+func (n *RaftNode) propose(cmd *command) (interface{}, error) {
+	future := n.raft.Apply(cmd.data, n.applyTimeout)
+	if err := future.Error(); err != nil {
+		return nil, err
 	}
-	n.infoMu.Unlock()
+	return future.Response(), nil
 }

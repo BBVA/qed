@@ -18,14 +18,13 @@ package consensus
 
 import (
 	"github.com/bbva/qed/log"
-	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/hashicorp/raft"
 )
 
 type fsmSnapshot struct {
 	LastSeqNum     uint64
 	BalloonVersion uint64
-	ClusterInfo    []byte
+	Info           *ClusterInfo
 }
 
 // Persist writes the snapshot to the given sink.
@@ -54,14 +53,9 @@ func (f *fsmSnapshot) Release() {
 }
 
 func (f *fsmSnapshot) encode() ([]byte, error) {
-	var out []byte
-	ch := new(codec.MsgpackHandle)
-	enc := codec.NewEncoderBytes(&out, ch)
-	err := enc.Encode(f)
-	return out, err
+	return encodeMsgPack(f)
 }
 
 func (f *fsmSnapshot) decode(in []byte) error {
-	ch := new(codec.MsgpackHandle)
-	return codec.NewDecoderBytes(in, ch).Decode(f)
+	return decodeMsgPack(in, f)
 }

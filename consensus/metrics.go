@@ -42,7 +42,7 @@ func newRaftNodeMetrics(n *RaftNode) *raftNodeMetrics {
 				Help:      "Current balloon version.",
 			},
 			func() float64 {
-				return float64(n.fsm.balloon.Version() - 1)
+				return float64(n.balloon.Version() - 1)
 			},
 		),
 		Adds: prometheus.NewCounter(

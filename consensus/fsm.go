@@ -16,10 +16,8 @@
 package consensus
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
-	"sync"
 
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
@@ -62,24 +60,11 @@ func (s *fsmState) shouldApply(f *fsmState) bool {
 	return true
 }
 
-type balloonFSM struct {
-	hasherF func() hashing.Hasher
-
-	store   storage.ManagedStore
-	balloon *balloon.Balloon
-	state   *fsmState
-
-	clusterInfoMu sync.RWMutex
-	clusterInfo   *ClusterInfo
-
-	restoreMu sync.RWMutex // Restore needs exclusive access to database.
-}
-
-func (fsm *balloonFSM) loadState() error {
-	kvstate, err := fsm.store.Get(storage.FSMStateTable, storage.FSMStateTableKey)
+func (n *RaftNode) loadState() error {
+	kvstate, err := n.db.Get(storage.FSMStateTable, storage.FSMStateTableKey)
 	if err == storage.ErrKeyNotFound {
 		log.Infof("Unable to find previous state: assuming a clean instance")
-		fsm.state = new(fsmState) // &fsmState{0, 0, 0}
+		n.state = new(fsmState) // &fsmState{0, 0, 0}
 		return nil
 	}
 	if err != nil {
@@ -90,82 +75,64 @@ func (fsm *balloonFSM) loadState() error {
 	if err != nil {
 		return errors.Wrap(err, "unable to decode state")
 	}
-	fsm.state = &state
+	n.state = &state
 	return nil
-}
-
-// newBalloonFSM function creates a balloon with stored in a given storage, and tries to recover
-// the FSM state from disk.
-func newBalloonFSM(store storage.ManagedStore, hasherF func() hashing.Hasher) (*balloonFSM, error) {
-
-	b, err := balloon.NewBalloon(store, hasherF)
-	if err != nil {
-		return nil, err
-	}
-
-	fsm := &balloonFSM{
-		hasherF: hasherF,
-		store:   store,
-		balloon: b,
-	}
-
-	err = fsm.loadState()
-	if err != nil {
-		log.Infof("There was an error recovering the FSM state!!")
-		return nil, err
-	}
-
-	return fsm, nil
 }
 
 // QueryDigestMembershipConsistency acts as a passthrough when an event digest is given to
 // request a membership proof against a certain balloon version.
-func (fsm *balloonFSM) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
-	return fsm.balloon.QueryDigestMembershipConsistency(keyDigest, version)
+func (n *RaftNode) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
+	return n.balloon.QueryDigestMembershipConsistency(keyDigest, version)
 }
 
 // QueryMembershipConsistency acts as a passthrough when an event is given to request a
 // membership proof against a certain balloon version.
-func (fsm *balloonFSM) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
-	return fsm.balloon.QueryMembershipConsistency(event, version)
+func (n *RaftNode) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
+	return n.balloon.QueryMembershipConsistency(event, version)
 }
 
 // QueryDigestMembership acts as a passthrough when an event digest is given to request a
 // membership proof against the last balloon version.
-func (fsm *balloonFSM) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
-	return fsm.balloon.QueryDigestMembership(keyDigest)
+func (n *RaftNode) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
+	return n.balloon.QueryDigestMembership(keyDigest)
 }
 
 // QueryMembership acts as a passthrough when an event is given to request a membership proof
 // against the last balloon version.
-func (fsm *balloonFSM) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
-	return fsm.balloon.QueryMembership(event)
+func (n *RaftNode) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
+	return n.balloon.QueryMembership(event)
 }
 
 // QueryConsistency acts as a passthrough when requesting an incremental proof.
-func (fsm *balloonFSM) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
-	return fsm.balloon.QueryConsistency(start, end)
+func (n *RaftNode) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
+	return n.balloon.QueryConsistency(start, end)
 }
 
 // Apply applies a Raft log entry to the database.
-func (fsm *balloonFSM) Apply(l *raft.Log) interface{} {
+func (n *RaftNode) Apply(l *raft.Log) interface{} {
 	// TODO should i use a restore mutex?
 
-	cmd := NewCommandFromRaft(l.Data)
+	cmd := newCommandFromRaft(l.Data)
 
 	switch cmd.id {
 	case addEventCommandType:
 		var eventDigests []hashing.Digest
-		if err := cmd.Decode(&eventDigests); err != nil {
+		if err := cmd.decode(&eventDigests); err != nil {
 			return &fsmResponse{err: err}
 		}
-
 		// INFO: after applying a bulk there will be a jump in term version due to balloon version mapping.
-		newState := &fsmState{l.Index, l.Term, fsm.balloon.Version() + uint64(len(eventDigests)-1)}
-		if fsm.state.shouldApply(newState) {
-			return fsm.applyAdd(eventDigests, newState)
+		newState := &fsmState{l.Index, l.Term, n.balloon.Version() + uint64(len(eventDigests)-1)}
+		if n.state.shouldApply(newState) {
+			return n.applyAdd(eventDigests, newState)
 		}
-		return &fsmResponse{fmt.Errorf("state already applied!: %+v -> %+v", fsm.state, newState)}
+		return &fsmResponse{fmt.Errorf("state already applied!: %+v -> %+v", n.state, newState)}
+
+	case infoSetCommandType:
+		var info ClusterInfo
+		if err := cmd.decode(&info); err != nil {
+			return &fsmResponse{err: err}
+		}
+		return n.applyClusterInfo(&info)
 
 	default:
 		return &fsmResponse{fmt.Errorf("unknown command: %v", cmd.id)}
@@ -176,38 +143,29 @@ func (fsm *balloonFSM) Apply(l *raft.Log) interface{} {
 // Snapshot returns a snapshot of the key-value store. The caller must ensure that
 // no Raft transaction is taking place during this call. Hashicorp Raft
 // guarantees that this function will not be called concurrently with Apply.
-func (fsm *balloonFSM) Snapshot() (raft.FSMSnapshot, error) {
-	fsm.restoreMu.Lock()
-	defer fsm.restoreMu.Unlock()
-
-	lastSeqNum, err := fsm.store.Snapshot()
+func (n *RaftNode) Snapshot() (raft.FSMSnapshot, error) {
+	lastSeqNum, err := n.db.Snapshot()
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Generating snapshot until seqNum: %d (balloon version %d)", lastSeqNum, fsm.balloon.Version())
+	log.Debugf("Generating snapshot until seqNum: %d (balloon version %d)", lastSeqNum, n.balloon.Version())
 
-	// Copy the node metadata.
-	clusterInfo, err := json.Marshal(fsm.clusterInfo)
-	if err != nil {
-		log.Debugf("failed to encode meta for snapshot: %s", err.Error())
-		return nil, err
-	}
 	// change lastVersion by checkpoint structure
 	return &fsmSnapshot{
 		LastSeqNum:     lastSeqNum,
-		BalloonVersion: fsm.balloon.Version(),
-		ClusterInfo:    clusterInfo}, nil
+		BalloonVersion: n.balloon.Version(),
+		Info:           n.clusterInfo}, nil
 }
 
 // Restore restores the node to a previous state.
-func (fsm *balloonFSM) Restore(rc io.ReadCloser) error {
+func (n *RaftNode) Restore(rc io.ReadCloser) error {
 
 	log.Debug("Restoring Balloon...")
 
 	var err error
 	// Set the state from the snapshot, no lock required according to
 	// Hashicorp docs.
-	if err = fsm.store.Load(rc); err != nil {
+	if err = n.db.Load(rc); err != nil {
 		return err
 	}
 
@@ -225,46 +183,37 @@ func (fsm *balloonFSM) Restore(rc io.ReadCloser) error {
 	// 	return err
 	// }
 	// err = func() error {
-	// 	fsm.metaMu.Lock()
-	// 	defer fsm.metaMu.Unlock()
-	// 	return json.Unmarshal(meta, &fsm.meta)
+	// 	n.metaMu.Lock()
+	// 	defer n.metaMu.Unlock()
+	// 	return json.Unmarshal(meta, &n.meta)
 	// }()
 
-	return fsm.balloon.RefreshVersion()
+	return n.balloon.RefreshVersion()
 }
 
 // Backup ...
-func (fsm *balloonFSM) Backup() error {
-	fsm.restoreMu.Lock()
-	defer fsm.restoreMu.Unlock()
-
-	metadata := fmt.Sprintf("%d", fsm.balloon.Version())
-	err := fsm.store.Backup(metadata)
+func (n *RaftNode) Backup() error {
+	metadata := fmt.Sprintf("%d", n.balloon.Version())
+	err := n.db.Backup(metadata)
 	if err != nil {
 		return err
 	}
-	log.Debugf("Generating backup until version: %d", fsm.balloon.Version())
+	log.Debugf("Generating backup until version: %d", n.balloon.Version())
 
 	return nil
 }
 
 // BackupsInfo ...
-func (fsm *balloonFSM) BackupsInfo() []*storage.BackupInfo {
+func (n *RaftNode) BackupsInfo() []*storage.BackupInfo {
 	log.Debugf("Retrieving backups information")
-	return fsm.store.GetBackupsInfo()
+	return n.db.GetBackupsInfo()
 }
 
-// Close function closes
-func (fsm *balloonFSM) Close() error {
-	fsm.balloon.Close()
-	return nil
-}
-
-func (fsm *balloonFSM) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmAddResponse {
+func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmAddResponse {
 
 	resp := new(fsmAddResponse)
 
-	snapshotBulk, mutations, err := fsm.balloon.AddBulk(hashes)
+	snapshotBulk, mutations, err := n.balloon.AddBulk(hashes)
 	if err != nil {
 		resp.err = err
 		return resp
@@ -275,58 +224,26 @@ func (fsm *balloonFSM) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmAd
 		resp.err = err
 		return resp
 	}
-
 	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff))
-	err = fsm.store.Mutate(mutations, nil)
+
+	err = n.db.Mutate(mutations, nil)
 	if err != nil {
 		resp.err = err
 		return resp
 	}
-	fsm.state = state
+	n.state = state
 	resp.snapshot = snapshotBulk
 
 	return resp
 }
 
-func (fsm *balloonFSM) metaAppend(id string) {}
-
-// // Metadata returns the value for a given key, for a given node ID.
-// func (fsm *balloonFSM) Metadata(id, key string) string {
-// 	fsm.metaMu.RLock()
-// 	defer fsm.metaMu.RUnlock()
-
-// 	if _, ok := fsm.meta[id]; !ok {
-// 		return ""
-// 	}
-// 	v, ok := fsm.meta[id][key]
-// 	if ok {
-// 		return v
-// 	}
-// 	return ""
-// }
-
-// // setMetadata adds the metadata md to any existing metadata for
-// // the given node ID.
-// func (fsm *balloonFSM) setMetadata(id string, md map[string]string) *commands.MetadataSetCommand {
-// 	// Check local data first.
-// 	if func() bool {
-// 		fsm.metaMu.RLock()
-// 		defer fsm.metaMu.RUnlock()
-// 		if _, ok := fsm.meta[id]; ok {
-// 			for k, v := range md {
-// 				if fsm.meta[id][k] != v {
-// 					return false
-// 				}
-// 			}
-// 			return true
-// 		}
-// 		return false
-// 	}() {
-// 		// Local data is same as data being pushed in,
-// 		// nothing to do.
-// 		return nil
-// 	}
-// 	cmd := &commands.MetadataSetCommand{Id: id, Data: md}
-
-// 	return cmd
-// }
+func (n *RaftNode) applyClusterInfo(info *ClusterInfo) *fsmResponse {
+	n.infoMu.Lock()
+	for id, data := range info.Nodes {
+		if id != n.info.NodeId {
+			n.clusterInfo.Nodes[id] = data
+		}
+	}
+	n.infoMu.Unlock()
+	return &fsmResponse{}
+}
