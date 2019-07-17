@@ -41,15 +41,6 @@ message RaftJoinResponse {
     ClusterInfo cluster_info = 1;
 }
 
-message SyncClusterInfoRequest {
-    ClusterInfo cluster_info = 1;
-}
-
-message SyncClusterInfoResponse{
-    ClusterInfo cluster_info = 1;
-}
-
 service ClusterService {
     rpc JoinCluster (RaftJoinRequest) returns (RaftJoinResponse);
-    rpc SyncClusterInfo (SyncClusterInfoRequest) returns (SyncClusterInfoResponse);
 }

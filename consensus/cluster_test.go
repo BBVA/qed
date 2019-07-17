@@ -172,6 +172,60 @@ func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
 
 }
 
+func TestMultRaftNodesReJoin(t *testing.T) {
+
+	log.SetLogger("TestMultRaftNodesReJoin", log.SILENT)
+
+	// start one seed
+	r0, clean0, err := newSeed(t, 0)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, r0.Close(true))
+		clean0()
+	}()
+
+	// check leader
+	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "r0 is not leader!")
+
+	// start two replicas
+	r1, clean1, err := newFollower(t, 1, r0.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, r1.Close(true))
+		clean1()
+	}()
+	r2, _, err := newFollower(t, 2, r0.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+
+	// check the number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, func() bool {
+			return len(r2.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	time.Sleep(1 * time.Second)
+
+	// stop one node
+	r2.Close(true)
+
+	// restart the stopped node
+	r2, clean2, err := newFollower(t, 2, r0.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, r2.Close(true))
+		clean2()
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	// check the number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return len(r0.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+}
+
 type closeF func()
 
 func raftAddr(id int) string {
