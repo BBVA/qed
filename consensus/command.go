@@ -23,21 +23,22 @@ import (
 
 // commandType are commands that affect the state of the cluster,
 // and must go through raft.
-type CommandType uint8
+type commandType uint8
 
 const (
-	addEventCommandType CommandType = iota // Commands which modify the database.
+	addEventCommandType commandType = iota // Commands which modify the database.
+	infoSetCommandType
 )
 
-type Command struct {
-	id   CommandType
+type command struct {
+	id   commandType
 	data []byte
 }
 
-func (c *Command) Encode(cmd interface{}) error {
+func (c *command) encode(in interface{}) error {
 	var buf bytes.Buffer
 	buf.WriteByte(uint8(c.id))
-	data, err := encodeMsgPack(cmd)
+	data, err := encodeMsgPack(in)
 	if err != nil {
 		return err
 	}
@@ -49,25 +50,25 @@ func (c *Command) Encode(cmd interface{}) error {
 	return nil
 }
 
-func (c *Command) Decode(out interface{}) error {
+func (c *command) decode(out interface{}) error {
 	if c.data == nil {
 		return fmt.Errorf("Command is empty")
 	}
-	if c.id != CommandType(c.data[0]) {
-		return fmt.Errorf("Command type %v is not %v", c.id, CommandType(c.data[0]))
+	if c.id != commandType(c.data[0]) {
+		return fmt.Errorf("Command type %v is not %v", c.id, commandType(c.data[0]))
 	}
 	return decodeMsgPack(c.data[1:], out)
 }
 
-func NewCommand(t CommandType) *Command {
-	return &Command{
+func newCommand(t commandType) *command {
+	return &command{
 		id: t,
 	}
 }
 
-func NewCommandFromRaft(data []byte) *Command {
-	return &Command{
-		id:   CommandType(data[0]),
+func newCommandFromRaft(data []byte) *command {
+	return &command{
+		id:   commandType(data[0]),
 		data: data,
 	}
 }
