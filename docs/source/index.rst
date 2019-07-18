@@ -34,6 +34,7 @@ Contents
    :maxdepth: 2
    :caption: Advanced usage
 
+   advanced_usage/cluster_mode
    advanced_usage/backup_and_restore
 
 .. toctree::
