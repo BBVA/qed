@@ -32,6 +32,12 @@ Contents
 
 .. toctree::
    :maxdepth: 2
+   :caption: Advanced usage
+
+   advanced_usage/backup_and_restore
+
+.. toctree::
+   :maxdepth: 2
    :caption: Contributing
 
    contributing/contributing
