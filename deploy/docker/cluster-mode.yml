@@ -1,0 +1,82 @@
+version: '3'
+services:
+  qed_server_0:
+    image: "bbvalabs/qed:v0.3.0-docs"
+    container_name: qed_server_0
+    ports:
+      - "8800:8800"   # API HTTP
+      - "8700:8700"   # Management
+      - "8600:8600"   # Metrics
+      - "8500:8500"   # Raft
+      - "8400:8400"   # Gossip
+#      - "6060:6060"   # Profiling
+    entrypoint: [
+      "qed", "server", "start",
+      "--api-key", "my-key",
+      "--http-addr", "qed_server_0:8800",
+      "--mgmt-addr", "qed_server_0:8700",
+      "--metrics-addr", "qed_server_0:8600",
+      "--raft-addr", "qed_server_0:8500",
+      "--gossip-addr", "qed_server_0:8400",
+      "--node-id", "server0",
+      "--private-key-path", "/var/tmp/qed_ed25519",
+      "--raft-path", "/var/tmp/qed0/wal",
+      "--db-path", "/var/tmp/qed0/db",
+      "--log", "info",
+    ]
+
+  qed_server_1:
+    image: "bbvalabs/qed:v0.3.0-docs"
+    container_name: qed_server_1
+    ports:
+      - "8801:8800"   # API HTTP
+      - "8701:8700"   # Management
+      - "8601:8600"   # Metrics
+      - "8501:8500"   # Raft
+      - "8401:8400"   # Gossip
+#      - "6061:6060"   # Profiling
+    entrypoint: [
+      "qed", "server", "start",
+      "--api-key", "my-key",
+      "--http-addr", "qed_server_1:8800",
+      "--mgmt-addr", "qed_server_1:8700",
+      "--metrics-addr", "qed_server_1:8600",
+      "--raft-addr", "qed_server_1:8500",
+      "--gossip-addr", "qed_server_1:8400",
+      "--node-id", "server1",
+      "--private-key-path", "/var/tmp/qed_ed25519",
+      "--raft-path", "/var/tmp/qed1/wal",
+      "--db-path", "/var/tmp/qed1/db",
+      "--log", "debug",
+      "--raft-join-addr","qed_server_0:8700",
+      "--gossip-join-addr", "qed_server_0:8400",
+    ]
+    restart: on-failure
+
+  qed_server_2:
+    image: "bbvalabs/qed:v0.3.0-docs"
+    container_name: qed_server_2
+    ports:
+      - "8802:8800"   # API HTTP
+      - "8702:8700"   # Management
+      - "8602:8600"   # Metrics
+      - "8502:8500"   # Raft
+      - "8402:8400"   # Gossip
+#      - "6062:6060"   # Profiling
+    entrypoint: [
+      "qed", "server", "start",
+      "--api-key", "my-key",
+      "--http-addr", "qed_server_2:8800",
+      "--mgmt-addr", "qed_server_2:8700",
+      "--metrics-addr", "qed_server_2:8600",
+      "--raft-addr", "qed_server_2:8500",
+      "--gossip-addr", "qed_server_2:8400",
+      "--node-id", "server2",
+      "--private-key-path", "/var/tmp/qed_ed25519",
+      "--raft-path", "/var/tmp/qed2/wal",
+      "--db-path", "/var/tmp/qed2/db",
+      "--log", "debug",
+      "--raft-join-addr","qed_server_0:8700",
+      "--gossip-join-addr", "qed_server_0:8400",
+    ]
+    restart: on-failure
