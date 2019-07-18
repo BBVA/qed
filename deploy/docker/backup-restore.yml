@@ -1,0 +1,28 @@
+version: '3'
+services:
+  qed_server_0:
+    image: "bbvalabs/qed:v0.3.0-docs"
+    container_name: qed_server_0
+    ports:
+      - "8800:8800"   # API HTTP
+      - "8700:8700"   # Management
+      - "8600:8600"   # Metrics
+      - "8500:8500"   # Raft
+      - "8400:8400"   # Gossip
+#      - "6060:6060"   # Profiling
+    volumes:
+      - "/tmp/backups:/var/tmp/qed0/db/backups"
+    entrypoint: [
+      "qed", "server", "start",
+      "--api-key", "my-key",
+      "--http-addr", "qed_server_0:8800",
+      "--mgmt-addr", "qed_server_0:8700",
+      "--metrics-addr", "qed_server_0:8600",
+      "--raft-addr", "qed_server_0:8500",
+      "--gossip-addr", "qed_server_0:8400",
+      "--node-id", "server0",
+      "--private-key-path", "/var/tmp/qed_ed25519",
+      "--raft-path", "/var/tmp/qed0/wal",
+      "--db-path", "/var/tmp/qed0/db",
+      "--log", "info",
+    ]
