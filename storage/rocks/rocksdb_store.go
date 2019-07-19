@@ -16,7 +16,6 @@
 package rocks
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
@@ -70,7 +69,7 @@ type RocksDBStore struct {
 type Options struct {
 	Path             string
 	EnableStatistics bool
-	WALSizeLimitMB uint64
+	WALSizeLimitMB   uint64
 }
 
 func NewRocksDBStore(path string) (*RocksDBStore, error) {
@@ -458,30 +457,6 @@ func (s *RocksDBStore) Close() error {
 	return nil
 }
 
-// Snapshot takes a snapshot of the store, and returns and id
-// to be used in the back up process. The state of the
-// snapshot is stored in the store instance.
-func (s *RocksDBStore) Snapshot() (uint64, error) {
-	// create temp directory
-	id := uint64(len(s.checkpoints) + 1)
-	checkDir := fmt.Sprintf("%s/rocksdb-checkpoint-%d", s.checkPointPath, id)
-	os.RemoveAll(checkDir)
-
-	// create checkpoint
-	checkpoint, err := s.db.NewCheckpoint()
-	if err != nil {
-		return 0, err
-	}
-	defer checkpoint.Destroy()
-	err = checkpoint.CreateCheckpoint(checkDir, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	s.checkpoints[id] = checkDir
-	return id, nil
-}
-
 // Backup uses the backupEngine to create backups with metadata. The backup directory has been
 // set up previously.
 func (s *RocksDBStore) Backup(metadata string) error {
@@ -621,19 +596,18 @@ func (s *RocksDBStore) Dump(w io.Writer, id uint64) error {
 // FetchSnapshot fetches all WAL transactions from the first available
 // seq_num to the last one specified in the lastSeqNum parameter, and dumps
 // them to the given writer.
-func (s *RocksDBStore) FetchSnapshot(w io.Writer, lastSeqNum uint64) error {
+func (s *RocksDBStore) FetchSnapshot(w io.Writer, since, until uint64) error {
 
-	it, err := s.db.GetUpdatesSince(0) // we start on the first available seq_num
+	it, err := s.db.GetUpdatesSince(since) // we start on the first available seq_num
 	if err != nil {
 		return err
 	}
 	defer it.Close()
 
 	for ; it.Valid(); it.Next() {
-
 		batch, seqNum := it.GetBatch()
 		defer batch.Destroy()
-		if seqNum > lastSeqNum {
+		if seqNum > until {
 			break
 		}
 
@@ -656,26 +630,29 @@ func (s *RocksDBStore) FetchSnapshot(w io.Writer, lastSeqNum uint64) error {
 func (s *RocksDBStore) LoadSnapshot(r io.Reader, valid storage.ValidateF) error {
 
 	wo := rocksdb.NewDefaultWriteOptions()
-	br := bufio.NewReaderSize(r, 16<<10)
+	lr := io.LimitReader(r, 8)
 
 	extractor := rocksdb.NewLogDataExtractor("version")
 	defer extractor.Destroy()
 
 	for {
-		var data uint64
-		err := binary.Read(br, binary.LittleEndian, &data)
+		var size uint64
+		err := binary.Read(lr, binary.LittleEndian, &size)
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			return err
 		}
+		fmt.Println("size", size)
 
-		unmarshalBuf := make([]byte, data)
-		if _, err = io.ReadFull(br, unmarshalBuf[:data]); err != nil {
+		data := make([]byte, size)
+		if _, err = io.ReadFull(r, data[:size]); err != nil {
 			return err
 		}
 
-		batch := rocksdb.WriteBatchFrom(unmarshalBuf)
+		fmt.Println("data", data)
+
+		batch := rocksdb.WriteBatchFrom(data)
 		defer batch.Destroy()
 
 		blob := batch.GetLogData(extractor)
@@ -697,57 +674,6 @@ func (s *RocksDBStore) LoadSnapshot(r io.Reader, valid storage.ValidateF) error 
 
 	return nil
 
-}
-
-// Load reads a protobuf-encoded list of all entries from a reader and writes
-// them to the database. This can be used to restore the database from a dump
-// made by calling DB.Dump().
-//
-// DB.Load() should be called on a database that is not running any other
-// concurrent transactions while it is running.
-func (s *RocksDBStore) Load(r io.Reader) error {
-
-	br := bufio.NewReaderSize(r, 16<<10)
-	unmarshalBuf := make([]byte, 1<<10)
-	batch := rocksdb.NewWriteBatch()
-	wo := rocksdb.NewDefaultWriteOptions()
-	wo.SetDisableWAL(true)
-
-	for {
-		var data uint64
-		err := binary.Read(br, binary.LittleEndian, &data)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		}
-
-		if cap(unmarshalBuf) < int(data) {
-			unmarshalBuf = make([]byte, data)
-		}
-
-		kv := &pb.KVPair{}
-		if _, err = io.ReadFull(br, unmarshalBuf[:data]); err != nil {
-			return err
-		}
-		if err = kv.Unmarshal(unmarshalBuf[:data]); err != nil {
-			return err
-		}
-		table := storage.Table(kv.GetTable())
-		batch.PutCF(s.cfHandles[table], kv.Key, kv.Value)
-
-		if batch.Count() == 1000 {
-			s.db.Write(wo, batch)
-			batch.Clear()
-			continue
-		}
-	}
-
-	if batch.Count() > 0 {
-		return s.db.Write(wo, batch)
-	}
-
-	return nil
 }
 
 // LastWALSequenceNumber returns the sequence number of the
