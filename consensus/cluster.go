@@ -54,17 +54,18 @@ var (
 
 // ClusteringOptions contains node options related to clustering.
 type ClusteringOptions struct {
-	NodeID          string   // ID of the node within the cluster.
-	Addr            string   // IP address where to listen for Raft commands.
-	ClusterMgmtAddr string   // IP address where to listen for cluster GRPC operations.
-	Bootstrap       bool     // Bootstrap the cluster as a seed node if there is no existing state.
-	Seeds           []string // List of cluster peer node IDs to bootstrap the cluster state.
-	RaftLogPath     string   // Path to Raft log store directory.
-	LogCacheSize    int      // Number of Raft log entries to cache in memory to reduce disk IO.
-	LogSnapshots    int      // Number of Raft log snapshots to retain.
-	TrailingLogs    uint64   // Number of logs left after a snapshot.
-	Sync            bool     // Do a file sync after every write to the Raft log and stable store.
-	RaftLogging     bool     // Enable logging of Raft library (disabled by default since really verbose).
+	NodeID            string   // ID of the node within the cluster.
+	Addr              string   // IP address where to listen for Raft commands.
+	ClusterMgmtAddr   string   // IP address where to listen for cluster GRPC operations.
+	Bootstrap         bool     // Bootstrap the cluster as a seed node if there is no existing state.
+	Seeds             []string // List of cluster peer node IDs to bootstrap the cluster state.
+	RaftLogPath       string   // Path to Raft log store directory.
+	LogCacheSize      int      // Number of Raft log entries to cache in memory to reduce disk IO.
+	LogSnapshots      int      // Number of Raft log snapshots to retain.
+	SnapshotThreshold uint64   // Controls how many outstanding logs there must be before we perform a snapshot.
+	TrailingLogs      uint64   // Number of logs left after a snapshot.
+	Sync              bool     // Do a file sync after every write to the Raft log and stable store.
+	RaftLogging       bool     // Enable logging of Raft library (disabled by default since really verbose).
 
 	// These will be set to some sane defaults. Change only if experiencing raft issues.
 	RaftHeartbeatTimeout time.Duration
@@ -75,16 +76,17 @@ type ClusteringOptions struct {
 
 func DefaultClusteringOptions() *ClusteringOptions {
 	return &ClusteringOptions{
-		NodeID:       "",
-		Addr:         "",
-		Bootstrap:    false,
-		Seeds:        make([]string, 0),
-		RaftLogPath:  "",
-		LogCacheSize: 512,
-		LogSnapshots: 2,
-		TrailingLogs: 10240,
-		Sync:         false,
-		RaftLogging:  false,
+		NodeID:            "",
+		Addr:              "",
+		Bootstrap:         false,
+		Seeds:             make([]string, 0),
+		RaftLogPath:       "",
+		LogCacheSize:      512,
+		LogSnapshots:      2,
+		SnapshotThreshold: 8192,
+		TrailingLogs:      10240,
+		Sync:              false,
+		RaftLogging:       false,
 	}
 }
 
@@ -197,7 +199,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		conf.CommitTimeout = opts.RaftCommitTimeout
 	}
 	conf.TrailingLogs = opts.TrailingLogs
-	conf.SnapshotThreshold = 0 // 8192,
+	conf.SnapshotThreshold = opts.SnapshotThreshold
 	conf.LocalID = raft.ServerID(opts.NodeID)
 	conf.Logger = hclog.Default()
 	node.raftConfig = conf

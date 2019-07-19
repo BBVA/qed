@@ -18,9 +18,12 @@ package consensus
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/testutils/rand"
+	utilrand "github.com/bbva/qed/testutils/rand"
 	"github.com/hashicorp/raft"
 	"github.com/stretchr/testify/require"
 )
@@ -30,12 +33,14 @@ func TestApplyAdd(t *testing.T) {
 	log.SetLogger("TestApplyAdd", log.SILENT)
 
 	// start only one seed
-	node, clean, err := newSeed(t, 1)
+	node, clean, err := newSeed(1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node.Close(true))
 		clean()
 	}()
+
+	require.Truef(t, retryTrue(50, 200*time.Millisecond, node.IsLeader), "a single node is not leader!")
 
 	h := hashing.NewSha256Hasher()
 	event := append([]hashing.Digest{},
@@ -65,6 +70,60 @@ func TestApplyAdd(t *testing.T) {
 		r := node.Apply(test.log).(*fsmResponse)
 		require.Equalf(t, test.expectedError, r.err != nil, "failed in test case %d", i)
 	}
+}
+
+func BenchmarkApplyAdd(b *testing.B) {
+
+	log.SetLogger("BenchmarkApplyAdd", log.SILENT)
+
+	// start only one seed
+	node, clean, err := newSeed(1)
+	require.NoError(b, err)
+	defer func() {
+		require.NoError(b, node.Close(true))
+		clean()
+	}()
+
+	require.Truef(b, retryTrue(50, 200*time.Millisecond, node.IsLeader), "a single node is not leader!")
+
+	hasher := hashing.NewSha256Hasher()
+	b.ResetTimer()
+	b.N = 2000000
+	for i := 0; i < b.N; i++ {
+		cmd := newCommand(addEventCommandType)
+		cmd.encode([]hashing.Digest{hasher.Do(rand.Bytes(128))})
+		log := newLog(uint64(i), uint64(1), cmd.data)
+		resp := node.Apply(log)
+		require.NoError(b, resp.(*fsmResponse).err)
+	}
+
+}
+
+func BenchmarkRaftAdd(b *testing.B) {
+
+	log.SetLogger("BenchmarkRaftAdd", log.SILENT)
+
+	node, clean, err := newSeed(1)
+	require.NoError(b, err)
+	defer func() {
+		require.NoError(b, node.Close(true))
+		clean()
+	}()
+
+	require.Truef(b, retryTrue(50, 200*time.Millisecond, node.IsLeader), "a single node is not leader!")
+
+	// b.N shoul be eq or greater than 500k to avoid benchmark framework spreading more than one goroutine.
+	b.N = 2000000
+	b.ResetTimer()
+	b.SetParallelism(100)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			event := utilrand.Bytes(128)
+			_, err := node.Add(event)
+			require.NoError(b, err)
+		}
+	})
+
 }
 
 func newLog(index, term uint64, command []byte) *raft.Log {

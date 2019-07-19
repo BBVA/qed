@@ -30,7 +30,7 @@ func TestSnapshot(t *testing.T) {
 	log.SetLogger("TestSnapshot", log.SILENT)
 
 	// start only one seed
-	node, clean, err := newSeed(t, 1)
+	node, clean, err := newSeed(1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node.Close(true))
@@ -65,7 +65,7 @@ func TestRestore(t *testing.T) {
 	log.SetLogger("TestSnapshot", log.SILENT)
 
 	// start only one seed
-	node, _, err := newSeed(t, 1)
+	node, _, err := newSeed(1)
 	require.NoError(t, err)
 
 	// check the leader of the cluster
@@ -92,7 +92,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, node.Close(true))
 
 	// restart the node
-	node, clean, err := newSeed(t, 1)
+	node, clean, err := newSeed(1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node.Close(true))
