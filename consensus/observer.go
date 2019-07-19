@@ -47,7 +47,7 @@ func (n *RaftNode) startObservationsConsumer() {
 					cmd := newCommand(infoSetCommandType)
 					cmd.encode(n.clusterInfo)
 					n.propose(cmd)
-				} 		
+				}
 				fmt.Printf("ID[%s] - %+v\n", n.info.NodeId, peerObs)
 			case raft.LeaderObservation:
 				fmt.Printf("ID[%s] - %+v\n", n.info.NodeId, obs.Data)

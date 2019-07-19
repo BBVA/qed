@@ -17,8 +17,13 @@
 package consensus
 
 import (
+	"context"
+	"fmt"
+	io "io"
+
 	"github.com/bbva/qed/log"
 	"github.com/hashicorp/raft"
+	"google.golang.org/grpc"
 )
 
 type fsmSnapshot struct {
@@ -58,4 +63,56 @@ func (f *fsmSnapshot) encode() ([]byte, error) {
 
 func (f *fsmSnapshot) decode(in []byte) error {
 	return decodeMsgPack(in, f)
+}
+
+type chunkWriter struct {
+	srv ClusterService_FetchSnapshotServer
+}
+
+func (c chunkWriter) Write(data []byte) (int, error) {
+	chunk := new(Chunk)
+	chunk.Content = data
+	fmt.Printf("chunkWriter: %v\n", data)
+	if err := c.srv.Send(chunk); err != nil {
+		return 0, err
+	}
+	return len(data), nil
+}
+
+type chunkReader struct {
+	stream ClusterService_FetchSnapshotClient
+}
+
+func (c chunkReader) Read(p []byte) (int, error) {
+	chunk, err := c.stream.Recv()
+	if err != nil {
+		fmt.Println(err)
+		return 0, err
+	}
+	fmt.Printf("chunkReader: %v\n", chunk.Content)
+	copy(p, chunk.Content)
+	//p = append(p, chunk.Content...)
+	return len(p), nil
+}
+
+func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_FetchSnapshotServer) error {
+	chunker := &chunkWriter{srv: srv}
+	return n.db.FetchSnapshot(chunker, req.SeqNum, n.db.LastWALSequenceNumber())
+}
+
+func (n *RaftNode) attemptToFetchSnapshot(seqNum uint64) (io.Reader, error) {
+
+	nodeInfo := n.clusterInfo.Nodes[n.clusterInfo.LeaderId]
+	conn, err := grpc.Dial(nodeInfo.ClusterMgmtAddr, grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+
+	client := NewClusterServiceClient(conn)
+	stream, err := client.FetchSnapshot(context.Background(), &FetchSnapshotRequest{seqNum})
+	if err != nil {
+		return nil, err
+	}
+
+	return &chunkReader{stream: stream}, nil
 }
