@@ -36,7 +36,7 @@ func TestMutate(t *testing.T) {
 	tests := []struct {
 		testname      string
 		table         storage.Table
-		key, value	  []byte
+		key, value    []byte
 		expectedError error
 	}{
 		{"Mutate Key=Value", storage.HistoryTable, []byte("Key"), []byte("Version"), nil},
@@ -58,7 +58,7 @@ func TestGetExistentKey(t *testing.T) {
 
 	testCases := []struct {
 		table         storage.Table
-		key, value	  []byte
+		key, value    []byte
 		expectedError error
 	}{
 		{storage.HistoryTable, []byte("Key1"), []byte("Value1"), nil},
@@ -191,54 +191,6 @@ func TestGetLast(t *testing.T) {
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
 }
 
-func TestSnapshotLoad(t *testing.T) {
-
-	store, closeF := openRocksDBStore(t)
-	defer closeF()
-
-	// insert
-	numElems := uint64(20)
-	tables := []storage.Table{storage.HistoryTable, storage.HyperTable}
-	for _, table := range tables {
-		for i := uint64(0); i < numElems; i++ {
-			key := util.Uint64AsBytes(i)
-			store.Mutate([]*storage.Mutation{
-				{Table: table, Key: key, Value: key},
-			}, nil)
-		}
-	}
-
-	// create snapshot
-	ioBuf := bytes.NewBufferString("")
-	id, err := store.Snapshot()
-	require.Nil(t, err)
-	require.NoError(t, store.Dump(ioBuf, id))
-
-	// load snapshot
-	restore, recloseF := openRocksDBStore(t)
-	defer recloseF()
-	require.NoError(t, restore.Load(ioBuf))
-
-	// check elements
-	for _, table := range tables {
-		reader := store.GetAll(table)
-		for {
-			entries := make([]*storage.KVPair, 1000)
-			n, _ := reader.Read(entries)
-			if n == 0 {
-				break
-			}
-			for i := 0; i < n; i++ {
-				kv, err := restore.Get(table, entries[i].Key)
-				require.NoError(t, err)
-				require.Equal(t, entries[i].Value, kv.Value, "The values should match")
-			}
-		}
-		reader.Close()
-	}
-
-}
-
 func TestFetchAndLoadSnapshot(t *testing.T) {
 	store, closeF := openRocksDBStore(t)
 	defer closeF()
@@ -265,7 +217,7 @@ func TestFetchAndLoadSnapshot(t *testing.T) {
 
 	// fetch snapshot
 	ioBuf := bytes.NewBufferString("")
-	require.NoError(t, store.FetchSnapshot(ioBuf, until))
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
 
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
@@ -315,7 +267,7 @@ func TestFetchAndLoadUntilSeqNum(t *testing.T) {
 
 	// fetch snapshot
 	ioBuf := bytes.NewBufferString("")
-	require.NoError(t, store.FetchSnapshot(ioBuf, until))
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
 
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
@@ -367,7 +319,7 @@ func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
 
 	// fetch snapshot
 	ioBuf := bytes.NewBufferString("")
-	require.NoError(t, store.FetchSnapshot(ioBuf, until))
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
 
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)

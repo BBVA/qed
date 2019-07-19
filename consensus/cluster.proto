@@ -41,6 +41,15 @@ message RaftJoinResponse {
     ClusterInfo cluster_info = 1;
 }
 
+message FetchSnapshotRequest {
+    uint64 SeqNum = 1;
+}
+
+message Chunk {
+    bytes Content = 1;
+}
+
 service ClusterService {
     rpc JoinCluster (RaftJoinRequest) returns (RaftJoinResponse);
+    rpc FetchSnapshot (FetchSnapshotRequest) returns (stream Chunk);
 }

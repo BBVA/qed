@@ -29,7 +29,6 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
-	"github.com/bbva/qed/raftwal/raftrocks"
 	"github.com/bbva/qed/storage"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
@@ -63,7 +62,7 @@ type ClusteringOptions struct {
 	RaftLogPath     string   // Path to Raft log store directory.
 	LogCacheSize    int      // Number of Raft log entries to cache in memory to reduce disk IO.
 	LogSnapshots    int      // Number of Raft log snapshots to retain.
-	TrailingLogs    int64    // Number of logs left after a snapshot.
+	TrailingLogs    uint64   // Number of logs left after a snapshot.
 	Sync            bool     // Do a file sync after every write to the Raft log and stable store.
 	RaftLogging     bool     // Enable logging of Raft library (disabled by default since really verbose).
 
@@ -97,7 +96,7 @@ type RaftNode struct {
 	applyTimeout time.Duration
 
 	db        storage.ManagedStore    // Persistent database
-	raftLog   *raftrocks.RocksDBStore // Underlying rocksdb-backed persistent log store
+	raftLog   *raftLog                // Underlying rocksdb-backed persistent log store
 	snapshots *raft.FileSnapshotStore // Persistent snapstop store
 
 	raft           *raft.Raft             // The consensus mechanism
@@ -144,7 +143,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	}
 
 	// Create the log store
-	raftLog, err := raftrocks.New(raftrocks.Options{
+	raftLog, err := newRaftLogOpts(raftLogOptions{
 		Path:             opts.RaftLogPath + "/wal",
 		NoSync:           !opts.Sync,
 		EnableStatistics: true},
@@ -162,6 +161,15 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	// Set hashing function
 	hasherF := hashing.NewSha256Hasher
 	node.hasherF = hasherF
+
+	// start grpc server to handle requests to join the cluster
+	listener, err := net.Listen("tcp", node.info.ClusterMgmtAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to listen: %v", err)
+	}
+	node.grpcServer = grpc.NewServer()
+	RegisterClusterServiceServer(node.grpcServer, node) // registers itself
+	go node.grpcServer.Serve(listener)                  // TODO fix this!!!
 
 	// Instantiate balloon FSM
 	node.balloon, err = balloon.NewBalloon(store, hasherF)
@@ -188,6 +196,8 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	if opts.RaftHeartbeatTimeout != 0 {
 		conf.CommitTimeout = opts.RaftCommitTimeout
 	}
+	conf.TrailingLogs = opts.TrailingLogs
+	conf.SnapshotThreshold = 0 // 8192,
 	conf.LocalID = raft.ServerID(opts.NodeID)
 	conf.Logger = hclog.Default()
 	node.raftConfig = conf
@@ -221,15 +231,6 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	observer := raft.NewObserver(node.observationsCh, true, observationsFilterFn)
 	node.raft.RegisterObserver(observer)
 	go node.startObservationsConsumer()
-
-	// start grpc server to handle requests to join the cluster
-	listener, err := net.Listen("tcp", node.info.ClusterMgmtAddr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to listen: %v", err)
-	}
-	node.grpcServer = grpc.NewServer()
-	RegisterClusterServiceServer(node.grpcServer, node) // registers itself
-	go node.grpcServer.Serve(listener)                  // TODO fix this!!!
 
 	// register metrics
 	node.metrics = newRaftNodeMetrics(node)

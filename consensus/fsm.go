@@ -16,6 +16,7 @@
 package consensus
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 
@@ -25,16 +26,13 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
 )
 
 type fsmResponse struct {
 	err error
-}
-
-type fsmAddResponse struct {
-	fsmResponse
-	snapshot []*balloon.Snapshot
+	val interface{}
 }
 
 type fsmState struct {
@@ -46,10 +44,12 @@ func (s *fsmState) encode() ([]byte, error) {
 }
 
 func (s *fsmState) shouldApply(f *fsmState) bool {
-	if f.Term < s.Term {
+
+	if s.Term > f.Term {
 		return false
 	}
-	if f.Term == s.Term && f.Index <= s.Index {
+
+	if s.Term == f.Term && s.Index >= f.Index && s.Index != 0 {
 		return false
 	}
 
@@ -77,6 +77,52 @@ func (n *RaftNode) loadState() error {
 	}
 	n.state = &state
 	return nil
+}
+
+/*
+	RaftBalloon API implements the Ballon API in the RAFT system
+*/
+
+// Add function applies an add operation into a Raft balloon.
+// As a result, it returns a shapshot, but previously it sends the snapshot
+// to the agents channel, in order to be published/queried.
+func (n *RaftNode) Add(event []byte) (*balloon.Snapshot, error) {
+	snapshots, err := n.AddBulk(append([][]byte{}, event))
+	if err != nil {
+		return nil, err
+	}
+	return snapshots[0], nil
+}
+
+// AddBulk function applies an add bulk operation into a Raft balloon.
+// As a result, it returns a bulk of shapshots, but previously it sends each snapshot
+// of the bulk to the agents channel, in order to be published/queried.
+func (n *RaftNode) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
+	// Hash events
+	var eventHashBulk []hashing.Digest
+	for _, event := range bulk {
+		eventHashBulk = append(eventHashBulk, n.hasherF().Do(event))
+	}
+
+	// Create and apply command.
+	cmd := newCommand(addEventCommandType)
+	cmd.encode(eventHashBulk)
+	resp, err := n.propose(cmd)
+	if err != nil {
+		return nil, err
+	}
+	n.metrics.Adds.Add(float64(len(bulk)))
+
+	snapshotBulk := resp.(*fsmResponse).val.([]*balloon.Snapshot)
+
+	//Send snapshot to the snapshot channel
+	// TODO move this to an upper layer (shard manager?)
+	for _, s := range snapshotBulk {
+		p := protocol.Snapshot(*s)
+		n.snapshotsCh <- &p
+	}
+
+	return snapshotBulk, nil
 }
 
 // QueryDigestMembershipConsistency acts as a passthrough when an event digest is given to
@@ -108,6 +154,8 @@ func (n *RaftNode) QueryConsistency(start, end uint64) (*balloon.IncrementalProo
 	return n.balloon.QueryConsistency(start, end)
 }
 
+/**************** END OF API ******************/
+
 // Apply applies a Raft log entry to the database.
 func (n *RaftNode) Apply(l *raft.Log) interface{} {
 	// TODO should i use a restore mutex?
@@ -118,14 +166,14 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 	case addEventCommandType:
 		var eventDigests []hashing.Digest
 		if err := cmd.decode(&eventDigests); err != nil {
-			return &fsmResponse{err: err}
+			return &fsmResponse{err, nil}
 		}
 		// INFO: after applying a bulk there will be a jump in term version due to balloon version mapping.
-		newState := &fsmState{l.Index, l.Term, n.balloon.Version() + uint64(len(eventDigests)-1)}
+		newState := &fsmState{l.Index, l.Term, n.balloon.Version() + uint64(len(eventDigests))}
 		if n.state.shouldApply(newState) {
 			return n.applyAdd(eventDigests, newState)
 		}
-		return &fsmResponse{fmt.Errorf("state already applied!: %+v -> %+v", n.state, newState)}
+		return &fsmResponse{fmt.Errorf("state already applied!: %+v -> %+v", n.state, newState), nil}
 
 	case infoSetCommandType:
 		var info ClusterInfo
@@ -135,7 +183,7 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 		return n.applyClusterInfo(&info)
 
 	default:
-		return &fsmResponse{fmt.Errorf("unknown command: %v", cmd.id)}
+		return &fsmResponse{fmt.Errorf("unknown command: %v", cmd.id), nil}
 
 	}
 }
@@ -144,74 +192,80 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 // no Raft transaction is taking place during this call. Hashicorp Raft
 // guarantees that this function will not be called concurrently with Apply.
 func (n *RaftNode) Snapshot() (raft.FSMSnapshot, error) {
-	lastSeqNum, err := n.db.Snapshot()
-	if err != nil {
-		return nil, err
-	}
+	lastSeqNum := n.db.LastWALSequenceNumber()
 	log.Debugf("Generating snapshot until seqNum: %d (balloon version %d)", lastSeqNum, n.balloon.Version())
-
 	// change lastVersion by checkpoint structure
 	return &fsmSnapshot{
 		LastSeqNum:     lastSeqNum,
 		BalloonVersion: n.balloon.Version(),
-		Info:           n.clusterInfo}, nil
+		Info:           n.clusterInfo}, nil // TODO should we lock the info?
+}
+
+type VersionMetadata struct {
+	PreviousVersion uint64
+	NewVersion      uint64
 }
 
 // Restore restores the node to a previous state.
 func (n *RaftNode) Restore(rc io.ReadCloser) error {
 
-	log.Debug("Restoring Balloon...")
+	log.Infof("Recovering from snapshot (last applied version: %d)...", n.state.BalloonVersion)
 
-	var err error
-	// Set the state from the snapshot, no lock required according to
-	// Hashicorp docs.
-	if err = n.db.Load(rc); err != nil {
+	var buf bytes.Buffer
+	if _, err := buf.ReadFrom(rc); err != nil {
+		return err
+	}
+	var snap fsmSnapshot
+	if err := snap.decode(buf.Bytes()); err != nil {
 		return err
 	}
 
-	// TODO: Restore metadata??
+	// set cluster info
+	n.infoMu.Lock()
+	n.clusterInfo = snap.Info
+	n.infoMu.Unlock()
 
-	// log.Debug("Restoring Metadata...")
-	// var sz uint64
-
-	// // Get size of meta, read those bytes, and set to meta.
-	// if err := binary.Read(rc, binary.LittleEndian, &sz); err != nil {
-	// 	return err
-	// }
-	// meta := make([]byte, sz)
-	// if _, err := io.ReadFull(rc, meta); err != nil {
-	// 	return err
-	// }
-	// err = func() error {
-	// 	n.metaMu.Lock()
-	// 	defer n.metaMu.Unlock()
-	// 	return json.Unmarshal(meta, &n.meta)
-	// }()
-
-	return n.balloon.RefreshVersion()
-}
-
-// Backup ...
-func (n *RaftNode) Backup() error {
-	metadata := fmt.Sprintf("%d", n.balloon.Version())
-	err := n.db.Backup(metadata)
+	// we make a remote call to fetch the snapshot
+	reader, err := n.attemptToFetchSnapshot(snap.LastSeqNum)
 	if err != nil {
 		return err
 	}
-	log.Debugf("Generating backup until version: %d", n.balloon.Version())
+
+	validateF := func(lastVersion uint64) storage.ValidateF {
+		lastAppliedVersion := lastVersion
+		return func(meta []byte) (bool, error) {
+			metadata := new(VersionMetadata)
+			err := decodeMsgPack(meta, metadata)
+			if err != nil {
+				return false, nil
+			}
+			if metadata.PreviousVersion > lastAppliedVersion {
+				log.Infof("Gap found between the last applied version [%d] and the new transaction version [%d]. Backup needed to recover.", lastAppliedVersion, metadata.PreviousVersion)
+				return false, errors.New("Gap found between versions")
+			}
+			if metadata.NewVersion <= lastAppliedVersion {
+				// apply only those who are ahead the version specified with the parameter.
+				return false, nil
+			}
+			lastAppliedVersion = metadata.NewVersion
+			return true, nil
+		}
+	}
+
+	if err := n.db.LoadSnapshot(reader, validateF(n.state.BalloonVersion)); err != nil {
+		return err
+	}
+
+	n.balloon.RefreshVersion()
+	n.state.BalloonVersion = n.balloon.Version()
+	log.Infof("Recovering finished, new version: %d", n.state.BalloonVersion)
 
 	return nil
 }
 
-// BackupsInfo ...
-func (n *RaftNode) BackupsInfo() []*storage.BackupInfo {
-	log.Debugf("Retrieving backups information")
-	return n.db.GetBackupsInfo()
-}
+func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmResponse {
 
-func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmAddResponse {
-
-	resp := new(fsmAddResponse)
+	resp := new(fsmResponse)
 
 	snapshotBulk, mutations, err := n.balloon.AddBulk(hashes)
 	if err != nil {
@@ -232,7 +286,7 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmAddRes
 		return resp
 	}
 	n.state = state
-	resp.snapshot = snapshotBulk
+	resp.val = snapshotBulk
 
 	return resp
 }
@@ -245,5 +299,5 @@ func (n *RaftNode) applyClusterInfo(info *ClusterInfo) *fsmResponse {
 		}
 	}
 	n.infoMu.Unlock()
-	return &fsmResponse{}
+	return new(fsmResponse)
 }
