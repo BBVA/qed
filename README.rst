@@ -5,11 +5,11 @@ QED - Scalable, auditable and high-performance tamper-evident log
 .. image:: https://readthedocs.org/projects/qed/badge/?version=latest
    :target: https://qed.readthedocs.io
    :alt: User Documentation Status
-.. image:: https://gdiazlo.visualstudio.com/qed/_apis/build/status/BBVA.qed?branchName=master
-   :target: https://gdiazlo.visualstudio.com/qed/_build/latest?definitionId=1&branchName=master
+.. image:: https://dev.azure.com/bbvalabs/qed/_apis/build/status/BBVA.qed?branchName=master
+   :target: https://dev.azure.com/bbvalabs/qed/_build/latest?definitionId=1&branchName=master
    :alt: Build Status
-.. image:: https://img.shields.io/azure-devops/coverage/gdiazlo/qed/1/master.svg
-   :target: https://gdiazlo.visualstudio.com/qed/_build/latest?definitionId=1&branchName=master
+.. image:: https://img.shields.io/azure-devops/coverage/bbvalabs/qed/1.svg
+   :target: https://dev.azure.com/bbvalabs/qed/_build/latest?definitionId=1&branchName=master 
    :alt: Azure DevOps coverage
 .. image:: https://goreportcard.com/badge/github.com/bbva/qed
    :target: https://goreportcard.com/report/github.com/bbva/qed
