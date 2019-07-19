@@ -64,7 +64,7 @@ Once finished the backup&restore section, don't forget to clean the environment:
 
 .. code::
 
-    $ docker-compose down
+    $ docker-compose -f backup-restore.yml down
     $ unalias qed_client
     $ unalias qed_backup
 
