@@ -17,9 +17,10 @@
 package consensus
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	io "io"
+	"io"
 
 	"github.com/bbva/qed/log"
 	"github.com/hashicorp/raft"
@@ -74,6 +75,7 @@ func (c chunkWriter) Write(data []byte) (int, error) {
 	chunk.Content = data
 	fmt.Printf("chunkWriter: %v\n", data)
 	if err := c.srv.Send(chunk); err != nil {
+		fmt.Println("error sending chunk from writer")
 		return 0, err
 	}
 	return len(data), nil
@@ -81,18 +83,40 @@ func (c chunkWriter) Write(data []byte) (int, error) {
 
 type chunkReader struct {
 	stream ClusterService_FetchSnapshotClient
+	buf   *bytes.Buffer
+	done   bool
 }
 
-func (c chunkReader) Read(p []byte) (int, error) {
-	chunk, err := c.stream.Recv()
-	if err != nil {
-		fmt.Println(err)
-		return 0, err
+func (c *chunkReader) Read(p []byte) (int, error) {
+	var n int
+	var err error
+	fmt.Println("Read()")
+	for {
+		if c.buf.Len() == 0 {
+			fmt.Println("load data from stream.")
+			chunk, err := c.stream.Recv()
+			if err != nil {
+				fmt.Println("error recv chunk in reader: ", err)
+				return 0, err
+			}
+			c.buf.Write(chunk.Content)
+		}
+		n, err = c.buf.Read(p)
+		if err == nil {
+			break
+		}
+		fmt.Println("buffer end")
+		c.buf.Reset()
 	}
-	fmt.Printf("chunkReader: %v\n", chunk.Content)
-	copy(p, chunk.Content)
-	//p = append(p, chunk.Content...)
-	return len(p), nil
+	return n, err
+}
+
+func newChunkReader(stream ClusterService_FetchSnapshotClient) *chunkReader {
+	cr := new(chunkReader)
+	cr.stream = stream
+	cr.buf = new(bytes.Buffer)
+	cr.done = true
+	return cr
 }
 
 func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_FetchSnapshotServer) error {
@@ -105,14 +129,16 @@ func (n *RaftNode) attemptToFetchSnapshot(seqNum uint64) (io.Reader, error) {
 	nodeInfo := n.clusterInfo.Nodes[n.clusterInfo.LeaderId]
 	conn, err := grpc.Dial(nodeInfo.ClusterMgmtAddr, grpc.WithInsecure())
 	if err != nil {
+		fmt.Println("error dialing")
 		return nil, err
 	}
 
 	client := NewClusterServiceClient(conn)
 	stream, err := client.FetchSnapshot(context.Background(), &FetchSnapshotRequest{seqNum})
 	if err != nil {
+		fmt.Println("error building stream")
 		return nil, err
 	}
 
-	return &chunkReader{stream: stream}, nil
+	return newChunkReader(stream), nil
 }

@@ -600,6 +600,7 @@ func (s *RocksDBStore) FetchSnapshot(w io.Writer, since, until uint64) error {
 
 	it, err := s.db.GetUpdatesSince(since) // we start on the first available seq_num
 	if err != nil {
+		fmt.Println("error in getUpdatesSince")
 		return err
 	}
 	defer it.Close()
@@ -611,12 +612,12 @@ func (s *RocksDBStore) FetchSnapshot(w io.Writer, since, until uint64) error {
 			break
 		}
 
-		batchRaw := batch.Data()
-		if err := binary.Write(w, binary.LittleEndian, uint64(len(batchRaw))); err != nil {
+		_, err = w.Write(batch.Data())
+		if err != nil {
+			fmt.Println("Error writting data in fetchSnapshot")
 			return err
 		}
-		_, err = w.Write(batchRaw)
-
+		fmt.Println("Write data to the stream")
 	}
 
 	return nil
@@ -630,29 +631,24 @@ func (s *RocksDBStore) FetchSnapshot(w io.Writer, since, until uint64) error {
 func (s *RocksDBStore) LoadSnapshot(r io.Reader, valid storage.ValidateF) error {
 
 	wo := rocksdb.NewDefaultWriteOptions()
-	lr := io.LimitReader(r, 8)
 
 	extractor := rocksdb.NewLogDataExtractor("version")
 	defer extractor.Destroy()
 
 	for {
-		var size uint64
-		err := binary.Read(lr, binary.LittleEndian, &size)
-		if err == io.EOF {
-			break
-		} else if err != nil {
+		writeBatch := new(bytes.Buffer)
+		
+		n, err := writeBatch.ReadFrom(r)
+		if err != nil {
 			return err
 		}
-		fmt.Println("size", size)
-
-		data := make([]byte, size)
-		if _, err = io.ReadFull(r, data[:size]); err != nil {
-			return err
+		if n == 0 {
+			return nil
 		}
+		
+		fmt.Println("data", writeBatch.Bytes())
 
-		fmt.Println("data", data)
-
-		batch := rocksdb.WriteBatchFrom(data)
+		batch := rocksdb.WriteBatchFrom(writeBatch.Bytes())
 		defer batch.Destroy()
 
 		blob := batch.GetLogData(extractor)
