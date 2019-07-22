@@ -18,7 +18,6 @@ package rocks
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"os"
 
@@ -29,7 +28,8 @@ import (
 )
 
 type RocksDBStore struct {
-	db *rocksdb.DB
+	path string
+	db   *rocksdb.DB
 
 	stats *rocksdb.Statistics
 
@@ -148,6 +148,7 @@ func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
 	}
 
 	store := &RocksDBStore{
+		path:           opts.Path,
 		db:             db,
 		stats:          stats,
 		cfHandles:      cfHandles,
@@ -600,7 +601,6 @@ func (s *RocksDBStore) FetchSnapshot(w io.Writer, since, until uint64) error {
 
 	it, err := s.db.GetUpdatesSince(since) // we start on the first available seq_num
 	if err != nil {
-		fmt.Println("error in getUpdatesSince")
 		return err
 	}
 	defer it.Close()
@@ -608,16 +608,17 @@ func (s *RocksDBStore) FetchSnapshot(w io.Writer, since, until uint64) error {
 	for ; it.Valid(); it.Next() {
 		batch, seqNum := it.GetBatch()
 		defer batch.Destroy()
+		if seqNum <= since {
+			continue
+		}
 		if seqNum > until {
 			break
 		}
 
 		_, err = w.Write(batch.Data())
 		if err != nil {
-			fmt.Println("Error writting data in fetchSnapshot")
 			return err
 		}
-		fmt.Println("Write data to the stream")
 	}
 
 	return nil
@@ -632,12 +633,12 @@ func (s *RocksDBStore) LoadSnapshot(r io.Reader, valid storage.ValidateF) error 
 
 	wo := rocksdb.NewDefaultWriteOptions()
 
-	extractor := rocksdb.NewLogDataExtractor("version")
+	extractor := rocksdb.NewLogDataExtractor(s.path)
 	defer extractor.Destroy()
 
 	for {
 		writeBatch := new(bytes.Buffer)
-		
+
 		n, err := writeBatch.ReadFrom(r)
 		if err != nil {
 			return err
@@ -645,8 +646,6 @@ func (s *RocksDBStore) LoadSnapshot(r io.Reader, valid storage.ValidateF) error 
 		if n == 0 {
 			return nil
 		}
-		
-		fmt.Println("data", writeBatch.Bytes())
 
 		batch := rocksdb.WriteBatchFrom(writeBatch.Bytes())
 		defer batch.Destroy()
