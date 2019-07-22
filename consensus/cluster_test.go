@@ -25,7 +25,7 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage/rocks"
-	// metrics_utils "github.com/bbva/qed/testutils/metrics"
+	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	"github.com/stretchr/testify/require"
 )
 
@@ -230,11 +230,11 @@ func TestMultRaftNodesReJoin(t *testing.T) {
 type closeF func()
 
 func raftAddr(id int) string {
-	return fmt.Sprintf(":1830%d", id)
+	return fmt.Sprintf("127.0.0.1:1830%d", id)
 }
 
 func clusterMgmtAddr(id int) string {
-	return fmt.Sprintf(":1930%d", id)
+	return fmt.Sprintf("127.0.0.1:1930%d", id)
 }
 
 func newSeed(id int) (*RaftNode, closeF, error) {
@@ -259,10 +259,10 @@ func newFollower(id int, seeds ...string) (*RaftNode, closeF, error) {
 func newNode(opts *ClusteringOptions) (*RaftNode, closeF, error) {
 
 	var snapshotsCh chan *protocol.Snapshot
-	// var metricsCloseF func()
+	var metricsCloseF = func() {}
 
 	cleanF := func() {
-		// metricsCloseF()
+		metricsCloseF()
 		close(snapshotsCh)
 		os.RemoveAll(fmt.Sprintf("/var/tmp/cluster-test/node%s", opts.NodeID))
 	}
@@ -287,8 +287,11 @@ func newNode(opts *ClusteringOptions) (*RaftNode, closeF, error) {
 	snapshotsDrainer(snapshotsCh)
 
 	node, err := NewRaftNode(opts, db, snapshotsCh)
+	if err != nil {
+		return nil, cleanF, err
+	}
 
-	// metricsCloseF = metrics_utils.StartMetricsServer(node, db)
+	metricsCloseF = metrics_utils.StartMetricsServer(node, db)
 
 	return node, cleanF, err
 

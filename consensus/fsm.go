@@ -35,12 +35,29 @@ type fsmResponse struct {
 	val interface{}
 }
 
+type VersionMetadata struct {
+	PreviousVersion uint64
+	NewVersion      uint64
+}
+
+func (m *VersionMetadata) encode() ([]byte, error) {
+	return encodeMsgPack(m)
+}
+
+func (m *VersionMetadata) decode(value []byte) error {
+	return decodeMsgPack(value, m)
+}
+
 type fsmState struct {
 	Index, Term, BalloonVersion uint64
 }
 
 func (s *fsmState) encode() ([]byte, error) {
 	return encodeMsgPack(s)
+}
+
+func (s *fsmState) decode(value []byte) error {
+	return decodeMsgPack(value, s)
 }
 
 func (s *fsmState) shouldApply(f *fsmState) bool {
@@ -71,7 +88,7 @@ func (n *RaftNode) loadState() error {
 		return errors.Wrap(err, "loading state failed")
 	}
 	var state fsmState
-	err = decodeMsgPack(kvstate.Value, &state)
+	state.decode(kvstate.Value)
 	if err != nil {
 		return errors.Wrap(err, "unable to decode state")
 	}
@@ -201,11 +218,6 @@ func (n *RaftNode) Snapshot() (raft.FSMSnapshot, error) {
 		Info:           n.clusterInfo}, nil // TODO should we lock the info?
 }
 
-type VersionMetadata struct {
-	PreviousVersion uint64
-	NewVersion      uint64
-}
-
 // Restore restores the node to a previous state.
 func (n *RaftNode) Restore(rc io.ReadCloser) error {
 
@@ -221,9 +233,8 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 	}
 
 	// set cluster info
-	n.infoMu.Lock()
-	n.clusterInfo = snap.Info
-	n.infoMu.Unlock()
+	n.applyClusterInfo(snap.Info)
+	n.clusterInfo.LeaderId = snap.Info.LeaderId
 
 	// we make a remote call to fetch the snapshot
 	reader, err := n.attemptToFetchSnapshot(snap.LastSeqNum)
@@ -243,8 +254,11 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 				log.Infof("Gap found between the last applied version [%d] and the new transaction version [%d]. Backup needed to recover.", lastAppliedVersion, metadata.PreviousVersion)
 				return false, errors.New("Gap found between versions")
 			}
-			if metadata.NewVersion <= lastAppliedVersion {
+			if metadata.NewVersion < lastAppliedVersion {
 				// apply only those who are ahead the version specified with the parameter.
+				return false, nil
+			}
+			if metadata.NewVersion == lastAppliedVersion && lastAppliedVersion != 0 {
 				return false, nil
 			}
 			lastAppliedVersion = metadata.NewVersion
@@ -280,7 +294,17 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 	}
 	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff))
 
-	err = n.db.Mutate(mutations, nil)
+	meta := &VersionMetadata{
+		PreviousVersion: n.state.BalloonVersion,
+		NewVersion:      state.BalloonVersion,
+	}
+	metaBytes, err := meta.encode()
+	if err != nil {
+		resp.err = err
+		return resp
+	}
+
+	err = n.db.Mutate(mutations, metaBytes)
 	if err != nil {
 		resp.err = err
 		return resp
@@ -298,6 +322,7 @@ func (n *RaftNode) applyClusterInfo(info *ClusterInfo) *fsmResponse {
 			n.clusterInfo.Nodes[id] = data
 		}
 	}
+	//n.clusterInfo.LeaderId = info.LeaderId
 	n.infoMu.Unlock()
 	return new(fsmResponse)
 }

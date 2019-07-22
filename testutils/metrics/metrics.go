@@ -39,6 +39,9 @@ func StartMetricsServer(registerers ...metrics.Registerer) func() {
 	go srv.ListenAndServe()
 
 	closeF := func() {
+		if srv == nil {
+			return
+		}
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(ctx); err != nil {
