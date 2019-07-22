@@ -60,7 +60,7 @@ func TestSnapshot(t *testing.T) {
 	require.Equalf(t, node.ClusterInfo(), fsmSnap.Info, "The cluster info should match")
 }
 
-func TestRestore(t *testing.T) {
+func TestRestoreSingleNode(t *testing.T) {
 
 	log.SetLogger("TestSnapshot", log.SILENT)
 
@@ -107,4 +107,236 @@ func TestRestore(t *testing.T) {
 	require.Equalf(t, uint64(len(events)), fsmSnap.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, uint64(16), fsmSnap.LastSeqNum, "The lastSeqNum should be only 1")
 	require.Equalf(t, node.ClusterInfo(), fsmSnap.Info, "The cluster info should match")
+
+}
+
+func TestRestoreFromLeaderWAL(t *testing.T) {
+
+	log.SetLogger("TestRestoreFromLeaderWAL", log.SILENT)
+
+	// start only one seed
+	node1, clean1, err := newSeed(1)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node1.Close(true))
+		clean1()
+	}()
+
+	// check the leader of the cluster
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
+
+	//start two nodes and join the cluster
+	node2, clean2, err := newFollower(2, node1.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node2.Close(true))
+		clean2()
+	}()
+	node3, _, err := newFollower(3, node1.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+
+	// check number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, func() bool {
+			return len(node1.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	// stop the follower
+	require.NoError(t, node3.Close(true))
+
+	// write some events
+	events := append([][]byte{},
+		[]byte("The year’s at the spring,"),
+		[]byte("And day's at the morn;"),
+		[]byte("Morning's at seven;"),
+		[]byte("The hill-side’s dew-pearled;"),
+	)
+	_, err = node1.AddBulk(events)
+	require.NoError(t, err)
+
+	// restart follower
+	node3, clean3, err := newFollower(3)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node3.Close(true))
+		clean3()
+	}()
+
+	// check the number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return len(node1.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	time.Sleep(1 * time.Second)
+
+	// take a snapshot to inspect its values
+	snap1, err := node1.Snapshot()
+	require.NoError(t, err)
+	snap3, err := node3.Snapshot()
+	require.NoError(t, err)
+	fsmSnap1 := snap1.(*fsmSnapshot)
+	fsmSnap3 := snap3.(*fsmSnapshot)
+
+	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
+	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
+
+	// wait for WAL replication
+	time.Sleep(2 * time.Second)
+	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
+
+}
+
+func TestRestoreFromLeaderSnapshot(t *testing.T) {
+
+	log.SetLogger("TestRestoreFromLeaderSnapshot", log.SILENT)
+
+	// start only one seed
+	node1, clean1, err := newSeed(1)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node1.Close(true))
+		clean1()
+	}()
+
+	// check the leader of the cluster
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
+
+	//start two nodes and join the cluster
+	node2, clean2, err := newFollower(2, node1.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node2.Close(true))
+		clean2()
+	}()
+	node3, _, err := newFollower(3, node1.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+
+	// check number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, func() bool {
+			return len(node1.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	// stop the follower
+	require.NoError(t, node3.Close(true))
+
+	// write some events
+	events := append([][]byte{},
+		[]byte("The year’s at the spring,"),
+		[]byte("And day's at the morn;"),
+		[]byte("Morning's at seven;"),
+		[]byte("The hill-side’s dew-pearled;"),
+	)
+	_, err = node1.AddBulk(events)
+	require.NoError(t, err)
+
+	// force a raft snapshot in both nodes in order to truncate the WAL
+	require.NoError(t, node1.raft.Snapshot().Error())
+	require.NoError(t, node2.raft.Snapshot().Error())
+
+	// restart follower
+	node3, clean3, err := newFollower(3)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node3.Close(true))
+		clean3()
+	}()
+
+	// check the number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return len(node1.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	time.Sleep(1 * time.Second)
+
+	// take a snapshot to inspect its values
+	snap1, err := node1.Snapshot()
+	require.NoError(t, err)
+	snap3, err := node3.Snapshot()
+	require.NoError(t, err)
+	fsmSnap1 := snap1.(*fsmSnapshot)
+	fsmSnap3 := snap3.(*fsmSnapshot)
+
+	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
+	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
+
+	// wait for WAL replication
+	time.Sleep(2 * time.Second)
+	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
+
+}
+
+func TestRestoreNewNodeFromLeader(t *testing.T) {
+
+	log.SetLogger("TestRestoreNewNodeFromLeader", log.SILENT)
+
+	// start only one seed
+	node1, clean1, err := newSeed(1)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node1.Close(true))
+		clean1()
+	}()
+
+	// check the leader of the cluster
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
+
+	// start another node and join the cluster
+	node2, clean2, err := newFollower(2, node1.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node2.Close(true))
+		clean2()
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	// write some events
+	events := append([][]byte{},
+		[]byte("The year’s at the spring,"),
+		[]byte("And day's at the morn;"),
+		[]byte("Morning's at seven;"),
+		[]byte("The hill-side’s dew-pearled;"),
+	)
+	_, err = node1.AddBulk(events)
+	require.NoError(t, err)
+
+	// force a raft snapshot in both nodes in order to truncate the WAL
+	require.NoError(t, node1.raft.Snapshot().Error())
+	require.NoError(t, node2.raft.Snapshot().Error())
+
+	// start a third node
+	node3, clean3, err := newFollower(3, node1.info.ClusterMgmtAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node3.Close(true))
+		clean3()
+	}()
+
+	time.Sleep(1 * time.Second)
+
+	// take a snapshot to inspect its values
+	snap1, err := node1.Snapshot()
+	require.NoError(t, err)
+	snap3, err := node3.Snapshot()
+	require.NoError(t, err)
+	fsmSnap1 := snap1.(*fsmSnapshot)
+	fsmSnap3 := snap3.(*fsmSnapshot)
+
+	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
+	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
+
+	// wait for WAL replication
+	time.Sleep(2 * time.Second)
+	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
+
+}
+
+func TestRestoreNewNodeFromFollower(t *testing.T) {
+
 }

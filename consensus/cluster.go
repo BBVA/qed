@@ -83,8 +83,8 @@ func DefaultClusteringOptions() *ClusteringOptions {
 		RaftLogPath:       "",
 		LogCacheSize:      512,
 		LogSnapshots:      2,
-		SnapshotThreshold: 8192,
-		TrailingLogs:      10240,
+		SnapshotThreshold: 0, //8192,
+		TrailingLogs:      0, //10240,
 		Sync:              false,
 		RaftLogging:       false,
 	}
