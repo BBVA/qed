@@ -20,10 +20,7 @@ package rocksdb
 // #include <stdlib.h>
 // #include "rocksdb/c.h"
 import "C"
-
-import (
-	"unsafe"
-)
+import "unsafe"
 
 // WriteBatch holds a collection of updates to apply atomically to a DB.
 //
@@ -177,21 +174,21 @@ func rocksdb_writebatch_handler_log_data(cIdx *C.char, cBlob *C.char, cBlobSize 
 
 // LogDataExtractor extracts metadata from a WriteBatch.
 type LogDataExtractor struct {
-	id   string
-	Blob []byte
-	c    *C.rocksdb_writebatch_handler_t
+	id    string
+	ptrId *C.char
+	Blob  []byte
+	c     *C.rocksdb_writebatch_handler_t
 }
 
 // NewLogDataExtractor creates a new LogDataExtractor.
 func NewLogDataExtractor(id string) *LogDataExtractor {
-	idx := C.CString(id)
-	defer C.free(unsafe.Pointer(idx))
 	extractor := &LogDataExtractor{
-		id:   id,
-		Blob: make([]byte, 0),
-		c:    C.rocksdb_writebatch_handler_create_ext(idx),
+		id:    id,
+		ptrId: C.CString(id),
+		Blob:  make([]byte, 0),
 	}
-	writeBatchHandlers.Register(id, extractor)
+	extractor.c = C.rocksdb_writebatch_handler_create_ext(extractor.ptrId)
+	writeBatchHandlers.Register(extractor.id, extractor)
 	return extractor
 }
 
@@ -208,6 +205,7 @@ func (e *LogDataExtractor) LogData(blob []byte) {
 // Destroy destroys de LogDataExtractor.
 func (e *LogDataExtractor) Destroy() {
 	writeBatchHandlers.Unregister(e.ID())
+	C.free(unsafe.Pointer(e.ptrId))
 	C.rocksdb_writebatch_handler_destroy(e.c)
 	e.Blob = nil
 }
