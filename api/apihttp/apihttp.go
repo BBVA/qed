@@ -20,7 +20,6 @@ package apihttp
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -43,8 +42,9 @@ type HealthCheckResponse struct {
 //	/proofs/membership -> Membership query using event
 //	/proofs/digest-membership -> Membership query using event digest
 //	/proofs/incremental -> Incremental query
+//	/info -> Qed server information
 //	/info/shards -> Qed cluster information
-func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
+func NewApiHttp(balloon raftwal.RaftBalloonApi, conf protocol.NodeInfo) *http.ServeMux {
 
 	api := http.NewServeMux()
 	api.HandleFunc("/healthcheck", AuthHandlerMiddleware(HealthCheckHandler))
@@ -53,6 +53,7 @@ func NewApiHttp(balloon raftwal.RaftBalloonApi) *http.ServeMux {
 	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
 	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
 	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
+	api.HandleFunc("/info", AuthHandlerMiddleware(InfoHandler(conf)))
 	api.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(balloon)))
 
 	return api
@@ -420,7 +421,6 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		info := balloon.Info()
 		details := make(map[string]protocol.ShardDetail)
 		for k, v := range info["meta"].(map[string]map[string]string) {
-			fmt.Println(k, v)
 			details[k] = protocol.ShardDetail{
 				NodeId:   k,
 				HTTPAddr: v["HTTPAddr"],
@@ -443,6 +443,81 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(out)
 	}
+}
+
+// InfoHandler returns information about the QED server.
+// The http post url is:
+//   GET /info
+//
+// The following statuses are expected:
+// If everything is alright, the HTTP status is 200 and the body contains:
+// {
+//  "APIKey": 				"my-key",
+//  "NodeID": 				"server0",
+//  "HTTPAddr": 			"127.0.0.1:8800",
+//  "RaftAddr": 			"127.0.0.1:8500",
+//  "MgmtAddr": 			"127.0.0.1:8700",
+//  "MetricsAddr": 			"127.0.0.1:8600",
+//  "RaftJoinAddr": 		"[]",
+//  "DBPath": 				"/var/tmp/db",
+//  "RaftPath": 			"/var/tmp/wal",
+//  "GossipAddr":		 	"127.0.0.1:8400",
+//  "GossipJoinAddr": 		"[]",
+//  "PrivateKeyPath": 		"/var/tmp",
+//  "EnableTLS": 			false,
+//  "EnableProfiling": 		false,
+//  "ProfilingAddr": 		"127.0.0.1:6060",
+//  "SSLCertificate": 		"/var/tmp/certs/my-cert",
+//  "SSLCertificateKey": 	"/var/tmp/certs",
+// }
+func InfoHandler(conf protocol.NodeInfo) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var err error
+
+		// Make sure we can only be called with an HTTP GET request.
+		w, _, err = GetReqSanitizer(w, r)
+		if err != nil {
+			return
+		}
+
+		out, err := json.Marshal(conf)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(out)
+		return
+
+	}
+}
+
+// PostReqSanitizer function checks that certain request info exists and it is correct.
+func PostReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request, error) {
+	if r.Method != "POST" {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return w, r, errors.New("Method not allowed.")
+	}
+
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", http.StatusBadRequest)
+		return w, r, errors.New("Bad request: nil body.")
+	}
+
+	return w, r, nil
+}
+
+// GetReqSanitizer function checks that certain request info exists and it is correct.
+func GetReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request, error) {
+	if r.Method != "GET" {
+		w.Header().Set("Allow", "GET")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return w, r, errors.New("Method not allowed.")
+	}
+
+	return w, r, nil
 }
 
 // LogHandler Logs the Http Status for a request into fileHandler and returns a
@@ -481,31 +556,4 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 	}
 	w.length = len(b)
 	return w.ResponseWriter.Write(b)
-}
-
-// PostReqSanitizer function checks that certain request info exists and it is correct.
-func PostReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request, error) {
-	if r.Method != "POST" {
-		w.Header().Set("Allow", "POST")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return w, r, errors.New("Method not allowed.")
-	}
-
-	if r.Body == nil {
-		http.Error(w, "Please send a request body", http.StatusBadRequest)
-		return w, r, errors.New("Bad request: nil body.")
-	}
-
-	return w, r, nil
-}
-
-// GetReqSanitizer function checks that certain request info exists and it is correct.
-func GetReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request, error) {
-	if r.Method != "GET" {
-		w.Header().Set("Allow", "GET")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return w, r, errors.New("Method not allowed.")
-	}
-
-	return w, r, nil
 }
