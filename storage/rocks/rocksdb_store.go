@@ -18,6 +18,7 @@ package rocks
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io"
 	"os"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/bbva/qed/rocksdb"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/pb"
+	"github.com/bbva/qed/util"
 )
 
 type RocksDBStore struct {
@@ -70,6 +72,7 @@ type Options struct {
 	Path             string
 	EnableStatistics bool
 	WALSizeLimitMB   uint64
+	WALTtlSeconds    uint64
 }
 
 func NewRocksDBStore(path string) (*RocksDBStore, error) {
@@ -77,6 +80,7 @@ func NewRocksDBStore(path string) (*RocksDBStore, error) {
 		Path:             path,
 		EnableStatistics: true,
 		WALSizeLimitMB:   1 << 20,
+		WALTtlSeconds:    0,
 	})
 }
 
@@ -99,7 +103,8 @@ func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
-	globalOpts.SetWalSizeLimitMb(1 << 20)
+	globalOpts.SetWalSizeLimitMb(opts.WALSizeLimitMB)
+	globalOpts.SetWALTtlSeconds(opts.WALTtlSeconds)
 	//globalOpts.SetMaxOpenFiles(1000)
 	globalOpts.SetEnv(env)
 	// We build a LRU cache with a high pool ratio of 0.4 (40%). The lower pool
@@ -614,14 +619,36 @@ func (s *RocksDBStore) FetchSnapshot(w io.Writer, since, until uint64) error {
 		if seqNum > until {
 			break
 		}
-
-		_, err = w.Write(batch.Data())
+		data := batch.Data()
+		size := util.Uint64AsBytes(uint64(len(data)))
+		_, err = w.Write(append(size, data...))
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func readChunk(r io.Reader) ([]byte, error) {
+
+	sizeBuff := make([]byte, 8)
+	n, err := r.Read(sizeBuff)
+	if err != nil || n != 8 {
+		return nil, err
+	}
+
+	size := util.BytesAsUint64(sizeBuff)
+	chunk := make([]byte, size)
+	n, err = r.Read(chunk)
+	if err != nil {
+		return nil, err
+	}
+	if uint64(n) != size {
+		return nil, fmt.Errorf("Corrupted chunk")
+	}
+	return chunk, nil
+
 }
 
 // LoadSnapshot reads a list of serialized batches from a reader,
@@ -637,17 +664,15 @@ func (s *RocksDBStore) LoadSnapshot(r io.Reader, valid storage.ValidateF) error 
 	defer extractor.Destroy()
 
 	for {
-		writeBatch := new(bytes.Buffer)
-
-		n, err := writeBatch.ReadFrom(r)
+		buff, err := readChunk(r)
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
 			return err
 		}
-		if n == 0 {
-			return nil
-		}
 
-		batch := rocksdb.WriteBatchFrom(writeBatch.Bytes())
+		batch := rocksdb.WriteBatchFrom(buff)
 		defer batch.Destroy()
 
 		blob := batch.GetLogData(extractor)
