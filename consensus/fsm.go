@@ -81,7 +81,7 @@ func (n *RaftNode) loadState() error {
 	kvstate, err := n.db.Get(storage.FSMStateTable, storage.FSMStateTableKey)
 	if err == storage.ErrKeyNotFound {
 		log.Infof("Unable to find previous state: assuming a clean instance")
-		n.state = new(fsmState) // &fsmState{0, 0, 0}
+		n.state = new(fsmState)
 		return nil
 	}
 	if err != nil {
@@ -270,8 +270,9 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 		return err
 	}
 
+	n.loadState()
 	n.balloon.RefreshVersion()
-	n.state.BalloonVersion = n.balloon.Version()
+
 	log.Infof("Recovering finished, new version: %d", n.state.BalloonVersion)
 
 	return nil
