@@ -169,7 +169,11 @@ func TestRestoreFromLeaderWAL(t *testing.T) {
 			return len(node1.ClusterInfo().Nodes) == 3
 		}), "The number of nodes does not match")
 
-	time.Sleep(1 * time.Second)
+	//wait for WAL replication
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+		}), "WAL not in sync")
 
 	// take a snapshot to inspect its values
 	snap1, err := node1.Snapshot()
@@ -181,9 +185,6 @@ func TestRestoreFromLeaderWAL(t *testing.T) {
 
 	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
-
-	// wait for WAL replication
-	time.Sleep(2 * time.Second)
 	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
 
 }
@@ -251,7 +252,11 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 			return len(node1.ClusterInfo().Nodes) == 3
 		}), "The number of nodes does not match")
 
-	time.Sleep(1 * time.Second)
+	//wait for WAL replication
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+		}), "WAL not in sync")
 
 	// take a snapshot to inspect its values
 	snap1, err := node1.Snapshot()
@@ -263,9 +268,6 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 
 	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
-
-	// wait for WAL replication
-	time.Sleep(2 * time.Second)
 	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
 
 }
@@ -294,7 +296,11 @@ func TestRestoreNewNodeFromLeader(t *testing.T) {
 		clean2()
 	}()
 
-	time.Sleep(1 * time.Second)
+	// check the number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return len(node1.ClusterInfo().Nodes) == 2
+		}), "The number of nodes does not match")
 
 	// write some events
 	events := append([][]byte{},
@@ -318,7 +324,17 @@ func TestRestoreNewNodeFromLeader(t *testing.T) {
 		clean3()
 	}()
 
-	time.Sleep(1 * time.Second)
+	// check the number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return len(node1.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	// wait for WAL replication
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+		}), "WAL not in sync")
 
 	// take a snapshot to inspect its values
 	snap1, err := node1.Snapshot()
@@ -330,9 +346,6 @@ func TestRestoreNewNodeFromLeader(t *testing.T) {
 
 	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
-
-	// wait for WAL replication
-	time.Sleep(2 * time.Second)
 	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
 
 }
