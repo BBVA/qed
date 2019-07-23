@@ -223,7 +223,9 @@ func (fsm *BalloonFSM) Snapshot() (raft.FSMSnapshot, error) {
 	fsm.restoreMu.Lock()
 	defer fsm.restoreMu.Unlock()
 
-	id, err := fsm.store.Snapshot()
+	// id, err := fsm.store.Snapshot()
+	id := uint64(0)
+	var err error
 	if err != nil {
 		return nil, err
 	}
@@ -244,12 +246,12 @@ func (fsm *BalloonFSM) Restore(rc io.ReadCloser) error {
 
 	log.Debug("Restoring Balloon...")
 
-	var err error
+	// var err error
 	// Set the state from the snapshot, no lock required according to
 	// Hashicorp docs.
-	if err = fsm.store.Load(rc); err != nil {
-		return err
-	}
+	// if err = fsm.store.Load(rc); err != nil {
+	// 	return err
+	// }
 
 	// TODO: Restore metadata??
 
