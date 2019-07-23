@@ -216,7 +216,7 @@ func TestFetchAndLoadSnapshot(t *testing.T) {
 	require.Equal(t, numElems*uint64(len(tables)), until)
 
 	// fetch snapshot
-	ioBuf := bytes.NewBufferString("")
+	ioBuf := new(bytes.Buffer)
 	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
 
 	// load snapshot in another instance
