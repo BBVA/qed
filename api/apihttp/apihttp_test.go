@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	assert "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
@@ -141,7 +141,18 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 }
 
 func (b fakeRaftBalloon) Info() map[string]interface{} {
-	return make(map[string]interface{})
+	m := make(map[string]interface{})
+	m["nodeID"] = "node01"
+	m["leaderID"] = "node01"
+
+	node01 := make(map[string]string)
+	node01["HTTPAddr"] = "127.0.0.1:8800"
+	meta := make(map[string]map[string]string)
+	meta["node01"] = node01
+
+	m["meta"] = meta
+
+	return m
 }
 
 func (b fakeRaftBalloon) Backup() error {
@@ -316,7 +327,7 @@ func TestMembership(t *testing.T) {
 	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 
@@ -362,7 +373,7 @@ func TestMembershipConsistency(t *testing.T) {
 	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 
@@ -408,7 +419,7 @@ func TestDigestMembership(t *testing.T) {
 	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 
@@ -456,7 +467,7 @@ func TestDigestMembershipConsistency(t *testing.T) {
 	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 
@@ -469,7 +480,7 @@ func TestIncremental(t *testing.T) {
 	})
 
 	req, err := http.NewRequest("POST", "/proofs/incremental", bytes.NewBuffer(query))
-	assert.NoError(t, err, "Error querying for incremental proof")
+	require.NoError(t, err, "Error querying for incremental proof")
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
@@ -486,13 +497,13 @@ func TestIncremental(t *testing.T) {
 
 	// Check the status code is what we expect.
 	status := rr.Code
-	assert.Equalf(t, http.StatusOK, status, "handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	require.Equalf(t, http.StatusOK, status, "handler returned wrong status code: got %v want %v", status, http.StatusOK)
 
 	// Check the body response
 	actualResult := new(protocol.IncrementalResponse)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	assert.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
 }
 
 func TestAuthHandlerMiddleware(t *testing.T) {
@@ -518,6 +529,65 @@ func TestAuthHandlerMiddleware(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusNoContent)
 	}
+}
+
+func TestInfo(t *testing.T) {
+	req, err := http.NewRequest("GET", "/info", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := InfoHandler(protocol.NodeInfo{
+		NodeID: "node01",
+	})
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the body response
+	nodeInfo := &protocol.NodeInfo{}
+	_ = json.Unmarshal([]byte(rr.Body.String()), nodeInfo)
+
+	require.Equal(t, "node01", nodeInfo.NodeID, "Wrong node ID")
+}
+
+func TestInfoShard(t *testing.T) {
+	req, err := http.NewRequest("GET", "/info/shards", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	rr := httptest.NewRecorder()
+	handler := InfoShardsHandler(fakeRaftBalloon{})
+
+	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+	// directly and pass in our Request and ResponseRecorder.
+	handler.ServeHTTP(rr, req)
+
+	// Check the status code is what we expect.
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	// Check the body response
+	infoShards := &protocol.Shards{}
+	_ = json.Unmarshal([]byte(rr.Body.String()), infoShards)
+
+	require.Equal(t, "node01", infoShards.NodeId, "Wrong node ID")
+	require.Equal(t, "node01", infoShards.LeaderId, "Wrong leader ID")
+	require.Equal(t, protocol.Scheme("http"), infoShards.URIScheme, "Wrong scheme")
+	require.Equal(t, 1, len(infoShards.Shards), "Wrong number of shards")
 }
 
 func BenchmarkNoAuth(b *testing.B) {
@@ -578,18 +648,19 @@ func newNodeBench(b *testing.B, id int) (*raftwal.RaftBalloon, func()) {
 	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
 	os.MkdirAll(raftPath, os.FileMode(0755))
 	r, err := raftwal.NewRaftBalloon(raftPath, ":8301", fmt.Sprintf("%d", id), rocks, make(chan *protocol.Snapshot))
-	assert.NoError(b, err)
+	require.NoError(b, err)
 
 	return r, closeF
 
 }
+
 func BenchmarkApiAdd(b *testing.B) {
 
 	r, clean := newNodeBench(b, 1)
 	defer clean()
 
 	err := r.Open(true, map[string]string{"foo": "bar"})
-	assert.NoError(b, err)
+	require.NoError(b, err)
 
 	handler := Add(r)
 
