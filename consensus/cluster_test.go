@@ -243,7 +243,10 @@ func newSeed(id int) (*RaftNode, closeF, error) {
 	opts.Addr = raftAddr(id)
 	opts.ClusterMgmtAddr = clusterMgmtAddr(id)
 	opts.Bootstrap = true
-	return newNode(opts)
+	opts.SnapshotThreshold = 0
+	opts.TrailingLogs = 0
+	rocksOpts := rocks.DefaultOptions()
+	return newNode(opts, rocksOpts)
 }
 
 func newFollower(id int, seeds ...string) (*RaftNode, closeF, error) {
@@ -252,11 +255,14 @@ func newFollower(id int, seeds ...string) (*RaftNode, closeF, error) {
 	opts.Addr = raftAddr(id)
 	opts.ClusterMgmtAddr = clusterMgmtAddr(id)
 	opts.Bootstrap = false
+	opts.SnapshotThreshold = 0
+	opts.TrailingLogs = 0
 	opts.Seeds = seeds
-	return newNode(opts)
+	rocksOpts := rocks.DefaultOptions()
+	return newNode(opts, rocksOpts)
 }
 
-func newNode(opts *ClusteringOptions) (*RaftNode, closeF, error) {
+func newNode(opts *ClusteringOptions, rocksOpts *rocks.Options) (*RaftNode, closeF, error) {
 
 	var snapshotsCh chan *protocol.Snapshot
 	var metricsCloseF = func() {}
@@ -271,8 +277,9 @@ func newNode(opts *ClusteringOptions) (*RaftNode, closeF, error) {
 	if err := os.MkdirAll(dbPath, os.FileMode(0755)); err != nil {
 		return nil, cleanF, err
 	}
+	rocksOpts.Path = dbPath
 
-	db, err := rocks.NewRocksDBStore(dbPath)
+	db, err := rocks.NewRocksDBStoreWithOpts(rocksOpts)
 	if err != nil {
 		return nil, cleanF, err
 	}

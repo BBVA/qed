@@ -71,17 +71,24 @@ type RocksDBStore struct {
 type Options struct {
 	Path             string
 	EnableStatistics bool
+	MaxTotalWalSize  uint64
 	WALSizeLimitMB   uint64
 	WALTtlSeconds    uint64
 }
 
-func NewRocksDBStore(path string) (*RocksDBStore, error) {
-	return NewRocksDBStoreWithOpts(&Options{
-		Path:             path,
+func DefaultOptions() *Options {
+	return &Options{
 		EnableStatistics: true,
+		MaxTotalWalSize:  0,
 		WALSizeLimitMB:   1 << 20,
 		WALTtlSeconds:    0,
-	})
+	}
+}
+
+func NewRocksDBStore(path string) (*RocksDBStore, error) {
+	opts := DefaultOptions()
+	opts.Path = path
+	return NewRocksDBStoreWithOpts(opts)
 }
 
 func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
@@ -103,6 +110,7 @@ func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
+	globalOpts.SetMaxTotalWalSize(opts.MaxTotalWalSize)
 	globalOpts.SetWalSizeLimitMb(opts.WALSizeLimitMB)
 	globalOpts.SetWALTtlSeconds(opts.WALTtlSeconds)
 	//globalOpts.SetMaxOpenFiles(1000)
