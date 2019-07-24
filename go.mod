@@ -11,7 +11,7 @@ require (
 	github.com/hashicorp/go-msgpack v0.5.5
 	github.com/hashicorp/logutils v1.0.0
 	github.com/hashicorp/memberlist v0.1.4
-	github.com/hashicorp/raft v1.1.0
+	github.com/hashicorp/raft v1.1.1
 	github.com/imdario/mergo v0.3.7
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/octago/sflags v0.2.0
