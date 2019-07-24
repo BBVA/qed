@@ -44,11 +44,11 @@ func TestBackup(t *testing.T) {
 	raftNode.Apply(rl)
 
 	// Create backup
-	backupsList := raftNode.BackupsInfo()
+	backupsList := raftNode.ListBackups()
 	require.True(t, len(backupsList) == 0, "Backup list should be empty")
-	err = raftNode.Backup()
+	err = raftNode.CreateBackup()
 	require.NoError(t, err)
-	backupsList = raftNode.BackupsInfo()
+	backupsList = raftNode.ListBackups()
 	require.True(t, len(backupsList) == 1, "Backup list should contain 1 backup")
 }
 
@@ -71,15 +71,15 @@ func TestDeleteBackup(t *testing.T) {
 	raftNode.Apply(rl)
 
 	// Create backup and delete later.
-	backupsList := raftNode.BackupsInfo()
+	backupsList := raftNode.ListBackups()
 	require.True(t, len(backupsList) == 0, "Backup list must be empty")
-	err = raftNode.Backup()
+	err = raftNode.CreateBackup()
 	require.NoError(t, err)
-	backupsList = raftNode.BackupsInfo()
+	backupsList = raftNode.ListBackups()
 	require.True(t, len(backupsList) == 1, "Backup list must contain 1 backup")
 	err = raftNode.DeleteBackup(1)
 	require.NoError(t, err)
-	backupsList = raftNode.BackupsInfo()
+	backupsList = raftNode.ListBackups()
 	require.True(t, len(backupsList) == 0, "Backup list must be empty again")
 	err = raftNode.DeleteBackup(12345)
 	require.Error(t, err, "Deleting an unknown backup must return an error")

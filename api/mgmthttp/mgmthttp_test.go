@@ -17,6 +17,7 @@
 package mgmthttp
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -25,55 +26,56 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
 )
 
-type fakeRaftBalloon struct {
+type fakeRaftNode struct {
 }
 
-func (b fakeRaftBalloon) Add(event []byte) (*balloon.Snapshot, error) {
+func (b fakeRaftNode) Add(event []byte) (*balloon.Snapshot, error) {
 	return nil, nil
 }
 
-func (b fakeRaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
+func (b fakeRaftNode) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
 	return nil, nil
 }
 
-func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) error {
+func (b fakeRaftNode) JoinCluster(ctx context.Context, req *consensus.RaftJoinRequest) (*consensus.RaftJoinResponse, error) {
+	return nil, nil
+}
+
+func (b fakeRaftNode) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
+	return nil, nil
+}
+
+func (b fakeRaftNode) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
+	return nil, nil
+}
+
+func (b fakeRaftNode) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
+	return nil, nil
+}
+
+func (b fakeRaftNode) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
+	return nil, nil
+}
+
+func (b fakeRaftNode) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
+	return nil, nil
+}
+
+func (b fakeRaftNode) Info() *consensus.NodeInfo {
 	return nil
 }
 
-func (b fakeRaftBalloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftBalloon) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftBalloon) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftBalloon) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftBalloon) Info() map[string]interface{} {
-	return make(map[string]interface{})
-}
-
-func (b fakeRaftBalloon) Backup() error {
+func (b fakeRaftNode) CreateBackup() error {
 	return nil
 }
 
-func (b fakeRaftBalloon) ListBackups() []*storage.BackupInfo {
+func (b fakeRaftNode) ListBackups() []*storage.BackupInfo {
 	bi := make([]*storage.BackupInfo, 1)
 	info := &storage.BackupInfo{
 		ID: 1,
@@ -82,7 +84,7 @@ func (b fakeRaftBalloon) ListBackups() []*storage.BackupInfo {
 	return bi
 }
 
-func (b fakeRaftBalloon) DeleteBackup(backupID uint32) error {
+func (b fakeRaftNode) DeleteBackup(backupID uint32) error {
 	return nil
 }
 
@@ -94,7 +96,7 @@ func TestCreateBackup(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := ManageBackup(fakeRaftBalloon{})
+	handler := ManageBackup(fakeRaftNode{})
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -115,7 +117,7 @@ func TestListBackups(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := ListBackups(fakeRaftBalloon{})
+	handler := ListBackups(fakeRaftNode{})
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -141,7 +143,7 @@ func TestDeleteBackup(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := ManageBackup(fakeRaftBalloon{})
+	handler := ManageBackup(fakeRaftNode{})
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.

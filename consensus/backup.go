@@ -25,7 +25,7 @@ import (
 
 // Backup function calls store's backup function, passing certain metadata.
 // Previously, it gets balloon version to build this metadata.
-func (n *RaftNode) Backup() error {
+func (n *RaftNode) CreateBackup() error {
 	n.Lock()
 	defer n.Unlock()
 
@@ -47,7 +47,7 @@ func (n *RaftNode) DeleteBackup(backupID uint32) error {
 }
 
 // BackupsInfo function is a passthough to store's equivalent funcion.
-func (n *RaftNode) BackupsInfo() []*storage.BackupInfo {
+func (n *RaftNode) ListBackups() []*storage.BackupInfo {
 	log.Debugf("Retrieving backups information")
 	return n.db.GetBackupsInfo()
 }
