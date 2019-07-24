@@ -17,11 +17,14 @@
 package consensus
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/storage/rocks"
+	utilrand "github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/require"
 )
 
@@ -347,6 +350,51 @@ func TestRestoreNewNodeFromLeader(t *testing.T) {
 	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
 	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
+
+}
+
+func TestRestoreFailureDueToGap(t *testing.T) {
+
+	t.Skip()
+
+	log.SetLogger("TestRestoreFailureDueToGap", log.SILENT)
+
+	// start only one seed
+	opts := DefaultClusteringOptions()
+	opts.NodeID = fmt.Sprintf("%d", 1)
+	opts.Addr = raftAddr(1)
+	opts.ClusterMgmtAddr = clusterMgmtAddr(1)
+	opts.Bootstrap = true
+	opts.SnapshotThreshold = 0
+	opts.TrailingLogs = 0
+	rocksOpts := rocks.DefaultOptions()
+	rocksOpts.MaxTotalWalSize = 1 * 1024 * 1024 // set to only 1mb to aggressively flush write buffers
+	rocksOpts.WALSizeLimitMB = 0                // force to truncate the rocksdb WAL
+	rocksOpts.WALTtlSeconds = 1
+	node1, clean1, err := newNode(opts, rocksOpts)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node1.Close(true))
+		clean1()
+	}()
+
+	// check the leader of the cluster
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
+
+	// write some events
+	for i := uint64(0); i < 30000; i++ {
+		event := utilrand.Bytes(128)
+		_, err = node1.Add(event)
+		require.NoError(t, err)
+	}
+
+	// force a raft snapshot in both nodes in order to truncate the raft WAL
+	require.NoError(t, node1.raft.Snapshot().Error())
+
+	// start another node and join the cluster
+	_, _, err = newFollower(2, node1.info.ClusterMgmtAddr)
+	require.Error(t, err)
 
 }
 
