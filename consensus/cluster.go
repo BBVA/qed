@@ -24,15 +24,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/raft"
+	"google.golang.org/grpc"
+
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/raft"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -88,6 +89,21 @@ func DefaultClusteringOptions() *ClusteringOptions {
 		Sync:              false,
 		RaftLogging:       false,
 	}
+}
+
+type RaftNodeApi interface {
+	Add(event []byte) (*balloon.Snapshot, error)
+	AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error)
+	QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
+	QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error)
+	QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error)
+	QueryMembership(event []byte) (*balloon.MembershipProof, error)
+	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
+	JoinCluster(ctx context.Context, req *RaftJoinRequest) (*RaftJoinResponse, error)
+	Info() *NodeInfo
+	CreateBackup() error
+	ListBackups() []*storage.BackupInfo
+	DeleteBackup(backupID uint32) error
 }
 
 type RaftNode struct {
