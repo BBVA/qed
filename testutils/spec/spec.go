@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-type TestF func(t testing.TB)
+type TestF func(t *testing.T)
 
 type LetF func(t *testing.T, desc string, fns ...TestF)
 type ReportF func() string
