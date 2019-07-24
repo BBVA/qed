@@ -43,15 +43,6 @@ type RocksDBStore struct {
 	// column family handlers
 	cfHandles rocksdb.ColumnFamilyHandles
 
-	// checkpoints are stored in a path on the same
-	// folder as the database, so rocksdb uses hardlinks instead
-	// of copies
-	checkPointPath string
-
-	// each checkpoint is created in a subdirectory
-	// inside checkPointPath folder
-	checkpoints map[uint64]string
-
 	// global options
 	globalOpts *rocksdb.Options
 	// per column family options
@@ -153,28 +144,19 @@ func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
 
 	restoreOpts := rocksdb.NewRestoreOptions()
 
-	// CheckPoint.
-	checkPointPath := opts.Path + "/checkpoints"
-	err = os.MkdirAll(checkPointPath, 0755)
-	if err != nil {
-		return nil, err
-	}
-
 	store := &RocksDBStore{
-		path:           opts.Path,
-		db:             db,
-		stats:          stats,
-		cfHandles:      cfHandles,
-		blockCache:     blockCache,
-		backupEngine:   be,
-		backupOpts:     backupOpts,
-		restoreOpts:    restoreOpts,
-		checkPointPath: checkPointPath,
-		checkpoints:    make(map[uint64]string),
-		globalOpts:     globalOpts,
-		cfOpts:         cfOpts,
-		wo:             rocksdb.NewDefaultWriteOptions(),
-		ro:             rocksdb.NewDefaultReadOptions(),
+		path:         opts.Path,
+		db:           db,
+		stats:        stats,
+		cfHandles:    cfHandles,
+		blockCache:   blockCache,
+		backupEngine: be,
+		backupOpts:   backupOpts,
+		restoreOpts:  restoreOpts,
+		globalOpts:   globalOpts,
+		cfOpts:       cfOpts,
+		wo:           rocksdb.NewDefaultWriteOptions(),
+		ro:           rocksdb.NewDefaultReadOptions(),
 	}
 
 	if stats != nil {
@@ -532,78 +514,6 @@ func (s *RocksDBStore) DeleteBackup(backupID uint32) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-// Dump dumps a protobuf-encoded list of all entries in the database into the
-// Snapshot2 takes a snapshot of the store, and returns the
-// sequence number of the last applied batch. The sequence
-// number can be used as upper limit when fetching transactions
-// from the WAL.
-func (s *RocksDBStore) Snapshot2() (uint64, error) {
-	return s.db.GetLatestSequenceNumber(), nil
-}
-
-// Backup dumps a protobuf-encoded list of all entries in the database into the
-// given writer, that are newer than the specified version.
-func (s *RocksDBStore) Dump(w io.Writer, id uint64) error {
-
-	checkDir := s.checkpoints[id]
-
-	// open db for read-only
-	opts := rocksdb.NewDefaultOptions()
-	checkDB, err := rocksdb.OpenDBForReadOnly(checkDir, opts, true)
-	if err != nil {
-		return err
-	}
-	defer checkDB.Close()
-
-	// open a new iterator and dump every key
-	ro := rocksdb.NewDefaultReadOptions()
-	ro.SetFillCache(false)
-
-	tables := []storage.Table{
-		storage.DefaultTable,
-		storage.HyperTable,
-		storage.HistoryTable,
-		storage.FSMStateTable,
-	}
-	for _, table := range tables {
-
-		it := checkDB.NewIteratorCF(ro, s.cfHandles[table])
-		defer it.Close()
-
-		for it.SeekToFirst(); it.Valid(); it.Next() {
-			keySlice := it.Key()
-			valueSlice := it.Value()
-			keyData := keySlice.Data()
-			valueData := valueSlice.Data()
-			key := append(keyData[:0:0], keyData...) // See https://github.com/go101/go101/wiki
-			value := append(valueData[:0:0], valueData...)
-			keySlice.Free()
-			valueSlice.Free()
-
-			entry := &pb.KVPair{
-				Table: pb.Table(table),
-				Key:   key,
-				Value: value,
-			}
-
-			// write entries to disk
-			if err := writeTo(entry, w); err != nil {
-				return err
-			}
-		}
-
-	}
-
-	// remove checkpoint from list
-	// order must be maintained,
-	delete(s.checkpoints, id)
-
-	// clean up only after we succesfully backup
-	os.RemoveAll(checkDir)
-
 	return nil
 }
 
