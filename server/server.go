@@ -59,28 +59,6 @@ type Server struct {
 	snapshotsCh        chan *protocol.Snapshot
 }
 
-func serverInfo(conf *Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Make sure we can only be called with an HTTP POST request.
-		if r.Method != "GET" {
-			w.Header().Set("Allow", "GET")
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		out, err := json.Marshal(conf)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		w.Write(out)
-		return
-
-	}
-}
-
 // NewServer creates a new Server based on the parameters it receives.
 func NewServer(conf *Config) (*Server, error) {
 
@@ -154,9 +132,7 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// Create http endpoints
-	httpMux := apihttp.NewApiHttp(server.raftBalloon)
-	httpMux.HandleFunc("/info", serverInfo(conf))
-
+	httpMux := apihttp.NewApiHttp(server.raftBalloon, protocol.NodeInfo(*conf))
 	if conf.EnableTLS {
 		server.httpServer = newTLSServer(conf.HTTPAddr, httpMux)
 	} else {
