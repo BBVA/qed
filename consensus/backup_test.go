@@ -30,9 +30,12 @@ func TestBackup(t *testing.T) {
 	log.SetLogger("TestBackup", log.SILENT)
 
 	// New raft node
-	raftNode, closeF, err := newSeed(0)
-	defer closeF()
+	raftNode, clean, err := newSeed(0)
 	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, raftNode.Close(true))
+		clean()
+	}()
 
 	// Insert an event
 	h := hashing.NewSha256Hasher()
@@ -57,9 +60,11 @@ func TestDeleteBackup(t *testing.T) {
 	log.SetLogger("TestDeleteBackup", log.SILENT)
 
 	// New raft node
-	raftNode, closeF, err := newSeed(1)
-	defer closeF()
-	require.NoError(t, err)
+	raftNode, clean, err := newSeed(1)
+	defer func() {
+		require.NoError(t, raftNode.Close(true))
+		clean()
+	}()
 
 	// Insert an event
 	h := hashing.NewSha256Hasher()
