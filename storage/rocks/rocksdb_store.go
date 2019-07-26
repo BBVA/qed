@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/rocksdb"
@@ -76,9 +77,10 @@ func DefaultOptions() *Options {
 	}
 }
 
-func NewRocksDBStore(path string) (*RocksDBStore, error) {
+func NewRocksDBStore(path string, ttl time.Duration) (*RocksDBStore, error) {
 	opts := DefaultOptions()
 	opts.Path = path
+	opts.WALTtlSeconds = uint64(ttl.Seconds())
 	return NewRocksDBStoreWithOpts(opts)
 }
 
@@ -520,13 +522,16 @@ func (s *RocksDBStore) DeleteBackup(backupID uint32) error {
 // FetchSnapshot fetches all WAL transactions from the first available
 // seq_num to the last one specified in the lastSeqNum parameter, and dumps
 // them to the given writer.
-func (s *RocksDBStore) FetchSnapshot(w io.Writer, since, until uint64) error {
+func (s *RocksDBStore) FetchSnapshot(w io.WriteCloser, since, until uint64) error {
 
 	it, err := s.db.GetUpdatesSince(since) // we start on the first available seq_num
 	if err != nil {
 		return err
 	}
-	defer it.Close()
+	defer func() {
+		it.Close()
+		w.Close()
+	}()
 
 	for ; it.Valid(); it.Next() {
 		batch, seqNum := it.GetBatch()
@@ -574,12 +579,15 @@ func readChunk(r io.Reader) ([]byte, error) {
 // condition specified as parameter.
 // This method should be called on a database that is not running
 // any other concurrent transactions while it is running.
-func (s *RocksDBStore) LoadSnapshot(r io.Reader, valid storage.ValidateF) error {
+func (s *RocksDBStore) LoadSnapshot(r io.ReadCloser, valid storage.ValidateF) error {
 
 	wo := rocksdb.NewDefaultWriteOptions()
 
 	extractor := rocksdb.NewLogDataExtractor(s.path)
-	defer extractor.Destroy()
+	defer func() {
+		extractor.Destroy()
+		r.Close()
+	}()
 
 	for {
 		buff, err := readChunk(r)
