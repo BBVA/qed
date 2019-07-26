@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
@@ -89,21 +88,6 @@ func DefaultClusteringOptions() *ClusteringOptions {
 		Sync:              false,
 		RaftLogging:       false,
 	}
-}
-
-type RaftNodeApi interface {
-	Add(event []byte) (*balloon.Snapshot, error)
-	AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error)
-	QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
-	QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error)
-	QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error)
-	QueryMembership(event []byte) (*balloon.MembershipProof, error)
-	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
-	JoinCluster(ctx context.Context, req *RaftJoinRequest) (*RaftJoinResponse, error)
-	Info() *NodeInfo
-	CreateBackup() error
-	ListBackups() []*storage.BackupInfo
-	DeleteBackup(backupID uint32) error
 }
 
 type RaftNode struct {
@@ -180,15 +164,6 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	hasherF := hashing.NewSha256Hasher
 	node.hasherF = hasherF
 
-	// start grpc server to handle requests to join the cluster
-	listener, err := net.Listen("tcp", node.info.ClusterMgmtAddr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to listen: %v", err)
-	}
-	node.grpcServer = grpc.NewServer()
-	RegisterClusterServiceServer(node.grpcServer, node) // registers itself
-	go node.grpcServer.Serve(listener)                  // TODO fix this!!!
-
 	// Instantiate balloon FSM
 	node.balloon, err = balloon.NewBalloon(store, hasherF)
 	if err != nil {
@@ -220,12 +195,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	conf.Logger = hclog.Default()
 	node.raftConfig = conf
 
-	// setup Raft transport
-	advertiseAddr, err := net.ResolveTCPAddr("tcp", node.info.RaftAddr)
-	if err != nil {
-		return nil, err
-	}
-	node.transport, err = raft.NewTCPTransportWithLogger(node.info.RaftAddr, advertiseAddr, 3, 10*time.Second, log.GetLogger())
+	node.transport, err = NewCMuxTCPTransportWithLogger(node, 3, 10*time.Second, log.GetLogger())
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +248,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 			err := node.attemptToJoinCluster(opts.Seeds)
 			if err != nil {
 				node.Close(true)
-				return nil, fmt.Errorf("failed to join Raft cluster")
+				return nil, fmt.Errorf("failed to join Raft cluster: %v", err)
 			}
 			log.Info("Join operation finished successfully.")
 		}
@@ -291,30 +261,16 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 // Once closed, a RaftNode may not be re-opened.
 func (n *RaftNode) Close(wait bool) error {
 	n.Lock()
+
 	if n.closed {
 		n.Unlock()
 		return nil
 	}
-	defer func() {
-		n.closed = true
-		n.Unlock()
-	}()
 
-	close(n.done)
-
-	// shutdown grpc
-	if n.grpcServer != nil {
-		n.grpcServer.GracefulStop()
-		n.grpcServer = nil
-	}
+	n.closed = true
+	n.Unlock()
 
 	// shutdown Raft
-	if n.transport != nil {
-		if err := n.transport.Close(); err != nil {
-			return err
-		}
-		n.transport = nil
-	}
 	if n.raft != nil {
 		f := n.raft.Shutdown()
 		if wait {
@@ -324,6 +280,14 @@ func (n *RaftNode) Close(wait bool) error {
 		}
 		n.raft = nil
 	}
+
+	if n.transport != nil {
+		if err := n.transport.Close(); err != nil {
+			return err
+		}
+		n.transport = nil
+	}
+
 	if n.raftLog != nil {
 		if err := n.raftLog.Close(); err != nil {
 			return err
@@ -346,7 +310,6 @@ func (n *RaftNode) Close(wait bool) error {
 	}
 
 	return nil
-
 }
 
 func (n *RaftNode) IsLeader() bool {
@@ -412,14 +375,13 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 
 func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 	for _, addr := range addrs {
-		log.Debug("Joining existent Raft cluster in addr: ", addr)
 		conn, err := grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
-			// TODO change this!! return err
-			log.Fatalf("failed to join node at %s: %s", addr, err.Error())
+			return err
 		}
-		defer conn.Close()
-
+		defer func() {
+			conn.Close()
+		}()
 		client := NewClusterServiceClient(conn)
 
 		resp, err := client.JoinCluster(context.Background(), &RaftJoinRequest{
@@ -430,6 +392,7 @@ func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 			n.applyClusterInfo(resp.ClusterInfo)
 			return nil
 		}
+		fmt.Println("ERROR attemptToJoin: ", err)
 	}
 	return ErrCannotJoin
 }
@@ -466,7 +429,14 @@ func (n *RaftNode) bootstrapCluster() error {
 
 // blank string if there is no leader, or an error.
 func (n *RaftNode) leaderID() (string, error) {
+	n.Lock()
+	if n.closed {
+		n.Unlock()
+		return "", errors.New("Node is closed")
+	}
+	defer n.Unlock()
 	addr := n.raft.Leader()
+
 	configFuture := n.raft.GetConfiguration()
 	if err := configFuture.Error(); err != nil {
 		log.Infof("failed to get raft configuration: %v", err)
@@ -477,7 +447,8 @@ func (n *RaftNode) leaderID() (string, error) {
 			return string(srv.ID), nil
 		}
 	}
-	return "", nil
+
+	return "", errors.New("No leader")
 }
 
 // applies a command into the Raft.
