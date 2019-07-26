@@ -49,7 +49,7 @@ func TestAdd(t *testing.T) {
 		snapshot, mutations, err := balloon.Add(eventHash)
 		require.NoError(t, err)
 
-		err = store.Mutate(mutations)
+		err = store.Mutate(mutations, nil)
 		require.NoError(t, err)
 		assert.Truef(t, len(mutations) > 0, "There should be some mutations in test %d", i)
 
@@ -90,7 +90,7 @@ func TestAddBulk(t *testing.T) {
 	snapshotBulk, mutations, err := balloon.AddBulk(eventHashes)
 	require.NoError(t, err)
 
-	err = store.Mutate(mutations)
+	err = store.Mutate(mutations, nil)
 	require.NoError(t, err)
 	assert.Truef(t, len(mutations) > 0, "There should be some mutations")
 
@@ -126,7 +126,7 @@ func TestQueryMembershipConsistency(t *testing.T) {
 		if c.key != nil {
 			_, mutations, err := balloon.Add(h.Do(c.key))
 			require.NoErrorf(t, err, "Error adding event %d", i)
-			err = store.Mutate(mutations)
+			err = store.Mutate(mutations, nil)
 			require.NoError(t, err)
 		}
 
@@ -171,7 +171,7 @@ func TestQueryMembership(t *testing.T) {
 		if c.key != nil {
 			_, mutations, err := balloon.Add(h.Do(c.key))
 			require.NoErrorf(t, err, "Error adding event %d", i)
-			err = store.Mutate(mutations)
+			err = store.Mutate(mutations, nil)
 			require.NoError(t, err)
 		}
 
@@ -214,7 +214,7 @@ func TestQueryConsistencyProof(t *testing.T) {
 			eventHash := h.Do(util.Uint64AsBytes(uint64(j)))
 			_, mutations, err := balloon.Add(eventHash)
 			require.NoErrorf(t, err, "Error adding event %d", j)
-			err = store.Mutate(mutations)
+			err = store.Mutate(mutations, nil)
 			require.NoError(t, err)
 		}
 
@@ -252,7 +252,7 @@ func TestAddQueryAndVerify(t *testing.T) {
 	// Add event
 	snapshot, mutations, err := b.Add(h.Do(event))
 	require.NoError(t, err)
-	err = store.Mutate(mutations)
+	err = store.Mutate(mutations, nil)
 	require.NoError(t, err)
 
 	// Query event
@@ -283,7 +283,7 @@ func TestCacheWarmingUp(t *testing.T) {
 		snapshot, mutations, err := balloon.Add(eventHash)
 		require.NoError(t, err)
 		lastSnapshot = snapshot
-		err = store.Mutate(mutations)
+		err = store.Mutate(mutations, nil)
 		require.NoError(t, err)
 	}
 
@@ -320,7 +320,7 @@ func TestGenIncrementalAndVerify(t *testing.T) {
 	for i := 0; i < size; i++ {
 		event := h.Do([]byte(fmt.Sprintf("Never knows %d best", i)))
 		snapshot, mutations, _ := b.Add(event)
-		err = store.Mutate(mutations)
+		err = store.Mutate(mutations, nil)
 		require.NoError(t, err)
 		s[i] = snapshot
 	}
@@ -356,7 +356,7 @@ func BenchmarkAddRocksDB(b *testing.B) {
 		event := rand.Bytes(128)
 		_, mutations, err := balloon.Add(h.Do(event))
 		require.NoError(b, err)
-		require.NoError(b, store.Mutate(mutations))
+		require.NoError(b, store.Mutate(mutations, nil))
 		AddTotal.Inc()
 	}
 }
@@ -383,7 +383,7 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 		events := []hashing.Digest{h.Do(rand.Bytes(128))}
 		_, mutations, err := balloon.AddBulk(events)
 		require.NoError(b, err)
-		require.NoError(b, store.Mutate(mutations))
+		require.NoError(b, store.Mutate(mutations, nil))
 		AddTotal.Inc()
 	}
 }
@@ -406,7 +406,7 @@ func BenchmarkQueryRocksDB(b *testing.B) {
 		eventHash := h.Do(event)
 		events = append(events, event)
 		_, mutations, _ := balloon.Add(eventHash)
-		_ = store.Mutate(mutations)
+		_ = store.Mutate(mutations, nil)
 	}
 
 	b.ResetTimer()
@@ -434,7 +434,7 @@ func BenchmarkQueryRocksDBParallel(b *testing.B) {
 		eventHash := h.Do(event)
 		events = append(events, event)
 		_, mutations, _ := balloon.Add(eventHash)
-		_ = store.Mutate(mutations)
+		_ = store.Mutate(mutations, nil)
 	}
 
 	b.ResetTimer()
