@@ -39,22 +39,10 @@ type Shards struct {
 
 // NodeInfo is the public struct that apihttp.InfoHandler call returns.
 type NodeInfo struct {
-	Log               string   `json:"log"`
-	APIKey            string   `json:"apiKey"`
-	NodeID            string   `json:"nodeID"`
-	HTTPAddr          string   `json:"httpAddr"`
-	RaftAddr          string   `json:"raftAddr"`
-	MgmtAddr          string   `json:"mgmtAddr"`
-	MetricsAddr       string   `json:"metricsAddr"`
-	RaftJoinAddr      []string `json:"raftJoinAddr"`
-	DBPath            string   `json:"dbPath"`
-	RaftPath          string   `json:"raftPath"`
-	GossipAddr        string   `json:"gossipAddr"`
-	GossipJoinAddr    []string `json:"gossipJoinAddr"`
-	PrivateKeyPath    string   `json:"privateKeyPath"`
-	EnableTLS         bool     `json:"enableTLS"`
-	EnableProfiling   bool     `json:"enableProfiling"`
-	ProfilingAddr     string   `json:"profilingAddr"`
-	SSLCertificate    string   `json:"sslCertificate"`
-	SSLCertificateKey string   `json:"sslCertificateKey"`
+	NodeId          string `json:"node_id"`
+	RaftAddr        string `json:"raft_addr"`
+	ClusterMgmtAddr string `json:"cluster_mgmt_addr"`
+	HttpAddr        string `json:"http_addr"`
+	HttpMgmtAddr    string `json:"http_mgmt_addr"`
+	MetricsAddr     string `json:"metrics_addr"`
 }
