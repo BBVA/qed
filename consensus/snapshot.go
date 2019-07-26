@@ -19,7 +19,7 @@ package consensus
 import (
 	"bytes"
 	"context"
-	"io"
+	io "io"
 
 	"github.com/bbva/qed/log"
 	"github.com/hashicorp/raft"
@@ -78,6 +78,10 @@ func (c chunkWriter) Write(data []byte) (int, error) {
 	return len(data), nil
 }
 
+func (c chunkWriter) Close() error {
+	return nil
+}
+
 type chunkReader struct {
 	stream ClusterService_FetchSnapshotClient
 	buf    *bytes.Buffer
@@ -104,6 +108,10 @@ func (c *chunkReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+func (c *chunkReader) Close() error {
+	return c.stream.CloseSend()
+}
+
 func newChunkReader(stream ClusterService_FetchSnapshotClient) *chunkReader {
 	cr := new(chunkReader)
 	cr.stream = stream
@@ -117,10 +125,10 @@ func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_F
 	return n.db.FetchSnapshot(chunker, req.StartSeqNum, req.EndSeqNum)
 }
 
-func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.Reader, error) {
+func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.ReadCloser, error) {
 
 	nodeInfo := n.clusterInfo.Nodes[n.clusterInfo.LeaderId]
-	conn, err := grpc.Dial(nodeInfo.ClusterMgmtAddr, grpc.WithInsecure())
+	conn, err := grpc.Dial(nodeInfo.RaftAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}

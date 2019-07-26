@@ -24,7 +24,7 @@ import (
 
 func TestWALIterator(t *testing.T) {
 
-	db := newTestDB(t, "TestWALIterator", nil)
+	db, _ := newTestDB(t, "TestWALIterator", nil)
 	defer db.Close()
 
 	// insert keys
@@ -52,7 +52,7 @@ func TestWALIterator(t *testing.T) {
 
 func TestWALIteratorFromBeginning(t *testing.T) {
 
-	db := newTestDB(t, "TestWALIteratorFromBeginning", nil)
+	db, _ := newTestDB(t, "TestWALIteratorFromBeginning", nil)
 	defer db.Close()
 
 	// insert keys

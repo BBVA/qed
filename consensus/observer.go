@@ -50,13 +50,22 @@ func (n *RaftNode) startObservationsConsumer() {
 				}
 				fmt.Printf("ID[%s] - %+v\n", n.info.NodeId, peerObs)
 			case raft.LeaderObservation:
+				var id string
 				fmt.Printf("ID[%s] - %+v\n", n.info.NodeId, obs.Data)
-				id, err := n.leaderID()
-				if err == nil {
-					n.infoMu.Lock()
-					n.clusterInfo.LeaderId = id
-					n.infoMu.Unlock()
+
+				addr := n.raft.Leader()
+				n.infoMu.Lock()
+				for k, node := range n.clusterInfo.Nodes {
+					if string(addr) == node.RaftAddr {
+						id = k
+						break
+					}
 				}
+
+				if id != "" {
+					n.clusterInfo.LeaderId = id
+				}
+				n.infoMu.Unlock()
 			default:
 			}
 		case <-n.done:

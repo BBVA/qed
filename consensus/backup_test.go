@@ -30,11 +30,11 @@ func TestBackup(t *testing.T) {
 	log.SetLogger("TestBackup", log.SILENT)
 
 	// New raft node
-	raftNode, clean, err := newSeed(0)
+	raftNode, clean, err := newSeed("backup-node-0", 0)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, raftNode.Close(true))
-		clean()
+		clean(true)
 	}()
 
 	// Insert an event
@@ -60,10 +60,11 @@ func TestDeleteBackup(t *testing.T) {
 	log.SetLogger("TestDeleteBackup", log.SILENT)
 
 	// New raft node
-	raftNode, clean, err := newSeed(1)
+	raftNode, clean, err := newSeed("backup-node-1", 1)
+	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, raftNode.Close(true))
-		clean()
+		clean(true)
 	}()
 
 	// Insert an event
