@@ -17,7 +17,6 @@
 package mgmthttp
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -25,50 +24,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/balloon"
-	"github.com/bbva/qed/consensus"
-	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
 )
 
 type fakeRaftNode struct {
-}
-
-func (b fakeRaftNode) Add(event []byte) (*balloon.Snapshot, error) {
-	return nil, nil
-}
-
-func (b fakeRaftNode) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
-	return nil, nil
-}
-
-func (b fakeRaftNode) JoinCluster(ctx context.Context, req *consensus.RaftJoinRequest) (*consensus.RaftJoinResponse, error) {
-	return nil, nil
-}
-
-func (b fakeRaftNode) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftNode) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftNode) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftNode) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftNode) QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error) {
-	return nil, nil
-}
-
-func (b fakeRaftNode) Info() *consensus.NodeInfo {
-	return nil
 }
 
 func (b fakeRaftNode) CreateBackup() error {
