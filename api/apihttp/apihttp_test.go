@@ -19,24 +19,19 @@ package apihttp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
+	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/protocol"
-	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/storage"
-	"github.com/bbva/qed/testutils/rand"
-	storage_utils "github.com/bbva/qed/testutils/storage"
 )
 
 type fakeRaftBalloon struct {
@@ -69,10 +64,6 @@ func (b fakeRaftBalloon) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
 			Version:       1,
 		},
 	}, nil
-}
-
-func (b fakeRaftBalloon) Join(nodeID, addr string, metadata map[string]string) error {
-	return nil
 }
 
 func (b fakeRaftBalloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
@@ -140,19 +131,12 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 	return &ip, nil
 }
 
-func (b fakeRaftBalloon) Info() map[string]interface{} {
-	m := make(map[string]interface{})
-	m["nodeID"] = "node01"
-	m["leaderID"] = "node01"
-
-	node01 := make(map[string]string)
-	node01["HTTPAddr"] = "127.0.0.1:8800"
-	meta := make(map[string]map[string]string)
-	meta["node01"] = node01
-
-	m["meta"] = meta
-
-	return m
+func (b fakeRaftBalloon) Info() *consensus.NodeInfo {
+	return &consensus.NodeInfo{
+		NodeId:          "node01",
+		RaftAddr:        "127.0.0.1:8800",
+		ClusterMgmtAddr: "127.0.0.1:8801",
+	}
 }
 
 func (b fakeRaftBalloon) Backup() error {
@@ -539,9 +523,7 @@ func TestInfo(t *testing.T) {
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
-	handler := InfoHandler(protocol.NodeInfo{
-		NodeID: "node01",
-	})
+	handler := InfoHandler(fakeRaftBalloon{})
 
 	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
 	// directly and pass in our Request and ResponseRecorder.
@@ -588,93 +570,4 @@ func TestInfoShard(t *testing.T) {
 	require.Equal(t, "node01", infoShards.LeaderId, "Wrong leader ID")
 	require.Equal(t, protocol.Scheme("http"), infoShards.URIScheme, "Wrong scheme")
 	require.Equal(t, 1, len(infoShards.Shards), "Wrong number of shards")
-}
-
-func BenchmarkNoAuth(b *testing.B) {
-
-	req, err := http.NewRequest("GET", "/health-check", nil)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(HealthCheckHandler)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
-
-	// Define our http client
-	client := &http.Client{}
-
-	for i := 0; i < b.N; i++ {
-		client.Do(req)
-	}
-}
-
-func BenchmarkAuth(b *testing.B) {
-
-	req, err := http.NewRequest("GET", "/health-check", nil)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	// Set Api-Key header
-	req.Header.Set("Api-Key", "this-is-my-api-key")
-
-	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
-	rr := httptest.NewRecorder()
-	handler := AuthHandlerMiddleware(HealthCheckHandler)
-
-	// Our handlers satisfy http.Handler, so we can call their ServeHTTP method
-	// directly and pass in our Request and ResponseRecorder.
-	handler.ServeHTTP(rr, req)
-
-	// Define our http client
-	client := &http.Client{}
-
-	for i := 0; i < b.N; i++ {
-		client.Do(req)
-	}
-}
-
-func newNodeBench(b *testing.B, id int) (*raftwal.RaftBalloon, func()) {
-	rocksdbPath := fmt.Sprintf("/var/tmp/raft-test/node%d/rocksdb", id)
-
-	os.MkdirAll(rocksdbPath, os.FileMode(0755))
-	rocks, closeF := storage_utils.OpenRocksDBStore(b, rocksdbPath)
-
-	raftPath := fmt.Sprintf("/var/tmp/raft-test/node%d/raft", id)
-	os.MkdirAll(raftPath, os.FileMode(0755))
-	r, err := raftwal.NewRaftBalloon(raftPath, ":8301", fmt.Sprintf("%d", id), rocks, make(chan *protocol.Snapshot))
-	require.NoError(b, err)
-
-	return r, closeF
-
-}
-
-func BenchmarkApiAdd(b *testing.B) {
-
-	r, clean := newNodeBench(b, 1)
-	defer clean()
-
-	err := r.Open(true, map[string]string{"foo": "bar"})
-	require.NoError(b, err)
-
-	handler := Add(r)
-
-	time.Sleep(2 * time.Second)
-	b.ResetTimer()
-	b.N = 10000
-	for i := 0; i < b.N; i++ {
-		data, _ := json.Marshal(&protocol.Event{rand.Bytes(128)})
-		req, _ := http.NewRequest("POST", "/events", bytes.NewBuffer(data))
-		rr := httptest.NewRecorder()
-		handler.ServeHTTP(rr, req)
-		if status := rr.Code; status != http.StatusCreated {
-			b.Errorf("handler returned wrong status code: got %v want %v",
-				status, http.StatusCreated)
-		}
-	}
 }

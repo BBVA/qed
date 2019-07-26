@@ -24,10 +24,22 @@ import (
 	"time"
 
 	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/consensus"
+	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
-	"github.com/bbva/qed/raftwal"
 )
+
+type ClientApi interface {
+	Add(event []byte) (*balloon.Snapshot, error)
+	AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error)
+	QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error)
+	QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error)
+	QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error)
+	QueryMembership(event []byte) (*balloon.MembershipProof, error)
+	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
+	Info() *consensus.NodeInfo
+}
 
 // HealthCheckResponse contains the response from HealthCheckHandler.
 type HealthCheckResponse struct {
@@ -44,19 +56,19 @@ type HealthCheckResponse struct {
 //	/proofs/incremental -> Incremental query
 //	/info -> Qed server information
 //	/info/shards -> Qed cluster information
-func NewApiHttp(balloon raftwal.RaftBalloonApi, conf protocol.NodeInfo) *http.ServeMux {
+func NewApiHttp(api ClientApi) *http.ServeMux {
 
-	api := http.NewServeMux()
-	api.HandleFunc("/healthcheck", AuthHandlerMiddleware(HealthCheckHandler))
-	api.HandleFunc("/events", AuthHandlerMiddleware(Add(balloon)))
-	api.HandleFunc("/events/bulk", AuthHandlerMiddleware(AddBulk(balloon)))
-	api.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(balloon)))
-	api.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(balloon)))
-	api.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(balloon)))
-	api.HandleFunc("/info", AuthHandlerMiddleware(InfoHandler(conf)))
-	api.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(balloon)))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthcheck", AuthHandlerMiddleware(HealthCheckHandler))
+	mux.HandleFunc("/events", AuthHandlerMiddleware(Add(api)))
+	mux.HandleFunc("/events/bulk", AuthHandlerMiddleware(AddBulk(api)))
+	mux.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(api)))
+	mux.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(api)))
+	mux.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(api)))
+	mux.HandleFunc("/info", AuthHandlerMiddleware(InfoHandler(api)))
+	mux.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(api)))
 
-	return api
+	return mux
 }
 
 // AuthHandlerMiddleware function is an HTTP handler wrapper that performs
@@ -110,7 +122,7 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 //     "HyperDigest":   "6a050f12acfc22989a7681f901a68ace8a9a3672428f8a877f4d21568123a0cb",
 //     "Version": 0
 //   }
-func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
+func Add(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		// Make sure we can only be called with an HTTP POST request.
@@ -169,7 +181,7 @@ func Add(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //	},
 //	...
 // ]
-func AddBulk(api raftwal.RaftBalloonApi) http.HandlerFunc {
+func AddBulk(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		// Make sure we can only be called with an HTTP POST request.
@@ -221,7 +233,7 @@ func AddBulk(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //  "ActualVersion":	0,
 // 	"KeyDigest":		"5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b"
 // }
-func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
+func Membership(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var proof *balloon.MembershipProof
 		var err error
@@ -286,7 +298,7 @@ func Membership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //  "ActualVersion":	0,
 //  "KeyDigest":		"5beeaf427ee0bfcd1a7b6f63010f2745110cf23ae088b859275cd0aad369561b"
 // }
-func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
+func DigestMembership(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var proof *balloon.MembershipProof
 		var err error
@@ -345,7 +357,7 @@ func DigestMembership(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //     "End": "8",
 //     "AuditPath": ["<truncated for clarity in docs>"]
 //   }
-func Incremental(api raftwal.RaftBalloonApi) http.HandlerFunc {
+func Incremental(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		// Make sure we can only be called with an HTTP POST request.
@@ -402,7 +414,7 @@ func Incremental(api raftwal.RaftBalloonApi) http.HandlerFunc {
 //    }
 //   }
 // }
-func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
+func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		// Make sure we can only be called with an HTTP GET request.
@@ -411,30 +423,32 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 			return
 		}
 
-		var scheme string
-		if r.TLS != nil {
-			scheme = "https"
-		} else {
-			scheme = "http"
-		}
-
-		info := balloon.Info()
-		details := make(map[string]protocol.ShardDetail)
-		for k, v := range info["meta"].(map[string]map[string]string) {
-			details[k] = protocol.ShardDetail{
-				NodeId:   k,
-				HTTPAddr: v["HTTPAddr"],
+		/*
+			var scheme string
+			if r.TLS != nil {
+				scheme = "https"
+			} else {
+				scheme = "http"
 			}
-		}
 
-		shards := &protocol.Shards{
-			NodeId:    info["nodeID"].(string),
-			LeaderId:  info["leaderID"].(string),
-			URIScheme: protocol.Scheme(scheme),
-			Shards:    details,
-		}
 
-		out, err := json.Marshal(shards)
+				info := api.Info()
+				details := make(map[string]protocol.ShardDetail)
+				for k, v := range info["meta"].(map[string]map[string]string) {
+					details[k] = protocol.ShardDetail{
+						NodeId:   k,
+						HTTPAddr: v["HTTPAddr"],
+					}
+				}
+
+				shards := &protocol.Shards{
+					NodeId:    info["nodeID"].(string),
+					LeaderId:  info["leaderID"].(string),
+					URIScheme: protocol.Scheme(scheme),
+					Shards:    details,
+				} */
+
+		out, err := json.Marshal(api.Info())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -470,7 +484,7 @@ func InfoShardsHandler(balloon raftwal.RaftBalloonApi) http.HandlerFunc {
 //  "SSLCertificate": 		"/var/tmp/certs/my-cert",
 //  "SSLCertificateKey": 	"/var/tmp/certs",
 // }
-func InfoHandler(conf protocol.NodeInfo) http.HandlerFunc {
+func InfoHandler(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 
@@ -480,7 +494,7 @@ func InfoHandler(conf protocol.NodeInfo) http.HandlerFunc {
 			return
 		}
 
-		out, err := json.Marshal(conf)
+		out, err := json.Marshal(api.Info())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
