@@ -34,6 +34,8 @@ type MgmtApi interface {
 
 // NewMgmtHttp will return a mux server with endpoints to manage different
 // QED log service features: DDBB backups, Raft membership,...
+//	/backup -> Create or Delete a backup
+//	/backups -> List backups
 func NewMgmtHttp(api MgmtApi) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/backup", apihttp.AuthHandlerMiddleware(ManageBackup(api)))
