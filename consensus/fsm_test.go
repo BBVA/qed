@@ -33,11 +33,11 @@ func TestApplyAdd(t *testing.T) {
 	log.SetLogger("TestApplyAdd", log.SILENT)
 
 	// start only one seed
-	node, clean, err := newSeed(1)
+	node, clean, err := newSeed("apply-add-node-1", 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node.Close(true))
-		clean()
+		clean(true)
 	}()
 
 	require.Truef(t, retryTrue(50, 200*time.Millisecond, node.IsLeader), "a single node is not leader!")
@@ -77,11 +77,11 @@ func BenchmarkApplyAdd(b *testing.B) {
 	log.SetLogger("BenchmarkApplyAdd", log.SILENT)
 
 	// start only one seed
-	node, clean, err := newSeed(1)
+	node, clean, err := newSeed("benchmark-apply-add-node-1", 1)
 	require.NoError(b, err)
 	defer func() {
 		require.NoError(b, node.Close(true))
-		clean()
+		clean(true)
 	}()
 
 	require.Truef(b, retryTrue(50, 200*time.Millisecond, node.IsLeader), "a single node is not leader!")
@@ -103,11 +103,11 @@ func BenchmarkRaftAdd(b *testing.B) {
 
 	log.SetLogger("BenchmarkRaftAdd", log.SILENT)
 
-	node, clean, err := newSeed(1)
+	node, clean, err := newSeed("bench-raft-add-node-1", 1)
 	require.NoError(b, err)
 	defer func() {
 		require.NoError(b, node.Close(true))
-		clean()
+		clean(true)
 	}()
 
 	require.Truef(b, retryTrue(50, 200*time.Millisecond, node.IsLeader), "a single node is not leader!")

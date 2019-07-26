@@ -21,6 +21,7 @@ import (
 	io "io"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -38,19 +39,18 @@ type TCPStreamLayer struct {
 	advertise  net.Addr
 	mux        cmux.CMux
 	grpcServer *grpc.Server
-	listener   *net.TCPListener
+	listener   net.Listener
 }
 
 // NewCMuxTCPTransport returns a NetworkTransport that is built on top of
 // a TCP streaming transport layer.
 func NewCMuxTCPTransport(
-	bindAddr string,
-	advertise net.Addr,
+	node *RaftNode,
 	maxPool int,
 	timeout time.Duration,
 	logOutput io.Writer,
 ) (*raft.NetworkTransport, error) {
-	return newTCPTransport(bindAddr, advertise, func(stream raft.StreamLayer) *raft.NetworkTransport {
+	return newTCPTransport(node, func(stream raft.StreamLayer) *raft.NetworkTransport {
 		return raft.NewNetworkTransport(stream, maxPool, timeout, logOutput)
 	})
 }
@@ -58,13 +58,12 @@ func NewCMuxTCPTransport(
 // NewCMuxTCPTransportWithLogger returns a NetworkTransport that is built on top of
 // a TCP streaming transport layer, with log output going to the supplied Logger
 func NewCMuxTCPTransportWithLogger(
-	bindAddr string,
-	advertise net.Addr,
+	node *RaftNode,
 	maxPool int,
 	timeout time.Duration,
 	logger *log.Logger,
 ) (*raft.NetworkTransport, error) {
-	return newTCPTransport(bindAddr, advertise, func(stream raft.StreamLayer) *raft.NetworkTransport {
+	return newTCPTransport(node, func(stream raft.StreamLayer) *raft.NetworkTransport {
 		return raft.NewNetworkTransportWithLogger(stream, maxPool, timeout, logger)
 	})
 }
@@ -72,21 +71,25 @@ func NewCMuxTCPTransportWithLogger(
 // NewCMuxTCPTransportWithConfig returns a NetworkTransport that is built on top of
 // a TCP streaming transport layer, using the given config struct.
 func NewCMuxTCPTransportWithConfig(
-	bindAddr string,
-	advertise net.Addr,
+	node *RaftNode,
 	config *raft.NetworkTransportConfig,
 ) (*raft.NetworkTransport, error) {
-	return newTCPTransport(bindAddr, advertise, func(stream raft.StreamLayer) *raft.NetworkTransport {
+	return newTCPTransport(node, func(stream raft.StreamLayer) *raft.NetworkTransport {
 		config.Stream = stream
 		return raft.NewNetworkTransportWithConfig(config)
 	})
 }
 
-func newTCPTransport(bindAddr string,
-	advertise net.Addr,
+func newTCPTransport(node *RaftNode,
 	transportCreator func(stream raft.StreamLayer) *raft.NetworkTransport) (*raft.NetworkTransport, error) {
+
+	advertiseAddr, err := net.ResolveTCPAddr("tcp", node.info.RaftAddr)
+	if err != nil {
+		return nil, err
+	}
+
 	// Try to bind
-	list, err := net.Listen("tcp", bindAddr)
+	list, err := net.Listen("tcp", node.info.RaftAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -96,21 +99,29 @@ func newTCPTransport(bindAddr string,
 
 	// Match connections in order:
 	// First grpc, otherwise TCP
-	grpcL := mux.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
+	// grpcL := mux.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
+	grpcL := mux.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
 	tcpL := mux.Match(cmux.Any()) // Any means anything that is not yet matched.
 
 	// Create the protocol Server
 	grpcS := grpc.NewServer()
+	RegisterClusterServiceServer(grpcS, node)
 
 	// Use the muxed listeners for your servers
 	go grpcS.Serve(grpcL)
 
+	go func() {
+		if err := mux.Serve(); !strings.Contains(err.Error(), "use of closed network connection") {
+			panic(err)
+		}
+	}()
+
 	// Create stream
 	stream := &TCPStreamLayer{
-		advertise:  advertise,
+		advertise:  advertiseAddr,
 		mux:        mux,
 		grpcServer: grpcS,
-		listener:   tcpL.(*net.TCPListener),
+		listener:   tcpL,
 	}
 
 	// Verify that we have a usable advertise address
@@ -141,10 +152,10 @@ func (t *TCPStreamLayer) Accept() (c net.Conn, err error) {
 
 // Close implements the net.Listener interface.
 func (t *TCPStreamLayer) Close() (err error) {
-	t.grpcServer.GracefulStop()
 	if err := t.listener.Close(); err != nil {
 		return err
 	}
+	t.grpcServer.Stop()
 	return nil
 }
 
