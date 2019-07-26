@@ -349,7 +349,7 @@ func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
 
 func openRocksDBStore(t require.TestingT) (*RocksDBStore, func()) {
 	path := mustTempDir()
-	store, err := NewRocksDBStore(filepath.Join(path, "rockdsdb_store_test.db"))
+	store, err := NewRocksDBStore(filepath.Join(path, "rockdsdb_store_test.db"), 0)
 	if err != nil {
 		t.Errorf("Error opening rocksdb store: %v", err)
 		t.FailNow()
