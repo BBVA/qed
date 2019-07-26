@@ -28,17 +28,19 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/mgmthttp"
+	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/sign"
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
-	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/storage/rocks"
 )
 
@@ -49,7 +51,8 @@ type Server struct {
 
 	httpServer         *http.Server
 	mgmtServer         *http.Server
-	raftBalloon        *raftwal.RaftBalloon
+	grpcMgmtServer     *grpc.Server
+	raftNode           *consensus.RaftNode
 	metrics            *serverMetrics
 	metricsServer      *metrics.Server
 	prometheusRegistry *prometheus.Registry
@@ -83,7 +86,7 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// Open RocksDB store
-	store, err := rocks.NewRocksDBStore(conf.DBPath)
+	store, err := rocks.NewRocksDBStore(conf.DBPath, conf.DbWalTtl)
 	if err != nil {
 		return nil, err
 	}
@@ -126,28 +129,37 @@ func NewServer(conf *Config) (*Server, error) {
 	server.sender = NewSender(server.agent, server.signer, 500, 2, 3)
 
 	// Create RaftBalloon
-	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.snapshotsCh)
+	clusterOpts := consensus.DefaultClusteringOptions()
+	clusterOpts.NodeID = conf.NodeID
+	clusterOpts.Addr = conf.RaftAddr
+	clusterOpts.RaftLogPath = conf.DBPath
+	clusterOpts.ClusterMgmtAddr = conf.MgmtAddr
+	clusterOpts.Bootstrap = bootstrap
+
+	server.raftNode, err = consensus.NewRaftNode(clusterOpts, store, server.snapshotsCh)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create http endpoints
-	httpMux := apihttp.NewApiHttp(server.raftBalloon, protocol.NodeInfo(*conf))
+	httpMux := apihttp.NewApiHttp(server.raftNode)
 	if conf.EnableTLS {
 		server.httpServer = newTLSServer(conf.HTTPAddr, httpMux)
 	} else {
-		server.httpServer = newHTTPServer(conf.HTTPAddr, httpMux)
+		server.httpServer = newHTTPServer(conf.HTTPAddr, httpMux, nil)
 	}
 
 	// Create management endpoints
-	mgmtMux := mgmthttp.NewMgmtHttp(server.raftBalloon)
-	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux)
+	mgmtMux := mgmthttp.NewMgmtHttp(server.raftNode)
+	server.grpcMgmtServer = grpc.NewServer()
+	consensus.RegisterClusterServiceServer(server.grpcMgmtServer, server.raftNode)
+	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux, server.grpcMgmtServer)
 
 	// register qed metrics
 	server.metrics = newServerMetrics()
 	server.RegisterMetrics(server.metricsServer)
 	store.RegisterMetrics(server.metricsServer)
-	server.raftBalloon.RegisterMetrics(server.metricsServer)
+	server.raftNode.RegisterMetrics(server.metricsServer)
 	server.sender.RegisterMetrics(server.metricsServer)
 
 	return server, nil
@@ -180,11 +192,6 @@ func (s *Server) Start() error {
 
 	metadata := map[string]string{}
 	metadata["HTTPAddr"] = s.conf.HTTPAddr
-
-	err := s.raftBalloon.Open(s.bootstrap, metadata)
-	if err != nil {
-		return err
-	}
 
 	log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
 	s.metricsServer.Start()
@@ -247,6 +254,11 @@ func (s *Server) Stop() error {
 		log.Error(err)
 		return err
 	}
+	if s.grpcMgmtServer != nil {
+		log.Debugf("Stopping grpc MGMT server...")
+		s.grpcMgmtServer.GracefulStop()
+		s.grpcMgmtServer = nil
+	}
 
 	log.Debugf("Stopping API HTTP server...")
 	if err := s.httpServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
@@ -264,7 +276,7 @@ func (s *Server) Stop() error {
 	}
 
 	log.Debugf("Stopping RAFT server...")
-	err := s.raftBalloon.Close(true)
+	err := s.raftNode.Close(true)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -309,7 +321,7 @@ func newTLSServer(addr string, mux *http.ServeMux) *http.Server {
 
 }
 
-func newHTTPServer(addr string, mux *http.ServeMux) *http.Server {
+func newHTTPServer(addr string, mux *http.ServeMux, grpc *grpc.Server) *http.Server {
 	var handler http.Handler
 	if mux != nil {
 		handler = apihttp.LogHandler(mux)
@@ -317,8 +329,22 @@ func newHTTPServer(addr string, mux *http.ServeMux) *http.Server {
 		handler = nil
 	}
 
+	if grpc != nil {
+		handler = grpcHandlerFunc(grpc, handler)
+	}
+
 	return &http.Server{
 		Addr:    addr,
 		Handler: handler,
 	}
+}
+
+func grpcHandlerFunc(grpc *grpc.Server, mux http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			grpc.ServeHTTP(w, r)
+		} else {
+			mux.ServeHTTP(w, r)
+		}
+	})
 }
