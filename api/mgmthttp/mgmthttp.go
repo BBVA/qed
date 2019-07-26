@@ -23,19 +23,25 @@ import (
 	"strconv"
 
 	"github.com/bbva/qed/api/apihttp"
-	"github.com/bbva/qed/consensus"
+	"github.com/bbva/qed/storage"
 )
+
+type MgmtApi interface {
+	CreateBackup() error
+	ListBackups() []*storage.BackupInfo
+	DeleteBackup(backupID uint32) error
+}
 
 // NewMgmtHttp will return a mux server with endpoints to manage different
 // QED log service features: DDBB backups, Raft membership,...
-func NewMgmtHttp(raftNode consensus.RaftNodeApi) *http.ServeMux {
+func NewMgmtHttp(api MgmtApi) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/backup", apihttp.AuthHandlerMiddleware(ManageBackup(raftNode)))
-	mux.HandleFunc("/backups", apihttp.AuthHandlerMiddleware(ListBackups(raftNode)))
+	mux.HandleFunc("/backup", apihttp.AuthHandlerMiddleware(ManageBackup(api)))
+	mux.HandleFunc("/backups", apihttp.AuthHandlerMiddleware(ListBackups(api)))
 	return mux
 }
 
-func ManageBackup(api consensus.RaftNodeApi) http.HandlerFunc {
+func ManageBackup(api MgmtApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "DELETE":
@@ -56,7 +62,7 @@ func ManageBackup(api consensus.RaftNodeApi) http.HandlerFunc {
 //
 // The following statuses are expected:
 // If everything is alright, the HTTP status is 200 with an empty body.
-func CreateBackup(api consensus.RaftNodeApi, w http.ResponseWriter, r *http.Request) {
+func CreateBackup(api MgmtApi, w http.ResponseWriter, r *http.Request) {
 	// Make sure we can only be called with an HTTP POST request.
 	if r.Method != "POST" {
 		w.Header().Set("Allow", "POST")
@@ -95,7 +101,7 @@ func CreateBackup(api consensus.RaftNodeApi, w http.ResponseWriter, r *http.Requ
 //	},
 //	...
 // ]
-func ListBackups(api consensus.RaftNodeApi) http.HandlerFunc {
+func ListBackups(api MgmtApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
 		// Make sure we can only be called with an HTTP GET request.
@@ -128,7 +134,7 @@ func ListBackups(api consensus.RaftNodeApi) http.HandlerFunc {
 //
 // The following statuses are expected:
 // If everything is alright, the HTTP status is 204 with an empty body.
-func DeleteBackup(api consensus.RaftNodeApi, w http.ResponseWriter, r *http.Request) {
+func DeleteBackup(api MgmtApi, w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "DELETE" {
 		w.Header().Set("Allow", "DELETE")
