@@ -38,6 +38,7 @@ type ClientApi interface {
 	QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error)
 	QueryMembership(event []byte) (*balloon.MembershipProof, error)
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
+	ClusterInfo() *consensus.ClusterInfo
 	Info() *consensus.NodeInfo
 }
 
@@ -423,32 +424,31 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 			return
 		}
 
-		/*
-			var scheme string
-			if r.TLS != nil {
-				scheme = "https"
-			} else {
-				scheme = "http"
+		var scheme string
+		if r.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+
+		clusterInfo := api.ClusterInfo()
+		nodeInfo := api.Info()
+		shardDetails := make(map[string]protocol.ShardDetail)
+
+		for _, node := range clusterInfo.Nodes {
+			shardDetails[node.NodeId] = protocol.ShardDetail{
+				NodeId:   node.NodeId,
+				HTTPAddr: node.HttpAddr,
 			}
+		}
 
-
-				info := api.Info()
-				details := make(map[string]protocol.ShardDetail)
-				for k, v := range info["meta"].(map[string]map[string]string) {
-					details[k] = protocol.ShardDetail{
-						NodeId:   k,
-						HTTPAddr: v["HTTPAddr"],
-					}
-				}
-
-				shards := &protocol.Shards{
-					NodeId:    info["nodeID"].(string),
-					LeaderId:  info["leaderID"].(string),
-					URIScheme: protocol.Scheme(scheme),
-					Shards:    details,
-				} */
-
-		out, err := json.Marshal(api.Info())
+		shards := &protocol.Shards{
+			NodeId:    nodeInfo.NodeId,
+			LeaderId:  clusterInfo.LeaderId,
+			URIScheme: protocol.Scheme(scheme),
+			Shards:    shardDetails,
+		}
+		out, err := json.Marshal(shards)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
