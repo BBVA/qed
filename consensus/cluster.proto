@@ -29,7 +29,7 @@ message NodeInfo {
 }
 
 message ClusterInfo {
-    string leader_id = 1;
+    string leader_addr = 1;
     map<string, NodeInfo> nodes = 2;
 }
 

@@ -126,9 +126,10 @@ func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_F
 }
 
 func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.ReadCloser, error) {
-
+	/* n.infoMu.Lock()
 	nodeInfo := n.clusterInfo.Nodes[n.clusterInfo.LeaderId]
-	conn, err := grpc.Dial(nodeInfo.RaftAddr, grpc.WithInsecure())
+	n.infoMu.Unlock() */
+	conn, err := grpc.Dial(n.clusterInfo.LeaderAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}

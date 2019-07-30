@@ -137,7 +137,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		info: info,
 		clusterInfo: &ClusterInfo{
 			Nodes: map[string]*NodeInfo{
-				info.NodeId: info,
+				info.RaftAddr: info,
 			},
 		},
 		observationsCh: make(chan raft.Observation, 1),
@@ -362,7 +362,7 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 
 	// update cluster info with the new node
 	n.infoMu.Lock()
-	n.clusterInfo.Nodes[req.NodeInfo.NodeId] = req.NodeInfo
+	n.clusterInfo.Nodes[req.NodeInfo.RaftAddr] = req.NodeInfo
 	n.infoMu.Unlock()
 	cmd := newCommand(infoSetCommandType)
 	cmd.encode(n.clusterInfo)
@@ -372,7 +372,7 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 	}
 	log.Infof("node %s at %s joined successfully", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
 
-	return &RaftJoinResponse{n.clusterInfo}, nil
+	return &RaftJoinResponse{ClusterInfo: n.clusterInfo}, nil
 }
 
 func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
