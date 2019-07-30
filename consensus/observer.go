@@ -40,7 +40,7 @@ func (n *RaftNode) startObservationsConsumer() {
 				peerObs := obs.Data.(raft.PeerObservation)
 				if peerObs.Removed {
 					n.infoMu.Lock()
-					delete(n.clusterInfo.Nodes, string(peerObs.Peer.ID))
+					delete(n.clusterInfo.Nodes, string(peerObs.Peer.Address))
 					n.infoMu.Unlock()
 					cmd := newCommand(infoSetCommandType)
 					cmd.encode(n.clusterInfo)
