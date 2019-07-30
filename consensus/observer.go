@@ -17,8 +17,6 @@
 package consensus
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/raft"
 )
 
@@ -48,22 +46,14 @@ func (n *RaftNode) startObservationsConsumer() {
 					cmd.encode(n.clusterInfo)
 					n.propose(cmd)
 				}
-				fmt.Printf("ID[%s] - %+v\n", n.info.NodeId, peerObs)
 			case raft.LeaderObservation:
-				var id string
-				fmt.Printf("ID[%s] - %+v\n", n.info.NodeId, obs.Data)
-
 				addr := n.raft.Leader()
 				n.infoMu.Lock()
-				for k, node := range n.clusterInfo.Nodes {
+				for id, node := range n.clusterInfo.Nodes {
 					if string(addr) == node.RaftAddr {
-						id = k
+						n.clusterInfo.LeaderId = id
 						break
 					}
-				}
-
-				if id != "" {
-					n.clusterInfo.LeaderId = id
 				}
 				n.infoMu.Unlock()
 			default:
