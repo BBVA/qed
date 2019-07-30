@@ -158,7 +158,7 @@ func (t *TCPStreamLayer) Close() (err error) {
 	// TODO: There is a race condition in fact ShutDown which prevents us to close grpc server.
 	// The listener is closed, so no port bindings are leaked. also this close is called when the main
 	// process is going down, so all the resources will be freed by runtime.
-	// t.grpcServer.Stop()
+	t.grpcServer.GracefulStop()
 	return nil
 }
 

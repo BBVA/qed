@@ -116,7 +116,7 @@ func TestRestoreSingleNode(t *testing.T) {
 
 func TestRestoreFromLeaderWAL(t *testing.T) {
 
-	log.SetLogger("TestRestoreFromLeaderWAL", log.DEBUG)
+	log.SetLogger("TestRestoreFromLeaderWAL", log.SILENT)
 
 	// start only one seed
 	node1, clean1, err := newSeed("RestoreFromLeaderWAL-1", 1)
