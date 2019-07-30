@@ -57,6 +57,7 @@ type ClusteringOptions struct {
 	NodeID            string   // ID of the node within the cluster.
 	Addr              string   // IP address where to listen for Raft commands.
 	ClusterMgmtAddr   string   // IP address where to listen for cluster GRPC operations.
+	HttpAddr          string   // IP address where clients can connect (this is used to populate node info)
 	Bootstrap         bool     // Bootstrap the cluster as a seed node if there is no existing state.
 	Seeds             []string // List of cluster peer node IDs to bootstrap the cluster state.
 	RaftLogPath       string   // Path to Raft log store directory.
@@ -129,6 +130,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		NodeId:          opts.NodeID,
 		RaftAddr:        opts.Addr,
 		ClusterMgmtAddr: opts.ClusterMgmtAddr,
+		HttpAddr:        opts.HttpAddr,
 	}
 	node := &RaftNode{
 		path: opts.RaftLogPath,
@@ -317,24 +319,24 @@ func (n *RaftNode) IsLeader() bool {
 }
 
 // // WaitForLeader waits until the node becomes leader or time is out.
-// func (n *RaftNode) WaitForLeader(timeout time.Duration) (string, error) {
-// 	tck := time.NewTicker(leaderWaitDelay)
-// 	defer tck.Stop()
-// 	tmr := time.NewTimer(timeout)
-// 	defer tmr.Stop()
+func (n *RaftNode) WaitForLeader(timeout time.Duration) error {
+	tck := time.NewTicker(leaderWaitDelay)
+	defer tck.Stop()
+	tmr := time.NewTimer(timeout)
+	defer tmr.Stop()
 
-// 	for {
-// 		select {
-// 		case <-tck.C:
-// 			l := string(n.raft.Leader())
-// 			if l != "" {
-// 				return l, nil
-// 			}
-// 		case <-tmr.C:
-// 			return "", fmt.Errorf("timeout expired")
-// 		}
-// 	}
-// }
+	for {
+		select {
+		case <-tck.C:
+			l := string(n.raft.Leader())
+			if l != "" {
+				return nil
+			}
+		case <-tmr.C:
+			return fmt.Errorf("timeout expired")
+		}
+	}
+}
 
 // JoinCluster joins a node, identified by id and located at addr, to this store.
 // The node must be ready to respond to Raft communications at that address.
@@ -424,7 +426,11 @@ func (n *RaftNode) bootstrapCluster() error {
 			Address: n.transport.LocalAddr(),
 		},
 	}
-	return n.raft.BootstrapCluster(raft.Configuration{Servers: servers}).Error()
+	err := n.raft.BootstrapCluster(raft.Configuration{Servers: servers}).Error()
+	if err != nil {
+		return err
+	}
+	return n.WaitForLeader(5 * time.Second)
 }
 
 // blank string if there is no leader, or an error.
