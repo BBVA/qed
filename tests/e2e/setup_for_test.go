@@ -19,7 +19,6 @@ package e2e
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -137,8 +136,8 @@ func newServerSetup(id int, tls bool) (func() (string, error), func() error) {
 	var err error
 
 	before := func() (string, error) {
-		// path = fmt.Sprintf("/var/tmp/e2e-qed%d", id)
-		path, err = ioutil.TempDir("/var/tmp", "e2e-qed-") // os.MkdirAll(path, os.ModePerm)
+		path = fmt.Sprintf("/var/tmp/e2e-qed%d", id)
+		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
 			return "", err
 		}
