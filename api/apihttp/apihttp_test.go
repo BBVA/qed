@@ -139,6 +139,19 @@ func (b fakeRaftBalloon) Info() *consensus.NodeInfo {
 	}
 }
 
+func (b fakeRaftBalloon) ClusterInfo() *consensus.ClusterInfo {
+	c := new(consensus.ClusterInfo)
+	c.LeaderId = "node01"
+	c.Nodes = map[string]*consensus.NodeInfo{
+		"node01": &consensus.NodeInfo{
+			NodeId:          "node01",
+			RaftAddr:        "127.0.0.1:8800",
+			ClusterMgmtAddr: "127.0.0.1:8801",
+		},
+	}
+	return c
+}
+
 func (b fakeRaftBalloon) Backup() error {
 	return nil
 }
@@ -539,7 +552,7 @@ func TestInfo(t *testing.T) {
 	nodeInfo := &protocol.NodeInfo{}
 	_ = json.Unmarshal([]byte(rr.Body.String()), nodeInfo)
 
-	require.Equal(t, "node01", nodeInfo.NodeID, "Wrong node ID")
+	require.Equal(t, "node01", nodeInfo.NodeId, "Wrong node ID")
 }
 
 func TestInfoShard(t *testing.T) {
@@ -563,7 +576,7 @@ func TestInfoShard(t *testing.T) {
 	}
 
 	// Check the body response
-	infoShards := &protocol.Shards{}
+	infoShards := new(protocol.Shards)
 	_ = json.Unmarshal([]byte(rr.Body.String()), infoShards)
 
 	require.Equal(t, "node01", infoShards.NodeId, "Wrong node ID")
