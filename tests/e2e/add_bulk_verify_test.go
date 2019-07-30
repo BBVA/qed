@@ -48,7 +48,8 @@ func TestAddBulkAndVerify(t *testing.T) {
 	_, err := before()
 	spec.NoError(t, err, "Error starting server")
 	defer func() {
-		_ = after()
+		err := after()
+		spec.NoError(t, err, "Error in server shutdown")
 		t.Logf(report())
 	}()
 
