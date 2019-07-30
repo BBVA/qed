@@ -436,7 +436,7 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 		shardDetails := make(map[string]protocol.ShardDetail)
 
 		for _, node := range clusterInfo.Nodes {
-			shardDetails[node.NodeId] = protocol.ShardDetail{
+			shardDetails[node.RaftAddr] = protocol.ShardDetail{
 				NodeId:   node.NodeId,
 				HTTPAddr: node.HttpAddr,
 			}
