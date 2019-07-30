@@ -216,7 +216,7 @@ func TestFetchAndLoadSnapshot(t *testing.T) {
 	require.Equal(t, numElems*uint64(len(tables)), until)
 
 	// fetch snapshot
-	ioBuf := new(bytes.Buffer)
+	ioBuf := new(bufCloser)
 	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
 
 	// load snapshot in another instance
@@ -266,7 +266,7 @@ func TestFetchAndLoadUntilSeqNum(t *testing.T) {
 	until := uint64(1)
 
 	// fetch snapshot
-	ioBuf := bytes.NewBufferString("")
+	ioBuf := new(bufCloser)
 	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
 
 	// load snapshot in another instance
@@ -318,7 +318,7 @@ func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
 	require.Equal(t, numElems, until)
 
 	// fetch snapshot
-	ioBuf := bytes.NewBufferString("")
+	ioBuf := new(bufCloser)
 	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
 
 	// load snapshot in another instance
@@ -374,4 +374,12 @@ func deleteFile(path string) {
 	if err != nil {
 		fmt.Printf("Unable to remove db file %s", err)
 	}
+}
+
+type bufCloser struct {
+	bytes.Buffer
+}
+
+func (b bufCloser) Close() error {
+	return nil
 }
