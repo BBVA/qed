@@ -49,12 +49,7 @@ func (n *RaftNode) startObservationsConsumer() {
 			case raft.LeaderObservation:
 				addr := n.raft.Leader()
 				n.infoMu.Lock()
-				for id, node := range n.clusterInfo.Nodes {
-					if string(addr) == node.RaftAddr {
-						n.clusterInfo.LeaderId = id
-						break
-					}
-				}
+				n.clusterInfo.LeaderId = string(addr)
 				n.infoMu.Unlock()
 			default:
 			}
