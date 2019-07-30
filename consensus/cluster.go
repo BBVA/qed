@@ -381,9 +381,7 @@ func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 		if err != nil {
 			return err
 		}
-		defer func() {
-			conn.Close()
-		}()
+		defer conn.Close()
 		client := NewClusterServiceClient(conn)
 
 		resp, err := client.JoinCluster(context.Background(), &RaftJoinRequest{
