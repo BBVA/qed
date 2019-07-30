@@ -463,3 +463,10 @@ func (n *RaftNode) propose(cmd *command) (interface{}, error) {
 	}
 	return future.Response(), nil
 }
+
+func (n *RaftNode) leaveLeadership() error {
+	if err := n.raft.LeadershipTransfer().Error(); err != nil {
+		return err
+	}
+	return nil
+}

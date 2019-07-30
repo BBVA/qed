@@ -230,6 +230,54 @@ func TestMultRaftNodesReJoin(t *testing.T) {
 
 }
 
+func TestMultiRaftLeaveLeadership(t *testing.T) {
+
+	log.SetLogger("TestMultiRaftLeaveLeadership", log.SILENT)
+
+	// start one seed
+	r0, clean0, err := newSeed("MultiRaftLeaveLeadership-0", 0)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, r0.Close(true))
+		clean0(true)
+	}()
+
+	// check leader
+	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "r0 is not leader!")
+
+	// start two replicas
+	r1, clean1, err := newFollower("MultiRaftLeaveLeadership-1", 1, r0.info.RaftAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, r1.Close(true))
+		clean1(true)
+	}()
+	r2, clean2, err := newFollower("MultiRaftLeaveLeadership-2", 2, r0.info.RaftAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, r2.Close(true))
+		clean2(true)
+	}()
+
+	// check the number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, func() bool {
+			return len(r0.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	// leave leadership
+	require.NoError(t, r0.leaveLeadership())
+
+	time.Sleep(3 * time.Second)
+
+	// check
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, func() bool {
+			return r0.ClusterInfo().LeaderAddr != r0.Info().RaftAddr && r0.ClusterInfo().LeaderAddr != ""
+		}), "The leader has to have changed")
+
+}
+
 type closeF func(dir bool)
 
 func raftAddr(id int) string {
