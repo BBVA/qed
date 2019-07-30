@@ -89,9 +89,13 @@ func TestRaftNodeClusterInfo(t *testing.T) {
 		retryTrue(50, 200*time.Millisecond, func() bool {
 			return len(r.ClusterInfo().Nodes) == 1
 		}), "The number of nodes does not match")
+
 	require.Truef(t,
 		retryTrue(50, 200*time.Millisecond, func() bool {
-			return r.Info().NodeId == r.ClusterInfo().LeaderId
+			a := r.Info().RaftAddr
+			b := r.ClusterInfo().LeaderAddr
+			fmt.Println(a, b)
+			return a == b
 		}), "The leaderId in cluster info is correct")
 
 }

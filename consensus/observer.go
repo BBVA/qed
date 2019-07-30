@@ -49,7 +49,7 @@ func (n *RaftNode) startObservationsConsumer() {
 			case raft.LeaderObservation:
 				addr := n.raft.Leader()
 				n.infoMu.Lock()
-				n.clusterInfo.LeaderId = string(addr)
+				n.clusterInfo.LeaderAddr = string(addr)
 				n.infoMu.Unlock()
 			default:
 			}

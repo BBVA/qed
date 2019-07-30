@@ -443,8 +443,8 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 		}
 
 		shards := &protocol.Shards{
-			NodeId:    nodeInfo.NodeId,
-			LeaderId:  clusterInfo.LeaderId,
+			NodeId:    nodeInfo.RaftAddr,
+			LeaderId:  clusterInfo.LeaderAddr,
 			URIScheme: protocol.Scheme(scheme),
 			Shards:    shardDetails,
 		}

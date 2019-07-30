@@ -234,7 +234,7 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 
 	// set cluster info
 	n.applyClusterInfo(snap.Info)
-	n.clusterInfo.LeaderId = snap.Info.LeaderId
+	n.clusterInfo.LeaderAddr = snap.Info.LeaderAddr
 
 	// we make a remote call to fetch the snapshot
 	reader, err := n.attemptToFetchSnapshot(snap.LastSeqNum)
@@ -319,7 +319,7 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 func (n *RaftNode) applyClusterInfo(info *ClusterInfo) *fsmResponse {
 	n.infoMu.Lock()
 	for id, data := range info.Nodes {
-		if id != n.info.NodeId {
+		if id != n.info.RaftAddr {
 			n.clusterInfo.Nodes[id] = data
 		}
 	}
