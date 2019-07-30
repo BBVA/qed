@@ -83,6 +83,7 @@ func (c chunkWriter) Close() error {
 }
 
 type chunkReader struct {
+	conn   *grpc.ClientConn
 	stream ClusterService_FetchSnapshotClient
 	buf    *bytes.Buffer
 	done   bool
@@ -109,11 +110,15 @@ func (c *chunkReader) Read(p []byte) (int, error) {
 }
 
 func (c *chunkReader) Close() error {
-	return c.stream.CloseSend()
+	if err := c.stream.CloseSend(); err != nil {
+		return err
+	}
+	return c.conn.Close()
 }
 
-func newChunkReader(stream ClusterService_FetchSnapshotClient) *chunkReader {
+func newChunkReader(conn *grpc.ClientConn, stream ClusterService_FetchSnapshotClient) *chunkReader {
 	cr := new(chunkReader)
+	cr.conn = conn
 	cr.stream = stream
 	cr.buf = new(bytes.Buffer)
 	cr.done = true
@@ -126,9 +131,6 @@ func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_F
 }
 
 func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.ReadCloser, error) {
-	/* n.infoMu.Lock()
-	nodeInfo := n.clusterInfo.Nodes[n.clusterInfo.LeaderId]
-	n.infoMu.Unlock() */
 	conn, err := grpc.Dial(n.clusterInfo.LeaderAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
@@ -142,5 +144,5 @@ func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.ReadCloser, err
 		return nil, err
 	}
 
-	return newChunkReader(stream), nil
+	return newChunkReader(conn, stream), nil
 }
