@@ -111,7 +111,7 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 	conf.RaftAddr = fmt.Sprintf("127.0.0.1:850%d", id)
 	conf.GossipAddr = fmt.Sprintf("127.0.0.1:840%d", id)
 	if id > 0 {
-		conf.RaftJoinAddr = []string{"127.0.0.1:8700"}
+		conf.RaftJoinAddr = []string{"127.0.0.1:8500"}
 		conf.GossipJoinAddr = []string{"127.0.0.1:8400"}
 	}
 	conf.DBPath = pathDB + "/db"
