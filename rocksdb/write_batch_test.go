@@ -18,7 +18,6 @@ package rocksdb
 import (
 	"os"
 	"testing"
-	"fmt"
 
 	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
@@ -172,7 +171,5 @@ func TestWriteBatchSerialization(t *testing.T) {
 	extractor := NewLogDataExtractor("version")
 	defer extractor.Destroy()
 	require.Equal(t, version, deserialized.GetLogData(extractor))
-
-	fmt.Println(deserialized.GetLogData(extractor))
 
 }
