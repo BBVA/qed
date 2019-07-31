@@ -234,7 +234,7 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 
 	// set cluster info
 	n.applyClusterInfo(snap.Info)
-	n.clusterInfo.LeaderAddr = snap.Info.LeaderAddr
+	n.clusterInfo.LeaderId = snap.Info.LeaderId
 
 	// we make a remote call to fetch the snapshot
 	reader, err := n.attemptToFetchSnapshot(snap.LastSeqNum)
