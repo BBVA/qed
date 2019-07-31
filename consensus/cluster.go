@@ -56,7 +56,7 @@ var (
 type ClusteringOptions struct {
 	NodeID            string   // ID of the node within the cluster.
 	Addr              string   // IP address where to listen for Raft commands.
-	ClusterMgmtAddr   string   // IP address where to listen for cluster GRPC operations.
+	MgmtAddr          string   // IP address where to listen for management operations.
 	HttpAddr          string   // IP address where clients can connect (this is used to populate node info)
 	Bootstrap         bool     // Bootstrap the cluster as a seed node if there is no existing state.
 	Seeds             []string // List of cluster peer node IDs to bootstrap the cluster state.
@@ -73,6 +73,7 @@ type ClusteringOptions struct {
 	RaftElectionTimeout  time.Duration
 	RaftLeaseTimeout     time.Duration
 	RaftCommitTimeout    time.Duration
+	RaftApplyTimeout     time.Duration // Amount of time we wait for the command to be started.
 }
 
 func DefaultClusteringOptions() *ClusteringOptions {
@@ -86,6 +87,7 @@ func DefaultClusteringOptions() *ClusteringOptions {
 		LogSnapshots:      2,
 		SnapshotThreshold: 8192,
 		TrailingLogs:      10240,
+		RaftApplyTimeout:  10 * time.Second,
 		Sync:              false,
 		RaftLogging:       false,
 	}
@@ -103,7 +105,6 @@ type RaftNode struct {
 	raft           *raft.Raft             // The consensus mechanism
 	transport      *raft.NetworkTransport // Raft network transport
 	raftConfig     *raft.Config           // Config provides any necessary configuration for the Raft server.
-	grpcServer     *grpc.Server
 	observationsCh chan raft.Observation
 
 	balloon     *balloon.Balloon // Balloon's finite state machine
@@ -124,16 +125,16 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	// raft code may asynchronously invoke FSM.Apply() and FSM.Restore()
 	// So we want the object to exist so we can check on leader atomic, etc..
 	info := &NodeInfo{
-		NodeId:          opts.NodeID,
-		RaftAddr:        opts.Addr,
-		ClusterMgmtAddr: opts.ClusterMgmtAddr,
-		HttpAddr:        opts.HttpAddr,
+		NodeId:   opts.NodeID,
+		RaftAddr: opts.Addr,
+		MgmtAddr: opts.MgmtAddr,
+		HttpAddr: opts.HttpAddr,
 	}
 	node := &RaftNode{
 		info:           info,
 		observationsCh: make(chan raft.Observation, 1),
 		snapshotsCh:    snapshotsCh,
-		applyTimeout:   10 * time.Second,
+		applyTimeout:   opts.RaftApplyTimeout,
 		done:           make(chan struct{}),
 	}
 
@@ -309,7 +310,7 @@ func (n *RaftNode) IsLeader() bool {
 	return n.raft.State() == raft.Leader
 }
 
-// // WaitForLeader waits until the node becomes leader or time is out.
+// WaitForLeader waits until the node becomes leader or time is out.
 func (n *RaftNode) WaitForLeader(timeout time.Duration) error {
 	tck := time.NewTicker(leaderWaitDelay)
 	defer tck.Stop()
@@ -368,7 +369,6 @@ func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 		if err == nil {
 			return nil
 		}
-		fmt.Println("ERROR attemptToJoin: ", err)
 	}
 	return ErrCannotJoin
 }
