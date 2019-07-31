@@ -189,7 +189,6 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	conf.SnapshotThreshold = opts.SnapshotThreshold
 	conf.LocalID = raft.ServerID(opts.NodeID)
 	conf.Logger = hclog.Default()
-	conf.NoSnapshotRestoreOnStart = true
 	node.raftConfig = conf
 
 	node.transport, err = NewCMuxTCPTransportWithLogger(node, 3, 10*time.Second, log.GetLogger())
@@ -216,10 +215,6 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	observer := raft.NewObserver(node.observationsCh, true, observationsFilterFn)
 	node.raft.RegisterObserver(observer)
 	go node.startObservationsConsumer()
-
-	// load state
-	node.loadState()
-	node.balloon.RefreshVersion()
 
 	// register metrics
 	node.metrics = newRaftNodeMetrics(node)
