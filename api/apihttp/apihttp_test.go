@@ -23,7 +23,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/bbva/qed/testutils/spec"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/balloon/history"
@@ -326,7 +326,7 @@ func TestMembership(t *testing.T) {
 	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	spec.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 
@@ -372,7 +372,7 @@ func TestMembershipConsistency(t *testing.T) {
 	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	spec.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 
@@ -418,7 +418,7 @@ func TestDigestMembership(t *testing.T) {
 	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	spec.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 
@@ -466,7 +466,7 @@ func TestDigestMembershipConsistency(t *testing.T) {
 	actualResult := new(protocol.MembershipResult)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	spec.Equal(t, expectedResult, actualResult, "Incorrect proof")
 
 }
 
@@ -479,7 +479,7 @@ func TestIncremental(t *testing.T) {
 	})
 
 	req, err := http.NewRequest("POST", "/proofs/incremental", bytes.NewBuffer(query))
-	require.NoError(t, err, "Error querying for incremental proof")
+	spec.NoError(t, err, "Error querying for incremental proof")
 
 	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 	rr := httptest.NewRecorder()
@@ -496,13 +496,13 @@ func TestIncremental(t *testing.T) {
 
 	// Check the status code is what we expect.
 	status := rr.Code
-	require.Equalf(t, http.StatusOK, status, "handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	spec.Equal(t, http.StatusOK, status, "handler returned wrong status code")
 
 	// Check the body response
 	actualResult := new(protocol.IncrementalResponse)
 	json.Unmarshal([]byte(rr.Body.String()), actualResult)
 
-	require.Equal(t, expectedResult, actualResult, "Incorrect proof")
+	spec.Equal(t, expectedResult, actualResult, "Incorrect proof")
 }
 
 func TestAuthHandlerMiddleware(t *testing.T) {
@@ -554,7 +554,7 @@ func TestInfo(t *testing.T) {
 	nodeInfo := &protocol.NodeInfo{}
 	_ = json.Unmarshal([]byte(rr.Body.String()), nodeInfo)
 
-	require.Equal(t, "node01", nodeInfo.NodeId, "Wrong node ID")
+	spec.Equal(t, "node01", nodeInfo.NodeId, "Wrong node ID")
 }
 
 func TestInfoShard(t *testing.T) {
@@ -581,8 +581,8 @@ func TestInfoShard(t *testing.T) {
 	infoShards := new(protocol.Shards)
 	_ = json.Unmarshal([]byte(rr.Body.String()), infoShards)
 
-	require.Equal(t, "node01", infoShards.NodeId, "Wrong node ID")
-	require.Equal(t, "node01", infoShards.LeaderId, "Wrong leader ID")
-	require.Equal(t, protocol.Scheme("http"), infoShards.URIScheme, "Wrong scheme")
-	require.Equal(t, 1, len(infoShards.Shards), "Wrong number of shards")
+	spec.Equal(t, "node01", infoShards.NodeId, "Wrong node ID")
+	spec.Equal(t, "node01", infoShards.LeaderId, "Wrong leader ID")
+	spec.Equal(t, protocol.Scheme("http"), infoShards.URIScheme, "Wrong scheme")
+	spec.Equal(t, 1, len(infoShards.Shards), "Wrong number of shards")
 }
