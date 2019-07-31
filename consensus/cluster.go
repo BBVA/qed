@@ -92,7 +92,6 @@ func DefaultClusteringOptions() *ClusteringOptions {
 }
 
 type RaftNode struct {
-	path string
 	info *NodeInfo
 
 	applyTimeout time.Duration
@@ -114,7 +113,6 @@ type RaftNode struct {
 	hasherF func() hashing.Hasher
 	metrics *raftNodeMetrics // Raft node metrics.
 
-	infoMu sync.Mutex
 	sync.Mutex
 	closed bool
 	done   chan struct{}
@@ -132,7 +130,6 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		HttpAddr:        opts.HttpAddr,
 	}
 	node := &RaftNode{
-		path:           opts.RaftLogPath,
 		info:           info,
 		observationsCh: make(chan raft.Observation, 1),
 		snapshotsCh:    snapshotsCh,
