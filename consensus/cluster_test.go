@@ -284,7 +284,7 @@ func raftAddr(id int) string {
 	return fmt.Sprintf("127.0.0.1:1830%d", id)
 }
 
-func clusterMgmtAddr(id int) string {
+func mgmtAddr(id int) string {
 	return fmt.Sprintf("127.0.0.1:1930%d", id)
 }
 
@@ -296,7 +296,7 @@ func newSeed(name string, id int) (*RaftNode, closeF, error) {
 	opts := DefaultClusteringOptions()
 	opts.NodeID = fmt.Sprintf("%s_%d", name, id)
 	opts.Addr = raftAddr(id)
-	opts.ClusterMgmtAddr = clusterMgmtAddr(id)
+	opts.MgmtAddr = mgmtAddr(id)
 	opts.HttpAddr = httpAddr(id)
 	opts.Bootstrap = true
 	opts.SnapshotThreshold = 0
@@ -309,7 +309,7 @@ func newFollower(name string, id int, seeds ...string) (*RaftNode, closeF, error
 	opts := DefaultClusteringOptions()
 	opts.NodeID = fmt.Sprintf("%s_%d", name, id)
 	opts.Addr = raftAddr(id)
-	opts.ClusterMgmtAddr = clusterMgmtAddr(id)
+	opts.MgmtAddr = mgmtAddr(id)
 	opts.HttpAddr = httpAddr(id)
 	opts.Bootstrap = false
 	opts.SnapshotThreshold = 0
