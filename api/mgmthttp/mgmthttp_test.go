@@ -22,7 +22,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/bbva/qed/testutils/spec"
 
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
@@ -90,9 +90,9 @@ func TestListBackups(t *testing.T) {
 	}
 
 	backupsInfo := make([]*protocol.BackupInfo, 1)
-	_ = json.Unmarshal([]byte(rr.Body.String()), backupsInfo)
-	require.NotNil(t, backupsInfo, "Backups info list must not be empty.")
-	require.True(t, len(backupsInfo) == 1, "Backups info list must have 1 element.")
+	_ = json.Unmarshal([]byte(rr.Body.String()), &backupsInfo)
+	spec.NotNil(t, backupsInfo, "Backups info list must not be empty.")
+	spec.True(t, len(backupsInfo) == 1, "Backups info list must have 1 element.")
 }
 
 func TestDeleteBackup(t *testing.T) {

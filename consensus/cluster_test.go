@@ -17,6 +17,7 @@
 package consensus
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -25,7 +26,7 @@ import (
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage/rocks"
-	"github.com/stretchr/testify/require"
+	"github.com/bbva/qed/testutils/spec"
 )
 
 func TestOpenAndCloseRaftNode(t *testing.T) {
@@ -34,9 +35,9 @@ func TestOpenAndCloseRaftNode(t *testing.T) {
 
 	// start only one seed
 	r, clean, err := newSeed(t.Name(), 1)
-	require.NoError(t, err)
+	spec.NoError(t, err, "Error creating new server as a seed")
 	defer func() {
-		require.NoError(t, r.Close(true))
+		spec.NoError(t, r.Close(true))
 		clean(true)
 	}()
 
@@ -48,15 +49,19 @@ func TestRaftNodeIsLeader(t *testing.T) {
 
 	// start only one seed
 	r, clean, err := newSeed(t.Name(), 1)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r.Close(true))
+		spec.NoError(t, r.Close(true))
 		clean(true)
 	}()
 
 	// check the leader of the cluster
-	require.Truef(t,
-		retryTrue(50, 200*time.Millisecond, r.IsLeader), "a single node is not leader!")
+	spec.Retry(t, 50, 00*time.Millisecond, func() error {
+		if r.IsLeader() {
+			return nil
+		}
+		return errors.New("A single node is not leader!")
+	})
 
 }
 
@@ -66,7 +71,7 @@ func TestRaftNodeNotLeader(t *testing.T) {
 
 	// start only one follower
 	_, clean, err := newFollower(t.Name(), 1)
-	require.Error(t, err)
+	spec.Error(t, err)
 	defer func() {
 		clean(true)
 	}()
@@ -79,24 +84,20 @@ func TestRaftNodeClusterInfo(t *testing.T) {
 
 	// start only one seed
 	r, clean, err := newSeed(t.Name(), 1)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r.Close(true))
+		spec.NoError(t, r.Close(true))
 		clean(true)
 	}()
 
 	// check cluster info
-	require.Truef(t,
-		retryTrue(50, 200*time.Millisecond, func() bool {
-			return len(r.ClusterInfo().Nodes) == 1
-		}), "The number of nodes does not match")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return len(r.ClusterInfo().Nodes) == 1
+	}, "The number of nodes does not match")
 
-	require.Truef(t,
-		retryTrue(50, 200*time.Millisecond, func() bool {
-			ci := r.ClusterInfo()
-			ni := r.Info()
-			return ci.LeaderId == ni.NodeId
-		}), "The leaderId in cluster info is correct")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return r.ClusterInfo().LeaderId == r.Info().NodeId
+	}, "The leaderId in cluster info is correct")
 
 }
 
@@ -106,30 +107,29 @@ func TestMultiRaftNodeJoin(t *testing.T) {
 
 	// start one seed
 	r0, clean0, err := newSeed(t.Name(), 0)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 
-	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "a single node is not leader!")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, r0.IsLeader, "A single node is not leader!")
 
 	// start one follower and join the cluster
 	r1, clean1, err := newFollower(t.Name(), 1, r0.info.RaftAddr)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 
 	defer func() {
-		require.NoError(t, r0.Close(true))
-		require.NoError(t, r1.Close(true))
+		spec.NoError(t, r0.Close(true))
+		spec.NoError(t, r1.Close(true))
 		clean0(true)
 		clean1(true)
 	}()
 
 	// check cluster info
-	require.Truef(t,
-		retryTrue(10, 200*time.Millisecond, func() bool {
-			return len(r0.ClusterInfo().Nodes) == 2
-		}), "The number of nodes does not match")
-	require.Truef(t,
-		retryTrue(10, 200*time.Millisecond, func() bool {
-			return len(r1.ClusterInfo().Nodes) == 2
-		}), "The number of nodes does not match")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return len(r0.ClusterInfo().Nodes) == 2
+	}, "The number of nodes does not match for node 0")
+
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return len(r1.ClusterInfo().Nodes) == 2
+	}, "The number of nodes does not match for node 1")
 
 }
 
@@ -139,72 +139,69 @@ func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
 
 	// start one seed
 	r0, clean0, err := newSeed(t.Name(), 0)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r0.Close(true))
+		spec.NoError(t, r0.Close(true))
 		clean0(true)
 	}()
 
 	// check leader
-	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "r0 is not leader!")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, r0.IsLeader, "A single node is not leader!")
 
 	// star one follower and join the cluster
 	r1, clean1, err := newFollower(t.Name(), 1, r0.info.RaftAddr)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r1.Close(true))
+		spec.NoError(t, r1.Close(true))
 		clean1(true)
 	}()
 
 	// check number of nodes in the cluster
-	require.Truef(t,
-		retryTrue(10, 200*time.Millisecond, func() bool {
-			return len(r0.ClusterInfo().Nodes) == 2
-		}), "The number of nodes does not match")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return len(r0.ClusterInfo().Nodes) == 2
+	}, "The number of nodes does not match")
 
 	// start another follower but try to join to a non-leader node
 	_, clean2, err := newFollower(t.Name(), 2, r1.info.RaftAddr) // wrong address
 	defer clean2(true)
-	require.Error(t, err)
+	spec.Error(t, err)
 
 	// check the number of nodes in the cluster
-	require.Truef(t,
-		retryTrue(10, 200*time.Millisecond, func() bool {
-			return len(r0.ClusterInfo().Nodes) == 2
-		}), "The number of nodes does not match")
-
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return len(r0.ClusterInfo().Nodes) == 2
+	}, "The number of nodes does not match")
 }
 
-func TestMultiRaftNodesReJoin(t *testing.T) {
+func TestMultRaftNodesReJoin(t *testing.T) {
 
 	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
 	r0, clean0, err := newSeed(t.Name(), 0)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r0.Close(true))
+		spec.NoError(t, r0.Close(true))
 		clean0(true)
 	}()
 
 	// check leader
-	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "r0 is not leader!")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, r0.IsLeader, "A single node is not leader!")
 
 	// start two replicas
 	r1, clean1, err := newFollower(t.Name(), 1, r0.info.RaftAddr)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r1.Close(true))
+		spec.NoError(t, r1.Close(true))
 		clean1(true)
 	}()
 	r2, clean2, err := newFollower(t.Name(), 2, r0.info.RaftAddr)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 
 	// check the number of nodes in the cluster
-	require.Truef(t,
-		retryTrue(50, 200*time.Millisecond, func() bool {
-			return len(r2.ClusterInfo().Nodes) == 3
-		}), "The number of nodes does not match")
+	// check the number of nodes in the cluster
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return len(r0.ClusterInfo().Nodes) == 3
+	}, "The number of nodes does not match")
 
 	time.Sleep(1 * time.Second)
 
@@ -214,19 +211,18 @@ func TestMultiRaftNodesReJoin(t *testing.T) {
 
 	// restart the stopped node
 	r2, clean3, err := newFollower(t.Name(), 2, r0.info.RaftAddr)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r2.Close(true))
+		spec.NoError(t, r2.Close(true))
 		clean3(true)
 	}()
 
 	time.Sleep(1 * time.Second)
 
 	// check the number of nodes in the cluster
-	require.Truef(t,
-		retryTrue(20, 200*time.Millisecond, func() bool {
-			return len(r0.ClusterInfo().Nodes) == 3
-		}), "The number of nodes does not match")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return len(r0.ClusterInfo().Nodes) == 3
+	}, "The number of nodes does not match")
 
 }
 
@@ -236,46 +232,43 @@ func TestMultiRaftLeaveLeadership(t *testing.T) {
 
 	// start one seed
 	r0, clean0, err := newSeed(t.Name(), 0)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r0.Close(true))
+		spec.NoError(t, r0.Close(true))
 		clean0(true)
 	}()
 
 	// check leader
-	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "r0 is not leader!")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, r0.IsLeader, "A single node is not leader!")
 
 	// start two replicas
 	r1, clean1, err := newFollower(t.Name(), 1, r0.info.RaftAddr)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r1.Close(true))
+		spec.NoError(t, r1.Close(true))
 		clean1(true)
 	}()
 	r2, clean2, err := newFollower(t.Name(), 2, r0.info.RaftAddr)
-	require.NoError(t, err)
+	spec.NoError(t, err)
 	defer func() {
-		require.NoError(t, r2.Close(true))
+		spec.NoError(t, r2.Close(true))
 		clean2(true)
 	}()
 
 	// check the number of nodes in the cluster
-	require.Truef(t,
-		retryTrue(50, 200*time.Millisecond, func() bool {
-			return len(r0.ClusterInfo().Nodes) == 3
-		}), "The number of nodes does not match")
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return len(r0.ClusterInfo().Nodes) == 3
+	}, "The number of nodes does not match")
 
 	// leave leadership
-	require.NoError(t, r0.leaveLeadership())
+	spec.NoError(t, r0.leaveLeadership())
 
 	time.Sleep(3 * time.Second)
 
 	// check
-	require.Truef(t,
-		retryTrue(50, 200*time.Millisecond, func() bool {
-			return r0.ClusterInfo().LeaderId != r0.Info().NodeId && r0.ClusterInfo().LeaderId != ""
-		}), "The leader has to have changed")
-
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return r0.ClusterInfo().LeaderId != r0.Info().NodeId && r0.ClusterInfo().LeaderId != ""
+	}, "The leader has to have changed")
 }
 
 type closeF func(dir bool)
@@ -284,7 +277,7 @@ func raftAddr(id int) string {
 	return fmt.Sprintf("127.0.0.1:1830%d", id)
 }
 
-func mgmtAddr(id int) string {
+func clusterMgmtAddr(id int) string {
 	return fmt.Sprintf("127.0.0.1:1930%d", id)
 }
 
@@ -296,7 +289,7 @@ func newSeed(name string, id int) (*RaftNode, closeF, error) {
 	opts := DefaultClusteringOptions()
 	opts.NodeID = fmt.Sprintf("%s_%d", name, id)
 	opts.Addr = raftAddr(id)
-	opts.MgmtAddr = mgmtAddr(id)
+	opts.MgmtAddr = clusterMgmtAddr(id)
 	opts.HttpAddr = httpAddr(id)
 	opts.Bootstrap = true
 	opts.SnapshotThreshold = 0
@@ -309,7 +302,7 @@ func newFollower(name string, id int, seeds ...string) (*RaftNode, closeF, error
 	opts := DefaultClusteringOptions()
 	opts.NodeID = fmt.Sprintf("%s_%d", name, id)
 	opts.Addr = raftAddr(id)
-	opts.MgmtAddr = mgmtAddr(id)
+	opts.MgmtAddr = clusterMgmtAddr(id)
 	opts.HttpAddr = httpAddr(id)
 	opts.Bootstrap = false
 	opts.SnapshotThreshold = 0
