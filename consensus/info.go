@@ -18,8 +18,10 @@ package consensus
 
 import (
 	"context"
+	"time"
 
 	"github.com/bbva/qed/log"
+	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
 )
 
@@ -37,34 +39,71 @@ func (n *RaftNode) Info() *NodeInfo {
 // ClusterInfo function returns Raft current node info plus certain raft cluster
 // info. Used in /info/shard.
 func (n *RaftNode) ClusterInfo() *ClusterInfo {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	ci := new(ClusterInfo)
 	ci.Nodes = make(map[string]*NodeInfo)
-	leaderAddr := n.raft.Leader()
+	done := make(chan struct{})
 
-	configFuture := n.raft.GetConfiguration()
-	if err := configFuture.Error(); err != nil {
-		log.Infof("failed to get raft configuration: %v", err)
+	go func() {
+		leaderAddr := n.raft.Leader()
+		servers := listServers(ctx, n.raft)
+		for _, srv := range servers {
+			resp, err := grpcFetchInfo(ctx, string(srv.Address))
+			if err != nil {
+				log.Infof("Error geting node info from %s", string(srv.Address))
+				continue
+			}
+			if leaderAddr == srv.Address {
+				ci.LeaderId = resp.NodeInfo.NodeId
+			}
+			ci.Nodes[resp.NodeInfo.NodeId] = resp.NodeInfo
+		}
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		log.Infof("Timed out  geting cluster  info ")
 		return nil
+	case <-done:
+		return ci
+	}
+}
+
+func listServers(ctx context.Context, r *raft.Raft) []raft.Server {
+	var list []raft.Server
+	done := make(chan struct{})
+
+	go func() {
+		configFuture := r.GetConfiguration()
+		if err := configFuture.Error(); err != nil {
+			log.Infof("Error getting configuration from raft: %v", err)
+		}
+		list = configFuture.Configuration().Servers
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return nil
+	case <-done:
+		return list
 	}
 
-	for _, srv := range configFuture.Configuration().Servers {
-		conn, err := grpc.Dial(string(srv.Address), grpc.WithInsecure())
-		if err != nil {
-			log.Infof("failed dialing grpc to %s: %v", string(srv.Address), err)
-			continue
-		}
-		defer conn.Close()
-		client := NewClusterServiceClient(conn)
-		resp, err := client.FetchNodeInfo(context.Background(), new(InfoRequest))
-		if err != nil {
-			log.Infof("failed fetching info from %s: %v", string(srv.Address), err)
-			continue
-		}
-		ci.Nodes[resp.NodeInfo.NodeId] = resp.NodeInfo
-		if leaderAddr == srv.Address {
-			ci.LeaderId = resp.NodeInfo.NodeId
-		}
-	}
+}
 
-	return ci
+func grpcFetchInfo(ctx context.Context, addr string) (*InfoResponse, error) {
+	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	client := NewClusterServiceClient(conn)
+	resp, err := client.FetchNodeInfo(ctx, new(InfoRequest))
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

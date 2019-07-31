@@ -141,9 +141,9 @@ func (b fakeRaftBalloon) Info() *consensus.NodeInfo {
 
 func (b fakeRaftBalloon) ClusterInfo() *consensus.ClusterInfo {
 	c := new(consensus.ClusterInfo)
-	c.LeaderAddr = "127.0.0.1:8800"
+	c.LeaderId = "node01"
 	c.Nodes = map[string]*consensus.NodeInfo{
-		"127.0.0.1:8800": &consensus.NodeInfo{
+		"node01": &consensus.NodeInfo{
 			NodeId:          "node01",
 			RaftAddr:        "127.0.0.1:8800",
 			ClusterMgmtAddr: "127.0.0.1:8801",
@@ -579,8 +579,8 @@ func TestInfoShard(t *testing.T) {
 	infoShards := new(protocol.Shards)
 	_ = json.Unmarshal([]byte(rr.Body.String()), infoShards)
 
-	require.Equal(t, "127.0.0.1:8800", infoShards.NodeId, "Wrong node ID")
-	require.Equal(t, "127.0.0.1:8800", infoShards.LeaderId, "Wrong leader ID")
+	require.Equal(t, "node01", infoShards.NodeId, "Wrong node ID")
+	require.Equal(t, "node01", infoShards.LeaderId, "Wrong leader ID")
 	require.Equal(t, protocol.Scheme("http"), infoShards.URIScheme, "Wrong scheme")
 	require.Equal(t, 1, len(infoShards.Shards), "Wrong number of shards")
 }
