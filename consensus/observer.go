@@ -47,10 +47,12 @@ func (n *RaftNode) startObservationsConsumer() {
 					n.propose(cmd)
 				}
 			case raft.LeaderObservation:
-				addr := n.raft.Leader()
-				n.infoMu.Lock()
-				n.clusterInfo.LeaderAddr = string(addr)
-				n.infoMu.Unlock()
+				id, err := n.leaderId()
+				if err == nil {
+					n.infoMu.Lock()
+					n.clusterInfo.LeaderId = id
+					n.infoMu.Unlock()
+				}
 			default:
 			}
 		case <-n.done:

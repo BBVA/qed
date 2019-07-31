@@ -29,7 +29,7 @@ message NodeInfo {
 }
 
 message ClusterInfo {
-    string leader_addr = 1;
+    string leader_id = 1;
     map<string, NodeInfo> nodes = 2;
 }
 
@@ -38,7 +38,6 @@ message RaftJoinRequest {
 }
 
 message RaftJoinResponse {
-    ClusterInfo cluster_info = 1;
 }
 
 message FetchSnapshotRequest {
@@ -50,7 +49,15 @@ message Chunk {
     bytes Content = 1;
 }
 
+message InfoResponse {
+    NodeInfo node_info = 1;
+}
+
+message InfoRequest {
+}
+
 service ClusterService {
     rpc JoinCluster (RaftJoinRequest) returns (RaftJoinResponse);
     rpc FetchSnapshot (FetchSnapshotRequest) returns (stream Chunk);
+    rpc FetchNodeInfo (InfoRequest) returns (InfoResponse);
 }

@@ -111,7 +111,7 @@ func (m *NodeInfo) GetMetricsAddr() string {
 }
 
 type ClusterInfo struct {
-	LeaderAddr           string               `protobuf:"bytes,1,opt,name=leader_addr,json=leaderAddr,proto3" json:"leader_addr,omitempty"`
+	LeaderId             string               `protobuf:"bytes,1,opt,name=leader_id,json=leaderId,proto3" json:"leader_id,omitempty"`
 	Nodes                map[string]*NodeInfo `protobuf:"bytes,2,rep,name=nodes,proto3" json:"nodes,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
@@ -151,9 +151,9 @@ func (m *ClusterInfo) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ClusterInfo proto.InternalMessageInfo
 
-func (m *ClusterInfo) GetLeaderAddr() string {
+func (m *ClusterInfo) GetLeaderId() string {
 	if m != nil {
-		return m.LeaderAddr
+		return m.LeaderId
 	}
 	return ""
 }
@@ -213,10 +213,9 @@ func (m *RaftJoinRequest) GetNodeInfo() *NodeInfo {
 }
 
 type RaftJoinResponse struct {
-	ClusterInfo          *ClusterInfo `protobuf:"bytes,1,opt,name=cluster_info,json=clusterInfo,proto3" json:"cluster_info,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
-	XXX_unrecognized     []byte       `json:"-"`
-	XXX_sizecache        int32        `json:"-"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *RaftJoinResponse) Reset()         { *m = RaftJoinResponse{} }
@@ -251,13 +250,6 @@ func (m *RaftJoinResponse) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_RaftJoinResponse proto.InternalMessageInfo
-
-func (m *RaftJoinResponse) GetClusterInfo() *ClusterInfo {
-	if m != nil {
-		return m.ClusterInfo
-	}
-	return nil
-}
 
 type FetchSnapshotRequest struct {
 	StartSeqNum          uint64   `protobuf:"varint,1,opt,name=startSeqNum,proto3" json:"startSeqNum,omitempty"`
@@ -361,6 +353,92 @@ func (m *Chunk) GetContent() []byte {
 	return nil
 }
 
+type InfoResponse struct {
+	NodeInfo             *NodeInfo `protobuf:"bytes,1,opt,name=node_info,json=nodeInfo,proto3" json:"node_info,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}  `json:"-"`
+	XXX_unrecognized     []byte    `json:"-"`
+	XXX_sizecache        int32     `json:"-"`
+}
+
+func (m *InfoResponse) Reset()         { *m = InfoResponse{} }
+func (m *InfoResponse) String() string { return proto.CompactTextString(m) }
+func (*InfoResponse) ProtoMessage()    {}
+func (*InfoResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_3cfb3b8ec240c376, []int{6}
+}
+func (m *InfoResponse) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *InfoResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_InfoResponse.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *InfoResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_InfoResponse.Merge(m, src)
+}
+func (m *InfoResponse) XXX_Size() int {
+	return m.Size()
+}
+func (m *InfoResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_InfoResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_InfoResponse proto.InternalMessageInfo
+
+func (m *InfoResponse) GetNodeInfo() *NodeInfo {
+	if m != nil {
+		return m.NodeInfo
+	}
+	return nil
+}
+
+type InfoRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *InfoRequest) Reset()         { *m = InfoRequest{} }
+func (m *InfoRequest) String() string { return proto.CompactTextString(m) }
+func (*InfoRequest) ProtoMessage()    {}
+func (*InfoRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_3cfb3b8ec240c376, []int{7}
+}
+func (m *InfoRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *InfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_InfoRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *InfoRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_InfoRequest.Merge(m, src)
+}
+func (m *InfoRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *InfoRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_InfoRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_InfoRequest proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterType((*NodeInfo)(nil), "consensus.NodeInfo")
 	proto.RegisterType((*ClusterInfo)(nil), "consensus.ClusterInfo")
@@ -369,43 +447,46 @@ func init() {
 	proto.RegisterType((*RaftJoinResponse)(nil), "consensus.RaftJoinResponse")
 	proto.RegisterType((*FetchSnapshotRequest)(nil), "consensus.FetchSnapshotRequest")
 	proto.RegisterType((*Chunk)(nil), "consensus.Chunk")
+	proto.RegisterType((*InfoResponse)(nil), "consensus.InfoResponse")
+	proto.RegisterType((*InfoRequest)(nil), "consensus.InfoRequest")
 }
 
 func init() { proto.RegisterFile("cluster.proto", fileDescriptor_3cfb3b8ec240c376) }
 
 var fileDescriptor_3cfb3b8ec240c376 = []byte{
-	// 486 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x93, 0xcd, 0x6e, 0x13, 0x3f,
-	0x14, 0xc5, 0xff, 0x4e, 0x9a, 0x34, 0x73, 0x27, 0x6d, 0xf3, 0x37, 0x08, 0xa2, 0x04, 0xa5, 0xc9,
-	0x88, 0x45, 0x61, 0x11, 0x55, 0x61, 0xc1, 0xc7, 0x0e, 0x02, 0x95, 0x8a, 0x94, 0x2e, 0x26, 0x12,
-	0x0b, 0x36, 0xd1, 0x30, 0xbe, 0x69, 0xa2, 0x66, 0xec, 0xd4, 0xf6, 0x54, 0xea, 0x9b, 0xb0, 0xe2,
-	0x31, 0x78, 0x06, 0x96, 0x88, 0x27, 0x40, 0xe1, 0x45, 0x90, 0x3f, 0xd2, 0x19, 0x50, 0xd8, 0xd9,
-	0xe7, 0x9e, 0xf9, 0x8d, 0xcf, 0xb1, 0x0c, 0x07, 0xe9, 0x2a, 0x57, 0x1a, 0xe5, 0x70, 0x2d, 0x85,
-	0x16, 0x34, 0x48, 0x05, 0x57, 0xc8, 0x55, 0xae, 0xa2, 0x1f, 0x04, 0x1a, 0x17, 0x82, 0xe1, 0x39,
-	0x9f, 0x0b, 0xfa, 0x10, 0xf6, 0xb9, 0x60, 0x38, 0x5b, 0xb2, 0x36, 0xe9, 0x93, 0x93, 0x20, 0xae,
-	0x9b, 0xed, 0x39, 0xa3, 0x5d, 0x08, 0x64, 0x32, 0xd7, 0xb3, 0x84, 0x31, 0xd9, 0xae, 0xd8, 0x51,
-	0xc3, 0x08, 0xaf, 0x19, 0x93, 0xf4, 0x29, 0xfc, 0xef, 0xf1, 0xb3, 0xec, 0x32, 0xf3, 0xa6, 0xaa,
-	0x35, 0x1d, 0xf9, 0xc1, 0xe4, 0x32, 0x73, 0xde, 0x2e, 0x04, 0x0b, 0xad, 0xd7, 0xce, 0xb3, 0xe7,
-	0x40, 0x46, 0xb0, 0xc3, 0xc7, 0x70, 0x68, 0x87, 0x05, 0xa5, 0x66, 0x1d, 0x4d, 0xa3, 0xde, 0x21,
-	0x06, 0xd0, 0xcc, 0x50, 0xcb, 0x65, 0xaa, 0x9c, 0xa7, 0x6e, 0x3d, 0xa1, 0xd7, 0x8c, 0x25, 0xfa,
-	0x4a, 0x20, 0x1c, 0xbb, 0x3f, 0xdb, 0x5c, 0xc7, 0x10, 0xae, 0x30, 0x61, 0x28, 0xdd, 0x17, 0x2e,
-	0x1b, 0x38, 0xc9, 0x32, 0x9f, 0x43, 0xcd, 0x24, 0x55, 0xed, 0x4a, 0xbf, 0x7a, 0x12, 0x8e, 0x06,
-	0xc3, 0xbb, 0x82, 0x86, 0x25, 0xce, 0xd0, 0x14, 0xa5, 0xde, 0x71, 0x2d, 0x6f, 0x63, 0xe7, 0xef,
-	0x4c, 0x00, 0x0a, 0x91, 0xb6, 0xa0, 0x7a, 0x85, 0xb7, 0x9e, 0x6f, 0x96, 0xf4, 0x09, 0xd4, 0x6e,
-	0x92, 0x55, 0x8e, 0xb6, 0xb4, 0x70, 0x74, 0xaf, 0x04, 0xde, 0xb6, 0x1e, 0x3b, 0xc7, 0xab, 0xca,
-	0x0b, 0x12, 0x8d, 0xe1, 0x28, 0x4e, 0xe6, 0xfa, 0xbd, 0x58, 0xf2, 0x18, 0xaf, 0x73, 0x54, 0x9a,
-	0x9e, 0x42, 0xe0, 0xee, 0x84, 0xcf, 0x85, 0x25, 0xff, 0x83, 0xd2, 0xe0, 0x7e, 0x15, 0x4d, 0xa0,
-	0x55, 0x40, 0xd4, 0xda, 0x58, 0xe9, 0x4b, 0x68, 0x6e, 0xef, 0xa8, 0x04, 0x7a, 0xb0, 0x3b, 0x67,
-	0x1c, 0xa6, 0xc5, 0x26, 0xfa, 0x00, 0xf7, 0xcf, 0x50, 0xa7, 0x8b, 0x29, 0x4f, 0xd6, 0x6a, 0x21,
-	0xf4, 0xf6, 0x60, 0x7d, 0x08, 0x95, 0x4e, 0xa4, 0x9e, 0xe2, 0xf5, 0x45, 0x9e, 0x59, 0xe2, 0x5e,
-	0x5c, 0x96, 0xe8, 0x23, 0x08, 0x90, 0x33, 0x3f, 0xaf, 0xd8, 0x79, 0x21, 0x44, 0x03, 0xa8, 0x8d,
-	0x17, 0x39, 0xbf, 0xa2, 0x6d, 0xd8, 0x1f, 0x0b, 0xae, 0x91, 0x6b, 0x0b, 0x69, 0xc6, 0xdb, 0xed,
-	0xe8, 0x0b, 0x81, 0x43, 0x7f, 0xae, 0x29, 0xca, 0x9b, 0x65, 0x8a, 0xf4, 0x0c, 0x42, 0x13, 0xcc,
-	0xab, 0xb4, 0x53, 0x4a, 0xf0, 0x57, 0x73, 0x9d, 0xee, 0xce, 0x99, 0x2f, 0xe4, 0x2d, 0x1c, 0xfc,
-	0x91, 0x8a, 0x1e, 0x97, 0xdc, 0xbb, 0xf2, 0x76, 0x5a, 0xe5, 0xb2, 0xcc, 0xc1, 0x4f, 0xc9, 0x9b,
-	0xee, 0xb7, 0x4d, 0x8f, 0x7c, 0xdf, 0xf4, 0xc8, 0xcf, 0x4d, 0x8f, 0x7c, 0xfe, 0xd5, 0xfb, 0xef,
-	0x63, 0xf1, 0xb4, 0x3e, 0xd5, 0xed, 0x63, 0x7b, 0xf6, 0x3b, 0x00, 0x00, 0xff, 0xff, 0xa4, 0xcf,
-	0x9a, 0x13, 0x7d, 0x03, 0x00, 0x00,
+	// 501 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x93, 0x4f, 0x6f, 0x12, 0x41,
+	0x18, 0xc6, 0x1d, 0x28, 0x94, 0x7d, 0x17, 0x5a, 0x1c, 0x8d, 0x25, 0xbb, 0x06, 0x61, 0xe3, 0xa1,
+	0x7a, 0x20, 0x0d, 0x1e, 0x34, 0x9e, 0xaa, 0x68, 0x13, 0x4c, 0xda, 0xc3, 0x92, 0x78, 0xf0, 0x42,
+	0xd6, 0x9d, 0xa1, 0x90, 0xb2, 0x33, 0x74, 0x66, 0xb6, 0x49, 0xbf, 0x89, 0x9f, 0xc3, 0x4f, 0xe1,
+	0xd1, 0xf8, 0x09, 0x1a, 0xfc, 0x22, 0x66, 0xfe, 0xc0, 0xae, 0x8a, 0x17, 0x6f, 0x3b, 0xcf, 0xf3,
+	0xe4, 0xc7, 0xfb, 0x3e, 0xc3, 0x40, 0x2b, 0x5d, 0xe6, 0x52, 0x51, 0x31, 0x58, 0x09, 0xae, 0x38,
+	0xf6, 0x52, 0xce, 0x24, 0x65, 0x32, 0x97, 0xd1, 0x0f, 0x04, 0x8d, 0x0b, 0x4e, 0xe8, 0x98, 0xcd,
+	0x38, 0x3e, 0x82, 0x7d, 0xc6, 0x09, 0x9d, 0x2e, 0x48, 0x07, 0xf5, 0xd0, 0xb1, 0x17, 0xd7, 0xf5,
+	0x71, 0x4c, 0x70, 0x08, 0x9e, 0x48, 0x66, 0x6a, 0x9a, 0x10, 0x22, 0x3a, 0x15, 0x63, 0x35, 0xb4,
+	0xf0, 0x86, 0x10, 0x81, 0x9f, 0xc3, 0x7d, 0x87, 0x9f, 0x66, 0x97, 0x99, 0x0b, 0x55, 0x4d, 0xe8,
+	0xd0, 0x19, 0xe7, 0x97, 0x99, 0xcd, 0x86, 0xe0, 0xcd, 0x95, 0x5a, 0xd9, 0xcc, 0x9e, 0x05, 0x69,
+	0xc1, 0x98, 0x4f, 0xe1, 0xc0, 0x98, 0x05, 0xa5, 0x66, 0x12, 0x4d, 0xad, 0x6e, 0x11, 0x7d, 0x68,
+	0x66, 0x54, 0x89, 0x45, 0x2a, 0x6d, 0xa6, 0x6e, 0x32, 0xbe, 0xd3, 0x74, 0x24, 0xfa, 0x8a, 0xc0,
+	0x1f, 0xd9, 0x5f, 0x36, 0x7b, 0x85, 0xe0, 0x2d, 0x69, 0x42, 0xa8, 0x28, 0x36, 0x6b, 0x58, 0x61,
+	0x4c, 0xf0, 0x4b, 0xa8, 0xe9, 0x2d, 0x65, 0xa7, 0xd2, 0xab, 0x1e, 0xfb, 0xc3, 0xfe, 0x60, 0x5b,
+	0xce, 0xa0, 0xc4, 0x18, 0xe8, 0x92, 0xe4, 0x7b, 0xa6, 0xc4, 0x6d, 0x6c, 0xf3, 0xc1, 0x39, 0x40,
+	0x21, 0xe2, 0x36, 0x54, 0xaf, 0xe8, 0xad, 0xa3, 0xeb, 0x4f, 0xfc, 0x0c, 0x6a, 0x37, 0xc9, 0x32,
+	0xa7, 0xa6, 0x30, 0x7f, 0xf8, 0xa0, 0x04, 0xde, 0x34, 0x1e, 0xdb, 0xc4, 0xeb, 0xca, 0x2b, 0x14,
+	0x8d, 0xe0, 0x30, 0x4e, 0x66, 0xea, 0x03, 0x5f, 0xb0, 0x98, 0x5e, 0xe7, 0x54, 0x2a, 0x7c, 0x02,
+	0x9e, 0xbd, 0x0f, 0x36, 0xe3, 0x86, 0xfc, 0x0f, 0x4a, 0x83, 0xb9, 0xaf, 0x08, 0x43, 0xbb, 0x80,
+	0xc8, 0x95, 0x8e, 0x46, 0x1f, 0xe1, 0xe1, 0x19, 0x55, 0xe9, 0x7c, 0xc2, 0x92, 0x95, 0x9c, 0x73,
+	0xb5, 0xa1, 0xf7, 0xc0, 0x97, 0x2a, 0x11, 0x6a, 0x42, 0xaf, 0x2f, 0xf2, 0xcc, 0xf0, 0xf7, 0xe2,
+	0xb2, 0x84, 0x1f, 0x83, 0x47, 0x19, 0x71, 0x7e, 0xc5, 0xf8, 0x85, 0x10, 0xf5, 0xa1, 0x36, 0x9a,
+	0xe7, 0xec, 0x0a, 0x77, 0x60, 0x7f, 0xc4, 0x99, 0xa2, 0x4c, 0x19, 0x48, 0x33, 0xde, 0x1c, 0xa3,
+	0x53, 0x68, 0x9a, 0x01, 0xdd, 0x28, 0xff, 0xb1, 0x50, 0x0b, 0x7c, 0x4b, 0x30, 0x33, 0x0f, 0xef,
+	0x10, 0x1c, 0xb8, 0x5b, 0x99, 0x50, 0x71, 0xb3, 0x48, 0x29, 0x3e, 0x03, 0x5f, 0xaf, 0xeb, 0x54,
+	0x1c, 0x94, 0x78, 0x7f, 0xf4, 0x19, 0x84, 0x3b, 0x3d, 0x37, 0xdb, 0x3b, 0x68, 0xfd, 0x56, 0x13,
+	0x7e, 0x52, 0x4a, 0xef, 0x2a, 0x30, 0x68, 0x97, 0xff, 0x2a, 0xba, 0x89, 0x13, 0x84, 0x4f, 0x1d,
+	0x65, 0xfb, 0xa6, 0x1e, 0x95, 0x42, 0xa5, 0x4d, 0x82, 0xa3, 0xbf, 0x74, 0x3b, 0xc7, 0xdb, 0xf0,
+	0xdb, 0xba, 0x8b, 0xbe, 0xaf, 0xbb, 0xe8, 0x6e, 0xdd, 0x45, 0x5f, 0x7e, 0x76, 0xef, 0x7d, 0x2a,
+	0x9e, 0xeb, 0xe7, 0xba, 0x79, 0xc0, 0x2f, 0x7e, 0x05, 0x00, 0x00, 0xff, 0xff, 0xa4, 0xd8, 0x0c,
+	0x91, 0xd1, 0x03, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -422,6 +503,7 @@ const _ = grpc.SupportPackageIsVersion4
 type ClusterServiceClient interface {
 	JoinCluster(ctx context.Context, in *RaftJoinRequest, opts ...grpc.CallOption) (*RaftJoinResponse, error)
 	FetchSnapshot(ctx context.Context, in *FetchSnapshotRequest, opts ...grpc.CallOption) (ClusterService_FetchSnapshotClient, error)
+	FetchNodeInfo(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error)
 }
 
 type clusterServiceClient struct {
@@ -473,10 +555,20 @@ func (x *clusterServiceFetchSnapshotClient) Recv() (*Chunk, error) {
 	return m, nil
 }
 
+func (c *clusterServiceClient) FetchNodeInfo(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoResponse, error) {
+	out := new(InfoResponse)
+	err := c.cc.Invoke(ctx, "/consensus.ClusterService/FetchNodeInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ClusterServiceServer is the server API for ClusterService service.
 type ClusterServiceServer interface {
 	JoinCluster(context.Context, *RaftJoinRequest) (*RaftJoinResponse, error)
 	FetchSnapshot(*FetchSnapshotRequest, ClusterService_FetchSnapshotServer) error
+	FetchNodeInfo(context.Context, *InfoRequest) (*InfoResponse, error)
 }
 
 func RegisterClusterServiceServer(s *grpc.Server, srv ClusterServiceServer) {
@@ -522,6 +614,24 @@ func (x *clusterServiceFetchSnapshotServer) Send(m *Chunk) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _ClusterService_FetchNodeInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClusterServiceServer).FetchNodeInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/consensus.ClusterService/FetchNodeInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClusterServiceServer).FetchNodeInfo(ctx, req.(*InfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _ClusterService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "consensus.ClusterService",
 	HandlerType: (*ClusterServiceServer)(nil),
@@ -529,6 +639,10 @@ var _ClusterService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "JoinCluster",
 			Handler:    _ClusterService_JoinCluster_Handler,
+		},
+		{
+			MethodName: "FetchNodeInfo",
+			Handler:    _ClusterService_FetchNodeInfo_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -613,11 +727,11 @@ func (m *ClusterInfo) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.LeaderAddr) > 0 {
+	if len(m.LeaderId) > 0 {
 		dAtA[i] = 0xa
 		i++
-		i = encodeVarintCluster(dAtA, i, uint64(len(m.LeaderAddr)))
-		i += copy(dAtA[i:], m.LeaderAddr)
+		i = encodeVarintCluster(dAtA, i, uint64(len(m.LeaderId)))
+		i += copy(dAtA[i:], m.LeaderId)
 	}
 	if len(m.Nodes) > 0 {
 		for k, _ := range m.Nodes {
@@ -699,16 +813,6 @@ func (m *RaftJoinResponse) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.ClusterInfo != nil {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintCluster(dAtA, i, uint64(m.ClusterInfo.Size()))
-		n3, err := m.ClusterInfo.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n3
-	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
@@ -773,6 +877,58 @@ func (m *Chunk) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *InfoResponse) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *InfoResponse) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.NodeInfo != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCluster(dAtA, i, uint64(m.NodeInfo.Size()))
+		n3, err := m.NodeInfo.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n3
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *InfoRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *InfoRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
 func encodeVarintCluster(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
@@ -824,7 +980,7 @@ func (m *ClusterInfo) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.LeaderAddr)
+	l = len(m.LeaderId)
 	if l > 0 {
 		n += 1 + l + sovCluster(uint64(l))
 	}
@@ -869,10 +1025,6 @@ func (m *RaftJoinResponse) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.ClusterInfo != nil {
-		l = m.ClusterInfo.Size()
-		n += 1 + l + sovCluster(uint64(l))
-	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -907,6 +1059,34 @@ func (m *Chunk) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCluster(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *InfoResponse) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.NodeInfo != nil {
+		l = m.NodeInfo.Size()
+		n += 1 + l + sovCluster(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *InfoRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -1203,7 +1383,7 @@ func (m *ClusterInfo) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LeaderAddr", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field LeaderId", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1231,7 +1411,7 @@ func (m *ClusterInfo) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.LeaderAddr = string(dAtA[iNdEx:postIndex])
+			m.LeaderId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -1506,42 +1686,6 @@ func (m *RaftJoinResponse) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: RaftJoinResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ClusterInfo", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowCluster
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthCluster
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthCluster
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			if m.ClusterInfo == nil {
-				m.ClusterInfo = &ClusterInfo{}
-			}
-			if err := m.ClusterInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCluster(dAtA[iNdEx:])
@@ -1722,6 +1866,150 @@ func (m *Chunk) Unmarshal(dAtA []byte) error {
 				m.Content = []byte{}
 			}
 			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *InfoResponse) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: InfoResponse: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: InfoResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field NodeInfo", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCluster
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCluster
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.NodeInfo == nil {
+				m.NodeInfo = &NodeInfo{}
+			}
+			if err := m.NodeInfo.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCluster(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCluster
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *InfoRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCluster
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: InfoRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: InfoRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipCluster(dAtA[iNdEx:])
