@@ -30,10 +30,10 @@ import (
 
 func TestApplyAdd(t *testing.T) {
 
-	log.SetLogger("TestApplyAdd", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	node, clean, err := newSeed("apply-add-node-1", 1)
+	node, clean, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node.Close(true))
@@ -74,10 +74,10 @@ func TestApplyAdd(t *testing.T) {
 
 func BenchmarkApplyAdd(b *testing.B) {
 
-	log.SetLogger("BenchmarkApplyAdd", log.SILENT)
+	log.SetLogger(b.Name(), log.SILENT)
 
 	// start only one seed
-	node, clean, err := newSeed("benchmark-apply-add-node-1", 1)
+	node, clean, err := newSeed(b.Name(), 1)
 	require.NoError(b, err)
 	defer func() {
 		require.NoError(b, node.Close(true))
@@ -101,9 +101,9 @@ func BenchmarkApplyAdd(b *testing.B) {
 
 func BenchmarkRaftAdd(b *testing.B) {
 
-	log.SetLogger("BenchmarkRaftAdd", log.SILENT)
+	log.SetLogger(b.Name(), log.SILENT)
 
-	node, clean, err := newSeed("bench-raft-add-node-1", 1)
+	node, clean, err := newSeed(b.Name(), 1)
 	require.NoError(b, err)
 	defer func() {
 		require.NoError(b, node.Close(true))

@@ -27,10 +27,10 @@ import (
 
 func TestBackup(t *testing.T) {
 	var err error
-	log.SetLogger("TestBackup", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// New raft node
-	raftNode, clean, err := newSeed("Backup-0", 0)
+	raftNode, clean, err := newSeed(t.Name(), 0)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, raftNode.Close(true))
@@ -57,10 +57,10 @@ func TestBackup(t *testing.T) {
 
 func TestDeleteBackup(t *testing.T) {
 	var err error
-	log.SetLogger("TestDeleteBackup", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// New raft node
-	raftNode, clean, err := newSeed("DeleteBackup-1", 1)
+	raftNode, clean, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, raftNode.Close(true))

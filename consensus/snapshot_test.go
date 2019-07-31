@@ -30,10 +30,10 @@ import (
 
 func TestSnapshot(t *testing.T) {
 
-	log.SetLogger("TestSnapshot", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	node, clean, err := newSeed("Snapshot-1", 1)
+	node, clean, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node.Close(true))
@@ -64,10 +64,10 @@ func TestSnapshot(t *testing.T) {
 
 func TestRestoreSingleNode(t *testing.T) {
 	// t.Skip()
-	log.SetLogger("TestSnapshot", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	node, clean0, err := newSeed("RestoreSingleNode-1", 1)
+	node, clean0, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 
 	// check the leader of the cluster
@@ -95,7 +95,7 @@ func TestRestoreSingleNode(t *testing.T) {
 	clean0(false)
 
 	// restart the node
-	node, clean, err := newSeed("RestoreSingleNode-1", 1)
+	node, clean, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node.Close(true))
@@ -114,10 +114,10 @@ func TestRestoreSingleNode(t *testing.T) {
 
 func TestRestoreFromLeaderWAL(t *testing.T) {
 
-	log.SetLogger("TestRestoreFromLeaderWAL", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	node1, clean1, err := newSeed("RestoreFromLeaderWAL-1", 1)
+	node1, clean1, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node1.Close(true))
@@ -129,14 +129,14 @@ func TestRestoreFromLeaderWAL(t *testing.T) {
 		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
 
 	//start two nodes and join the cluster
-	node2, clean2, err := newFollower("RestoreFromLeaderWAL-2", 2, node1.info.RaftAddr)
+	node2, clean2, err := newFollower(t.Name(), 2, node1.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node2.Close(true))
 		clean2(true)
 	}()
 
-	node3, clean3, err := newFollower("RestoreFromLeaderWAL-3", 3, node1.info.RaftAddr)
+	node3, clean3, err := newFollower(t.Name(), 3, node1.info.RaftAddr)
 	require.NoError(t, err)
 
 	// check number of nodes in the cluster
@@ -160,7 +160,7 @@ func TestRestoreFromLeaderWAL(t *testing.T) {
 	require.NoError(t, err)
 
 	// restart follower
-	node3, clean3, err = newFollower("RestoreFromLeaderWAL-3", 3)
+	node3, clean3, err = newFollower(t.Name(), 3)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node3.Close(true))
@@ -193,10 +193,10 @@ func TestRestoreFromLeaderWAL(t *testing.T) {
 
 func TestRestoreFromLeaderSnapshot(t *testing.T) {
 	// t.Skip()
-	log.SetLogger("TestRestoreFromLeaderSnapshot", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	node1, clean1, err := newSeed("RestoreFromLeaderSnapshot-node-1", 1)
+	node1, clean1, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node1.Close(true))
@@ -208,13 +208,13 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
 
 	//start two nodes and join the cluster
-	node2, clean2, err := newFollower("RestoreFromLeaderSnapshot-node-2", 2, node1.info.RaftAddr)
+	node2, clean2, err := newFollower(t.Name(), 2, node1.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node2.Close(true))
 		clean2(true)
 	}()
-	node3, clean3, err := newFollower("RestoreFromLeaderSnapshot-node-3", 3, node1.info.RaftAddr)
+	node3, clean3, err := newFollower(t.Name(), 3, node1.info.RaftAddr)
 	require.NoError(t, err)
 
 	// check number of nodes in the cluster
@@ -242,7 +242,7 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 	require.NoError(t, node2.raft.Snapshot().Error())
 
 	// restart follower
-	node3, clean4, err := newFollower("RestoreFromLeaderSnapshot-node-3", 3)
+	node3, clean4, err := newFollower(t.Name(), 3)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node3.Close(true))
@@ -276,10 +276,10 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 
 func TestRestoreNewNodeFromLeader(t *testing.T) {
 
-	log.SetLogger("TestRestoreNewNodeFromLeader", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	node1, clean1, err := newSeed("RestoreNewNodeFromLeader-node-1", 1)
+	node1, clean1, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node1.Close(true))
@@ -291,7 +291,7 @@ func TestRestoreNewNodeFromLeader(t *testing.T) {
 		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
 
 	// start another node and join the cluster
-	node2, clean2, err := newFollower("RestoreNewNodeFromLeader-node-2", 2, node1.info.RaftAddr)
+	node2, clean2, err := newFollower(t.Name(), 2, node1.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node2.Close(true))
@@ -319,7 +319,7 @@ func TestRestoreNewNodeFromLeader(t *testing.T) {
 	require.NoError(t, node2.raft.Snapshot().Error())
 
 	// start a third node
-	node3, clean3, err := newFollower("RestoreNewNodeFromLeader-node-3", 3, node1.info.RaftAddr)
+	node3, clean3, err := newFollower(t.Name(), 3, node1.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node3.Close(true))
@@ -355,11 +355,11 @@ func TestRestoreFailureDueToGap(t *testing.T) {
 
 	t.Skip()
 
-	log.SetLogger("TestRestoreFailureDueToGap", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	opts := DefaultClusteringOptions()
-	opts.NodeID = fmt.Sprintf("%d", 1)
+	opts.NodeID = fmt.Sprintf("%s_%d", t.Name(), 1)
 	opts.Addr = raftAddr(1)
 	opts.ClusterMgmtAddr = clusterMgmtAddr(1)
 	opts.HttpAddr = httpAddr(1)
@@ -392,17 +392,17 @@ func TestRestoreFailureDueToGap(t *testing.T) {
 	require.NoError(t, node1.raft.Snapshot().Error())
 
 	// start another node and join the cluster
-	_, _, err = newFollower("RestoreFailureDueToGap-node-2", 2, node1.info.RaftAddr)
+	_, _, err = newFollower(t.Name(), 2, node1.info.RaftAddr)
 	require.Error(t, err)
 
 }
 
 func TestRestoreNewNodeFromChangedLeader(t *testing.T) {
 
-	log.SetLogger("TestRestoreNewNodeFromChangedLeader", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	node1, clean1, err := newSeed("RestoreNewNodeFromChangedLeader-node-1", 1)
+	node1, clean1, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node1.Close(true))
@@ -414,7 +414,7 @@ func TestRestoreNewNodeFromChangedLeader(t *testing.T) {
 		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
 
 	// start another node and join the cluster
-	node2, clean2, err := newFollower("RestoreNewNodeFromChangedLeader-node-2", 2, node1.info.RaftAddr)
+	node2, clean2, err := newFollower(t.Name(), 2, node1.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node2.Close(true))
@@ -433,7 +433,7 @@ func TestRestoreNewNodeFromChangedLeader(t *testing.T) {
 	require.NoError(t, node2.raft.Snapshot().Error())
 
 	// start a third node
-	node3, clean3, err := newFollower("RestoreNewNodeFromChangedLeader-node-3", 3, node1.info.RaftAddr)
+	node3, clean3, err := newFollower(t.Name(), 3, node1.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node3.Close(true))
@@ -470,12 +470,10 @@ func TestRestoreNewNodeFromChangedLeader(t *testing.T) {
 
 func TestRestoreOldNodeFromChangedLeader(t *testing.T) {
 
-	t.Skip()
-
-	log.SetLogger("TestRestoreOldNodeFromChangedLeader", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	node1, clean1, err := newSeed("RestoreOldNodeFromChangedLeader-node-1", 1)
+	node1, clean1, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node1.Close(true))
@@ -487,13 +485,13 @@ func TestRestoreOldNodeFromChangedLeader(t *testing.T) {
 		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
 
 	// start another two nodes and join the cluster
-	node2, clean2, err := newFollower("RestoreOldNodeFromChangedLeader-node-2", 2, node1.info.RaftAddr)
+	node2, clean2, err := newFollower(t.Name(), 2, node1.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node2.Close(true))
 		clean2(true)
 	}()
-	node3, clean3, err := newFollower("RestoreOldNodeFromChangedLeader-node-3", 3, node1.info.RaftAddr)
+	node3, clean3, err := newFollower(t.Name(), 3, node1.info.RaftAddr)
 	require.NoError(t, err)
 
 	// check number of nodes in the cluster
@@ -531,7 +529,7 @@ func TestRestoreOldNodeFromChangedLeader(t *testing.T) {
 		retryTrue(50, 200*time.Millisecond, node2.IsLeader), "the node is not leader!")
 
 	// restart a third node
-	node3, clean3, err = newFollower("RestoreOldNodeFromChangedLeader-node-3", 3)
+	node3, clean3, err = newFollower(t.Name(), 3)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node3.Close(true))
