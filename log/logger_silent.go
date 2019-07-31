@@ -44,3 +44,7 @@ func (l *silentLogger) Debugf(format string, v ...interface{}) { return }
 func (l *silentLogger) GetLogger() *log.Logger {
 	return &l.Logger
 }
+
+func (l *silentLogger) GetLoggerLevel() string {
+	return SILENT
+}
