@@ -29,7 +29,6 @@ import (
 type fsmSnapshot struct {
 	LastSeqNum     uint64
 	BalloonVersion uint64
-	Info           *ClusterInfo
 }
 
 // Persist writes the snapshot to the given sink.
@@ -131,8 +130,8 @@ func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_F
 }
 
 func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.ReadCloser, error) {
-	addr := n.clusterInfo.Nodes[n.clusterInfo.LeaderId].RaftAddr
-	conn, err := grpc.Dial(addr, grpc.WithInsecure())
+	leaderAddr := string(n.raft.Leader())
+	conn, err := grpc.Dial(leaderAddr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}

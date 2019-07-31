@@ -27,7 +27,6 @@ type commandType uint8
 
 const (
 	addEventCommandType commandType = iota // Commands which modify the database.
-	infoSetCommandType
 )
 
 type command struct {

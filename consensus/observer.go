@@ -37,22 +37,7 @@ func (n *RaftNode) startObservationsConsumer() {
 		case obs := <-n.observationsCh:
 			switch obs.Data.(type) {
 			case raft.PeerObservation:
-				peerObs := obs.Data.(raft.PeerObservation)
-				if peerObs.Removed {
-					n.infoMu.Lock()
-					delete(n.clusterInfo.Nodes, string(peerObs.Peer.Address))
-					n.infoMu.Unlock()
-					cmd := newCommand(infoSetCommandType)
-					cmd.encode(n.clusterInfo)
-					n.propose(cmd)
-				}
 			case raft.LeaderObservation:
-				id, err := n.leaderId()
-				if err == nil {
-					n.infoMu.Lock()
-					n.clusterInfo.LeaderId = id
-					n.infoMu.Unlock()
-				}
 			default:
 			}
 		case <-n.done:
