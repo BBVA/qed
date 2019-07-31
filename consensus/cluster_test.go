@@ -29,10 +29,11 @@ import (
 )
 
 func TestOpenAndCloseRaftNode(t *testing.T) {
-	log.SetLogger("TestOpenAndCloseRaftNode", log.SILENT)
+
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	r, clean, err := newSeed("open-close-node-1", 1)
+	r, clean, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r.Close(true))
@@ -43,10 +44,10 @@ func TestOpenAndCloseRaftNode(t *testing.T) {
 
 func TestRaftNodeIsLeader(t *testing.T) {
 
-	log.SetLogger("TestRaftNodeIsLeader", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	r, clean, err := newSeed("RaftNodeIsLeader-1", 1)
+	r, clean, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r.Close(true))
@@ -61,10 +62,10 @@ func TestRaftNodeIsLeader(t *testing.T) {
 
 func TestRaftNodeNotLeader(t *testing.T) {
 
-	log.SetLogger("TestRaftNodeNotLeader", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one follower
-	_, clean, err := newFollower("TestRaftNodeNotLeader-1", 1)
+	_, clean, err := newFollower(t.Name(), 1)
 	require.Error(t, err)
 	defer func() {
 		clean(true)
@@ -74,10 +75,10 @@ func TestRaftNodeNotLeader(t *testing.T) {
 
 func TestRaftNodeClusterInfo(t *testing.T) {
 
-	log.SetLogger("TestRaftNodeClusterInfo", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
-	r, clean, err := newSeed("RaftNodeClusterInfo-1", 1)
+	r, clean, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r.Close(true))
@@ -101,16 +102,16 @@ func TestRaftNodeClusterInfo(t *testing.T) {
 
 func TestMultiRaftNodeJoin(t *testing.T) {
 
-	log.SetLogger("TestMultiRaftNodeJoin", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
-	r0, clean0, err := newSeed("MultiRaftNodeJoin-0", 0)
+	r0, clean0, err := newSeed(t.Name(), 0)
 	require.NoError(t, err)
 
 	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "a single node is not leader!")
 
 	// start one follower and join the cluster
-	r1, clean1, err := newFollower("MultiRaftNodeJoin-1", 1, r0.info.RaftAddr)
+	r1, clean1, err := newFollower(t.Name(), 1, r0.info.RaftAddr)
 	require.NoError(t, err)
 
 	defer func() {
@@ -134,10 +135,10 @@ func TestMultiRaftNodeJoin(t *testing.T) {
 
 func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
 
-	log.SetLogger("TestMultiRaftNodeJoin", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
-	r0, clean0, err := newSeed("MultiRaftNodeJoin-0", 0)
+	r0, clean0, err := newSeed(t.Name(), 0)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r0.Close(true))
@@ -148,7 +149,7 @@ func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
 	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "r0 is not leader!")
 
 	// star one follower and join the cluster
-	r1, clean1, err := newFollower("MultiRaftNodeJoin-1", 1, r0.info.RaftAddr)
+	r1, clean1, err := newFollower(t.Name(), 1, r0.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r1.Close(true))
@@ -162,7 +163,7 @@ func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
 		}), "The number of nodes does not match")
 
 	// start another follower but try to join to a non-leader node
-	_, clean2, err := newFollower("MultiRaftNodeJoin-2", 2, r1.info.RaftAddr) // wrong address
+	_, clean2, err := newFollower(t.Name(), 2, r1.info.RaftAddr) // wrong address
 	defer clean2(true)
 	require.Error(t, err)
 
@@ -176,10 +177,10 @@ func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
 
 func TestMultRaftNodesReJoin(t *testing.T) {
 
-	log.SetLogger("TestMultRaftNodesReJoin", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
-	r0, clean0, err := newSeed("MultRaftNodesReJoin-0", 0)
+	r0, clean0, err := newSeed(t.Name(), 0)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r0.Close(true))
@@ -190,13 +191,13 @@ func TestMultRaftNodesReJoin(t *testing.T) {
 	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "r0 is not leader!")
 
 	// start two replicas
-	r1, clean1, err := newFollower("MultRaftNodesReJoin-1", 1, r0.info.RaftAddr)
+	r1, clean1, err := newFollower(t.Name(), 1, r0.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r1.Close(true))
 		clean1(true)
 	}()
-	r2, clean2, err := newFollower("MultRaftNodesReJoin-2", 2, r0.info.RaftAddr)
+	r2, clean2, err := newFollower(t.Name(), 2, r0.info.RaftAddr)
 	require.NoError(t, err)
 
 	// check the number of nodes in the cluster
@@ -212,7 +213,7 @@ func TestMultRaftNodesReJoin(t *testing.T) {
 	clean2(false)
 
 	// restart the stopped node
-	r2, clean3, err := newFollower("MultRaftNodesReJoin-2", 2, r0.info.RaftAddr)
+	r2, clean3, err := newFollower(t.Name(), 2, r0.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r2.Close(true))
@@ -231,10 +232,10 @@ func TestMultRaftNodesReJoin(t *testing.T) {
 
 func TestMultiRaftLeaveLeadership(t *testing.T) {
 
-	log.SetLogger("TestMultiRaftLeaveLeadership", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
-	r0, clean0, err := newSeed("MultiRaftLeaveLeadership-0", 0)
+	r0, clean0, err := newSeed(t.Name(), 0)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r0.Close(true))
@@ -245,13 +246,13 @@ func TestMultiRaftLeaveLeadership(t *testing.T) {
 	require.Truef(t, retryTrue(50, 200*time.Millisecond, r0.IsLeader), "r0 is not leader!")
 
 	// start two replicas
-	r1, clean1, err := newFollower("MultiRaftLeaveLeadership-1", 1, r0.info.RaftAddr)
+	r1, clean1, err := newFollower(t.Name(), 1, r0.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r1.Close(true))
 		clean1(true)
 	}()
-	r2, clean2, err := newFollower("MultiRaftLeaveLeadership-2", 2, r0.info.RaftAddr)
+	r2, clean2, err := newFollower(t.Name(), 2, r0.info.RaftAddr)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, r2.Close(true))
@@ -293,7 +294,7 @@ func httpAddr(id int) string {
 
 func newSeed(name string, id int) (*RaftNode, closeF, error) {
 	opts := DefaultClusteringOptions()
-	opts.NodeID = name
+	opts.NodeID = fmt.Sprintf("%s_%d", name, id)
 	opts.Addr = raftAddr(id)
 	opts.ClusterMgmtAddr = clusterMgmtAddr(id)
 	opts.HttpAddr = httpAddr(id)
@@ -306,7 +307,7 @@ func newSeed(name string, id int) (*RaftNode, closeF, error) {
 
 func newFollower(name string, id int, seeds ...string) (*RaftNode, closeF, error) {
 	opts := DefaultClusteringOptions()
-	opts.NodeID = name
+	opts.NodeID = fmt.Sprintf("%s_%d", name, id)
 	opts.Addr = raftAddr(id)
 	opts.ClusterMgmtAddr = clusterMgmtAddr(id)
 	opts.HttpAddr = httpAddr(id)
@@ -329,11 +330,11 @@ func newNode(opts *ClusteringOptions, rocksOpts *rocks.Options) (*RaftNode, clos
 		// metricsCloseF()
 		close(snapshotsCh)
 		if dir {
-			os.RemoveAll(fmt.Sprintf("/var/tmp/cluster-test/node%s", opts.NodeID))
+			os.RemoveAll(fmt.Sprintf("/var/tmp/cluster-test/node_%s", opts.NodeID))
 		}
 	}
 
-	dbPath := fmt.Sprintf("/var/tmp/cluster-test/node%s/db", opts.NodeID)
+	dbPath := fmt.Sprintf("/var/tmp/cluster-test/node_%s/db", opts.NodeID)
 	if err := os.MkdirAll(dbPath, os.FileMode(0755)); err != nil {
 		return nil, cleanF, err
 	}
@@ -344,7 +345,7 @@ func newNode(opts *ClusteringOptions, rocksOpts *rocks.Options) (*RaftNode, clos
 		return nil, cleanF, err
 	}
 
-	raftPath := fmt.Sprintf("/var/tmp/cluster-test/node%s/raft", opts.NodeID)
+	raftPath := fmt.Sprintf("/var/tmp/cluster-test/node_%s/raft", opts.NodeID)
 	if err := os.MkdirAll(raftPath, os.FileMode(0755)); err != nil {
 		return nil, cleanF, err
 	}
