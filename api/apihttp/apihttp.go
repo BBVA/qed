@@ -436,15 +436,15 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 		shardDetails := make(map[string]protocol.ShardDetail)
 
 		for _, node := range clusterInfo.Nodes {
-			shardDetails[node.RaftAddr] = protocol.ShardDetail{
+			shardDetails[node.NodeId] = protocol.ShardDetail{
 				NodeId:   node.NodeId,
 				HTTPAddr: node.HttpAddr,
 			}
 		}
 
 		shards := &protocol.Shards{
-			NodeId:    nodeInfo.RaftAddr,
-			LeaderId:  clusterInfo.LeaderAddr,
+			NodeId:    nodeInfo.NodeId,
+			LeaderId:  clusterInfo.LeaderId,
 			URIScheme: protocol.Scheme(scheme),
 			Shards:    shardDetails,
 		}
