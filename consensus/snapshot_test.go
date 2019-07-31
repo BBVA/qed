@@ -361,7 +361,7 @@ func TestRestoreFailureDueToGap(t *testing.T) {
 	opts := DefaultClusteringOptions()
 	opts.NodeID = fmt.Sprintf("%s_%d", t.Name(), 1)
 	opts.Addr = raftAddr(1)
-	opts.ClusterMgmtAddr = clusterMgmtAddr(1)
+	opts.MgmtAddr = mgmtAddr(1)
 	opts.HttpAddr = httpAddr(1)
 	opts.Bootstrap = true
 	opts.SnapshotThreshold = 0

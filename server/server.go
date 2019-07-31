@@ -125,7 +125,7 @@ func NewServer(conf *Config) (*Server, error) {
 	clusterOpts.Addr = conf.RaftAddr
 	clusterOpts.HttpAddr = conf.HTTPAddr
 	clusterOpts.RaftLogPath = conf.DBPath
-	clusterOpts.ClusterMgmtAddr = conf.MgmtAddr
+	clusterOpts.MgmtAddr = conf.MgmtAddr
 	clusterOpts.Bootstrap = bootstrap
 	if !bootstrap {
 		clusterOpts.Seeds = conf.RaftJoinAddr

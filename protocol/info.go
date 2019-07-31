@@ -39,10 +39,9 @@ type Shards struct {
 
 // NodeInfo is the public struct that apihttp.InfoHandler call returns.
 type NodeInfo struct {
-	NodeId          string `json:"node_id"`
-	RaftAddr        string `json:"raft_addr"`
-	ClusterMgmtAddr string `json:"cluster_mgmt_addr"`
-	HttpAddr        string `json:"http_addr"`
-	HttpMgmtAddr    string `json:"http_mgmt_addr"`
-	MetricsAddr     string `json:"metrics_addr"`
+	NodeId      string `json:"node_id"`
+	RaftAddr    string `json:"raft_addr"`
+	MgmtAddr    string `json:"mgmt_addr"`
+	HttpAddr    string `json:"http_addr"`
+	MetricsAddr string `json:"metrics_addr"`
 }

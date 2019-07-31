@@ -133,9 +133,10 @@ func (b fakeRaftBalloon) QueryConsistency(start, end uint64) (*balloon.Increment
 
 func (b fakeRaftBalloon) Info() *consensus.NodeInfo {
 	return &consensus.NodeInfo{
-		NodeId:          "node01",
-		RaftAddr:        "127.0.0.1:8800",
-		ClusterMgmtAddr: "127.0.0.1:8801",
+		NodeId:   "node01",
+		RaftAddr: "127.0.0.1:8800",
+		MgmtAddr: "127.0.0.1:8801",
+		HttpAddr: "127.0.0.1:8802",
 	}
 }
 
@@ -144,9 +145,10 @@ func (b fakeRaftBalloon) ClusterInfo() *consensus.ClusterInfo {
 	c.LeaderId = "node01"
 	c.Nodes = map[string]*consensus.NodeInfo{
 		"node01": &consensus.NodeInfo{
-			NodeId:          "node01",
-			RaftAddr:        "127.0.0.1:8800",
-			ClusterMgmtAddr: "127.0.0.1:8801",
+			NodeId:   "node01",
+			RaftAddr: "127.0.0.1:8800",
+			MgmtAddr: "127.0.0.1:8801",
+			HttpAddr: "127.0.0.1:8802",
 		},
 	}
 	return c
