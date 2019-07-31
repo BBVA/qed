@@ -175,7 +175,7 @@ func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
 
 }
 
-func TestMultRaftNodesReJoin(t *testing.T) {
+func TestMultiRaftNodesReJoin(t *testing.T) {
 
 	log.SetLogger(t.Name(), log.SILENT)
 

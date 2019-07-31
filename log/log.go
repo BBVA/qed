@@ -48,6 +48,7 @@ type logger interface {
 	Debugf(format string, v ...interface{})
 
 	GetLogger() *log.Logger
+	GetLoggerLevel() string
 }
 
 func getFilter(lv string) *logutils.LevelFilter {
@@ -135,6 +136,11 @@ func Debugf(format string, v ...interface{}) {
 // modules to use the same formatting options that the defined here.
 func GetLogger() *log.Logger {
 	return std.GetLogger()
+}
+
+// GetLoggerLevel returns the string representation of the log.Logger level.
+func GetLoggerLevel() string {
+	return std.GetLoggerLevel()
 }
 
 // SetLogger is a function that switches between verbosity loggers. Default
