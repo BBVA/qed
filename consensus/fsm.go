@@ -202,7 +202,7 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 // change is committed. It takes the index at which the configuration was
 // written and the configuration value.
 func (n *RaftNode) StoreConfiguration(index uint64, config raft.Configuration) {
-	fmt.Println(index, config)
+	log.Debugf("Node [%s] - Configuration changed on index [%d]: %+v", n.info.NodeId, index, config)
 }
 
 // Snapshot returns a snapshot of the key-value store. The caller must ensure that

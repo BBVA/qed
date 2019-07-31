@@ -67,3 +67,7 @@ func (l *debugLogger) Debugf(format string, v ...interface{}) {
 func (l *debugLogger) GetLogger() *log.Logger {
 	return &l.Logger
 }
+
+func (l *debugLogger) GetLoggerLevel() string {
+	return DEBUG
+}

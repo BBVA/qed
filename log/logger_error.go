@@ -56,3 +56,7 @@ func (l *errorLogger) Debugf(format string, v ...interface{}) { return }
 func (l *errorLogger) GetLogger() *log.Logger {
 	return &l.Logger
 }
+
+func (l *errorLogger) GetLoggerLevel() string {
+	return ERROR
+}
