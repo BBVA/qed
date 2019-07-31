@@ -60,7 +60,6 @@ func TestSnapshot(t *testing.T) {
 	require.Equalf(t, uint64(len(events)), fsmSnap.BalloonVersion, "The balloon version should match")
 	// INFO!! the seqnum gets increased in the number of column families affected by a transaction
 	require.Equalf(t, uint64(4), fsmSnap.LastSeqNum, "The lastSeqNum should be only 1")
-	require.Equalf(t, node.ClusterInfo(), fsmSnap.Info, "The cluster info should match")
 }
 
 func TestRestoreSingleNode(t *testing.T) {
@@ -110,7 +109,6 @@ func TestRestoreSingleNode(t *testing.T) {
 
 	require.Equalf(t, uint64(len(events)), fsmSnap.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, uint64(16), fsmSnap.LastSeqNum, "The lastSeqNum should be only 1")
-	require.Equalf(t, node.ClusterInfo(), fsmSnap.Info, "The cluster info should match")
 
 }
 
@@ -191,7 +189,6 @@ func TestRestoreFromLeaderWAL(t *testing.T) {
 
 	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
-	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
 }
 
 func TestRestoreFromLeaderSnapshot(t *testing.T) {
@@ -274,7 +271,6 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 
 	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
-	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
 
 }
 
@@ -352,7 +348,6 @@ func TestRestoreNewNodeFromLeader(t *testing.T) {
 
 	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
-	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
 
 }
 
@@ -470,6 +465,100 @@ func TestRestoreNewNodeFromChangedLeader(t *testing.T) {
 
 	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
 	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
-	require.Equalf(t, fsmSnap1.Info, fsmSnap3.Info, "The cluster info should match")
+
+}
+
+func TestRestoreOldNodeFromChangedLeader(t *testing.T) {
+
+	t.Skip()
+
+	log.SetLogger("TestRestoreOldNodeFromChangedLeader", log.SILENT)
+
+	// start only one seed
+	node1, clean1, err := newSeed("RestoreOldNodeFromChangedLeader-node-1", 1)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node1.Close(true))
+		clean1(true)
+	}()
+
+	// check the leader of the cluster
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, node1.IsLeader), "a single node is not leader!")
+
+	// start another two nodes and join the cluster
+	node2, clean2, err := newFollower("RestoreOldNodeFromChangedLeader-node-2", 2, node1.info.RaftAddr)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node2.Close(true))
+		clean2(true)
+	}()
+	node3, clean3, err := newFollower("RestoreOldNodeFromChangedLeader-node-3", 3, node1.info.RaftAddr)
+	require.NoError(t, err)
+
+	// check number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(10, 200*time.Millisecond, func() bool {
+			return len(node1.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	// wait for WAL replication
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+		}), "WAL not in sync")
+
+	// stop the follower
+	require.NoError(t, node3.Close(true))
+	clean3(false)
+
+	// write some events
+	for i := uint64(0); i < 10000; i++ {
+		event := utilrand.Bytes(128)
+		_, err = node1.Add(event)
+		require.NoError(t, err)
+	}
+
+	// force a raft snapshot in both nodes in order to truncate the WAL
+	require.NoError(t, node1.raft.Snapshot().Error())
+	require.NoError(t, node2.raft.Snapshot().Error())
+
+	// change leader
+	node1.leaveLeadership()
+
+	// check the leader of the cluster
+	require.Truef(t,
+		retryTrue(50, 200*time.Millisecond, node2.IsLeader), "the node is not leader!")
+
+	// restart a third node
+	node3, clean3, err = newFollower("RestoreOldNodeFromChangedLeader-node-3", 3)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, node3.Close(true))
+		clean3(true)
+	}()
+
+	// check the number of nodes in the cluster
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return len(node1.ClusterInfo().Nodes) == 3
+		}), "The number of nodes does not match")
+
+	// wait for WAL replication
+	require.Truef(t,
+		retryTrue(20, 200*time.Millisecond, func() bool {
+			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+		}), "WAL not in sync")
+
+	// take a snapshot to inspect its values
+	snap1, err := node1.Snapshot()
+	require.NoError(t, err)
+	snap3, err := node3.Snapshot()
+	require.NoError(t, err)
+	fsmSnap1 := snap1.(*fsmSnapshot)
+	fsmSnap3 := snap3.(*fsmSnapshot)
+
+	require.Equalf(t, fsmSnap1.BalloonVersion, fsmSnap3.BalloonVersion, "The balloon version should match")
+	require.Equalf(t, fsmSnap1.LastSeqNum, fsmSnap3.LastSeqNum, "The lastSeqNum should be only 1")
 
 }

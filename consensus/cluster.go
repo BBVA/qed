@@ -92,9 +92,8 @@ func DefaultClusteringOptions() *ClusteringOptions {
 }
 
 type RaftNode struct {
-	path        string
-	info        *NodeInfo
-	clusterInfo *ClusterInfo
+	path string
+	info *NodeInfo
 
 	applyTimeout time.Duration
 
@@ -133,13 +132,8 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		HttpAddr:        opts.HttpAddr,
 	}
 	node := &RaftNode{
-		path: opts.RaftLogPath,
-		info: info,
-		clusterInfo: &ClusterInfo{
-			Nodes: map[string]*NodeInfo{
-				info.RaftAddr: info,
-			},
-		},
+		path:           opts.RaftLogPath,
+		info:           info,
 		observationsCh: make(chan raft.Observation, 1),
 		snapshotsCh:    snapshotsCh,
 		applyTimeout:   10 * time.Second,
@@ -195,6 +189,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	conf.SnapshotThreshold = opts.SnapshotThreshold
 	conf.LocalID = raft.ServerID(opts.NodeID)
 	conf.Logger = hclog.Default()
+	conf.NoSnapshotRestoreOnStart = true
 	node.raftConfig = conf
 
 	node.transport, err = NewCMuxTCPTransportWithLogger(node, 3, 10*time.Second, log.GetLogger())
@@ -221,6 +216,10 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	observer := raft.NewObserver(node.observationsCh, true, observationsFilterFn)
 	node.raft.RegisterObserver(observer)
 	go node.startObservationsConsumer()
+
+	// load state
+	node.loadState()
+	node.balloon.RefreshVersion()
 
 	// register metrics
 	node.metrics = newRaftNodeMetrics(node)
@@ -350,7 +349,7 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 	if !n.IsLeader() {
 		return nil, ErrNotLeader
 	}
-	fmt.Println("REQ ----- ", req)
+
 	log.Infof("received join request for remote node %s at %s", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
 
 	// Add the node as a voter. This is idempotent. No-op if the request

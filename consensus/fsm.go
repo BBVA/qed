@@ -192,17 +192,17 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 		}
 		return &fsmResponse{fmt.Errorf("state already applied!: %+v -> %+v", n.state, newState), nil}
 
-	case infoSetCommandType:
-		var info ClusterInfo
-		if err := cmd.decode(&info); err != nil {
-			return &fsmResponse{err: err}
-		}
-		return n.applyClusterInfo(&info)
-
 	default:
 		return &fsmResponse{fmt.Errorf("unknown command: %v", cmd.id), nil}
 
 	}
+}
+
+// StoreConfiguration is invoked once a log entry containing a configuration
+// change is committed. It takes the index at which the configuration was
+// written and the configuration value.
+func (n *RaftNode) StoreConfiguration(index uint64, config raft.Configuration) {
+	fmt.Println(index, config)
 }
 
 // Snapshot returns a snapshot of the key-value store. The caller must ensure that
@@ -211,11 +211,7 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 func (n *RaftNode) Snapshot() (raft.FSMSnapshot, error) {
 	lastSeqNum := n.db.LastWALSequenceNumber()
 	log.Debugf("Generating snapshot until seqNum: %d (balloon version %d)", lastSeqNum, n.balloon.Version())
-	// change lastVersion by checkpoint structure
-	return &fsmSnapshot{
-		LastSeqNum:     lastSeqNum,
-		BalloonVersion: n.balloon.Version(),
-		Info:           n.clusterInfo}, nil // TODO should we lock the info?
+	return &fsmSnapshot{lastSeqNum, n.balloon.Version()}, nil
 }
 
 // Restore restores the node to a previous state.
@@ -231,10 +227,6 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 	if err := snap.decode(buf.Bytes()); err != nil {
 		return err
 	}
-
-	// set cluster info
-	n.applyClusterInfo(snap.Info)
-	n.clusterInfo.LeaderId = snap.Info.LeaderId
 
 	// we make a remote call to fetch the snapshot
 	reader, err := n.attemptToFetchSnapshot(snap.LastSeqNum)
@@ -314,16 +306,4 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 	resp.val = snapshotBulk
 
 	return resp
-}
-
-func (n *RaftNode) applyClusterInfo(info *ClusterInfo) *fsmResponse {
-	n.infoMu.Lock()
-	for id, data := range info.Nodes {
-		if id != n.info.RaftAddr {
-			n.clusterInfo.Nodes[id] = data
-		}
-	}
-	//n.clusterInfo.LeaderId = info.LeaderId
-	n.infoMu.Unlock()
-	return new(fsmResponse)
 }
