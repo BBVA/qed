@@ -29,6 +29,7 @@ import (
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/crypto"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/notifierstore"
 	"github.com/bbva/qed/testutils/scope"
@@ -103,6 +104,7 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 	hostname, _ := os.Hostname()
 	conf := server.DefaultConfig()
 	conf.APIKey = "APIKey"
+	conf.Log = log.SILENT
 	conf.NodeID = fmt.Sprintf("%s-%d", hostname, id)
 	conf.HTTPAddr = fmt.Sprintf("127.0.0.1:880%d", id)
 	conf.MgmtAddr = fmt.Sprintf("127.0.0.1:870%d", id)
