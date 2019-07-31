@@ -18,6 +18,7 @@ package consensus
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/bbva/qed/log"
@@ -39,27 +40,45 @@ func (n *RaftNode) Info() *NodeInfo {
 // ClusterInfo function returns Raft current node info plus certain raft cluster
 // info. Used in /info/shard.
 func (n *RaftNode) ClusterInfo() *ClusterInfo {
+
+	var wg sync.WaitGroup
+
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	ci := new(ClusterInfo)
-	ci.Nodes = make(map[string]*NodeInfo)
+
 	done := make(chan struct{})
 
 	go func() {
-		leaderAddr := n.raft.Leader()
-		servers := listServers(ctx, n.raft)
-		for _, srv := range servers {
-			resp, err := grpcFetchInfo(ctx, string(srv.Address))
-			if err != nil {
-				log.Infof("Error geting node info from %s", string(srv.Address))
-				continue
-			}
-			if leaderAddr == srv.Address {
-				ci.LeaderId = resp.NodeInfo.NodeId
-			}
-			ci.Nodes[resp.NodeInfo.NodeId] = resp.NodeInfo
+		var lock sync.Mutex
+		nodes := make(map[string]*NodeInfo)
+		leaderAddr := string(n.raft.Leader())
+		if leaderAddr == "" {
+			leaderAddr = "unknown"
 		}
+
+		servers := listServers(ctx, n.raft)
+
+		for _, srv := range servers {
+			wg.Add(1)
+			go func(addr string) {
+				defer wg.Done()
+				resp, err := grpcFetchInfo(ctx, addr)
+				if err != nil {
+					log.Infof("Error geting node info from %s: %v", addr, err)
+					return
+				}
+				lock.Lock()
+				if leaderAddr == addr {
+					ci.LeaderId = resp.NodeInfo.NodeId
+				}
+				nodes[resp.NodeInfo.NodeId] = resp.NodeInfo
+				lock.Unlock()
+			}(string(srv.Address))
+		}
+		wg.Wait()
+		ci.Nodes = nodes
 		close(done)
 	}()
 
