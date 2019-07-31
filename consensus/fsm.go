@@ -228,38 +228,42 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 		return err
 	}
 
-	// we make a remote call to fetch the snapshot
-	reader, err := n.attemptToFetchSnapshot(snap.LastSeqNum)
-	if err != nil {
-		return err
-	}
+	if n.raft != nil { // we are not restoring on startup
 
-	validateF := func(lastVersion uint64) storage.ValidateF {
-		lastAppliedVersion := lastVersion
-		return func(meta []byte) (bool, error) {
-			metadata := new(VersionMetadata)
-			err := decodeMsgPack(meta, metadata)
-			if err != nil {
-				return false, nil
-			}
-			if metadata.PreviousVersion > lastAppliedVersion {
-				log.Infof("Gap found between the last applied version [%d] and the new transaction version [%d]. Backup needed to recover.", lastAppliedVersion, metadata.PreviousVersion)
-				return false, errors.New("Gap found between versions")
-			}
-			if metadata.NewVersion < lastAppliedVersion {
-				// apply only those who are ahead the version specified with the parameter.
-				return false, nil
-			}
-			if metadata.NewVersion == lastAppliedVersion && lastAppliedVersion != 0 {
-				return false, nil
-			}
-			lastAppliedVersion = metadata.NewVersion
-			return true, nil
+		// we make a remote call to fetch the snapshot
+		reader, err := n.attemptToFetchSnapshot(snap.LastSeqNum)
+		if err != nil {
+			return err
 		}
-	}
 
-	if err := n.db.LoadSnapshot(reader, validateF(n.state.BalloonVersion)); err != nil {
-		return err
+		validateF := func(lastVersion uint64) storage.ValidateF {
+			lastAppliedVersion := lastVersion
+			return func(meta []byte) (bool, error) {
+				metadata := new(VersionMetadata)
+				err := decodeMsgPack(meta, metadata)
+				if err != nil {
+					return false, nil
+				}
+				if metadata.PreviousVersion > lastAppliedVersion {
+					log.Infof("Gap found between the last applied version [%d] and the new transaction version [%d]. Backup needed to recover.", lastAppliedVersion, metadata.PreviousVersion)
+					return false, errors.New("Gap found between versions")
+				}
+				if metadata.NewVersion < lastAppliedVersion {
+					// apply only those who are ahead the version specified with the parameter.
+					return false, nil
+				}
+				if metadata.NewVersion == lastAppliedVersion && lastAppliedVersion != 0 {
+					return false, nil
+				}
+				lastAppliedVersion = metadata.NewVersion
+				return true, nil
+			}
+		}
+
+		if err := n.db.LoadSnapshot(reader, validateF(n.state.BalloonVersion)); err != nil {
+			return err
+		}
+
 	}
 
 	n.loadState()
