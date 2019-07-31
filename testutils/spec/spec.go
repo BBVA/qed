@@ -55,35 +55,35 @@ func New() (LetF, ReportF) {
 		}
 }
 
-func Equal(t testing.TB, exp, got interface{}, msg string) {
+func Equal(t testing.TB, exp, got interface{}, msg ...string) {
 	t.Helper()
 	if !reflect.DeepEqual(exp, got) {
 		t.Fatalf("Not equals: %s -> expecting '%v' got '%v'\n", msg, exp, got)
 	}
 }
 
-func True(t testing.TB, cond bool, msg string) {
+func True(t testing.TB, cond bool, msg ...string) {
 	t.Helper()
 	if cond != true {
 		t.Fatalf("Condition is not true: %s -> %v", msg, cond)
 	}
 }
 
-func False(t testing.TB, cond bool, msg string) {
+func False(t testing.TB, cond bool, msg ...string) {
 	t.Helper()
 	if cond != false {
 		t.Fatalf("Condition is not false: %s -> %v", msg, cond)
 	}
 }
 
-func NoError(t testing.TB, err error, msg string) {
+func NoError(t testing.TB, err error, msg ...string) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("Error is not nil: %s -> %v", msg, err)
 	}
 }
 
-func Error(t testing.TB, err error, msg string) {
+func Error(t testing.TB, err error, msg ...string) {
 	t.Helper()
 	if err == nil {
 		t.Fatalf("Error is not nil: %s -> %v", msg, err)
@@ -105,7 +105,7 @@ func isNil(object interface{}) bool {
 	return false
 }
 
-func NotNil(t testing.TB, object interface{}, msg string) {
+func NotNil(t testing.TB, object interface{}, msg ...string) {
 	t.Helper()
 	if isNil(object) {
 		t.Fatalf("Object is nil: %v --> %v", msg, object)
@@ -131,3 +131,12 @@ func Retry(t testing.TB, tries int, delay time.Duration, fn func() error) {
 	}
 }
 
+func RetryOnFalse(t testing.TB, tries int, delay time.Duration, fn func() bool, format string, vars ...interface{}) {
+	t.Helper()
+	Retry(t, tries, delay, func() error {
+		if fn() {
+			return nil
+		}
+		return fmt.Errorf(format, vars...)
+	})
+}
