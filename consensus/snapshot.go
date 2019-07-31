@@ -131,7 +131,8 @@ func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_F
 }
 
 func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.ReadCloser, error) {
-	conn, err := grpc.Dial(n.clusterInfo.LeaderAddr, grpc.WithInsecure())
+	addr := n.clusterInfo.Nodes[n.clusterInfo.LeaderId].RaftAddr
+	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
 		return nil, err
 	}

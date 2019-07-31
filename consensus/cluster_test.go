@@ -92,10 +92,9 @@ func TestRaftNodeClusterInfo(t *testing.T) {
 
 	require.Truef(t,
 		retryTrue(50, 200*time.Millisecond, func() bool {
-			a := r.Info().RaftAddr
-			b := r.ClusterInfo().LeaderAddr
-			fmt.Println(a, b)
-			return a == b
+			ci := r.ClusterInfo()
+			ni := r.Info()
+			return ci.LeaderId == ni.NodeId
 		}), "The leaderId in cluster info is correct")
 
 }
@@ -273,7 +272,7 @@ func TestMultiRaftLeaveLeadership(t *testing.T) {
 	// check
 	require.Truef(t,
 		retryTrue(50, 200*time.Millisecond, func() bool {
-			return r0.ClusterInfo().LeaderAddr != r0.Info().RaftAddr && r0.ClusterInfo().LeaderAddr != ""
+			return r0.ClusterInfo().LeaderId != r0.Info().NodeId && r0.ClusterInfo().LeaderId != ""
 		}), "The leader has to have changed")
 
 }

@@ -350,7 +350,7 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 	if !n.IsLeader() {
 		return nil, ErrNotLeader
 	}
-
+	fmt.Println("REQ ----- ", req)
 	log.Infof("received join request for remote node %s at %s", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
 
 	// Add the node as a voter. This is idempotent. No-op if the request
@@ -360,19 +360,7 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 		return nil, err
 	}
 
-	// update cluster info with the new node
-	n.infoMu.Lock()
-	n.clusterInfo.Nodes[req.NodeInfo.RaftAddr] = req.NodeInfo
-	n.infoMu.Unlock()
-	cmd := newCommand(infoSetCommandType)
-	cmd.encode(n.clusterInfo)
-	_, err := n.propose(cmd)
-	if err != nil {
-		return nil, err
-	}
-	log.Infof("node %s at %s joined successfully", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
-
-	return &RaftJoinResponse{ClusterInfo: n.clusterInfo}, nil
+	return new(RaftJoinResponse), nil
 }
 
 func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
@@ -383,29 +371,15 @@ func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 		}
 		defer conn.Close()
 		client := NewClusterServiceClient(conn)
-
-		resp, err := client.JoinCluster(context.Background(), &RaftJoinRequest{
-			NodeInfo: n.info,
-		})
+		req := new(RaftJoinRequest)
+		req.NodeInfo = n.info
+		_, err = client.JoinCluster(context.Background(), req)
 		if err == nil {
-			// merge cluster info
-			n.applyClusterInfo(resp.ClusterInfo)
 			return nil
 		}
 		fmt.Println("ERROR attemptToJoin: ", err)
 	}
 	return ErrCannotJoin
-}
-
-// Info function returns Raft current node info.
-func (n *RaftNode) Info() *NodeInfo {
-	return n.info
-}
-
-// ClusterInfo function returns Raft current node info plus certain raft cluster
-// info. Used in /info/shard.
-func (n *RaftNode) ClusterInfo() *ClusterInfo {
-	return n.clusterInfo
 }
 
 // RegisterMetrics register raft metrics: prometheus collectors and raftLog metrics.
@@ -432,7 +406,7 @@ func (n *RaftNode) bootstrapCluster() error {
 }
 
 // blank string if there is no leader, or an error.
-func (n *RaftNode) leaderID() (string, error) {
+func (n *RaftNode) leaderId() (string, error) {
 	n.Lock()
 	if n.closed {
 		n.Unlock()
