@@ -40,16 +40,12 @@ func (n *RaftNode) Info() *NodeInfo {
 // ClusterInfo function returns Raft current node info plus certain raft cluster
 // info. Used in /info/shard.
 func (n *RaftNode) ClusterInfo() *ClusterInfo {
-
-	var wg sync.WaitGroup
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	ci := new(ClusterInfo)
 	ci.Nodes = make(map[string]*NodeInfo)
 
-	var lock sync.Mutex
 	leaderAddr := string(n.raft.Leader())
 	if leaderAddr == "" {
 		return ci
@@ -57,8 +53,13 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 
 	servers := listServers(ctx, n.raft)
 
+	var wg sync.WaitGroup
+	infoCh := make(chan *NodeInfo, len(servers))
+	done := make(chan struct{})
+
+	wg.Add(len(servers))
 	for _, srv := range servers {
-		wg.Add(1)
+
 		go func(addr string) {
 			defer wg.Done()
 			resp, err := grpcFetchInfo(ctx, addr)
@@ -66,17 +67,29 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 				log.Infof("Error getting node info from %s: %v", addr, err)
 				return
 			}
-			lock.Lock()
-			if leaderAddr == addr {
-				ci.LeaderId = resp.NodeInfo.NodeId
-			}
-			ci.Nodes[resp.NodeInfo.NodeId] = resp.NodeInfo
-			lock.Unlock()
+			infoCh <- resp.NodeInfo
 		}(string(srv.Address))
 	}
-	wg.Wait()
 
-	return ci
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ci
+		case <-done:
+			return ci
+		case node := <-infoCh:
+			if leaderAddr == node.RaftAddr {
+				ci.LeaderId = node.NodeId
+			}
+			ci.Nodes[node.NodeId] = node
+		}
+	}
+
 }
 
 func listServers(ctx context.Context, r *raft.Raft) []raft.Server {
