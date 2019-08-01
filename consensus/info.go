@@ -47,48 +47,34 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 	defer cancel()
 
 	ci := new(ClusterInfo)
+	ci.Nodes = make(map[string]*NodeInfo)
+	ci.LeaderId = "unknown"
 
-	done := make(chan struct{})
+	var lock sync.Mutex
+	leaderAddr := string(n.raft.Leader())
 
-	go func() {
-		var lock sync.Mutex
-		nodes := make(map[string]*NodeInfo)
-		leaderAddr := string(n.raft.Leader())
-		if leaderAddr == "" {
-			leaderAddr = "unknown"
-		}
+	servers := listServers(ctx, n.raft)
 
-		servers := listServers(ctx, n.raft)
-
-		for _, srv := range servers {
-			wg.Add(1)
-			go func(addr string) {
-				defer wg.Done()
-				resp, err := grpcFetchInfo(ctx, addr)
-				if err != nil {
-					log.Infof("Error getting node info from %s: %v", addr, err)
-					return
-				}
-				lock.Lock()
-				if leaderAddr == addr {
-					ci.LeaderId = resp.NodeInfo.NodeId
-				}
-				nodes[resp.NodeInfo.NodeId] = resp.NodeInfo
-				lock.Unlock()
-			}(string(srv.Address))
-		}
-		wg.Wait()
-		ci.Nodes = nodes
-		close(done)
-	}()
-
-	select {
-	case <-ctx.Done():
-		log.Infof("Timed out  getting cluster  info ")
-		return ci
-	case <-done:
-		return ci
+	for _, srv := range servers {
+		wg.Add(1)
+		go func(addr string) {
+			defer wg.Done()
+			resp, err := grpcFetchInfo(ctx, addr)
+			if err != nil {
+				log.Infof("Error getting node info from %s: %v", addr, err)
+				return
+			}
+			lock.Lock()
+			if leaderAddr == addr {
+				ci.LeaderId = resp.NodeInfo.NodeId
+			}
+			ci.Nodes[resp.NodeInfo.NodeId] = resp.NodeInfo
+			lock.Unlock()
+		}(string(srv.Address))
 	}
+	wg.Wait()
+
+	return ci
 }
 
 func listServers(ctx context.Context, r *raft.Raft) []raft.Server {
