@@ -17,7 +17,6 @@
 package consensus
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -56,12 +55,7 @@ func TestRaftNodeIsLeader(t *testing.T) {
 	}()
 
 	// check the leader of the cluster
-	spec.Retry(t, 50, 00*time.Millisecond, func() error {
-		if r.IsLeader() {
-			return nil
-		}
-		return errors.New("A single node is not leader!")
-	})
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, r.IsLeader, "A single node is not leader!")
 
 }
 
@@ -277,7 +271,7 @@ func raftAddr(id int) string {
 	return fmt.Sprintf("127.0.0.1:1830%d", id)
 }
 
-func clusterMgmtAddr(id int) string {
+func mgmtAddr(id int) string {
 	return fmt.Sprintf("127.0.0.1:1930%d", id)
 }
 
@@ -289,7 +283,7 @@ func newSeed(name string, id int) (*RaftNode, closeF, error) {
 	opts := DefaultClusteringOptions()
 	opts.NodeID = fmt.Sprintf("%s_%d", name, id)
 	opts.Addr = raftAddr(id)
-	opts.MgmtAddr = clusterMgmtAddr(id)
+	opts.MgmtAddr = mgmtAddr(id)
 	opts.HttpAddr = httpAddr(id)
 	opts.Bootstrap = true
 	opts.SnapshotThreshold = 0
@@ -302,7 +296,7 @@ func newFollower(name string, id int, seeds ...string) (*RaftNode, closeF, error
 	opts := DefaultClusteringOptions()
 	opts.NodeID = fmt.Sprintf("%s_%d", name, id)
 	opts.Addr = raftAddr(id)
-	opts.MgmtAddr = clusterMgmtAddr(id)
+	opts.MgmtAddr = mgmtAddr(id)
 	opts.HttpAddr = httpAddr(id)
 	opts.Bootstrap = false
 	opts.SnapshotThreshold = 0
