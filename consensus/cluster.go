@@ -102,10 +102,9 @@ type RaftNode struct {
 	raftLog   *raftLog                // Underlying rocksdb-backed persistent log store
 	snapshots *raft.FileSnapshotStore // Persistent snapstop store
 
-	raft           *raft.Raft             // The consensus mechanism
-	transport      *raft.NetworkTransport // Raft network transport
-	raftConfig     *raft.Config           // Config provides any necessary configuration for the Raft server.
-	observationsCh chan raft.Observation
+	raft       *raft.Raft             // The consensus mechanism
+	transport  *raft.NetworkTransport // Raft network transport
+	raftConfig *raft.Config           // Config provides any necessary configuration for the Raft server.
 
 	balloon     *balloon.Balloon // Balloon's finite state machine
 	state       *fsmState
@@ -131,11 +130,10 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		HttpAddr: opts.HttpAddr,
 	}
 	node := &RaftNode{
-		info:           info,
-		observationsCh: make(chan raft.Observation, 1),
-		snapshotsCh:    snapshotsCh,
-		applyTimeout:   opts.RaftApplyTimeout,
-		done:           make(chan struct{}),
+		info:         info,
+		snapshotsCh:  snapshotsCh,
+		applyTimeout: opts.RaftApplyTimeout,
+		done:         make(chan struct{}),
 	}
 
 	// Create the log store
@@ -217,11 +215,6 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		node.raftLog.Close()
 		return nil, fmt.Errorf("new raft: %s", err)
 	}
-
-	// register observer
-	observer := raft.NewObserver(node.observationsCh, true, observationsFilterFn)
-	node.raft.RegisterObserver(observer)
-	go node.startObservationsConsumer()
 
 	// register metrics
 	node.metrics = newRaftNodeMetrics(node)
