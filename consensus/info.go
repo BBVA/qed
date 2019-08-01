@@ -66,7 +66,7 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 				defer wg.Done()
 				resp, err := grpcFetchInfo(ctx, addr)
 				if err != nil {
-					log.Infof("Error geting node info from %s: %v", addr, err)
+					log.Infof("Error getting node info from %s: %v", addr, err)
 					return
 				}
 				lock.Lock()
@@ -84,8 +84,8 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 
 	select {
 	case <-ctx.Done():
-		log.Infof("Timed out  geting cluster  info ")
-		return nil
+		log.Infof("Timed out  getting cluster  info ")
+		return ci
 	case <-done:
 		return ci
 	}
