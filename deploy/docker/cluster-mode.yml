@@ -76,7 +76,7 @@ services:
       "--raft-path", "/var/tmp/qed2/wal",
       "--db-path", "/var/tmp/qed2/db",
       "--log", "debug",
-      "--raft-join-addr","qed_server_0:8700",
+      "--raft-join-addr","qed_server_0:8500",
       "--gossip-join-addr", "qed_server_0:8400",
     ]
     restart: on-failure
