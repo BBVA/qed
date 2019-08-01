@@ -1,7 +1,7 @@
 version: '3'
 services:
   qed_server_0:
-    image: "bbvalabs/qed:v0.3.0-docs"
+    image: "bbvalabs/qed:v0.4.10-docs"
     container_name: qed_server_0
     ports:
       - "8800:8800"   # API HTTP
@@ -22,11 +22,11 @@ services:
       "--private-key-path", "/var/tmp/qed_ed25519",
       "--raft-path", "/var/tmp/qed0/wal",
       "--db-path", "/var/tmp/qed0/db",
-      "--log", "info",
+      "--log", "debug",
     ]
 
   qed_server_1:
-    image: "bbvalabs/qed:v0.3.0-docs"
+    image: "bbvalabs/qed:v0.4.10-docs"
     container_name: qed_server_1
     ports:
       - "8801:8800"   # API HTTP
@@ -48,13 +48,13 @@ services:
       "--raft-path", "/var/tmp/qed1/wal",
       "--db-path", "/var/tmp/qed1/db",
       "--log", "debug",
-      "--raft-join-addr","qed_server_0:8700",
+      "--raft-join-addr","qed_server_0:8500",
       "--gossip-join-addr", "qed_server_0:8400",
     ]
     restart: on-failure
 
   qed_server_2:
-    image: "bbvalabs/qed:v0.3.0-docs"
+    image: "bbvalabs/qed:v0.4.10-docs"
     container_name: qed_server_2
     ports:
       - "8802:8800"   # API HTTP
