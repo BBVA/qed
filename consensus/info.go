@@ -48,10 +48,12 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 
 	ci := new(ClusterInfo)
 	ci.Nodes = make(map[string]*NodeInfo)
-	ci.LeaderId = "unknown"
 
 	var lock sync.Mutex
 	leaderAddr := string(n.raft.Leader())
+	if leaderAddr == "" {
+		return ci
+	}
 
 	servers := listServers(ctx, n.raft)
 

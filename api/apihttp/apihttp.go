@@ -432,8 +432,13 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 		}
 
 		clusterInfo := api.ClusterInfo()
-		if clusterInfo.LeaderId == "unknown" {
-			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		if clusterInfo.LeaderId == "" {
+			http.Error(w, "Leader not found", http.StatusServiceUnavailable)
+			return
+		}
+
+		if len(clusterInfo.Nodes) == 0 {
+			http.Error(w, "Nodes not found", http.StatusServiceUnavailable)
 			return
 		}
 
