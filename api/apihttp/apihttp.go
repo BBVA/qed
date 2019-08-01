@@ -432,6 +432,11 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 		}
 
 		clusterInfo := api.ClusterInfo()
+		if clusterInfo.LeaderId == "unknown" {
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+			return
+		}
+
 		nodeInfo := api.Info()
 		shardDetails := make(map[string]protocol.ShardDetail)
 
