@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"sync"
 	"time"
 
@@ -188,19 +187,14 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	conf.SnapshotThreshold = opts.SnapshotThreshold
 	conf.LocalID = raft.ServerID(opts.NodeID)
 
-	var loggerOpts *hclog.LoggerOptions
 	if log.GetLoggerLevel() == log.SILENT {
-		hclog.DefaultLevel = hclog.Error
-		loggerOpts = &hclog.LoggerOptions{
-			Level:  hclog.LevelFromString(log.GetLoggerLevel()),
-			Output: ioutil.Discard,
-		}
+		conf.Logger = hclog.NewNullLogger()
 	} else {
-		loggerOpts = &hclog.LoggerOptions{
+		hclog.DefaultLevel = hclog.Error
+		conf.Logger = hclog.New(&hclog.LoggerOptions{
 			Level: hclog.LevelFromString(log.GetLoggerLevel()),
-		}
+		})
 	}
-	conf.Logger = hclog.New(loggerOpts)
 
 	node.raftConfig = conf
 
