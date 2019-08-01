@@ -33,7 +33,8 @@ message ClusterInfo {
 }
 
 message RaftJoinRequest {
-    NodeInfo node_info = 1;
+    string node_id = 1;
+    string raft_addr = 2;
 }
 
 message RaftJoinResponse {
