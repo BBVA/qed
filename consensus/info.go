@@ -78,8 +78,6 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 
 	for {
 		select {
-		case <-ctx.Done():
-			return ci
 		case <-done:
 			return ci
 		case node := <-infoCh:
