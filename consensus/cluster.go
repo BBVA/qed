@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -120,12 +121,19 @@ type RaftNode struct {
 
 func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot) (*RaftNode, error) {
 
+	// We try to resolve the raft addr to avoid binding to hostnames
+	// because Raft library does not support FQDNs
+	addr, err := net.ResolveTCPAddr("tcp", opts.Addr)
+	if err != nil {
+		return nil, err
+	}
+
 	// We create s.raft early because once NewRaft() is called, the
 	// raft code may asynchronously invoke FSM.Apply() and FSM.Restore()
 	// So we want the object to exist so we can check on leader atomic, etc..
 	info := &NodeInfo{
 		NodeId:   opts.NodeID,
-		RaftAddr: opts.Addr,
+		RaftAddr: addr.String(),
 		MgmtAddr: opts.MgmtAddr,
 		HttpAddr: opts.HttpAddr,
 	}
