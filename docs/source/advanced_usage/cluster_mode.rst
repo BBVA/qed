@@ -70,7 +70,7 @@ Here we will ask **qed_server_0** (notice that "nodeID: server0"), but you can t
         "nodeId": "server0",
         "leaderId": "server0",
         "uriScheme": "http",
-        "shards": 
+        "shards": {
             "server0": {
                 "nodeId": "server0",
                 "httpAddr": "qed_server_0:8800"
