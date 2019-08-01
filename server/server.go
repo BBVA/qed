@@ -198,6 +198,7 @@ func (s *Server) Start() error {
 	log.Debugf(" ready on %s and %s\n", s.conf.HTTPAddr, s.conf.MgmtAddr)
 
 	s.agent.Start()
+	s.sender.Start(s.snapshotsCh)
 
 	return s.raftNode.WaitForLeader(3 * time.Second)
 }
