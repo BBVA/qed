@@ -345,11 +345,11 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 		return nil, ErrNotLeader
 	}
 
-	log.Infof("received join request for remote node %s at %s", req.NodeInfo.NodeId, req.NodeInfo.RaftAddr)
+	log.Infof("received join request for remote node %s at %s", req.NodeId, req.RaftAddr)
 
 	// Add the node as a voter. This is idempotent. No-op if the request
 	// came from ourselves.
-	f := n.raft.AddVoter(raft.ServerID(req.NodeInfo.NodeId), raft.ServerAddress(req.NodeInfo.RaftAddr), 0, 0)
+	f := n.raft.AddVoter(raft.ServerID(req.NodeId), raft.ServerAddress(req.RaftAddr), 0, 0)
 	if err := f.Error(); err != nil {
 		return nil, err
 	}
@@ -366,7 +366,8 @@ func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 		defer conn.Close()
 		client := NewClusterServiceClient(conn)
 		req := new(RaftJoinRequest)
-		req.NodeInfo = n.info
+		req.NodeId = n.info.NodeId
+		req.RaftAddr = string(n.transport.LocalAddr())
 		_, err = client.JoinCluster(context.Background(), req)
 		if err == nil {
 			return nil
