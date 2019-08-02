@@ -1,7 +1,7 @@
 version: '3'
 services:
   qed_server_0:
-    image: "bbvalabs/qed:v0.4.10-docs"
+    image: "bbvalabs/qed:v1.0.0-rc1"
     container_name: qed_server_0
     ports:
       - "8800:8800"   # API HTTP
