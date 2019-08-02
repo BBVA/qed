@@ -128,7 +128,6 @@ func (n *RaftNode) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	n.metrics.Adds.Add(float64(len(bulk)))
 
 	snapshotBulk := resp.(*fsmResponse).val.([]*balloon.Snapshot)
 
@@ -145,24 +144,28 @@ func (n *RaftNode) AddBulk(bulk [][]byte) ([]*balloon.Snapshot, error) {
 // QueryDigestMembershipConsistency acts as a passthrough when an event digest is given to
 // request a membership proof against a certain balloon version.
 func (n *RaftNode) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*balloon.MembershipProof, error) {
+	n.metrics.IncrementalQueries.Inc()
 	return n.balloon.QueryDigestMembershipConsistency(keyDigest, version)
 }
 
 // QueryMembershipConsistency acts as a passthrough when an event is given to request a
 // membership proof against a certain balloon version.
 func (n *RaftNode) QueryMembershipConsistency(event []byte, version uint64) (*balloon.MembershipProof, error) {
+	n.metrics.IncrementalQueries.Inc()
 	return n.balloon.QueryMembershipConsistency(event, version)
 }
 
 // QueryDigestMembership acts as a passthrough when an event digest is given to request a
 // membership proof against the last balloon version.
 func (n *RaftNode) QueryDigestMembership(keyDigest hashing.Digest) (*balloon.MembershipProof, error) {
+	n.metrics.MembershipQueries.Inc()
 	return n.balloon.QueryDigestMembership(keyDigest)
 }
 
 // QueryMembership acts as a passthrough when an event is given to request a membership proof
 // against the last balloon version.
 func (n *RaftNode) QueryMembership(event []byte) (*balloon.MembershipProof, error) {
+	n.metrics.MembershipQueries.Inc()
 	return n.balloon.QueryMembership(event)
 }
 
@@ -309,5 +312,6 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 	n.state = state
 	resp.val = snapshotBulk
 
+	n.metrics.Adds.Add(float64(len(hashes)))
 	return resp
 }
