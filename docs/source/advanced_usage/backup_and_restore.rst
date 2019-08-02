@@ -19,9 +19,9 @@ To **add events**, we will use the same client as in QuickStart.
 
     .. code::
 
-        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v0.2.4-docs qed client --endpoints http://qed_server_0:8800 --snapshot-store-url http://snapshotstore:8888 --log info'
+        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v1.0.0-rc1 qed client --endpoints http://qed_server_0:8800 --snapshot-store-url http://snapshotstore:8888 --log info'
 
-        $ alias qed_backup='docker run -it --net=docker_default bbvalabs/qed:v0.3.0-docs qed backup --endpoint http://qed_server_0:8700 --log info'
+        $ alias qed_backup='docker run -it --net=docker_default bbvalabs/qed:v1.0.0-rc1 qed backup --endpoint http://qed_server_0:8700 --log info'
 
     Don't hesitate to check both ``qed_backup`` and ``qed_client`` help commands when necessary.
 

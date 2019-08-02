@@ -34,7 +34,7 @@ func NewBPlusTreeStore() *BPlusTreeStore {
 	return &BPlusTreeStore{btree.New(2)}
 }
 
-func (s *BPlusTreeStore) Mutate(mutations []*storage.Mutation) error {
+func (s *BPlusTreeStore) Mutate(mutations []*storage.Mutation, metadata []byte) error {
 	for _, m := range mutations {
 		key := append([]byte{m.Table.Prefix()}, m.Key...)
 		s.db.ReplaceOrInsert(KVItem{key, m.Value})

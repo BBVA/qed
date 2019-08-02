@@ -14,13 +14,9 @@
    limitations under the License.
 */
 
-// Package raftrocks provides access to RocksDB for Raft to store and retrieve
-// log entries. It also provides key/value storage, and can be used as
-// a LogStore and StableStore.
-package raftrocks
+package consensus
 
 import (
-	"bytes"
 	"errors"
 
 	"github.com/bbva/qed/metrics"
@@ -58,12 +54,13 @@ func (t table) String() string {
 	return s
 }
 
-// RocksDBStore provides access to RocksDB for Raft to store and retrieve
-// log entries. It also provides key/value storage, and can be used as
-// a LogStore and StableStore.
-type RocksDBStore struct {
+// raftLog implements both the raft LogStore and Stable interfaces. This is used
+// by raft to store logs and configuration changes.
+type raftLog struct {
 	// db is the underlying handle to the db.
 	db *rocksdb.DB
+
+	codec *codec.MsgpackHandle
 
 	stats *rocksdb.Statistics
 
@@ -86,11 +83,11 @@ type RocksDBStore struct {
 	blockCache *rocksdb.Cache
 
 	// metrics
-	metrics *rocksDBMetrics
+	metrics *raftLogMetrics
 }
 
 // Options contains all the configuration used to open the RocksDB instance.
-type Options struct {
+type raftLogOptions struct {
 	// Path is the directory path to the RocksDB instance to use.
 	Path string
 	// TODO decide if we should use a diferent directory for the Rocks WAL
@@ -103,14 +100,18 @@ type Options struct {
 	EnableStatistics bool
 }
 
-// NewRocksDBStore takes a file path and returns a connected Raft backend.
-func NewRocksDBStore(path string) (*RocksDBStore, error) {
-	return New(Options{Path: path, NoSync: true})
+// newRaftLog takes a file path and returns a connected Raft backend.
+func newRaftLog(path string) (*raftLog, error) {
+	return newRaftLogOpts(raftLogOptions{
+		Path:             path,
+		NoSync:           true,
+		EnableStatistics: true,
+	})
 }
 
-// New uses the supplied options to open the RocksDB instance and prepare it for
+// newRaftLogOpts uses the supplied options to open the raftLog instance and prepare it for
 // use as a raft backend.
-func New(options Options) (*RocksDBStore, error) {
+func newRaftLogOpts(options raftLogOptions) (*raftLog, error) {
 
 	// we need two column families, one for stable store and one for log store:
 	// stable : used for storing key configurations.
@@ -193,8 +194,9 @@ func New(options Options) (*RocksDBStore, error) {
 	ro := rocksdb.NewDefaultReadOptions()
 	ro.SetFillCache(false)
 
-	store := &RocksDBStore{
+	store := &raftLog{
 		db:         db,
+		codec:      &codec.MsgpackHandle{},
 		stats:      stats,
 		path:       options.Path,
 		cfHandles:  cfHandles,
@@ -209,14 +211,15 @@ func New(options Options) (*RocksDBStore, error) {
 	}
 
 	if stats != nil {
-		store.metrics = newRocksDBMetrics(store)
+		store.metrics = newRaftLogMetrics(store)
 	}
 
 	return store, nil
+
 }
 
 // Close is used to gracefully close the DB connection.
-func (s *RocksDBStore) Close() error {
+func (s *raftLog) Close() error {
 	for _, cf := range s.cfHandles {
 		cf.Destroy()
 	}
@@ -252,7 +255,7 @@ func (s *RocksDBStore) Close() error {
 }
 
 // FirstIndex returns the first known index from the Raft log.
-func (s *RocksDBStore) FirstIndex() (uint64, error) {
+func (s *raftLog) FirstIndex() (uint64, error) {
 	it := s.db.NewIteratorCF(rocksdb.NewDefaultReadOptions(), s.cfHandles[logTable])
 	defer it.Close()
 	it.SeekToFirst()
@@ -267,7 +270,7 @@ func (s *RocksDBStore) FirstIndex() (uint64, error) {
 }
 
 // LastIndex returns the last known index from the Raft log.
-func (s *RocksDBStore) LastIndex() (uint64, error) {
+func (s *raftLog) LastIndex() (uint64, error) {
 	it := s.db.NewIteratorCF(rocksdb.NewDefaultReadOptions(), s.cfHandles[logTable])
 	defer it.Close()
 	it.SeekToLast()
@@ -282,7 +285,7 @@ func (s *RocksDBStore) LastIndex() (uint64, error) {
 }
 
 // GetLog gets a log entry at a given index.
-func (s *RocksDBStore) GetLog(index uint64, log *raft.Log) error {
+func (s *raftLog) GetLog(index uint64, log *raft.Log) error {
 	val, err := s.db.GetBytesCF(s.ro, s.cfHandles[logTable], util.Uint64AsBytes(index))
 	if err != nil {
 		return err
@@ -290,41 +293,41 @@ func (s *RocksDBStore) GetLog(index uint64, log *raft.Log) error {
 	if val == nil {
 		return raft.ErrLogNotFound
 	}
-	return decodeMsgPack(val, log)
+	return s.decodeRaftLog(val, log)
 }
 
 // StoreLog stores a single raft log.
-func (s *RocksDBStore) StoreLog(log *raft.Log) error {
-	val, err := encodeMsgPack(log)
+func (s *raftLog) StoreLog(log *raft.Log) error {
+	val, err := s.encodeRaftLog(log)
 	if err != nil {
 		return err
 	}
-	return s.db.PutCF(s.wo, s.cfHandles[logTable], util.Uint64AsBytes(log.Index), val.Bytes())
+	return s.db.PutCF(s.wo, s.cfHandles[logTable], util.Uint64AsBytes(log.Index), val)
 }
 
 // StoreLogs stores a set of raft logs.
-func (s *RocksDBStore) StoreLogs(logs []*raft.Log) error {
+func (s *raftLog) StoreLogs(logs []*raft.Log) error {
 	batch := rocksdb.NewWriteBatch()
 	for _, log := range logs {
 		key := util.Uint64AsBytes(log.Index)
-		val, err := encodeMsgPack(log)
+		val, err := s.encodeRaftLog(log)
 		if err != nil {
 			return err
 		}
-		batch.PutCF(s.cfHandles[logTable], key, val.Bytes())
+		batch.PutCF(s.cfHandles[logTable], key, val)
 	}
 	return s.db.Write(s.wo, batch)
 }
 
 // DeleteRange deletes logs within a given range inclusively.
-func (s *RocksDBStore) DeleteRange(min, max uint64) error {
+func (s *raftLog) DeleteRange(min, max uint64) error {
 	batch := rocksdb.NewWriteBatch()
 	batch.DeleteRangeCF(s.cfHandles[logTable], util.Uint64AsBytes(min), util.Uint64AsBytes(max+1))
 	return s.db.Write(s.wo, batch)
 }
 
 // Set is used to set a key/value set outside of the raft log.
-func (s *RocksDBStore) Set(key []byte, val []byte) error {
+func (s *raftLog) Set(key []byte, val []byte) error {
 	if err := s.db.PutCF(s.wo, s.cfHandles[stableTable], key, val); err != nil {
 		return err
 	}
@@ -332,7 +335,7 @@ func (s *RocksDBStore) Set(key []byte, val []byte) error {
 }
 
 // Get is used to retrieve a value from the k/v store by key
-func (s *RocksDBStore) Get(key []byte) ([]byte, error) {
+func (s *raftLog) Get(key []byte) ([]byte, error) {
 	val, err := s.db.GetBytesCF(s.ro, s.cfHandles[stableTable], key)
 	if err != nil {
 		return nil, err
@@ -344,12 +347,12 @@ func (s *RocksDBStore) Get(key []byte) ([]byte, error) {
 }
 
 // SetUint64 is like Set, but handles uint64 values
-func (s *RocksDBStore) SetUint64(key []byte, val uint64) error {
+func (s *raftLog) SetUint64(key []byte, val uint64) error {
 	return s.Set(key, util.Uint64AsBytes(val))
 }
 
 // GetUint64 is like Get, but handles uint64 values
-func (s *RocksDBStore) GetUint64(key []byte) (uint64, error) {
+func (s *raftLog) GetUint64(key []byte) (uint64, error) {
 	val, err := s.Get(key)
 	if err != nil {
 		return 0, err
@@ -357,25 +360,21 @@ func (s *RocksDBStore) GetUint64(key []byte) (uint64, error) {
 	return util.BytesAsUint64(val), nil
 }
 
-func (s *RocksDBStore) RegisterMetrics(registry metrics.Registry) {
+func (s *raftLog) RegisterMetrics(registry metrics.Registry) {
 	if registry != nil {
 		registry.MustRegister(s.metrics.collectors()...)
 	}
 }
 
 // Decode reverses the encode operation on a byte slice input
-func decodeMsgPack(buf []byte, out interface{}) error {
-	r := bytes.NewBuffer(buf)
-	hd := codec.MsgpackHandle{}
-	dec := codec.NewDecoder(r, &hd)
-	return dec.Decode(out)
+func (s *raftLog) decodeRaftLog(buf []byte, log *raft.Log) error {
+	return codec.NewDecoderBytes(buf, s.codec).Decode(log)
 }
 
 // Encode writes an encoded object to a new bytes buffer
-func encodeMsgPack(in interface{}) (*bytes.Buffer, error) {
-	buf := bytes.NewBuffer(nil)
-	hd := codec.MsgpackHandle{}
-	enc := codec.NewEncoder(buf, &hd)
+func (s *raftLog) encodeRaftLog(in *raft.Log) ([]byte, error) {
+	var buf []byte
+	enc := codec.NewEncoderBytes(&buf, s.codec)
 	err := enc.Encode(in)
 	return buf, err
 }

@@ -88,7 +88,7 @@ var (
 )
 
 type Store interface {
-	Mutate(mutations []*Mutation) error
+	Mutate(mutations []*Mutation, metadata []byte) error
 	GetRange(table Table, start, end []byte) (KVRange, error)
 	Get(table Table, key []byte) (*KVPair, error)
 	GetAll(table Table) KVPairReader
@@ -98,15 +98,20 @@ type Store interface {
 
 type ManagedStore interface {
 	Store
-	Dump(w io.Writer, until uint64) error
-	Snapshot() (uint64, error)
-	Load(r io.Reader) error
 	Backup(metadata string) error
 	GetBackupsInfo() []*BackupInfo
 	DeleteBackup(backupID uint32) error
 	RestoreFromBackup(backupID uint32, dbDir, walDir string) error
+	FetchSnapshot(w io.WriteCloser, since, until uint64) error
+	LoadSnapshot(r io.ReadCloser, validate ValidateF) error
+	LastWALSequenceNumber() uint64
 	metrics.Registerer
 }
+
+// ValidateF can be used to determine if a particular batch
+// can be applied to the database when loading a snapshot.
+// It receives the metadata of the write batch to make the decision.
+type ValidateF func(meta []byte) (bool, error)
 
 type Mutation struct {
 	Table      Table

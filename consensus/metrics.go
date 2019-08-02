@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package raftwal
+package consensus
 
 import "github.com/prometheus/client_golang/prometheus"
 
@@ -24,8 +24,7 @@ const namespace = "qed"
 // subsystem associated with metrics for raft balloon
 const subSystem = "raft_balloon"
 
-// raftBalloonMetrics is the definition of the set of metrics retrieved in raft.
-type raftBalloonMetrics struct {
+type raftNodeMetrics struct {
 	Version                 prometheus.GaugeFunc
 	Adds                    prometheus.Counter
 	MembershipQueries       prometheus.Counter
@@ -33,8 +32,8 @@ type raftBalloonMetrics struct {
 	IncrementalQueries      prometheus.Counter
 }
 
-func newRaftBalloonMetrics(b *RaftBalloon) *raftBalloonMetrics {
-	return &raftBalloonMetrics{
+func newRaftNodeMetrics(n *RaftNode) *raftNodeMetrics {
+	return &raftNodeMetrics{
 		Version: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -43,7 +42,7 @@ func newRaftBalloonMetrics(b *RaftBalloon) *raftBalloonMetrics {
 				Help:      "Current balloon version.",
 			},
 			func() float64 {
-				return float64(b.fsm.balloon.Version() - 1)
+				return float64(n.balloon.Version() - 1)
 			},
 		),
 		Adds: prometheus.NewCounter(
@@ -82,7 +81,7 @@ func newRaftBalloonMetrics(b *RaftBalloon) *raftBalloonMetrics {
 }
 
 // collectors satisfies the prom.PrometheusCollector interface.
-func (m *raftBalloonMetrics) collectors() []prometheus.Collector {
+func (m *raftNodeMetrics) collectors() []prometheus.Collector {
 	return []prometheus.Collector{
 		m.Version,
 		m.Adds,

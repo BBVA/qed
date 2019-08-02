@@ -16,8 +16,11 @@
 
 package rocksdb
 
-// #include <rocksdb/c.h>
+// #include "extended.h"
+// #include <stdlib.h>
+// #include "rocksdb/c.h"
 import "C"
+import "unsafe"
 
 // WriteBatch holds a collection of updates to apply atomically to a DB.
 //
@@ -36,7 +39,17 @@ type WriteBatch struct {
 
 // NewWriteBatch create a WriteBatch object.
 func NewWriteBatch() *WriteBatch {
-	return &WriteBatch{c: C.rocksdb_writebatch_create()}
+	return NewNativeWriteBatch(C.rocksdb_writebatch_create())
+}
+
+// NewNativeWriteBatch create a WriteBatch object.
+func NewNativeWriteBatch(c *C.rocksdb_writebatch_t) *WriteBatch {
+	return &WriteBatch{c: c}
+}
+
+// WriteBatchFrom creates a write batch from a serialized WriteBatch.
+func WriteBatchFrom(data []byte) *WriteBatch {
+	return NewNativeWriteBatch(C.rocksdb_writebatch_create_from(bytesToChar(data), C.size_t(len(data))))
 }
 
 // Put stores the mapping "key->value" in the database.
@@ -82,8 +95,6 @@ func (wb *WriteBatch) DeleteRangeCF(cf *ColumnFamilyHandle, beginKey, endKey []b
 	C.rocksdb_writebatch_delete_range_cf(wb.c, cf.c, cBeginKey, C.size_t(len(beginKey)), cEndKey, C.size_t(len(endKey)))
 }
 
-// WriteBatch implementation of DeleteRange() // TODO
-
 // Merge "value" with the existing value of "key" in the database.
 // "key->merge(existing, value)"
 func (wb *WriteBatch) Merge(key, value []byte) {
@@ -110,8 +121,91 @@ func (wb *WriteBatch) Count() int {
 	return int(C.rocksdb_writebatch_count(wb.c))
 }
 
+// Data returns the serialized version of this batch.
+func (wb *WriteBatch) Data() []byte {
+	var cSize C.size_t
+	cValue := C.rocksdb_writebatch_data(wb.c, &cSize)
+	return charToBytes(cValue, cSize)
+}
+
+// PutLogData appends a blob of arbitrary size to the records in this batch.
+// The blob will be stored in the transaction log but not in any other files.
+// In particular, it will not be persisted to the SST files. When iterating
+// over this WriteBatch, WriteBatch::Handler::LogData will be called with the contents
+// of the blob as it is encountered. Blobs, puts, deletes, and merges will be
+// encountered in the same order in which they were inserted. The blob will
+// NOT consume sequence number(s) and will NOT increase the count of the batch
+//
+// Example application: add timestamps to the transaction log for use in
+// replication.
+func (wb *WriteBatch) PutLogData(blob []byte, size int) {
+	C.rocksdb_writebatch_put_log_data(wb.c, bytesToChar(blob), C.size_t(size))
+}
+
+// GetLogData retrieves the blob appended to this batch.
+func (wb *WriteBatch) GetLogData(extractor *LogDataExtractor) []byte {
+	if extractor != nil {
+		C.rocksdb_writebatch_iterate_ext(wb.c, extractor.c)
+		return extractor.Blob
+	}
+	return nil
+}
+
 // Destroy deallocates the WriteBatch object.
 func (wb *WriteBatch) Destroy() {
 	C.rocksdb_writebatch_destroy(wb.c)
 	wb.c = nil
+}
+
+// WriteBatchHandler is used to iterate over the contents of a batch.
+type WriteBatchHandler interface {
+	ID() string
+	LogData(blob []byte)
+}
+
+var writeBatchHandlers = NewRegistry()
+
+//export rocksdb_writebatch_handler_log_data
+func rocksdb_writebatch_handler_log_data(cIdx *C.char, cBlob *C.char, cBlobSize C.size_t) {
+	blob := charToBytes(cBlob, cBlobSize)
+	idx := C.GoString(cIdx)
+	writeBatchHandlers.Lookup(idx).(WriteBatchHandler).LogData(blob)
+}
+
+// LogDataExtractor extracts metadata from a WriteBatch.
+type LogDataExtractor struct {
+	id    string
+	ptrId *C.char
+	Blob  []byte
+	c     *C.rocksdb_writebatch_handler_t
+}
+
+// NewLogDataExtractor creates a new LogDataExtractor.
+func NewLogDataExtractor(id string) *LogDataExtractor {
+	extractor := &LogDataExtractor{
+		id:    id,
+		ptrId: C.CString(id),
+		Blob:  make([]byte, 0),
+	}
+	extractor.c = C.rocksdb_writebatch_handler_create_ext(extractor.ptrId)
+	writeBatchHandlers.Register(extractor.id, extractor)
+	return extractor
+}
+
+// ID returns the unique identifier of this WriteBatchHandler.
+func (e *LogDataExtractor) ID() string {
+	return e.id
+}
+
+// LogData is a callback for the LogData.
+func (e *LogDataExtractor) LogData(blob []byte) {
+	e.Blob = append(blob[:0:0], blob...)
+}
+
+// Destroy destroys de LogDataExtractor.
+func (e *LogDataExtractor) Destroy() {
+	writeBatchHandlers.Unregister(e.ID())
+	C.free(unsafe.Pointer(e.ptrId))
+	C.rocksdb_writebatch_handler_destroy(e.c)
+	e.Blob = nil
 }

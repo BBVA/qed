@@ -48,6 +48,7 @@ type logger interface {
 	Debugf(format string, v ...interface{})
 
 	GetLogger() *log.Logger
+	GetLoggerLevel() string
 }
 
 func getFilter(lv string) *logutils.LevelFilter {
@@ -66,7 +67,7 @@ func getFilter(lv string) *logutils.LevelFilter {
 }
 
 // The default logger is an log.ERROR level.
-var std logger = newError(getFilter(ERROR), "Qed: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+var std logger = newError(getFilter(ERROR), "Qed: ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile|log.LUTC)
 
 // To allow mocking we require a switchable variable.
 var osExit = os.Exit
@@ -137,23 +138,28 @@ func GetLogger() *log.Logger {
 	return std.GetLogger()
 }
 
+// GetLoggerLevel returns the string representation of the log.Logger level.
+func GetLoggerLevel() string {
+	return std.GetLoggerLevel()
+}
+
 // SetLogger is a function that switches between verbosity loggers. Default
 // is error level. Available levels are "silent", "debug", "info" and "error".
 func SetLogger(namespace, lv string) {
 
-	prefix := fmt.Sprintf("%s: ", namespace)
+	prefix := fmt.Sprintf("%s ", namespace)
 
 	switch lv {
 	case SILENT:
 		std = newSilent()
 	case ERROR:
-		std = newError(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		std = newError(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile|log.LUTC)
 	case INFO:
-		std = newInfo(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		std = newInfo(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile|log.LUTC)
 	case DEBUG:
-		std = newDebug(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		std = newDebug(getFilter(lv), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile|log.LUTC)
 	default:
-		l := newInfo(getFilter(INFO), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Llongfile)
+		l := newInfo(getFilter(INFO), prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile|log.LUTC)
 		l.Infof("Incorrect level of verbosity (%v) fallback to log.INFO", lv)
 		std = l
 	}

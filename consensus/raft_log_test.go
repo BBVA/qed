@@ -13,9 +13,10 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-package raftrocks
+package consensus
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -27,38 +28,20 @@ import (
 	"github.com/hashicorp/raft"
 )
 
-func testRocksDBStore(t testing.TB) (*RocksDBStore, string) {
-	path, err := ioutil.TempDir("", "raftrocks")
-	require.NoError(t, err)
-	os.RemoveAll(path)
-
-	// Successfully creates and returns a store
-	store, err := NewRocksDBStore(path)
-	require.NoError(t, err)
-
-	return store, path
-}
-
-func testRaftLog(idx uint64, data string) *raft.Log {
-	return &raft.Log{
-		Data:  []byte(data),
-		Index: idx,
-	}
-}
-
-func TestRocksDBStore_Implements(t *testing.T) {
-	var store interface{} = &RocksDBStore{}
+func TestRaftLogImplementsInterfaces(t *testing.T) {
+	var store interface{} = &raftLog{}
 	if _, ok := store.(raft.StableStore); !ok {
-		t.Fatalf("RocksDBStore does not implement raft.StableStore")
+		t.Fatalf("raftLog does not implement raft.StableStore")
 	}
 	if _, ok := store.(raft.LogStore); !ok {
-		t.Fatalf("RocksDBStore does not implement raft.LogStore")
+		t.Fatalf("raftLog does not implement raft.LogStore")
 	}
 }
 
-func TestNewRocksDBStore(t *testing.T) {
+func TestNewRaftLog(t *testing.T) {
 
-	store, path := testRocksDBStore(t)
+	store, path, _ := openRaftLog(t)
+	defer deleteFile(path)
 
 	// Ensure the directory was created
 	require.Equal(t, path, store.path)
@@ -72,26 +55,28 @@ func TestNewRocksDBStore(t *testing.T) {
 	// Ensure our files were created
 	opts := rocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(false)
-	_, err := rocksdb.OpenDBForReadOnly(path, opts, true)
+	db, err := rocksdb.OpenDBForReadOnly(path, opts, true)
 	require.NoError(t, err)
+
+	db.Close()
 
 }
 
-func TestRocksDBStore_FirstIndex(t *testing.T) {
-	store, path := testRocksDBStore(t)
-	defer store.Close()
-	defer os.RemoveAll(path)
+func TestRaftLogFirstIndex(t *testing.T) {
+
+	store, _, closeF := openRaftLog(t)
+	defer closeF()
 
 	// Should get 0 index on empty log
 	idx, err := store.FirstIndex()
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), idx)
 
-	// Set a mock raft log
+	// Set a fake raft log
 	logs := []*raft.Log{
-		testRaftLog(1, "log1"),
-		testRaftLog(2, "log2"),
-		testRaftLog(3, "log3"),
+		fakeRaftLog(1, "log1"),
+		fakeRaftLog(2, "log2"),
+		fakeRaftLog(3, "log3"),
 	}
 	require.NoError(t, store.StoreLogs(logs))
 
@@ -99,23 +84,24 @@ func TestRocksDBStore_FirstIndex(t *testing.T) {
 	idx, err = store.FirstIndex()
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), idx)
+
 }
 
-func TestRocksDBStore_LastIndex(t *testing.T) {
-	store, path := testRocksDBStore(t)
-	defer store.Close()
-	defer os.RemoveAll(path)
+func TestRaftLogLastIndex(t *testing.T) {
+
+	store, _, closeF := openRaftLog(t)
+	defer closeF()
 
 	// Should get 0 index on empty log
 	idx, err := store.LastIndex()
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), idx)
 
-	// Set a mock raft log
+	// create a set of fake raft logs
 	logs := []*raft.Log{
-		testRaftLog(1, "log1"),
-		testRaftLog(2, "log2"),
-		testRaftLog(3, "log3"),
+		fakeRaftLog(1, "log1"),
+		fakeRaftLog(2, "log2"),
+		fakeRaftLog(3, "log3"),
 	}
 	require.NoError(t, store.StoreLogs(logs))
 
@@ -126,12 +112,13 @@ func TestRocksDBStore_LastIndex(t *testing.T) {
 	}
 	require.NoError(t, err)
 	require.Equal(t, uint64(3), idx)
+
 }
 
-func TestRocksDBStore_GetLog(t *testing.T) {
-	store, path := testRocksDBStore(t)
-	defer store.Close()
-	defer os.RemoveAll(path)
+func TestRaftLogGetLog(t *testing.T) {
+
+	store, _, closeF := openRaftLog(t)
+	defer closeF()
 
 	log := new(raft.Log)
 
@@ -141,21 +128,22 @@ func TestRocksDBStore_GetLog(t *testing.T) {
 
 	// Set a mock raft log
 	logs := []*raft.Log{
-		testRaftLog(1, "log1"),
-		testRaftLog(2, "log2"),
-		testRaftLog(3, "log3"),
+		fakeRaftLog(1, "log1"),
+		fakeRaftLog(2, "log2"),
+		fakeRaftLog(3, "log3"),
 	}
 	require.NoError(t, store.StoreLogs(logs))
 
 	// Should return the proper log
 	require.NoError(t, store.GetLog(2, log))
 	require.Equal(t, log, logs[1])
+
 }
 
-func TestRocksDBStore_SetLog(t *testing.T) {
-	store, path := testRocksDBStore(t)
-	defer store.Close()
-	defer os.Remove(path)
+func TestRaftLogSetLog(t *testing.T) {
+
+	store, _, closeF := openRaftLog(t)
+	defer closeF()
 
 	// Create the log
 	log := &raft.Log{
@@ -172,17 +160,18 @@ func TestRocksDBStore_SetLog(t *testing.T) {
 
 	// Ensure the log comes back the same
 	require.Equal(t, log, result)
+
 }
 
-func TestRocksDBStore_SetLogs(t *testing.T) {
-	store, path := testRocksDBStore(t)
-	defer store.Close()
-	defer os.Remove(path)
+func TestRaftLogSetLogs(t *testing.T) {
+
+	store, _, closeF := openRaftLog(t)
+	defer closeF()
 
 	// Create a set of logs
 	logs := []*raft.Log{
-		testRaftLog(1, "log1"),
-		testRaftLog(2, "log2"),
+		fakeRaftLog(1, "log1"),
+		fakeRaftLog(2, "log2"),
 	}
 
 	// Attempt to store the logs
@@ -195,17 +184,18 @@ func TestRocksDBStore_SetLogs(t *testing.T) {
 
 	require.NoError(t, store.GetLog(2, result2))
 	require.Equal(t, logs[1], result2)
+
 }
 
-func TestRocksDBStore_DeleteRange(t *testing.T) {
-	store, path := testRocksDBStore(t)
-	defer store.Close()
-	defer os.Remove(path)
+func TestRaftLogDeleteRange(t *testing.T) {
+
+	store, _, closeF := openRaftLog(t)
+	defer closeF()
 
 	// Create a set of logs
-	log1 := testRaftLog(1, "log1")
-	log2 := testRaftLog(2, "log2")
-	log3 := testRaftLog(3, "log3")
+	log1 := fakeRaftLog(1, "log1")
+	log2 := fakeRaftLog(2, "log2")
+	log3 := fakeRaftLog(3, "log3")
 	logs := []*raft.Log{log1, log2, log3}
 
 	// Attempt to store the logs
@@ -225,10 +215,10 @@ func TestRocksDBStore_DeleteRange(t *testing.T) {
 
 }
 
-func TestRocksDBStore_Set_Get(t *testing.T) {
-	store, path := testRocksDBStore(t)
-	defer store.Close()
-	defer os.Remove(path)
+func TestRaftLogSetGet(t *testing.T) {
+
+	store, _, closeF := openRaftLog(t)
+	defer closeF()
 
 	// Returns error on non-existent key
 	_, err := store.Get([]byte("bad"))
@@ -244,12 +234,13 @@ func TestRocksDBStore_Set_Get(t *testing.T) {
 	val, err := store.Get(k)
 	require.NoError(t, err)
 	require.Equal(t, v, val)
+
 }
 
-func TestRocksDBStore_SetUint64_GetUint64(t *testing.T) {
-	store, path := testRocksDBStore(t)
-	defer store.Close()
-	defer os.Remove(path)
+func TestRaftLogSetUint64GetUint64(t *testing.T) {
+
+	store, _, closeF := openRaftLog(t)
+	defer closeF()
 
 	// Returns error on non-existent key
 	_, err := store.GetUint64([]byte("bad"))
@@ -265,4 +256,42 @@ func TestRocksDBStore_SetUint64_GetUint64(t *testing.T) {
 	val, err := store.GetUint64(k)
 	require.NoError(t, err)
 	require.Equal(t, v, val)
+
+}
+
+func openRaftLog(t testing.TB) (*raftLog, string, func()) {
+	path := mustTempDir()
+	store, err := newRaftLog(path)
+	if err != nil {
+		t.Errorf("Error opening raftLog store: %v", err)
+		t.FailNow()
+	}
+
+	return store, path, func() {
+		store.Close()
+		deleteFile(path)
+	}
+}
+
+func mustTempDir() string {
+	var err error
+	path, err := ioutil.TempDir("/var/tmp", "raftlog-test-")
+	if err != nil {
+		panic("failed to create temp dir")
+	}
+	return path
+}
+
+func deleteFile(path string) {
+	err := os.RemoveAll(path)
+	if err != nil {
+		fmt.Printf("Unable to remove db file %s", err)
+	}
+}
+
+func fakeRaftLog(idx uint64, data string) *raft.Log {
+	return &raft.Log{
+		Data:  []byte(data),
+		Index: idx,
+	}
 }

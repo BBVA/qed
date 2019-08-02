@@ -493,6 +493,34 @@ func (o *Options) SetKeepLogFileNum(value int) {
 	C.rocksdb_options_set_keep_log_file_num(o.c, C.size_t(value))
 }
 
+// SetWALTtlSeconds sets the WAL ttl in seconds.
+//
+// The following two options affect how archived logs will be deleted.
+// 1. If both set to 0, logs will be deleted asap and will not get into
+//    the archive.
+// 2. If wal_ttl_seconds is 0 and wal_size_limit_mb is not 0,
+//    WAL files will be checked every 10 min and if total size is greater
+//    then wal_size_limit_mb, they will be deleted starting with the
+//    earliest until size_limit is met. All empty files will be deleted.
+// 3. If wal_ttl_seconds is not 0 and wall_size_limit_mb is 0, then
+//    WAL files will be checked every wal_ttl_seconds / 2 and those that
+//    are older than wal_ttl_seconds will be deleted.
+// 4. If both are not 0, WAL files will be checked every 10 min and both
+//    checks will be performed with ttl being first.
+// Default: 0
+func (o *Options) SetWALTtlSeconds(value uint64) {
+	C.rocksdb_options_set_WAL_ttl_seconds(o.c, C.uint64_t(value))
+}
+
+// SetWalSizeLimitMb sets the WAL size limit in MB.
+//
+// If total size of WAL files is greater then wal_size_limit_mb,
+// they will be deleted starting with the earliest until size_limit is met
+// Default: 0
+func (o *Options) SetWalSizeLimitMb(value uint64) {
+	C.rocksdb_options_set_WAL_size_limit_MB(o.c, C.uint64_t(value))
+}
+
 // SetAllowMmapReads enables/disables mmap reads for reading sst tables.
 // Default: false
 func (o *Options) SetAllowMmapReads(value bool) {
