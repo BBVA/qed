@@ -15,7 +15,7 @@ The client will talk to the QED servers, so it must be configured for that propo
 
     .. code::
 
-        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v0.4.10-docs qed client --log info'
+        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v1.0.0-rc1 qed client --log info'
 
     Don't hesitate to check ``qed_client`` help command when necessary.
 
