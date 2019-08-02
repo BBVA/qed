@@ -154,7 +154,7 @@ var errorNoSnapshots error = fmt.Errorf("No snapshots were found on this batch!!
 
 func (p publisherFactory) New(ctx context.Context) gossip.Task {
 	QedPublisherBatchesReceivedTotal.Inc()
-	fmt.Println("PublisherFactory creating new Task!")
+	log.Infof("PublisherFactory creating new Task!")
 	a := ctx.Value("agent").(*gossip.Agent)
 	b := ctx.Value("batch").(*protocol.BatchSnapshots)
 

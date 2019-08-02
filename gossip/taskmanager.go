@@ -17,7 +17,6 @@ package gossip
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/bbva/qed/log"
@@ -181,10 +180,10 @@ func (p PrinterFactory) Metrics() []prometheus.Collector {
 
 func (p PrinterFactory) New(ctx context.Context) Task {
 	// a := ctx.Value("agent").(Agent)
-	fmt.Println("PrinterFactory creating new Task!")
+	log.Infof("PrinterFactory creating new Task!")
 	b := ctx.Value("batch").(*protocol.BatchSnapshots)
 	return func() error {
-		fmt.Printf("Printer Task: agent received batch: %+v\n", b)
+		log.Debugf("Printer Task: agent received batch: %+v\n", b)
 		return nil
 	}
 }
