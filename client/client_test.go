@@ -31,6 +31,7 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/testutils/spec"
 	"github.com/pkg/errors"
 
 	"github.com/bbva/qed/log"
@@ -534,15 +535,17 @@ func TestPeriodicHealthCheck(t *testing.T) {
 	require.NoError(t, err)
 
 	// wait for all endpoints to get marked as dead
-	time.Sleep(2 * time.Second)
-	require.False(t, client.topology.HasActiveEndpoint())
+	spec.RetryOnFalse(t, 50, 200*time.Millisecond, func() bool {
+		return !client.topology.HasActiveEndpoint()
+	}, "The topology still have active endpoints")
 	_, err = client.callAny("GET", "/events", nil)
 	require.Error(t, err)
 
 	// wait for all endpoints to get marked as alive
-	time.Sleep(1 * time.Second)
-	_, err = client.callAny("GET", "/events", nil)
-	require.NoError(t, err)
+	spec.Retry(t, 50, 200*time.Millisecond, func() error {
+		_, err = client.callAny("GET", "/events", nil)
+		return err
+	})
 
 }
 
