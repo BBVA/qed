@@ -30,7 +30,7 @@ $QED_HOME/qed server start \
 --raft-addr "{{ ansible_eth0.ipv4.address }}:8500" \
 {% if groups.role_qed.index(inventory_hostname) != 0  %}
 {% for host in groups['name_qed-0'] %}
---raft-join-addr "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8700" \
+--raft-join-addr "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8500" \
 --gossip-join-addr "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400" \
 {% endfor %}
 {% endif %}

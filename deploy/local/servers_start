@@ -34,7 +34,7 @@ LEADER_CONFIG+=('--raft-addr 127.0.0.1:850${i}')
 LEADER_CONFIG+=('--raft-path /var/tmp/qed${i}/wal')
 
 FOLLOWER_CONFIG=("${LEADER_CONFIG[@]}")
-FOLLOWER_CONFIG+=('--raft-join-addr 127.0.0.1:8700')
+FOLLOWER_CONFIG+=('--raft-join-addr 127.0.0.1:8500')
 FOLLOWER_CONFIG+=('--gossip-join-addr 127.0.0.1:8400')
 
 # Port 6060 conflict if followers and leader have the following option enabled.

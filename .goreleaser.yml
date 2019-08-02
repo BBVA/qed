@@ -1,4 +1,6 @@
 # Build customization
+env: 
+  - GO111MODULE=on
 before:
   hooks:
     - go mod download
@@ -6,13 +8,34 @@ builds:
   - env:
       - CGO_LDFLAGS_ALLOW=".*"
       - GOOS=linux
-      - GO111MODULE=on
     binary: qed
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
 archive:
+  wrap_in_directory: true
   files:
     - README.md
     - LICENSE
+release:
+  github:
+    owner: bbva
+    name: qed
+changelog:
+  skip: true
+dockers:
+  -
+    goos: linux
+    goarch: amd64
+    goarm: ''
+    binaries:
+    - qed
+    image_templates:
+    - "bbvalabs/qed:latest"
+    - "bbvalabs/qed:{{ .Tag }}"
+    skip_push: auto
+    dockerfile: Dockerfile 
+  
+

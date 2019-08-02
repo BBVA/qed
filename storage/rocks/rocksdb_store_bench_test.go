@@ -57,7 +57,7 @@ func BenchmarkMutateOnlyHyper(b *testing.B) {
 				Key:   key,
 				Value: value,
 			},
-		})
+		}, nil)
 	}
 
 }
@@ -84,7 +84,7 @@ func BenchmarkQueryOnlyHyper(b *testing.B) {
 				Key:   key,
 				Value: value,
 			},
-		})
+		}, nil)
 	}
 
 	b.ResetTimer()
@@ -118,7 +118,7 @@ func BenchmarkMutateOnlyHistory(b *testing.B) {
 				Key:   key,
 				Value: hasher.Do([]byte(fmt.Sprintf("test%d", i))),
 			},
-		})
+		}, nil)
 	}
 
 }
@@ -144,7 +144,7 @@ func BenchmarkQueryOnlyHistory(b *testing.B) {
 				Key:   key,
 				Value: hasher.Do([]byte(fmt.Sprintf("test%d", i))),
 			},
-		})
+		}, nil)
 	}
 
 	b.ResetTimer()
@@ -176,7 +176,7 @@ func BenchmarkMutateOnlyFSMState(b *testing.B) {
 				Key:   storage.FSMStateTableKey,
 				Value: rand.Bytes(24),
 			},
-		})
+		}, nil)
 	}
 
 }
@@ -199,7 +199,7 @@ func BenchmarkQueryOnlyFSMState(b *testing.B) {
 				Key:   storage.FSMStateTableKey,
 				Value: rand.Bytes(24),
 			},
-		})
+		}, nil)
 	}
 
 	b.ResetTimer()
@@ -244,7 +244,7 @@ func BenchmarkMutateAllTables(b *testing.B) {
 				Key:   storage.FSMStateTableKey,
 				Value: rand.Bytes(24),
 			},
-		})
+		}, nil)
 	}
 
 }

@@ -56,3 +56,32 @@ func (c *COWList) Get(index int) interface{} {
 	list := c.v.Load().([]interface{})
 	return list[index]
 }
+
+type Registry struct {
+	data map[string]interface{}
+	sync.Mutex
+}
+
+func NewRegistry() *Registry {
+	return &Registry{
+		data: make(map[string]interface{}, 0),
+	}
+}
+
+func (r *Registry) Register(key string, elem interface{}) {
+	r.Lock()
+	defer r.Unlock()
+	r.data[key] = elem
+}
+
+func (r *Registry) Lookup(key string) interface{} {
+	r.Lock()
+	defer r.Unlock()
+	return r.data[key]
+}
+
+func (r *Registry) Unregister(key string) {
+	r.Lock()
+	defer r.Unlock()
+	delete(r.data, key)
+}

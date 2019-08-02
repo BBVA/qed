@@ -29,6 +29,7 @@ import (
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/crypto"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/notifierstore"
 	"github.com/bbva/qed/testutils/scope"
@@ -103,6 +104,7 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 	hostname, _ := os.Hostname()
 	conf := server.DefaultConfig()
 	conf.APIKey = "APIKey"
+	conf.Log = log.SILENT
 	conf.NodeID = fmt.Sprintf("%s-%d", hostname, id)
 	conf.HTTPAddr = fmt.Sprintf("127.0.0.1:880%d", id)
 	conf.MgmtAddr = fmt.Sprintf("127.0.0.1:870%d", id)
@@ -110,7 +112,7 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 	conf.RaftAddr = fmt.Sprintf("127.0.0.1:850%d", id)
 	conf.GossipAddr = fmt.Sprintf("127.0.0.1:840%d", id)
 	if id > 0 {
-		conf.RaftJoinAddr = []string{"127.0.0.1:8700"}
+		conf.RaftJoinAddr = []string{"127.0.0.1:8500"}
 		conf.GossipJoinAddr = []string{"127.0.0.1:8400"}
 	}
 	conf.DBPath = pathDB + "/db"
@@ -137,7 +139,7 @@ func newServerSetup(id int, tls bool) (func() (string, error), func() error) {
 
 	before := func() (string, error) {
 		path = fmt.Sprintf("/var/tmp/e2e-qed%d", id)
-		err = os.MkdirAll(path, os.ModePerm) // ioutil.TempDir("/var/tmp", "e2e-qed-")
+		err = os.MkdirAll(path, os.ModePerm)
 		if err != nil {
 			return "", err
 		}

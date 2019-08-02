@@ -62,3 +62,7 @@ func (l *infoLogger) Debugf(format string, v ...interface{}) { return }
 func (l *infoLogger) GetLogger() *log.Logger {
 	return &l.Logger
 }
+
+func (l *infoLogger) GetLoggerLevel() string {
+	return INFO
+}

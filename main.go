@@ -24,7 +24,14 @@ import (
 	"github.com/bbva/qed/cmd"
 )
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
+	cmd.SetReleaseInfo(version, commit, date)
 	if err := cmd.Root.Execute(); err != nil {
 		os.Exit(-1)
 	}
