@@ -140,7 +140,7 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 	lagf := newLagFactory(1 * time.Second)
 	lagf.start()
 	defer lagf.stop()
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{gossip.PrinterFactory{}, incrementalFactory{}, lagf})
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{incrementalFactory{}, lagf})
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 
@@ -203,6 +203,7 @@ func (i incrementalFactory) New(ctx context.Context) gossip.Task {
 
 		ok, err := a.Qed.IncrementalVerify(proof, &firstSnap, &lastSnap)
 		if err != nil {
+			log.Infof("Error verifying incremental proof: %v", err)
 			return nil
 		}
 		if !ok {
@@ -294,9 +295,9 @@ func (l *lagFactory) New(ctx context.Context) gossip.Task {
 			if err != nil {
 				log.Infof("LagTask had an error sending a notification: %v", err)
 			}
-			log.Infof("Lag between gossip and snapshot store: last seen version %d - store count %d  = %d", lastVersion, count, storeLag)
+			log.Debugf("Lag between gossip and snapshot store: last seen version %d - store count %d  = %d", lastVersion, count, storeLag)
 		}
-		log.Infof("Lag status: Rate: %d Counter: %d, Local Lag: %d Store Lag: %d", rate, counter, localLag, storeLag)
+		log.Debugf("Lag status: Rate: %d Counter: %d, Local Lag: %d Store Lag: %d", rate, counter, localLag, storeLag)
 		return nil
 	}
 }

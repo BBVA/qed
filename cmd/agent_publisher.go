@@ -115,7 +115,7 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{gossip.PrinterFactory{}, publisherFactory{}})
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{publisherFactory{}})
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 
