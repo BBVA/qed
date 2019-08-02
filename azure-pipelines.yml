@@ -16,7 +16,6 @@ variables:
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
   GO111MODULE: on
   CGO_LDFLAGS_ALLOW: '.*'
-  PATH: '$(GOROOT)/bin:$(PATH)'
 
 steps:
 - script: |
@@ -44,19 +43,19 @@ steps:
   displayName: 'Build rocksdb'
 
 - script: |
-    go get github.com/jstemmer/go-junit-report
-    go get github.com/axw/gocov/gocov
-    go get github.com/AlekSi/gocov-xml 
-    go get github.com/matm/gocov-html
+    '$(GOROOT)/bin/go' get github.com/jstemmer/go-junit-report
+    '$(GOROOT)/bin/go' get github.com/axw/gocov/gocov
+    '$(GOROOT)/bin/go' get github.com/AlekSi/gocov-xml 
+    '$(GOROOT)/bin/go' get github.com/matm/gocov-html
   workingDirectory: '$(modulePath)'  
   displayName: 'Download code coverage tools'
   
 - script: |
-    go version
-    go mod download
-    go test -v -coverprofile=coverage.txt -covermode=count ./... 2>&1 | tee coverage.out
+    '$(GOROOT)/bin/go' version
+    '$(GOROOT)/bin/go' mod download
+    '$(GOROOT)/bin/go' test -v -coverprofile=coverage.txt -covermode=count ./... 2>&1 | tee coverage.out
     cat coverage.out | go-junit-report > report.xml
-    go vet -composites=false ./...
+    '$(GOROOT)/bin/go' vet -composites=false ./...
     gocov convert coverage.txt > coverage.json
     gocov-xml < coverage.json > coverage.xml
     mkdir coverage
