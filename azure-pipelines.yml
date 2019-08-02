@@ -7,11 +7,11 @@ trigger:
 - master
 
 pool:
-  vmImage: 'Ubuntu-16.04'
+  name: 'QED Pool'
 
 variables:
   GOBIN:  '$(GOPATH)/bin' # Go binaries path
-  GOROOT: '/usr/local/go1.11' # Go installation path
+  GOROOT: '$(Agent.BuildDirectory)/go' # Go installation path
   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
   GO111MODULE: on
@@ -19,9 +19,9 @@ variables:
 
 steps:
 - script: |
-    wget "https://dl.google.com/go/go1.12.4.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.12.4.tar.gz"
-    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.12.4.tar.gz"
-  displayName: 'Install Go 1.12.4'
+    wget "https://dl.google.com/go/go1.12.7.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.12.7.tar.gz"
+    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.12.7.tar.gz"
+  displayName: 'Install Go 1.12.7'
 
 - script: |
     mkdir -p '$(GOBIN)'
@@ -32,7 +32,6 @@ steps:
     mv !(gopath) '$(modulePath)'
     echo '##vso[task.prependpath]$(GOBIN)'
     echo '##vso[task.prependpath]$(GOROOT)/bin'
-    sudo apt install bzr
   displayName: 'Set up the Go workspace'
 
 - script: |
