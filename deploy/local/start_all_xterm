@@ -17,10 +17,23 @@
 # Starts a local test setup
 
 export CGO_LDFLAGS_ALLOW='.*'
+
+# Start Snapshot Store
 xterm -hold -e "go run $GOPATH/src/github.com/bbva/qed/testutils/notifierstore.go" &
 
-xterm -hold -e "bash servers_start" &
+# Start QED Cluster with 3 nodes
+./servers_start 2 >/dev/null
 
-sleep 3s
+# xterm -hold -e "bash -c 'while [ ! -f /var/tmp/qed-pids/qed-log-2.pid ] ; do echo Waiting Cluster to start... && sleep 5 ; done'" &
+xterm -hold -e "bash -c 'while ! tail -f /var/tmp/qed-log-0/server.log ; do sleep 5 ; done'" &
+xterm -hold -e "bash -c 'while ! tail -f /var/tmp/qed-log-1/server.log ; do sleep 5 ; done'" &
+xterm -hold -e "bash -c 'while ! tail -f /var/tmp/qed-log-2/server.log ; do sleep 5 ; done'" &
 
-xterm -hold -e "bash start_agent monitor publisher auditor" &
+# Start Agent Monitor
+xterm -hold -e "bash -c './agents_start monitor && while ! tail -f /var/tmp/agent-monitor-0/agent.log ; do sleep 3 ; done'" &
+
+# Start Agent Publisher
+xterm -hold -e "bash -c './agents_start publisher && while ! tail -f /var/tmp/agent-publisher-0/agent.log ; do sleep 3 ; done'" &
+
+# Start Agent Auditor
+xterm -hold -e "./agents_start auditor && bash -c 'while ! tail -f /var/tmp/agent-auditor-0/agent.log ; do sleep 3 ; done'" &
