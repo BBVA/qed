@@ -37,4 +37,18 @@ var Root *cobra.Command = &cobra.Command{
 	SilenceUsage: true,
 }
 
-var Ctx context.Context = context.WithValue(context.Background(), k("version"), "alpha")
+var Ctx context.Context = context.Background()
+
+type release struct {
+	version string
+	commit  string
+	date    string
+}
+
+func SetReleaseInfo(version, commit, date string) {
+	Ctx = context.WithValue(Ctx, k("root.release"), release{
+		version: version,
+		commit:  commit,
+		date:    date,
+	})
+}
