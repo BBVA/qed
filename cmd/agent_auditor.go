@@ -133,7 +133,7 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{gossip.PrinterFactory{}, membershipFactory{}})
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{membershipFactory{}})
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 
@@ -205,7 +205,7 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 
 		storedSnap, err := a.SnapshotStore.GetSnapshot(proof.CurrentVersion)
 		if err != nil {
-			log.Infof("Unable to get snapshot from storage: %v", err)
+			log.Infof("Unable to get snapshot with version %d from storage: %v", proof.CurrentVersion, err)
 			return err
 		}
 
@@ -225,7 +225,7 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 			log.Infof("Unable to verify snapshot %v", s.Snapshot)
 		}
 
-		log.Infof("MembershipTask.Do(): Snapshot %v has been verified by QED", s.Snapshot)
+		log.Infof("Snapshot %v has been verified by QED", s.Snapshot)
 		return nil
 	}
 }
