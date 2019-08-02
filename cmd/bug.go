@@ -45,7 +45,8 @@ func formatInfo(w io.Writer, title string, body func() error) error {
 
 func debugInfo(w io.Writer) error {
 	var err error
-	qedVersion := Ctx.Value(k("version"))
+	release := Ctx.Value(k("root.release")).(release)
+	qedVersion := release.version
 	// Get build version
 	formatInfo(w, "Build Info", func() error {
 		fmt.Fprintf(w, "QED version %s, built in $GOPATH mode\n", qedVersion)
