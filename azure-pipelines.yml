@@ -16,6 +16,7 @@ variables:
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
   GO111MODULE: on
   CGO_LDFLAGS_ALLOW: '.*'
+  PATH: '$(GOROOT)/bin:$(PATH)'
 
 steps:
 - script: |
