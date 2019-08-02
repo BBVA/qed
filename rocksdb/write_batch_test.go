@@ -19,6 +19,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 )
 
@@ -121,5 +122,54 @@ func TestDeleteRange(t *testing.T) {
 	actualVal4, err = db.GetBytes(ro, key4)
 	require.NoError(t, err)
 	require.Equal(t, actualVal4, val4)
+
+}
+
+func TestGetLogData(t *testing.T) {
+
+	var (
+		key1   = []byte("key1")
+		value1 = []byte("val1")
+	)
+
+	// create and fill the write batch
+	wb := NewWriteBatch()
+	defer wb.Destroy()
+	wb.Put(key1, value1)
+
+	// add log data
+	version := util.Uint64AsBytes(1)
+	wb.PutLogData(version, len(version))
+
+	// get log data
+	extractor := NewLogDataExtractor("version")
+	wb.GetLogData(extractor)
+	require.Equal(t, version, extractor.Blob)
+
+}
+
+func TestWriteBatchSerialization(t *testing.T) {
+
+	var (
+		key1   = []byte("key1")
+		value1 = []byte("val1")
+	)
+
+	// create and fill the write batch
+	wb := NewWriteBatch()
+	defer wb.Destroy()
+	wb.Put(key1, value1)
+
+	// add log data
+	version := util.Uint64AsBytes(1)
+	wb.PutLogData(version, len(version))
+
+	serialized := wb.Data()
+	deserialized := WriteBatchFrom(serialized)
+	require.Equal(t, serialized, deserialized.Data())
+
+	extractor := NewLogDataExtractor("version")
+	defer extractor.Destroy()
+	require.Equal(t, version, deserialized.GetLogData(extractor))
 
 }

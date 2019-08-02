@@ -19,37 +19,31 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
-
-	"github.com/prometheus/client_golang/prometheus"
+	"time"
 
 	"github.com/bbva/qed/api/apihttp"
 	"github.com/bbva/qed/api/mgmthttp"
+	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/sign"
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
-	"github.com/bbva/qed/raftwal"
 	"github.com/bbva/qed/storage/rocks"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Server encapsulates the data and login to start/stop a QED server
 type Server struct {
-	conf      *Config
-	bootstrap bool // Set bootstrap to true when bringing up the first node as a master
-
+	conf               *Config
+	bootstrap          bool // Set bootstrap to true when bringing up the first node as a master
 	httpServer         *http.Server
 	mgmtServer         *http.Server
-	raftBalloon        *raftwal.RaftBalloon
+	raftNode           *consensus.RaftNode
 	metrics            *serverMetrics
 	metricsServer      *metrics.Server
 	prometheusRegistry *prometheus.Registry
@@ -83,7 +77,7 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// Open RocksDB store
-	store, err := rocks.NewRocksDBStore(conf.DBPath)
+	store, err := rocks.NewRocksDBStore(conf.DBPath, conf.DbWalTtl)
 	if err != nil {
 		return nil, err
 	}
@@ -126,13 +120,23 @@ func NewServer(conf *Config) (*Server, error) {
 	server.sender = NewSender(server.agent, server.signer, 500, 2, 3)
 
 	// Create RaftBalloon
-	server.raftBalloon, err = raftwal.NewRaftBalloon(conf.RaftPath, conf.RaftAddr, conf.NodeID, store, server.snapshotsCh)
+	clusterOpts := consensus.DefaultClusteringOptions()
+	clusterOpts.NodeID = conf.NodeID
+	clusterOpts.Addr = conf.RaftAddr
+	clusterOpts.HttpAddr = conf.HTTPAddr
+	clusterOpts.RaftLogPath = conf.DBPath
+	clusterOpts.MgmtAddr = conf.MgmtAddr
+	clusterOpts.Bootstrap = bootstrap
+	if !bootstrap {
+		clusterOpts.Seeds = conf.RaftJoinAddr
+	}
+	server.raftNode, err = consensus.NewRaftNode(clusterOpts, store, server.snapshotsCh)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create http endpoints
-	httpMux := apihttp.NewApiHttp(server.raftBalloon, protocol.NodeInfo(*conf))
+	httpMux := apihttp.NewApiHttp(server.raftNode)
 	if conf.EnableTLS {
 		server.httpServer = newTLSServer(conf.HTTPAddr, httpMux)
 	} else {
@@ -140,37 +144,17 @@ func NewServer(conf *Config) (*Server, error) {
 	}
 
 	// Create management endpoints
-	mgmtMux := mgmthttp.NewMgmtHttp(server.raftBalloon)
+	mgmtMux := mgmthttp.NewMgmtHttp(server.raftNode)
 	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux)
 
 	// register qed metrics
 	server.metrics = newServerMetrics()
 	server.RegisterMetrics(server.metricsServer)
 	store.RegisterMetrics(server.metricsServer)
-	server.raftBalloon.RegisterMetrics(server.metricsServer)
+	server.raftNode.RegisterMetrics(server.metricsServer)
 	server.sender.RegisterMetrics(server.metricsServer)
 
 	return server, nil
-}
-
-func join(joinAddr, raftAddr, nodeID string, metadata map[string]string) error {
-	body := make(map[string]interface{})
-	body["addr"] = raftAddr
-	body["id"] = nodeID
-	body["metadata"] = metadata
-	b, err := json.Marshal(body)
-	if err != nil {
-		return err
-	}
-
-	resp, err := http.Post(fmt.Sprintf("http://%s/join", joinAddr), "application-type/json", bytes.NewReader(b))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	_, _ = io.Copy(ioutil.Discard, resp.Body)
-
-	return nil
 }
 
 // Start will start the server in a non-blockable fashion.
@@ -180,11 +164,6 @@ func (s *Server) Start() error {
 
 	metadata := map[string]string{}
 	metadata["HTTPAddr"] = s.conf.HTTPAddr
-
-	err := s.raftBalloon.Open(s.bootstrap, metadata)
-	if err != nil {
-		return err
-	}
 
 	log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
 	s.metricsServer.Start()
@@ -218,20 +197,10 @@ func (s *Server) Start() error {
 
 	log.Debugf(" ready on %s and %s\n", s.conf.HTTPAddr, s.conf.MgmtAddr)
 
-	if !s.bootstrap {
-		for _, addr := range s.conf.RaftJoinAddr {
-			log.Debug("	* Joining existent cluster QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
-			if err := join(addr, s.conf.RaftAddr, s.conf.NodeID, metadata); err != nil {
-				log.Fatalf("failed to join node at %s: %s", addr, err.Error())
-			}
-		}
-	}
-
+	s.agent.Start()
 	s.sender.Start(s.snapshotsCh)
 
-	s.agent.Start()
-
-	return nil
+	return s.raftNode.WaitForLeader(3 * time.Second)
 }
 
 // Stop will close all the channels from the mux servers.
@@ -264,7 +233,7 @@ func (s *Server) Stop() error {
 	}
 
 	log.Debugf("Stopping RAFT server...")
-	err := s.raftBalloon.Close(true)
+	err := s.raftNode.Close(true)
 	if err != nil {
 		log.Error(err)
 		return err

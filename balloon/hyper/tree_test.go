@@ -63,7 +63,7 @@ func TestAdd(t *testing.T) {
 		version := uint64(i)
 		rootHash, mutations, err := tree.Add(c.eventDigest, version)
 		require.NoErrorf(t, err, "This should not fail for version %d", i)
-		err = tree.store.Mutate(mutations)
+		err = tree.store.Mutate(mutations, nil)
 		require.NoErrorf(t, err, "Error inserting mutations for version %d", i)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for index %d", i)
 	}
@@ -104,7 +104,7 @@ func TestAddBulk(t *testing.T) {
 	for i, c := range testCases {
 		rootHash, mutations, err := tree.AddBulk(c.eventDigests, c.initialVersion)
 		require.NoErrorf(t, err, "This should not fail in test %d", i)
-		err = tree.store.Mutate(mutations)
+		err = tree.store.Mutate(mutations, nil)
 		require.NoErrorf(t, err, "Error inserting mutations in test %d", i)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash in test %d", i)
 	}
@@ -153,14 +153,14 @@ func TestConsistencyBetweenAddAndAddBulk(t *testing.T) {
 		for j, _ := range c.eventDigests {
 			rootHash, mutations, err := addTree.Add(c.eventDigests[j], c.versions[j])
 			require.NoErrorf(t, err, "This should not fail in test %d", j)
-			require.NoErrorf(t, addTree.store.Mutate(mutations), "Error inserting mutations in test %d", j)
+			require.NoErrorf(t, addTree.store.Mutate(mutations, nil), "Error inserting mutations in test %d", j)
 			lastRootHash = rootHash
 		}
 
 		// Add Bulk
 		rootHashBulk, mutations, err := addBulkTree.AddBulk(c.eventDigests, c.versions[0])
 		require.NoErrorf(t, err, "This should not fail in test %d", i)
-		require.NoErrorf(t, addBulkTree.store.Mutate(mutations), "Error inserting mutations in test %d", i)
+		require.NoErrorf(t, addBulkTree.store.Mutate(mutations, nil), "Error inserting mutations in test %d", i)
 
 		// Root Hashes
 		assert.Equalf(t, lastRootHash, rootHashBulk, "Incorrect root hash in test %d", i)
@@ -251,7 +251,7 @@ func TestProveMembership(t *testing.T) {
 		for index, digest := range c.addedKeys {
 			_, mutations, err := tree.Add(digest, index)
 			require.NoErrorf(t, err, "This should not fail for index %d", i)
-			err = tree.store.Mutate(mutations)
+			err = tree.store.Mutate(mutations, nil)
 			require.NoErrorf(t, err, "This should not fail for index %d", i)
 		}
 
@@ -291,7 +291,7 @@ func TestAddAndVerify(t *testing.T) {
 
 		rootHash, mutations, err := tree.Add(key, value)
 		require.NoErrorf(t, err, "Add operation should not fail for index %d", i)
-		_ = tree.store.Mutate(mutations)
+		_ = tree.store.Mutate(mutations, nil)
 
 		proof, err := tree.QueryMembership(key)
 		require.Nilf(t, err, "The membership query should not fail for index %d", i)
@@ -325,9 +325,9 @@ func TestDeterministicAdd(t *testing.T) {
 		eventDigest := hasher.Do(event)
 		version := uint64(i)
 		_, m1, _ := tree1.Add(eventDigest, version)
-		_ = store1.Mutate(m1)
+		_ = store1.Mutate(m1, nil)
 		_, m2, _ := tree2.Add(eventDigest, version)
-		_ = store2.Mutate(m2)
+		_ = store2.Mutate(m2, nil)
 	}
 
 	// check cache store equality
@@ -377,7 +377,7 @@ func TestRebuildCache(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		key := hasher.Do(rand.Bytes(32))
 		_, mutations, _ := tree.Add(key, uint64(i))
-		_ = store.Mutate(mutations)
+		_ = store.Mutate(mutations, nil)
 	}
 	expectedSize := firstCache.Size()
 
@@ -412,7 +412,7 @@ func BenchmarkAdd(b *testing.B) {
 		elem := append(rand.Bytes(32), index...)
 		_, mutations, err := tree.Add(hasher.Do(elem), uint64(i))
 		require.NoError(b, err)
-		require.NoError(b, store.Mutate(mutations))
+		require.NoError(b, store.Mutate(mutations, nil))
 		AddTotal.Inc()
 	}
 
@@ -452,7 +452,7 @@ func BenchmarkAddBulk(b *testing.B) {
 			_, mutations, err := tree.AddBulk(eventDigests, initialVersion)
 			initialVersion = i + 1
 			require.NoError(b, err)
-			require.NoError(b, store.Mutate(mutations))
+			require.NoError(b, store.Mutate(mutations, nil))
 			AddTotal.Add(float64(bulkSize))
 		}
 	}
@@ -481,7 +481,7 @@ func BenchmarkRebuildCacheTime(b *testing.B) {
 		elem := append(rand.Bytes(32), index...)
 		_, mutations, err := tree.Add(hasher.Do(elem), uint64(i))
 		require.NoError(b, err)
-		require.NoError(b, store.Mutate(mutations))
+		require.NoError(b, store.Mutate(mutations, nil))
 		AddTotal.Inc()
 	}
 

@@ -1,7 +1,7 @@
 version: '3'
 services:
   qed_server_0:
-    image: "bbvalabs/qed:v0.2.4-docs"
+    image: "bbvalabs/qed:v1.0.0-rc1"
     container_name: qed_server_0
     ports:
       - "8800:8800"   # API HTTP
@@ -26,7 +26,7 @@ services:
     ]
 
   publisher:
-    image: "bbvalabs/qed:v0.2.4-docs"
+    image: "bbvalabs/qed:v1.0.0-rc1"
     container_name: publisher
     ports:
       - "8100:8100"   # API HTTP
@@ -45,7 +45,7 @@ services:
     restart: on-failure
 
   snapshotstore:
-    image: "bbvalabs/qed:v0.2.4-docs"
+    image: "bbvalabs/qed:v1.0.0-rc1"
     container_name: snapshot_store
     ports:
       - "8888:8888"   # API HTTP

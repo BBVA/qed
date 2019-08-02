@@ -17,7 +17,7 @@ configured for that proposal.
 
     .. code::
 
-        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v0.2.4-docs qed client --endpoints http://qed_server_0:8800 --snapshot-store-url http://snapshotstore:8888 --log info'
+        $ alias qed_client='docker run -it --net=docker_default bbvalabs/qed:v1.0.0-rc1 qed client --endpoints http://qed_server_0:8800 --snapshot-store-url http://snapshotstore:8888 --log info'
 
     Don't hesitate to check the ``qed_client`` help facility when necessary.
 
@@ -55,6 +55,7 @@ environment is as easy as:
 .. code::
 
     $ git clone https://github.com/BBVA/qed.git
+    $ git checkout v1.0.0-rc1
     $ cd qed/deploy/docker
     $ docker-compose up -d
 

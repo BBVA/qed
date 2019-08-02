@@ -99,7 +99,7 @@ func TestAdd(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash for test case %d", i)
 		assert.Equalf(t, c.expectedMutationsLen, len(mutations), "The mutations should match for test case %d", i)
-		err = store.Mutate(mutations)
+		err = store.Mutate(mutations, nil)
 		require.NoErrorf(t, err, "Error inserting mutations in test case %d", i)
 	}
 
@@ -140,7 +140,7 @@ func TestAddBulk(t *testing.T) {
 	for i, c := range testCases {
 		rootHash, mutations, err := tree.AddBulk(c.eventDigests, c.initialVersion)
 		require.NoErrorf(t, err, "This should not fail in test %d", i)
-		err = store.Mutate(mutations)
+		err = store.Mutate(mutations, nil)
 		require.NoErrorf(t, err, "Error inserting mutations in test %d", i)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "Incorrect root hash in test %d", i)
 	}
@@ -312,7 +312,7 @@ func TestProveMembership(t *testing.T) {
 
 	for _, c := range testCases {
 		_, mutations, err := tree.Add(c.eventDigest, c.index)
-		_ = store.Mutate(mutations)
+		_ = store.Mutate(mutations, nil)
 		require.NoError(t, err)
 	}
 
@@ -425,7 +425,7 @@ func TestProveConsistency(t *testing.T) {
 		index := uint64(i)
 		_, mutations, err := tree.Add(c.eventDigest, index)
 		require.NoError(t, err)
-		_ = store.Mutate(mutations)
+		_ = store.Mutate(mutations, nil)
 
 		start := uint64(max(0, i-1))
 		end := index
@@ -495,7 +495,7 @@ func TestProveConsistencySameVersions(t *testing.T) {
 	for i, c := range testCases {
 		_, mutations, err := tree.Add(c.eventDigest, c.index)
 		require.NoError(t, err)
-		_ = store.Mutate(mutations)
+		_ = store.Mutate(mutations, nil)
 
 		proof, err := tree.ProveConsistency(c.index, c.index)
 		require.NoError(t, err)
@@ -531,7 +531,7 @@ func BenchmarkAdd(b *testing.B) {
 	for i := uint64(0); i < uint64(b.N); i++ {
 		_, mutations, err := tree.Add(hasher.Do(rand.Bytes(64)), i)
 		require.NoError(b, err)
-		require.NoError(b, store.Mutate(mutations))
+		require.NoError(b, store.Mutate(mutations, nil))
 		AddTotal.Inc()
 	}
 }
@@ -563,7 +563,7 @@ func BenchmarkAddBulk(b *testing.B) {
 			_, mutations, err := tree.AddBulk(eventDigests, initialVersion)
 			initialVersion = i + 1
 			require.NoError(b, err)
-			require.NoError(b, store.Mutate(mutations))
+			require.NoError(b, store.Mutate(mutations, nil))
 			AddTotal.Add(float64(bulkSize))
 		}
 	}

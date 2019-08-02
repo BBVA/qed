@@ -16,21 +16,23 @@
 package rocks
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/rocksdb"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/storage/pb"
+	"github.com/bbva/qed/util"
 )
 
 type RocksDBStore struct {
-	db *rocksdb.DB
+	path string
+	db   *rocksdb.DB
 
 	stats *rocksdb.Statistics
 
@@ -41,15 +43,6 @@ type RocksDBStore struct {
 
 	// column family handlers
 	cfHandles rocksdb.ColumnFamilyHandles
-
-	// checkpoints are stored in a path on the same
-	// folder as the database, so rocksdb uses hardlinks instead
-	// of copies
-	checkPointPath string
-
-	// each checkpoint is created in a subdirectory
-	// inside checkPointPath folder
-	checkpoints map[uint64]string
 
 	// global options
 	globalOpts *rocksdb.Options
@@ -70,10 +63,25 @@ type RocksDBStore struct {
 type Options struct {
 	Path             string
 	EnableStatistics bool
+	MaxTotalWalSize  uint64
+	WALSizeLimitMB   uint64
+	WALTtlSeconds    uint64
 }
 
-func NewRocksDBStore(path string) (*RocksDBStore, error) {
-	return NewRocksDBStoreWithOpts(&Options{Path: path, EnableStatistics: true})
+func DefaultOptions() *Options {
+	return &Options{
+		EnableStatistics: true,
+		MaxTotalWalSize:  0,
+		WALSizeLimitMB:   1 << 20,
+		WALTtlSeconds:    0,
+	}
+}
+
+func NewRocksDBStore(path string, ttl time.Duration) (*RocksDBStore, error) {
+	opts := DefaultOptions()
+	opts.Path = path
+	opts.WALTtlSeconds = uint64(ttl.Seconds())
+	return NewRocksDBStoreWithOpts(opts)
 }
 
 func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
@@ -95,6 +103,9 @@ func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
 	globalOpts := rocksdb.NewDefaultOptions()
 	globalOpts.SetCreateIfMissing(true)
 	globalOpts.SetCreateIfMissingColumnFamilies(true)
+	globalOpts.SetMaxTotalWalSize(opts.MaxTotalWalSize)
+	globalOpts.SetWalSizeLimitMb(opts.WALSizeLimitMB)
+	globalOpts.SetWALTtlSeconds(opts.WALTtlSeconds)
 	//globalOpts.SetMaxOpenFiles(1000)
 	globalOpts.SetEnv(env)
 	// We build a LRU cache with a high pool ratio of 0.4 (40%). The lower pool
@@ -135,27 +146,19 @@ func NewRocksDBStoreWithOpts(opts *Options) (*RocksDBStore, error) {
 
 	restoreOpts := rocksdb.NewRestoreOptions()
 
-	// CheckPoint.
-	checkPointPath := opts.Path + "/checkpoints"
-	err = os.MkdirAll(checkPointPath, 0755)
-	if err != nil {
-		return nil, err
-	}
-
 	store := &RocksDBStore{
-		db:             db,
-		stats:          stats,
-		cfHandles:      cfHandles,
-		blockCache:     blockCache,
-		backupEngine:   be,
-		backupOpts:     backupOpts,
-		restoreOpts:    restoreOpts,
-		checkPointPath: checkPointPath,
-		checkpoints:    make(map[uint64]string),
-		globalOpts:     globalOpts,
-		cfOpts:         cfOpts,
-		wo:             rocksdb.NewDefaultWriteOptions(),
-		ro:             rocksdb.NewDefaultReadOptions(),
+		path:         opts.Path,
+		db:           db,
+		stats:        stats,
+		cfHandles:    cfHandles,
+		blockCache:   blockCache,
+		backupEngine: be,
+		backupOpts:   backupOpts,
+		restoreOpts:  restoreOpts,
+		globalOpts:   globalOpts,
+		cfOpts:       cfOpts,
+		wo:           rocksdb.NewDefaultWriteOptions(),
+		ro:           rocksdb.NewDefaultReadOptions(),
 	}
 
 	if stats != nil {
@@ -334,14 +337,16 @@ func getFsmStateTableOpts() *rocksdb.Options {
 	return opts
 }
 
-func (s *RocksDBStore) Mutate(mutations []*storage.Mutation) error {
+func (s *RocksDBStore) Mutate(mutations []*storage.Mutation, metadata []byte) error {
 	batch := rocksdb.NewWriteBatch()
 	defer batch.Destroy()
+	// IMPORTANT: This line must go before the PutCF. For some reason, if we set it after,
+	// we cannot retrieve the metadata later with a writebatch handler.
+	batch.PutLogData(metadata, len(metadata))
 	for _, m := range mutations {
 		batch.PutCF(s.cfHandles[m.Table], m.Key, m.Value)
 	}
-	err := s.db.Write(s.wo, batch)
-	return err
+	return s.db.Write(s.wo, batch)
 }
 
 func (s *RocksDBStore) Get(table storage.Table, key []byte) (*storage.KVPair, error) {
@@ -450,30 +455,6 @@ func (s *RocksDBStore) Close() error {
 	return nil
 }
 
-// Snapshot takes a snapshot of the store, and returns and id
-// to be used in the back up process. The state of the
-// snapshot is stored in the store instance.
-func (s *RocksDBStore) Snapshot() (uint64, error) {
-	// create temp directory
-	id := uint64(len(s.checkpoints) + 1)
-	checkDir := fmt.Sprintf("%s/rocksdb-checkpoint-%d", s.checkPointPath, id)
-	os.RemoveAll(checkDir)
-
-	// create checkpoint
-	checkpoint, err := s.db.NewCheckpoint()
-	if err != nil {
-		return 0, err
-	}
-	defer checkpoint.Destroy()
-	err = checkpoint.CreateCheckpoint(checkDir, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	s.checkpoints[id] = checkDir
-	return id, nil
-}
-
 // Backup uses the backupEngine to create backups with metadata. The backup directory has been
 // set up previously.
 func (s *RocksDBStore) Backup(metadata string) error {
@@ -538,118 +519,115 @@ func (s *RocksDBStore) DeleteBackup(backupID uint32) error {
 	return nil
 }
 
-// Dump dumps a protobuf-encoded list of all entries in the database into the
-// given writer, that are newer than the specified version.
-func (s *RocksDBStore) Dump(w io.Writer, id uint64) error {
+// FetchSnapshot fetches all WAL transactions from the first available
+// seq_num to the last one specified in the lastSeqNum parameter, and dumps
+// them to the given writer.
+func (s *RocksDBStore) FetchSnapshot(w io.WriteCloser, since, until uint64) error {
 
-	checkDir := s.checkpoints[id]
-
-	// open db for read-only
-	opts := rocksdb.NewDefaultOptions()
-	checkDB, err := rocksdb.OpenDBForReadOnly(checkDir, opts, true)
+	it, err := s.db.GetUpdatesSince(since) // we start on the first available seq_num
 	if err != nil {
 		return err
 	}
-	defer checkDB.Close()
+	defer func() {
+		it.Close()
+		w.Close()
+	}()
 
-	// open a new iterator and dump every key
-	ro := rocksdb.NewDefaultReadOptions()
-	ro.SetFillCache(false)
-
-	tables := []storage.Table{
-		storage.DefaultTable,
-		storage.HyperTable,
-		storage.HistoryTable,
-		storage.FSMStateTable,
-	}
-	for _, table := range tables {
-
-		it := checkDB.NewIteratorCF(ro, s.cfHandles[table])
-		defer it.Close()
-
-		for it.SeekToFirst(); it.Valid(); it.Next() {
-			keySlice := it.Key()
-			valueSlice := it.Value()
-			keyData := keySlice.Data()
-			valueData := valueSlice.Data()
-			key := append(keyData[:0:0], keyData...) // See https://github.com/go101/go101/wiki
-			value := append(valueData[:0:0], valueData...)
-			keySlice.Free()
-			valueSlice.Free()
-
-			entry := &pb.KVPair{
-				Table: pb.Table(table),
-				Key:   key,
-				Value: value,
-			}
-
-			// write entries to disk
-			if err := writeTo(entry, w); err != nil {
-				return err
-			}
+	for ; it.Valid(); it.Next() {
+		batch, seqNum := it.GetBatch()
+		defer batch.Destroy()
+		if seqNum <= since {
+			continue
 		}
-
+		if seqNum > until {
+			break
+		}
+		data := batch.Data()
+		size := util.Uint64AsBytes(uint64(len(data)))
+		_, err = w.Write(append(size, data...))
+		if err != nil {
+			return err
+		}
 	}
-
-	// remove checkpoint from list
-	// order must be maintained,
-	delete(s.checkpoints, id)
-
-	// clean up only after we succesfully backup
-	os.RemoveAll(checkDir)
 
 	return nil
 }
 
-// Load reads a protobuf-encoded list of all entries from a reader and writes
-// them to the database. This can be used to restore the database from a dump
-// made by calling DB.Dump().
-//
-// DB.Load() should be called on a database that is not running any other
-// concurrent transactions while it is running.
-func (s *RocksDBStore) Load(r io.Reader) error {
+func readChunk(r io.Reader) ([]byte, error) {
 
-	br := bufio.NewReaderSize(r, 16<<10)
-	unmarshalBuf := make([]byte, 1<<10)
-	batch := rocksdb.NewWriteBatch()
-	wo := rocksdb.NewDefaultWriteOptions()
-	wo.SetDisableWAL(true)
-
-	for {
-		var data uint64
-		err := binary.Read(br, binary.LittleEndian, &data)
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		}
-
-		if cap(unmarshalBuf) < int(data) {
-			unmarshalBuf = make([]byte, data)
-		}
-
-		kv := &pb.KVPair{}
-		if _, err = io.ReadFull(br, unmarshalBuf[:data]); err != nil {
-			return err
-		}
-		if err = kv.Unmarshal(unmarshalBuf[:data]); err != nil {
-			return err
-		}
-		table := storage.Table(kv.GetTable())
-		batch.PutCF(s.cfHandles[table], kv.Key, kv.Value)
-
-		if batch.Count() == 1000 {
-			s.db.Write(wo, batch)
-			batch.Clear()
-			continue
-		}
+	sizeBuff := make([]byte, 8)
+	n, err := r.Read(sizeBuff)
+	if err != nil || n != 8 {
+		return nil, err
 	}
 
-	if batch.Count() > 0 {
-		return s.db.Write(wo, batch)
+	size := util.BytesAsUint64(sizeBuff)
+	chunk := make([]byte, size)
+	n, err = r.Read(chunk)
+	if err != nil {
+		return nil, err
+	}
+	if uint64(n) != size {
+		return nil, fmt.Errorf("Corrupted chunk")
+	}
+	return chunk, nil
+
+}
+
+// LoadSnapshot reads a list of serialized batches from a reader,
+// rehydrates them and write to the database if they fulfill the validation
+// condition specified as parameter.
+// This method should be called on a database that is not running
+// any other concurrent transactions while it is running.
+func (s *RocksDBStore) LoadSnapshot(r io.ReadCloser, valid storage.ValidateF) error {
+
+	wo := rocksdb.NewDefaultWriteOptions()
+
+	extractor := rocksdb.NewLogDataExtractor(s.path)
+	defer func() {
+		extractor.Destroy()
+		r.Close()
+	}()
+
+	for {
+		buff, err := readChunk(r)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		batch := rocksdb.WriteBatchFrom(buff)
+		defer batch.Destroy()
+
+		blob := batch.GetLogData(extractor)
+
+		ok, err := valid(blob)
+		if err != nil {
+			return err
+		}
+
+		// apply only valid transactions
+		if ok {
+			err = s.db.Write(wo, batch)
+			if err != nil {
+				return nil
+			}
+		}
+
 	}
 
 	return nil
+
+}
+
+// LastWALSequenceNumber returns the sequence number of the
+// last transaction applied to the WAL. This sequence
+// number can be used as upper limit when fetching transactions
+// from the WAL.
+func (s *RocksDBStore) LastWALSequenceNumber() uint64 {
+	return s.db.GetLatestSequenceNumber()
 }
 
 func (s *RocksDBStore) RegisterMetrics(registry metrics.Registry) {

@@ -14,7 +14,7 @@
    limitations under the License.
 */
 
-package raftrocks
+package consensus
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ import (
 )
 
 // namespace is the leading part of all published metrics for the Storage service.
-const namespace = "qed_wal"
+const raftLogNamespace = "qed_wal"
 
 const blockCacheSubsystem = "block"  // sub-system associated with metrics for block cache.
 const filterSubsystem = "filter"     // sub-system associated with metrics for bloom filters.
@@ -34,7 +34,7 @@ const getSubsystem = "get"           // sub-system associated with metrics for g
 const ioSubsystem = "io"             // sub-system associated with metrics for I/O.
 const compressSybsystem = "compress" // sub-system associated with metrics for compression.
 
-type rocksDBMetrics struct {
+type raftLogMetrics struct {
 	*blockCacheMetrics
 	*bloomFilterMetrics
 	*memtableMetrics
@@ -44,11 +44,11 @@ type rocksDBMetrics struct {
 	tables []*perTableMetrics
 }
 
-func newRocksDBMetrics(store *RocksDBStore) *rocksDBMetrics {
+func newRaftLogMetrics(store *raftLog) *raftLogMetrics {
 	tables := make([]*perTableMetrics, 0)
 	tables = append(tables, newPerTableMetrics(stableTable, store))
 	tables = append(tables, newPerTableMetrics(logTable, store))
-	return &rocksDBMetrics{
+	return &raftLogMetrics{
 		blockCacheMetrics:  newBlockCacheMetrics(store.stats, store.blockCache),
 		bloomFilterMetrics: newBloomFilterMetrics(store.stats),
 		memtableMetrics:    newMemtableMetrics(store.stats),
@@ -60,7 +60,7 @@ func newRocksDBMetrics(store *RocksDBStore) *rocksDBMetrics {
 }
 
 // collectors satisfies the prom.PrometheusCollector interface.
-func (m *rocksDBMetrics) collectors() []prometheus.Collector {
+func (m *raftLogMetrics) collectors() []prometheus.Collector {
 	var collectors []prometheus.Collector
 	collectors = append(collectors, m.blockCacheMetrics.collectors()...)
 	collectors = append(collectors, m.bloomFilterMetrics.collectors()...)
@@ -105,7 +105,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 	return &blockCacheMetrics{
 		Miss: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_miss",
 				Help:      "Block cache misses.",
@@ -114,7 +114,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		Hit: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_hit",
 				Help:      "Block cache hits.",
@@ -123,7 +123,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		Add: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_add",
 				Help:      "Block cache adds.",
@@ -132,7 +132,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		AddFailures: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_add_failures",
 				Help:      "Block cache add failures.",
@@ -141,7 +141,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		IndexMiss: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_index_miss",
 				Help:      "Block cache index misses.",
@@ -150,7 +150,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		IndexHit: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_index_hit",
 				Help:      "Block cache index hits.",
@@ -159,7 +159,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		IndexAdd: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_index_add",
 				Help:      "Block cache index adds.",
@@ -168,7 +168,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		IndexBytesInsert: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_index_bytes_insert",
 				Help:      "Block cache index bytes inserted.",
@@ -177,7 +177,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		IndexBytesEvict: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_index_bytes_evict",
 				Help:      "Block cache index bytes evicted.",
@@ -186,7 +186,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		FilterMiss: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_filter_miss",
 				Help:      "Block cache filter misses.",
@@ -195,7 +195,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		FilterHit: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_filter_hit",
 				Help:      "Block cache filter hits.",
@@ -204,7 +204,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		FilterAdd: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_filter_add",
 				Help:      "Block cache filter adds.",
@@ -213,7 +213,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		FilterBytesInsert: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_filter_bytes_insert",
 				Help:      "Block cache filter bytes inserted.",
@@ -222,7 +222,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		FilterBytesEvict: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_filter_bytes_evict",
 				Help:      "Block cache filter bytes evicted.",
@@ -231,7 +231,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		DataMiss: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_data_miss",
 				Help:      "Block cache data misses.",
@@ -240,7 +240,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		DataHit: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_data_hit",
 				Help:      "Block cache data hits.",
@@ -249,7 +249,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		DataAdd: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_data_add",
 				Help:      "Block cache data adds.",
@@ -258,7 +258,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		DataBytesInsert: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_data_bytes_insert",
 				Help:      "Block cache data bytes inserted.",
@@ -267,7 +267,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		BytesRead: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_bytes_read",
 				Help:      "Block cache bytes read.",
@@ -276,7 +276,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		BytesWrite: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_bytes_write",
 				Help:      "Block cache bytes written.",
@@ -285,7 +285,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		Usage: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_memory_usage",
 				Help:      "Block cache memory usage.",
@@ -296,7 +296,7 @@ func newBlockCacheMetrics(stats *rocksdb.Statistics, cache *rocksdb.Cache) *bloc
 		),
 		PinnedUsage: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: blockCacheSubsystem,
 				Name:      "cache_pinned_memory_usage",
 				Help:      "Block cache pinned memory usage.",
@@ -347,7 +347,7 @@ func newBloomFilterMetrics(stats *rocksdb.Statistics) *bloomFilterMetrics {
 	return &bloomFilterMetrics{
 		Useful: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: filterSubsystem,
 				Name:      "useful",
 				Help:      "Number of times bloom filter avoided reads.",
@@ -356,7 +356,7 @@ func newBloomFilterMetrics(stats *rocksdb.Statistics) *bloomFilterMetrics {
 		),
 		FullPositive: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: filterSubsystem,
 				Name:      "full_positive",
 				Help:      "Number of times bloom fullfilter did not avoid reads.",
@@ -365,7 +365,7 @@ func newBloomFilterMetrics(stats *rocksdb.Statistics) *bloomFilterMetrics {
 		),
 		FullTruePositive: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: filterSubsystem,
 				Name:      "full_true_positive",
 				Help:      "Number of times bloom fullfilter did not avoid reads and data actually exist.",
@@ -394,7 +394,7 @@ func newMemtableMetrics(stats *rocksdb.Statistics) *memtableMetrics {
 	return &memtableMetrics{
 		Hit: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: memtableSubsystem,
 				Name:      "hit",
 				Help:      "Number of memtable hits.",
@@ -403,7 +403,7 @@ func newMemtableMetrics(stats *rocksdb.Statistics) *memtableMetrics {
 		),
 		Miss: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: memtableSubsystem,
 				Name:      "miss",
 				Help:      "Number of memtable misses.",
@@ -433,7 +433,7 @@ func newGetsMetrics(stats *rocksdb.Statistics) *getsMetrics {
 	return &getsMetrics{
 		HitL0: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: getSubsystem,
 				Name:      "hits_l0",
 				Help:      "Number of Get() queries server by L0.",
@@ -442,7 +442,7 @@ func newGetsMetrics(stats *rocksdb.Statistics) *getsMetrics {
 		),
 		HitL1: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: getSubsystem,
 				Name:      "hits_l1",
 				Help:      "Number of Get() queries server by L1.",
@@ -451,7 +451,7 @@ func newGetsMetrics(stats *rocksdb.Statistics) *getsMetrics {
 		),
 		HitL2AndUp: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: getSubsystem,
 				Name:      "hits_l2_up",
 				Help:      "Number of Get() queries server by L2 and up.",
@@ -489,7 +489,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 	return &ioMetrics{
 		KeysWritten: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "keys_written",
 				Help:      "Number of keys written via puts and writes.",
@@ -498,7 +498,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		KeysRead: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "keys_read",
 				Help:      "Number of keys read.",
@@ -507,7 +507,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		KeysUpdated: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "keys_updated",
 				Help:      "Number of keys updated.",
@@ -516,7 +516,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		BytesRead: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "bytes_read",
 				Help:      "Number of uncompressed bytes read.",
@@ -525,7 +525,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		BytesWritten: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "bytes_written",
 				Help:      "Number of uncompressed bytes written.",
@@ -534,7 +534,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		StallMicros: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "stall_micros",
 				Help:      "Number of microseconds waiting for compaction or flush to finish.",
@@ -543,7 +543,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		WALFileSynced: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "wal_files_synced",
 				Help:      "Number of times WAL sync is done.",
@@ -552,7 +552,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		WALFileBytes: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "wal_file_bytes",
 				Help:      "Number of bytes written to WAL.",
@@ -561,7 +561,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		CompactReadBytes: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "compact_read_bytes",
 				Help:      "Number of bytes read during compaction.",
@@ -570,7 +570,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		CompactWriteBytes: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "compact_write_bytes",
 				Help:      "Number of bytes written during compaction.",
@@ -579,7 +579,7 @@ func newIOMetrics(stats *rocksdb.Statistics) *ioMetrics {
 		),
 		FlushWriteBytes: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: ioSubsystem,
 				Name:      "compact_flush_bytes",
 				Help:      "Number of bytes written during flush.",
@@ -617,7 +617,7 @@ func newCompressMetrics(stats *rocksdb.Statistics) *compressMetrics {
 	return &compressMetrics{
 		NumberBlockCompressed: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: compressSybsystem,
 				Name:      "block_compressed",
 				Help:      "Number of compressions executed",
@@ -626,7 +626,7 @@ func newCompressMetrics(stats *rocksdb.Statistics) *compressMetrics {
 		),
 		NumberBlockDecompressed: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: compressSybsystem,
 				Name:      "block_decompressed",
 				Help:      "Number of decompressions executed",
@@ -635,7 +635,7 @@ func newCompressMetrics(stats *rocksdb.Statistics) *compressMetrics {
 		),
 		NumberBlockNotCompressed: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: compressSybsystem,
 				Name:      "block_not_compressed",
 				Help:      "Number of blocks not compressed.",
@@ -678,11 +678,11 @@ type perTableMetrics struct {
 	BlockCachePinnedUsage           prometheus.GaugeFunc
 }
 
-func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
+func newPerTableMetrics(table table, store *raftLog) *perTableMetrics {
 	m := &perTableMetrics{
 		NumImmutableMemtables: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "num_immutable_memtables",
 				Help:      "Number of immutable memtables that have not yet been flushed.",
@@ -693,7 +693,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		NumImmutableMemtablesFlushed: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "num_immutable_memtables_flushed",
 				Help:      "Number of immutable memtables that have already been flushed.",
@@ -704,7 +704,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		NumRunningFlushes: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "num_running_flushes",
 				Help:      "Number of currently running flushes.",
@@ -715,7 +715,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		NumRunningCompactions: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "num_running_compactions",
 				Help:      "Number of currently running compactions.",
@@ -726,7 +726,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		CurrentSizeActiveMemtable: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "cur_size_active_memtable",
 				Help:      "Approximate size of active memtable (bytes).",
@@ -737,7 +737,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		CurrentSizeAllMemtables: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "cur_size_all_memtables",
 				Help:      "Approximate size of active and unflushed immutable memtables (bytes).",
@@ -748,7 +748,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		SizeAllMemtables: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "size_all_memtables",
 				Help:      "Approximate size of active, unflushed immutable, and pinned immutable memtables (bytes).",
@@ -759,7 +759,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		NumEntriesActiveMemtable: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "num_entries_active_memtable",
 				Help:      "Total number of entries in the active memtable.",
@@ -770,7 +770,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		NumEntriesImmutableMemtables: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "num_entries_imm_memtables",
 				Help:      "Total number of entries in the unflushed immutable memtables.",
@@ -781,7 +781,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		EstimatedNumKeys: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "estimated_num_keys",
 				Help:      "Estimated number of total keys in the active and unflushed immutable memtables and storage.",
@@ -792,7 +792,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		EstimateTableReadersMem: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "estimated_table_readers_mem",
 				Help:      "Estimated memory used for reading SST tables, excluding memory used in block cache (e.g., filter and index blocks).",
@@ -803,7 +803,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		NumLiveVersions: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "num_live_versions",
 				Help:      "Number of live versions.",
@@ -816,7 +816,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		EstimatedLiveDataSize: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "estimated_live_data_size",
 				Help:      "Estimate of the amount of live data (bytes).",
@@ -827,7 +827,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		TotalSSTFilesSize: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "total_sst_files_size",
 				Help:      "Total size (bytes) of all SST files.",
@@ -838,7 +838,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		TotalLiveSSTFilesSize: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "total_live_sst_files_size",
 				Help:      "Total size (bytes) of all live SST files that belongs to theh last LSM tree.",
@@ -849,7 +849,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		EstimatedPendingCompactionBytes: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "estimated_pending_compaction_bytes",
 				Help:      "Estimated total number of bytes compaction needs to rewrite to get all levels down to under target size.",
@@ -860,7 +860,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		ActualDelayedWriteRate: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "actual_delayed_write_rate",
 				Help:      "Current actual delayed write rate. 0 means no delay.",
@@ -871,7 +871,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		BlockCacheUsage: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "block_cache_usage",
 				Help:      "Memory size (bytes) for the entries residing in block cache.",
@@ -882,7 +882,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		),
 		BlockCachePinnedUsage: prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      "block_cache_pinned_usage",
 				Help:      "Memory size (bytes) for the entries being pinned in block cache.",
@@ -897,7 +897,7 @@ func newPerTableMetrics(table table, store *RocksDBStore) *perTableMetrics {
 		propName := fmt.Sprintf("rocksdb.num-files-at-level%d", i)
 		numFileAtLevels = append(numFileAtLevels, prometheus.NewGaugeFunc(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: raftLogNamespace,
 				Subsystem: "cf_" + table.String(),
 				Name:      fmt.Sprintf("num_files_at_level_%d", i),
 				Help:      fmt.Sprintf("Number of files at level %d.", i),

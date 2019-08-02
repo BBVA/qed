@@ -39,13 +39,13 @@ func TestMutate(t *testing.T) {
 		key, value    []byte
 		expectedError error
 	}{
-		{"Mutate Key=Value", storage.HistoryTable, []byte("Key"), []byte("Value"), nil},
+		{"Mutate Key=Value", storage.HistoryTable, []byte("Key"), []byte("Version"), nil},
 	}
 
 	for _, test := range tests {
 		err := store.Mutate([]*storage.Mutation{
 			{Table: test.table, Key: test.key, Value: test.value},
-		})
+		}, nil)
 		require.Equalf(t, test.expectedError, err, "Error mutating in test: %s", test.testname)
 		_, err = store.Get(test.table, test.key)
 		require.Equalf(t, test.expectedError, err, "Error getting key in test: %s", test.testname)
@@ -75,7 +75,7 @@ func TestGetExistentKey(t *testing.T) {
 					Key:   test.key,
 					Value: test.value,
 				},
-			})
+			}, nil)
 			require.NoError(t, err)
 		}
 
@@ -112,7 +112,7 @@ func TestGetRange(t *testing.T) {
 	for i := 10; i < 50; i++ {
 		store.Mutate([]*storage.Mutation{
 			{table, []byte{byte(i)}, []byte("Value")},
-		})
+		}, nil)
 	}
 
 	for _, test := range testCases {
@@ -145,7 +145,7 @@ func TestGetAll(t *testing.T) {
 		key := util.Uint16AsBytes(i)
 		store.Mutate([]*storage.Mutation{
 			{table, key, key},
-		})
+		}, nil)
 	}
 
 	for i, c := range testCases {
@@ -180,7 +180,7 @@ func TestGetLast(t *testing.T) {
 			key := util.Uint64AsBytes(i)
 			store.Mutate([]*storage.Mutation{
 				{table, key, key},
-			})
+			}, nil)
 		}
 	}
 
@@ -191,33 +191,40 @@ func TestGetLast(t *testing.T) {
 	require.Equalf(t, util.Uint64AsBytes(numElems-1), kv.Value, "The value should match the last inserted element")
 }
 
-func TestSnapshotLoad(t *testing.T) {
-
+func TestFetchAndLoadSnapshot(t *testing.T) {
 	store, closeF := openRocksDBStore(t)
 	defer closeF()
 
 	// insert
-	numElems := uint64(20)
+	numElems := uint64(100)
 	tables := []storage.Table{storage.HistoryTable, storage.HyperTable}
-	for _, table := range tables {
+	for j, table := range tables {
 		for i := uint64(0); i < numElems; i++ {
 			key := util.Uint64AsBytes(i)
-			store.Mutate([]*storage.Mutation{
-				{Table: table, Key: key, Value: key},
-			})
+			err := store.Mutate(
+				[]*storage.Mutation{
+					{Table: table, Key: key, Value: key},
+				},
+				util.Uint64AsBytes(numElems*uint64(j)+i),
+			)
+			require.NoError(t, err)
 		}
 	}
 
-	// create snapshot
-	ioBuf := bytes.NewBufferString("")
-	id, err := store.Snapshot()
-	require.Nil(t, err)
-	require.NoError(t, store.Dump(ioBuf, id))
+	// get last WAL seq num
+	until := store.LastWALSequenceNumber()
+	require.Equal(t, numElems*uint64(len(tables)), until)
 
-	// load snapshot
+	// fetch snapshot
+	ioBuf := new(bufCloser)
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
+
+	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
-	require.NoError(t, restore.Load(ioBuf))
+	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= 0, nil // we start from the beginning
+	}))
 
 	// check elements
 	for _, table := range tables {
@@ -236,12 +243,113 @@ func TestSnapshotLoad(t *testing.T) {
 		}
 		reader.Close()
 	}
+}
 
+func TestFetchAndLoadUntilSeqNum(t *testing.T) {
+	store, closeF := openRocksDBStore(t)
+	defer closeF()
+
+	numElems := uint64(100)
+	// insert
+	for i := uint64(0); i < numElems; i++ {
+		key := util.Uint64AsBytes(i)
+		err := store.Mutate(
+			[]*storage.Mutation{
+				{Table: storage.HistoryTable, Key: key, Value: key},
+			},
+			key,
+		)
+		require.NoError(t, err)
+	}
+
+	// set last WAL seq num
+	until := uint64(1)
+
+	// fetch snapshot
+	ioBuf := new(bufCloser)
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
+
+	// load snapshot in another instance
+	restore, recloseF := openRocksDBStore(t)
+	defer recloseF()
+	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= 0, nil // we start from the beginning
+	}))
+
+	// check elements
+	reader := store.GetAll(storage.HistoryTable)
+	defer reader.Close()
+	entries := make([]*storage.KVPair, numElems)
+	n, _ := reader.Read(entries)
+	require.Equal(t, numElems, uint64(n))
+
+	for i := uint64(0); i < until; i++ {
+		kv, err := restore.Get(storage.HistoryTable, entries[i].Key)
+		require.NoError(t, err)
+		require.Equal(t, entries[i].Value, kv.Value, "The values should match")
+	}
+	for i := until; i < numElems; i++ {
+		_, err := restore.Get(storage.HistoryTable, entries[i].Key)
+		require.Error(t, err)
+		require.Equal(t, storage.ErrKeyNotFound, err, "The error should match")
+	}
+}
+
+func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
+	store, closeF := openRocksDBStore(t)
+	defer closeF()
+
+	numElems := uint64(100)
+	lastVersion := numElems / 2
+	// insert
+	for i := uint64(0); i < numElems; i++ {
+		key := util.Uint64AsBytes(i)
+		err := store.Mutate(
+			[]*storage.Mutation{
+				{Table: storage.HistoryTable, Key: key, Value: key},
+			},
+			key,
+		)
+		require.NoError(t, err)
+	}
+
+	// get last WAL seq num
+	until := store.LastWALSequenceNumber()
+	require.Equal(t, numElems, until)
+
+	// fetch snapshot
+	ioBuf := new(bufCloser)
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
+
+	// load snapshot in another instance
+	restore, recloseF := openRocksDBStore(t)
+	defer recloseF()
+	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= lastVersion, nil // we start at the middle
+	}))
+
+	// check elements
+	reader := store.GetAll(storage.HistoryTable)
+	defer reader.Close()
+	entries := make([]*storage.KVPair, numElems)
+	n, _ := reader.Read(entries)
+	require.Equal(t, numElems, uint64(n))
+
+	for i := uint64(0); i < lastVersion; i++ {
+		_, err := restore.Get(storage.HistoryTable, entries[i].Key)
+		require.Error(t, err)
+		require.Equal(t, storage.ErrKeyNotFound, err, "The error should match")
+	}
+	for i := lastVersion; i < numElems; i++ {
+		kv, err := restore.Get(storage.HistoryTable, entries[i].Key)
+		require.NoError(t, err)
+		require.Equal(t, entries[i].Value, kv.Value, "The values should match")
+	}
 }
 
 func openRocksDBStore(t require.TestingT) (*RocksDBStore, func()) {
 	path := mustTempDir()
-	store, err := NewRocksDBStore(filepath.Join(path, "rockdsdb_store_test.db"))
+	store, err := NewRocksDBStore(filepath.Join(path, "rockdsdb_store_test.db"), 0)
 	if err != nil {
 		t.Errorf("Error opening rocksdb store: %v", err)
 		t.FailNow()
@@ -266,4 +374,12 @@ func deleteFile(path string) {
 	if err != nil {
 		fmt.Printf("Unable to remove db file %s", err)
 	}
+}
+
+type bufCloser struct {
+	bytes.Buffer
+}
+
+func (b bufCloser) Close() error {
+	return nil
 }

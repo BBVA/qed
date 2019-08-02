@@ -20,6 +20,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type Config struct {
@@ -79,6 +80,9 @@ type Config struct {
 
 	// TLS server cerificate key
 	SSLCertificateKey string
+	
+	// DB WAL TTL
+	DbWalTtl time.Duration
 }
 
 func DefaultConfig() *Config {
@@ -104,6 +108,7 @@ func DefaultConfig() *Config {
 		SSLCertificate:    "",
 		SSLCertificateKey: "",
 		PrivateKeyPath:    "",
+		DbWalTtl: 0,
 	}
 }
 
