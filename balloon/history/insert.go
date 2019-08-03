@@ -33,16 +33,13 @@ func pruneToInsert(version uint64, eventDigest hashing.Digest) operation {
 
 		rightPos := pos.Right()
 		if version < rightPos.Index { // go to left
-			left = traverse(pos.Left())
-			right = newGetCacheOp(rightPos)
-		} else { // go to right
-			left = newGetCacheOp(pos.Left())
-			right = traverse(rightPos)
-		}
-
-		if rightPos.Index > version { // partial
+			left = traverse(pos.Left()) // partial
 			return newPartialInnerHashOp(pos, left)
 		}
+
+		// go to right
+		left = newGetCacheOp(pos.Left())
+		right = traverse(rightPos)
 
 		if pos.LastDescendant().Index <= version { // freeze
 			return newMutateOp(newPutCacheOp(newInnerHashOp(pos, left, right)))
