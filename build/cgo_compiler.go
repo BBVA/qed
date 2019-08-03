@@ -14,18 +14,19 @@
    limitations under the License.
 */
 
-// This binary allows client and auditor streaming commands and also manual
-// event insertion and validation against a qed server.
-package main
+package build
 
-import (
-	"os"
+// const char* compilerVersion() {
+// #if defined(__clang__)
+// 	return __VERSION__;
+// #elif defined(__GNUC__) || defined(__GNUG__)
+// 	return "gcc " __VERSION__;
+// #else
+// 	return "non-gcc, non-clang (or an unrecognized version)";
+// #endif
+// }
+import "C"
 
-	"github.com/bbva/qed/cmd"
-)
-
-func main() {
-	if err := cmd.Root.Execute(); err != nil {
-		os.Exit(-1)
-	}
+func cgoVersion() string {
+	return C.GoString(C.compilerVersion())
 }
