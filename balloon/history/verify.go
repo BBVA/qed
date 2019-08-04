@@ -98,11 +98,12 @@ func pruneToVerifyIncrementalEnd(start, end uint64) operation {
 		leftTargets, rightTargets := targets.Split(rightPos.Index)
 
 		left := traverse(pos.Left(), leftTargets)
-		right := traverse(rightPos, rightTargets)
 
 		if end < rightPos.Index {
 			return newPartialInnerHashOp(pos, left)
 		}
+
+		right := traverse(rightPos, rightTargets)
 
 		return newInnerHashOp(pos, left, right)
 
