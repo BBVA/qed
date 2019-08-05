@@ -60,6 +60,7 @@ steps:
     gocov-xml < coverage.json > coverage.xml
     mkdir coverage
     gocov-html < coverage.json > coverage/index.html    
+    '$(GOROOT)/bin/go' clean -modcache
   workingDirectory: '$(modulePath)'
   displayName: 'Get dependencies, then build'
 
