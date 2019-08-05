@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bbva/qed/build"
 	"github.com/bbva/qed/log"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
@@ -45,11 +46,10 @@ func formatInfo(w io.Writer, title string, body func() error) error {
 
 func debugInfo(w io.Writer) error {
 	var err error
-	release := Ctx.Value(k("root.release")).(release)
-	qedVersion := release.version
+	buildInfo := build.GetInfo()
 	// Get build version
 	formatInfo(w, "Build Info", func() error {
-		fmt.Fprintf(w, "QED version %s, built in $GOPATH mode\n", qedVersion)
+		fmt.Fprintf(w, "QED version %s, built in $GOPATH mode\n", buildInfo.Tag)
 		return nil
 	})
 

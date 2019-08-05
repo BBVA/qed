@@ -9,6 +9,10 @@ builds:
       - CGO_LDFLAGS_ALLOW=".*"
       - GOOS=linux
     binary: qed
+    # Custom ldflags templates.
+    # Default is `-s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=goreleaser`.
+    ldflags:
+      - -s -w -X github.com/bbva/qed/build.tag={{.Tag}} -X github.com/bbva/qed/build.rev={{.FullCommit}} -X github.com/bbva/qed/build.utcTime={{.Date}}
     goos:
       - linux
       - darwin
