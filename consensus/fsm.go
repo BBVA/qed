@@ -189,8 +189,7 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 		if err := cmd.decode(&eventDigests); err != nil {
 			return &fsmResponse{err, nil}
 		}
-		// INFO: after applying a bulk there will be a jump in term version due to balloon version mapping.
-		newState := &fsmState{l.Index, l.Term, n.balloon.Version() + uint64(len(eventDigests))}
+		newState := &fsmState{l.Index, l.Term, n.balloon.Version() + uint64(len(eventDigests)) - 1}
 		if n.state.shouldApply(newState) {
 			return n.applyAdd(eventDigests, newState)
 		}
