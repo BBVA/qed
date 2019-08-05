@@ -33,7 +33,7 @@ type fsmSnapshot struct {
 
 // Persist writes the snapshot to the given sink.
 func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
-	log.Debug("Persisting snapshot with ID: %s", sink.ID())
+	log.Debugf("Persisting snapshot with ID: %s", sink.ID())
 	err := func() error {
 		data, err := f.encode()
 		if err != nil {
