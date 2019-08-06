@@ -283,14 +283,12 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 
 	snapshotBulk, mutations, err := n.balloon.AddBulk(hashes)
 	if err != nil {
-		resp.err = err
-		return resp
+		panic(fmt.Sprintf("Unable to add bulk: %v\n", err))
 	}
 
 	stateBuff, err := state.encode()
 	if err != nil {
-		resp.err = err
-		return resp
+		panic(fmt.Sprintf("Unable to encode state: %v\n", err))
 	}
 	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff))
 
@@ -300,14 +298,12 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 	}
 	metaBytes, err := meta.encode()
 	if err != nil {
-		resp.err = err
-		return resp
+		panic(fmt.Sprintf("Unable to encode version metadata: %v\n", err))
 	}
 
 	err = n.db.Mutate(mutations, metaBytes)
 	if err != nil {
-		resp.err = err
-		return resp
+		panic(fmt.Sprintf("Unable to mutate database: %v\n", err))
 	}
 	n.state = state
 	resp.val = snapshotBulk
