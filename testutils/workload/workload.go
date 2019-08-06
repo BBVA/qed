@@ -221,6 +221,11 @@ func newAttack(conf Config) {
 	if err != nil {
 		log.Errorf("New attack create HTTP Client: %s", err)
 	}
+	if conf.Kind != "bulk" {
+		// TODO: this is a hack to avoid executing bulks when kind is add.
+		// We should to redesign the workload to avoid it.
+		conf.BulkSize = 1
+	}
 	attack := Attack{
 		client:         client,
 		config:         conf,
@@ -283,28 +288,26 @@ func (a *Attack) Run() {
 		}(rID)
 	}
 
-	hasReqs := func(i uint) bool {
-		return i < a.config.Offset+a.config.NumRequests
-	}
+	start := a.config.Offset
+	end := start + a.config.NumRequests
 
-	hasBulk := func(j, i uint) bool {
-		return i < j+a.config.BulkSize && hasReqs(i)
-	}
+	events := make([]string, 0)
+	for i := start; i < end; i++ {
 
-	for i := a.config.Offset; hasReqs(i); i++ {
-		task := Task{
-			kind:    a.kind,
-			events:  []string{},
-			version: a.balloonVersion,
-			start:   uint64(i),
-			end:     uint64(i + a.config.IncrementalDelta),
+		events = append(events, fmt.Sprintf("event %d", i))
+
+		if i%a.config.BulkSize == 0 || i == end-1 {
+			task := Task{
+				kind:    a.kind,
+				events:  events,
+				version: a.balloonVersion,
+				start:   uint64(i),
+				end:     uint64(i + a.config.IncrementalDelta),
+			}
+			a.senChan <- task
+			events = make([]string, 0)
 		}
 
-		for j := i; hasBulk(j, i); i++ {
-			task.events = append(task.events, fmt.Sprintf("event %d", i))
-		}
-
-		a.senChan <- task
 	}
 
 	close(a.senChan)
