@@ -179,15 +179,17 @@ func (n *RaftNode) QueryConsistency(start, end uint64) (*balloon.IncrementalProo
 
 // Apply applies a Raft log entry to the database.
 func (n *RaftNode) Apply(l *raft.Log) interface{} {
-	// TODO should i use a restore mutex?
-
 	cmd := newCommandFromRaft(l.Data)
+
+	// We should ignore unknown message types.
+	// Otherwise, apply if possible. If not, we have to panic so
+	// that we crash and our state doesn't diverge.
 
 	switch cmd.id {
 	case addEventCommandType:
 		var eventDigests []hashing.Digest
 		if err := cmd.decode(&eventDigests); err != nil {
-			return &fsmResponse{err, nil}
+			panic(fmt.Sprintf("Unable to decode command: %v", err))
 		}
 		newState := &fsmState{l.Index, l.Term, n.balloon.Version() + uint64(len(eventDigests)) - 1}
 		if n.state.shouldApply(newState) {
@@ -196,7 +198,9 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 		return &fsmResponse{fmt.Errorf("state already applied!: %+v -> %+v", n.state, newState), nil}
 
 	default:
-		return &fsmResponse{fmt.Errorf("unknown command: %v", cmd.id), nil}
+		// ignore
+		log.Infof("Unknown command: %v", cmd.id)
+		return nil
 
 	}
 }
@@ -280,15 +284,14 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmResponse {
 
 	resp := new(fsmResponse)
-
 	snapshotBulk, mutations, err := n.balloon.AddBulk(hashes)
 	if err != nil {
-		panic(fmt.Sprintf("Unable to add bulk: %v\n", err))
+		panic(fmt.Sprintf("Unable to add bulk: %v", err))
 	}
 
 	stateBuff, err := state.encode()
 	if err != nil {
-		panic(fmt.Sprintf("Unable to encode state: %v\n", err))
+		panic(fmt.Sprintf("Unable to encode state: %v", err))
 	}
 	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff))
 
@@ -298,16 +301,16 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 	}
 	metaBytes, err := meta.encode()
 	if err != nil {
-		panic(fmt.Sprintf("Unable to encode version metadata: %v\n", err))
+		panic(fmt.Sprintf("Unable to encode version metadata: %v", err))
 	}
 
 	err = n.db.Mutate(mutations, metaBytes)
 	if err != nil {
-		panic(fmt.Sprintf("Unable to mutate database: %v\n", err))
+		panic(fmt.Sprintf("Unable to mutate database: %v", err))
 	}
 	n.state = state
 	resp.val = snapshotBulk
-
 	n.metrics.Adds.Add(float64(len(hashes)))
+
 	return resp
 }
