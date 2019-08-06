@@ -21,7 +21,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 )
 
@@ -38,13 +37,8 @@ func TestBackup(t *testing.T) {
 	}()
 
 	// Insert an event
-	h := hashing.NewSha256Hasher()
-	event := h.Do([]byte("All's right with the world"))
-	cmd := newCommand(addEventCommandType)
-	_ = cmd.encode(event)
-	rl := newLog(1, 1, cmd.data)
-
-	raftNode.Apply(rl)
+	event := []byte("All's right with the world")
+	raftNode.Add(event)
 
 	// Create backup
 	backupsList := raftNode.ListBackups()
@@ -68,13 +62,8 @@ func TestDeleteBackup(t *testing.T) {
 	}()
 
 	// Insert an event
-	h := hashing.NewSha256Hasher()
-	event := h.Do([]byte("All's right with the world"))
-	cmd := newCommand(addEventCommandType)
-	_ = cmd.encode(event)
-	rl := newLog(1, 1, cmd.data)
-
-	raftNode.Apply(rl)
+	event := []byte("All's right with the world")
+	raftNode.Add(event)
 
 	// Create backup and delete later.
 	backupsList := raftNode.ListBackups()
