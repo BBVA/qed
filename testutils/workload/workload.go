@@ -223,7 +223,7 @@ func newAttack(conf Config) {
 	}
 	if conf.Kind != "bulk" {
 		// TODO: this is a hack to avoid executing bulks when kind is add.
-		// We should to redesign the workload to avoid it.
+		// We should redesign the workload to avoid it.
 		conf.BulkSize = 1
 	}
 	attack := Attack{
