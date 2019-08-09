@@ -90,7 +90,7 @@ steps:
     gitHubConnection: githubrelease
     repositoryName: bbva/qed
     assets: | 
-      $(modulePath)/dist/qed_*.tar.gz
-      $(modulePath)/dist/qed_*.txt
+      $(modulePath)/dist/qed-*.tar.gz
+      $(modulePath)/dist/qed-*.txt
     isDraft: true
     addChangeLog: false
