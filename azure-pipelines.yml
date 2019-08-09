@@ -75,3 +75,22 @@ steps:
     codeCoverageTool: Cobertura 
     summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
     reportDirectory: $(System.DefaultWorkingDirectory)/**/coverage
+
+- script: |
+    ./goreleaser.sh
+    '$(GOROOT)/bin/go' clean -modcache
+  condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/v')
+  workingDirectory: '$(modulePath)'  
+  displayName: 'Create Release'
+
+- task: GithubRelease@0
+  condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/v')
+  displayName: 'Create GitHub Release'
+  inputs:
+    gitHubConnection: githubrelease
+    repositoryName: bbva/qed
+    assets: | 
+      $(modulePath)/dist/qed_*.tar.gz
+      $(modulePath)/dist/qed_*.txt
+    isDraft: true
+    addChangeLog: false
