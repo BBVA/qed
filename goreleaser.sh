@@ -26,17 +26,21 @@ else
     Date=$(date --utc +'%Y/%m/%dT%XUTC')
 fi
 
-mkdir -p dist
+mkdir -p dist/qed
 
 echo "Building binary"
-go build -ldflags="-s -w -X github.com/bbva/qed/build.tag=${Tag} -X github.com/bbva/qed/build.rev=${FullCommit} -X github.com/bbva/qed/build.utcTime=${Date}" -o dist/qed
+go build -ldflags="-s -w                            \
+    -X github.com/bbva/qed/build.tag=${Tag}         \
+    -X github.com/bbva/qed/build.rev=${FullCommit}  \
+    -X github.com/bbva/qed/build.utcTime=${Date}"   \
+    -o dist/qed/qed
 
-cp README.rst dist/README.rst
-cp LICENSE dist/LICENSE
+cp README.rst dist/qed/README.rst
+cp LICENSE dist/qed/LICENSE
 
-tar -C dist -zcvf qed_${Tag}_linux_amd64.tar.gz .
-mv qed_${Tag}_linux_amd64.tar.gz dist
-md5sum dist/qed_${Tag}_linux_amd64.tar.gz > dist/qed_${Tag}_checksum.txt
+tar -C dist -zcvf qed-${Tag}-linux-amd64.tar.gz .
+mv qed-${Tag}-linux-amd64.tar.gz dist
+md5sum dist/qed-${Tag}-linux-amd64.tar.gz > dist/qed-${Tag}-checksum.txt
 
 if [ "$?" != 0 ]
 then
