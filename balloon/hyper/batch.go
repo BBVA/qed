@@ -23,6 +23,13 @@ import (
 	"github.com/bbva/qed/crypto/hashing"
 )
 
+const (
+	DefaultBatchHeight uint16 = 4
+	DefaultBatchLevels uint8  = 6
+	DefaultBatchSize   uint64 = (31 * 33) + 4 // 31 nodes * 33 bytes/node + 4 bytes of bitmap
+	MaxNumberOfBatches uint64 = 1118481       // for a 6 levels cache
+)
+
 type batchNode struct {
 	batch    [][]byte
 	nodeSize int // in bytes

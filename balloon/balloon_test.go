@@ -34,14 +34,13 @@ import (
 
 func TestAdd(t *testing.T) {
 
-	log.SetLogger("TestAdd", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
-	balloon, err := NewBalloon(store, raftBalloonHasherF)
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(t, err)
 
 	for i := uint64(0); i < 9; i++ {
@@ -61,14 +60,13 @@ func TestAdd(t *testing.T) {
 }
 func TestAddBulk(t *testing.T) {
 
-	log.SetLogger("TestAddBulk", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
-	balloon, err := NewBalloon(store, raftBalloonHasherF)
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(t, err)
 
 	events := [][]byte{
@@ -103,7 +101,7 @@ func TestAddBulk(t *testing.T) {
 
 func TestQueryMembershipConsistency(t *testing.T) {
 
-	log.SetLogger("TestQueryMembership", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	testCases := []struct {
 		key     []byte
@@ -114,13 +112,13 @@ func TestQueryMembershipConsistency(t *testing.T) {
 		{nil, uint64(42), false},
 	}
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
+	hasherF := hashing.NewSha256Hasher
+	h := hasherF()
 
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 
-		balloon, err := NewBalloon(store, raftBalloonHasherF)
+		balloon, err := NewBalloon(store, hasherF)
 		require.NoError(t, err)
 
 		if c.key != nil {
@@ -149,7 +147,7 @@ func TestQueryMembershipConsistency(t *testing.T) {
 
 func TestQueryMembership(t *testing.T) {
 
-	log.SetLogger("TestQueryMembership", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	testCases := []struct {
 		key    []byte
@@ -159,13 +157,13 @@ func TestQueryMembership(t *testing.T) {
 		{nil, false},
 	}
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
+	hasherF := hashing.NewSha256Hasher
+	h := hasherF()
 
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 
-		balloon, err := NewBalloon(store, raftBalloonHasherF)
+		balloon, err := NewBalloon(store, hasherF)
 		require.NoError(t, err)
 
 		if c.key != nil {
@@ -191,7 +189,7 @@ func TestQueryMembership(t *testing.T) {
 
 func TestQueryConsistencyProof(t *testing.T) {
 
-	log.SetLogger("TestQueryConsistencyProof", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	testCases := []struct {
 		additions, start, end uint64
@@ -201,13 +199,13 @@ func TestQueryConsistencyProof(t *testing.T) {
 		{uint64(0), uint64(30), uint64(600), false},
 	}
 
-	raftBalloonHasherF := hashing.NewFakeXorHasher
-	h := raftBalloonHasherF()
+	hasherF := hashing.NewSha256Hasher
+	h := hasherF()
 
 	for i, c := range testCases {
 		store, closeF := storage_utils.OpenBPlusTreeStore()
 		defer closeF()
-		balloon, err := NewBalloon(store, raftBalloonHasherF)
+		balloon, err := NewBalloon(store, hasherF)
 		require.NoError(t, err)
 
 		for j := 0; j <= int(c.additions); j++ {
@@ -232,40 +230,40 @@ func TestQueryConsistencyProof(t *testing.T) {
 }
 
 func TestConsistencyProofVerify(t *testing.T) {
+	t.Skip()
 	// Tests already done in history>proof_test.go
 }
 
 func TestAddQueryAndVerify(t *testing.T) {
-	log.SetLogger("TestCacheWarmingUp", log.SILENT)
+
+	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.1")
 	defer closeF()
 
 	// start balloon
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
-	b, err := NewBalloon(store, raftBalloonHasherF)
-	assert.NoError(t, err)
+	h := hashing.NewSha256Hasher()
+	b, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(t, err)
 
 	event := []byte("Never knows best")
 
 	// Add event
 	snapshot, mutations, err := b.Add(h.Do(event))
 	require.NoError(t, err)
-	err = store.Mutate(mutations, nil)
-	require.NoError(t, err)
+	require.NoError(t, store.Mutate(mutations, nil))
 
 	// Query event
 	proof, err := b.QueryMembershipConsistency(event, snapshot.Version)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify
-	assert.True(t, proof.Verify(event, snapshot), "The proof should verify correctly")
+	require.True(t, proof.Verify(event, snapshot), "The proof should verify correctly")
 }
 
 func TestCacheWarmingUp(t *testing.T) {
 
-	log.SetLogger("TestCacheWarmingUp", log.SILENT)
+	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/ballon_test.db")
 	defer closeF()
@@ -305,14 +303,14 @@ func TestCacheWarmingUp(t *testing.T) {
 }
 
 func TestGenIncrementalAndVerify(t *testing.T) {
-	log.SetLogger("TestGenIncrementalAndVerify", log.SILENT)
+
+	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.3")
 	defer closeF()
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
-	b, err := NewBalloon(store, raftBalloonHasherF)
+	h := hashing.NewSha256Hasher()
+	b, err := NewBalloon(store, hashing.NewSha256Hasher)
 	assert.NoError(t, err)
 
 	size := 10
@@ -334,16 +332,114 @@ func TestGenIncrementalAndVerify(t *testing.T) {
 	assert.True(t, correct, "Unable to verify incremental proof")
 }
 
+func TestAddBulkAndQuery(t *testing.T) {
+
+	log.SetLogger(t.Name(), log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.6")
+	defer closeF()
+
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(t, err)
+
+	size := 1000
+	// insert
+	bulk := make([]hashing.Digest, 0)
+	for i := 0; i < size; i++ {
+		eventDigest := h.Do([]byte(fmt.Sprintf("Never knows %d best", i)))
+		bulk = append(bulk, eventDigest)
+		if i%20 == 0 || i == size-1 {
+			_, mutations, err := balloon.AddBulk(bulk)
+			require.NoError(t, err)
+			require.NoError(t, store.Mutate(mutations, nil))
+			bulk = make([]hashing.Digest, 0)
+		}
+	}
+
+	// query
+	for i := 0; i < size; i++ {
+		event := []byte(fmt.Sprintf("Never knows %d best", i))
+		proof, err := balloon.QueryMembership(event)
+		require.NoError(t, err)
+		require.Equalf(t, h.Do(event), proof.KeyDigest, "index %d", i)
+		require.Equalf(t, uint64(i), proof.ActualVersion, "index %d", i)
+	}
+
+}
+
+func TestAddAndQuery(t *testing.T) {
+
+	log.SetLogger(t.Name(), log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.7")
+	defer closeF()
+
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	require.NoError(t, err)
+
+	size := 1000
+	// insert
+	for i := 0; i < size; i++ {
+		eventDigest := h.Do([]byte(fmt.Sprintf("Never knows %d best", i)))
+		_, mutations, err := balloon.Add(eventDigest)
+		require.NoError(t, err)
+		require.NoError(t, store.Mutate(mutations, nil))
+	}
+
+	// query
+	for i := 0; i < size; i++ {
+		event := []byte(fmt.Sprintf("Never knows %d best", i))
+		proof, err := balloon.QueryMembership(event)
+		require.NoError(t, err)
+		require.True(t, proof.Exists, "index %d", i)
+		require.Equalf(t, h.Do(event), proof.KeyDigest, "index %d", i)
+		require.Equalf(t, uint64(i), proof.ActualVersion, "index %d", i)
+	}
+
+}
+
+func TestAddAndQueryConsistency(t *testing.T) {
+
+	log.SetLogger(t.Name(), log.SILENT)
+
+	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.7")
+	defer closeF()
+
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	assert.NoError(t, err)
+
+	size := 1000
+	// insert
+	for i := 0; i < size; i++ {
+		eventDigest := h.Do([]byte(fmt.Sprintf("Never knows %d best", i)))
+		_, mutations, err := balloon.Add(eventDigest)
+		require.NoError(t, err)
+		require.NoError(t, store.Mutate(mutations, nil))
+	}
+
+	// query
+	for i := 1; i < size; i++ {
+		proof, err := balloon.QueryConsistency(uint64(i-1), uint64(i))
+		require.NoError(t, err)
+		assert.True(t, len(proof.AuditPath) > 0, "index %d", i)
+		assert.Equalf(t, uint64(i-1), proof.Start, "index %d", i)
+		assert.Equalf(t, uint64(i), proof.End, "index %d", i)
+	}
+
+}
+
 func BenchmarkAddRocksDB(b *testing.B) {
 
-	log.SetLogger("BenchmarkAddRocksDB", log.SILENT)
+	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/balloon_bench.db")
 	defer closeF()
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
-	balloon, err := NewBalloon(store, raftBalloonHasherF)
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
 	balloonMetrics := metrics_utils.CustomRegister(AddTotal)
@@ -363,14 +459,13 @@ func BenchmarkAddRocksDB(b *testing.B) {
 
 func BenchmarkAddBulkRocksDB(b *testing.B) {
 
-	log.SetLogger("BenchmarkAddBulkRocksDB", log.SILENT)
+	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/balloon_bench.db")
 	defer closeF()
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
-	balloon, err := NewBalloon(store, raftBalloonHasherF)
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
 	balloonMetrics := metrics_utils.CustomRegister(AddTotal)
@@ -390,14 +485,13 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 
 func BenchmarkQueryRocksDB(b *testing.B) {
 	var events [][]byte
-	log.SetLogger("BenchmarkQueryRocksDB", log.SILENT)
+	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/ballon_bench.db")
 	defer closeF()
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
-	balloon, err := NewBalloon(store, raftBalloonHasherF)
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
 	b.N = 1000000
@@ -418,14 +512,13 @@ func BenchmarkQueryRocksDB(b *testing.B) {
 
 func BenchmarkQueryRocksDBParallel(b *testing.B) {
 	var events [][]byte
-	log.SetLogger("BenchmarkQueryRocksDB", log.SILENT)
+	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/ballon_bench.db")
 	defer closeF()
 
-	raftBalloonHasherF := hashing.NewSha256Hasher
-	h := raftBalloonHasherF()
-	balloon, err := NewBalloon(store, raftBalloonHasherF)
+	h := hashing.NewSha256Hasher()
+	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
 	require.NoError(b, err)
 
 	b.N = 1000000
