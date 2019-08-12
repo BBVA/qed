@@ -27,9 +27,9 @@ type leaf struct {
 	Index, Value []byte
 }
 
-type leaves []leaf
+type leavesList []leaf
 
-func (l leaves) InsertSorted(leaf leaf) leaves {
+func (l leavesList) InsertSorted(leaf leaf) leavesList {
 
 	if len(l) == 0 {
 		l = append(l, leaf)
@@ -51,7 +51,7 @@ func (l leaves) InsertSorted(leaf leaf) leaves {
 
 }
 
-func (l leaves) Split(index []byte) (left, right leaves) {
+func (l leavesList) Split(index []byte) (left, right leavesList) {
 	// the smallest index i where l[i].Index >= index
 	splitIndex := sort.Search(len(l), func(i int) bool {
 		return bytes.Compare(l[i].Index, index) >= 0
@@ -59,13 +59,13 @@ func (l leaves) Split(index []byte) (left, right leaves) {
 	return l[:splitIndex], l[splitIndex:]
 }
 
-type traverseBatch func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack)
+type traverseBatch func(pos position, leaves leavesList, batch *batchNode, iBatch int8, ops *operationsStack)
 
 func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches batchLoader) *operationsStack {
 
 	var traverse, traverseThroughCache, traverseAfterCache traverseBatch
 
-	traverse = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
+	traverse = func(pos position, leaves leavesList, batch *batchNode, iBatch int8, ops *operationsStack) {
 		if batch == nil {
 			batch = batches.Load(pos)
 		}
@@ -76,7 +76,7 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 		}
 	}
 
-	traverseThroughCache = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
+	traverseThroughCache = func(pos position, leaves leavesList, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		if len(leaves) == 0 { // discarded branch
 			if batch.HasElementAt(iBatch) {
@@ -109,7 +109,7 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 
 	}
 
-	traverseAfterCache = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
+	traverseAfterCache = func(pos position, leaves leavesList, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		if len(leaves) == 0 { // discarded branch
 			if batch.HasElementAt(iBatch) {
@@ -207,7 +207,7 @@ func pruneToInsert(index []byte, value []byte, cacheHeightLimit uint16, batches 
 	ops := newOperationsStack()
 	version := util.AddPaddingToBytes(value, len(index))
 	version = version[len(version)-len(index):] // TODO GET RID OF THIS: used only to pass tests
-	leaves := make(leaves, 0)
+	leaves := make(leavesList, 0)
 	leaves = leaves.InsertSorted(leaf{index, version})
 	traverse(newRootPosition(uint16(len(index))), leaves, nil, 0, ops)
 	return ops
