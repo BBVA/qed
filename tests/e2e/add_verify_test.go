@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/balloon"
+	"github.com/bbva/qed/log"
 
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/protocol"
@@ -32,7 +33,9 @@ func TestAddVerify(t *testing.T) {
 	before, after := newServerSetup(0, false)
 	let, report := spec.New()
 	defer func() { t.Logf(report()) }()
-	// log.SetLogger("", log.DEBUG)
+
+	log.SetLogger("", log.SILENT)
+
 	event := rand.RandomString(10)
 	_, err := before()
 	spec.NoError(t, err, "Error starting server")
