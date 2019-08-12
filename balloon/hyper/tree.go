@@ -30,11 +30,6 @@ import (
 	"github.com/bbva/qed/util"
 )
 
-const (
-	//CacheSize int = (1118481) * ((31 * 33) + 34) // (2^0+2^4 + 2^8 + 2^12 + 2^16 + 2^20) batches * batchSize (31 nodes * 33 bytes + 34 bytes from key)
-	CacheSize int = (2000000) * ((31 * 33) + 34)
-)
-
 type HyperTree struct {
 	store   storage.Store
 	cache   cache.ModifiableCache
