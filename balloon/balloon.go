@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/crypto/hashing"
@@ -53,7 +52,8 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 
 	// create trees
 	historyTree := history.NewHistoryTree(hasherF, store, 300)
-	hyperTree := hyper.NewHyperTree(hasherF, store, cache.NewFreeCache(hyper.CacheSize))
+	batchCache := hyper.NewBatchCache(hyper.DefaultBatchLevels)
+	hyperTree := hyper.NewHyperTree(hasherF, store, batchCache)
 
 	balloon := &Balloon{
 		version:     0,
