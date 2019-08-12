@@ -24,7 +24,7 @@ func pruneToInsertBulk(indexes [][]byte, values [][]byte, cacheHeightLimit uint1
 
 	var traverse, traverseThroughCache, traverseAfterCache traverseBatch
 
-	traverse = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
+	traverse = func(pos position, leaves leavesList, batch *batchNode, iBatch int8, ops *operationsStack) {
 		if batch == nil {
 			batch = batches.Load(pos)
 		}
@@ -35,7 +35,7 @@ func pruneToInsertBulk(indexes [][]byte, values [][]byte, cacheHeightLimit uint1
 		}
 	}
 
-	traverseThroughCache = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
+	traverseThroughCache = func(pos position, leaves leavesList, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		if len(leaves) == 0 { // discarded branch
 			if batch.HasElementAt(iBatch) {
@@ -68,7 +68,7 @@ func pruneToInsertBulk(indexes [][]byte, values [][]byte, cacheHeightLimit uint1
 
 	}
 
-	traverseAfterCache = func(pos position, leaves leaves, batch *batchNode, iBatch int8, ops *operationsStack) {
+	traverseAfterCache = func(pos position, leaves leavesList, batch *batchNode, iBatch int8, ops *operationsStack) {
 
 		if len(leaves) == 0 { // discarded branch
 			if batch.HasElementAt(iBatch) {
@@ -135,23 +135,24 @@ func pruneToInsertBulk(indexes [][]byte, values [][]byte, cacheHeightLimit uint1
 				}
 				return
 			}
-
-			// we found a node in our path and it is a shortcut leaf
-			if batch.HasLeafAt(iBatch) {
-				// push down leaf
-				key, value := batch.GetLeafKVAt(iBatch)
-				// we need to make a copy of the slice because it could affect to other branches
-				newLeaves := append(leaves[:0:0], leaves...)
-				newLeaves = newLeaves.InsertSorted(leaf{key, value})
-				batch.ResetElementAt(iBatch)
-				batch.ResetElementAt(2*iBatch + 1)
-				batch.ResetElementAt(2*iBatch + 2)
-				traverseAfterCache(pos, newLeaves, batch, iBatch, ops)
-				return
-			}
 		}
 
 		// on an internal node with more than one leaf
+
+		// we found a node in our path and it is a shortcut leaf
+		if batch.HasLeafAt(iBatch) {
+			// push down leaf
+			key, value := batch.GetLeafKVAt(iBatch)
+			// we need to make a copy of the slice because it could affect to other branches
+			newLeaves := append(leaves[:0:0], leaves...)
+			newLeaves = newLeaves.InsertSorted(leaf{key, value})
+			batch.ResetElementAt(iBatch)
+			batch.ResetElementAt(2*iBatch + 1)
+			batch.ResetElementAt(2*iBatch + 2)
+			traverseAfterCache(pos, newLeaves, batch, iBatch, ops)
+			return
+		}
+
 		rightPos := pos.Right()
 		leftLeaves, rightLeaves := leaves.Split(rightPos.Index)
 
@@ -166,7 +167,7 @@ func pruneToInsertBulk(indexes [][]byte, values [][]byte, cacheHeightLimit uint1
 	}
 
 	ops := newOperationsStack()
-	leaves := make(leaves, 0)
+	leaves := make(leavesList, 0)
 	indexLength := len(indexes[0])
 	for i, index := range indexes {
 		version := util.AddPaddingToBytes(values[i], indexLength)
