@@ -169,15 +169,28 @@ func (c *BatchCache) seek(key []byte) uint64 {
 	// tree height - node height -> number of bits to take into account
 	//
 	//
-	//					0000					4 - 4 = 0 bits => index 0
-	//			_________|_________
-	//			|         		  |
-	//		  0000      		1000			4 - 3 = 1 bit => indexes 0 and 1
-	//	  ______|______     ______|______
-	//	  |			  |     |			|
-	//    0000 		0100  1000        1100		4 - 2 = 2 bits => indexes 0..4
-	// 					.....
-	// and so on
+	//                         0000                              4 - 4 = 0 bits => index 0
+	//                          +
+	//                          |
+	//             +------------+-------------+
+	//             |                          |
+	//             +                          +
+	//           0000                        1000                4 -3 = 1 bit => indexes 0 and 1
+	//             +                          +
+	//             |                          |
+	//      +------+------+            +------+------+
+	//      |             |            |             |
+	//      +             +            +             +
+	//    0000          0100         1000          1100          4 - 2 = 2 bits => indexes 0..4
+	//      +             +            +             +
+	//      |             |            |             |
+	//  +---+---+     +---+---+   +----+----+   +----+----
+	//  |       |     |       |   |         |   |        |
+	//  +       +     +       +   +         +   +        +
+	//0000    0010  0100    0110 1000     1010 1100    1110      4 - 1 = 3 bits => indexes 0..8
+	//
+	//
+	//                       . . . . .                           and so on...
 	//
 	// So, if we have the global offset of the first batch of that depth
 	// (which also indicates the number of previous batches) and
