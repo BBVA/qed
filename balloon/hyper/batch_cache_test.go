@@ -42,7 +42,6 @@ func TestBatchCache(t *testing.T) {
 
 	cached, ok := cache.Get(pos.Bytes())
 	require.True(t, ok)
-	//require.Equal(t, batch.Serialize(), cached)
 	require.Equal(t, batch, parseBatchNode(32, cached))
 
 }
