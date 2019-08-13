@@ -17,6 +17,7 @@
 package balloon
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sync/atomic"
 	"testing"
@@ -466,6 +467,8 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 
 	h := hashing.NewSha256Hasher()
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
+	bulkSize := uint64(20)
+	eventDigests := make([]hashing.Digest, bulkSize)
 	require.NoError(b, err)
 
 	balloonMetrics := metrics_utils.CustomRegister(AddTotal)
@@ -473,16 +476,23 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 	defer srvCloseF()
 
 	b.ResetTimer()
-	b.N = 2000000
-	for i := 0; i < b.N; i++ {
-		events := []hashing.Digest{h.Do(rand.Bytes(128))}
-		_, mutations, err := balloon.AddBulk(events)
-		require.NoError(b, err)
-		require.NoError(b, store.Mutate(mutations, nil))
-		AddTotal.Inc()
+	b.N = 1000000
+	for i := uint64(0); i < uint64(b.N); i++ {
+		idx := i % bulkSize
+
+		index := make([]byte, 8)
+		binary.LittleEndian.PutUint64(index, i)
+		event := append(rand.Bytes(32), index...)
+		eventDigests[idx] = h.Do(event)
+
+		if idx == bulkSize-1 {
+			_, mutations, err := balloon.AddBulk(eventDigests)
+			require.NoError(b, err)
+			require.NoError(b, store.Mutate(mutations, nil))
+			AddTotal.Add(float64(bulkSize))
+		}
 	}
 }
-
 func BenchmarkQueryRocksDB(b *testing.B) {
 	var events [][]byte
 	log.SetLogger(b.Name(), log.SILENT)
