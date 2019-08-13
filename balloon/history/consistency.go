@@ -20,9 +20,9 @@ import (
 	"sort"
 )
 
-type targets []uint64
+type targetsList []uint64
 
-func (t targets) InsertSorted(version uint64) targets {
+func (t targetsList) InsertSorted(version uint64) targetsList {
 
 	if len(t) == 0 {
 		t = append(t, version)
@@ -44,7 +44,7 @@ func (t targets) InsertSorted(version uint64) targets {
 
 }
 
-func (t targets) Split(version uint64) (left, right targets) {
+func (t targetsList) Split(version uint64) (left, right targetsList) {
 	// the smallest index i where t[i] >= version
 	index := sort.Search(len(t), func(i int) bool {
 		return t[i] >= version
@@ -54,9 +54,9 @@ func (t targets) Split(version uint64) (left, right targets) {
 
 func pruneToFindConsistent(index, version uint64) operation {
 
-	var traverse func(pos *position, targets targets, shortcut bool) operation
+	var traverse func(pos *position, targets targetsList, shortcut bool) operation
 
-	traverse = func(pos *position, targets targets, shortcut bool) operation {
+	traverse = func(pos *position, targets targetsList, shortcut bool) operation {
 
 		if len(targets) == 0 {
 			if !shortcut {
@@ -95,7 +95,7 @@ func pruneToFindConsistent(index, version uint64) operation {
 		return newInnerHashOp(pos, left, right)
 	}
 
-	targets := make(targets, 0)
+	targets := make(targetsList, 0)
 	targets = targets.InsertSorted(index)
 	targets = targets.InsertSorted(version)
 	return traverse(newRootPosition(version), targets, false)
@@ -104,9 +104,9 @@ func pruneToFindConsistent(index, version uint64) operation {
 
 func pruneToCheckConsistency(start, end uint64) operation {
 
-	var traverse func(pos *position, targets targets) operation
+	var traverse func(pos *position, targets targetsList) operation
 
-	traverse = func(pos *position, targets targets) operation {
+	traverse = func(pos *position, targets targetsList) operation {
 
 		if len(targets) == 0 {
 			return newCollectOp(newGetCacheOp(pos))
@@ -130,7 +130,7 @@ func pruneToCheckConsistency(start, end uint64) operation {
 		return newInnerHashOp(pos, left, right)
 	}
 
-	targets := make(targets, 0)
+	targets := make(targetsList, 0)
 	targets = targets.InsertSorted(start)
 	targets = targets.InsertSorted(end)
 	return traverse(newRootPosition(end), targets)

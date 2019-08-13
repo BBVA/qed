@@ -83,8 +83,8 @@ func pruneToVerifyIncrementalStart(version uint64) operation {
 
 func pruneToVerifyIncrementalEnd(start, end uint64) operation {
 
-	var traverse func(pos *position, targets targets) operation
-	traverse = func(pos *position, targets targets) operation {
+	var traverse func(pos *position, targets targetsList) operation
+	traverse = func(pos *position, targets targetsList) operation {
 
 		if len(targets) == 0 {
 			return newGetCacheOp(pos)
@@ -109,7 +109,7 @@ func pruneToVerifyIncrementalEnd(start, end uint64) operation {
 
 	}
 
-	targets := make(targets, 0)
+	targets := make(targetsList, 0)
 	targets = targets.InsertSorted(start)
 	targets = targets.InsertSorted(end)
 	return traverse(newRootPosition(end), targets)

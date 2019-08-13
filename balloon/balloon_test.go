@@ -410,24 +410,29 @@ func TestAddAndQueryConsistency(t *testing.T) {
 
 	h := hashing.NewSha256Hasher()
 	balloon, err := NewBalloon(store, hashing.NewSha256Hasher)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	size := 1000
+	size := 10
+	snapshots := make([]*Snapshot, size)
 	// insert
 	for i := 0; i < size; i++ {
 		eventDigest := h.Do([]byte(fmt.Sprintf("Never knows %d best", i)))
-		_, mutations, err := balloon.Add(eventDigest)
+		snapshot, mutations, err := balloon.Add(eventDigest)
 		require.NoError(t, err)
 		require.NoError(t, store.Mutate(mutations, nil))
+		snapshots[i] = snapshot
 	}
 
-	// query
-	for i := 1; i < size; i++ {
-		proof, err := balloon.QueryConsistency(uint64(i-1), uint64(i))
-		require.NoError(t, err)
-		assert.True(t, len(proof.AuditPath) > 0, "index %d", i)
-		assert.Equalf(t, uint64(i-1), proof.Start, "index %d", i)
-		assert.Equalf(t, uint64(i), proof.End, "index %d", i)
+	// query and verify
+	for i := 0; i < size; i++ {
+		for j := i; j < size; j++ {
+			proof, err := balloon.QueryConsistency(uint64(i), uint64(j))
+			require.NoErrorf(t, err, "start %d, end %d", i, j)
+			require.True(t, len(proof.AuditPath) > 0, "start %d, end %d", i, j)
+			require.Equalf(t, uint64(i), proof.Start, "start %d, end %d", i, j)
+			require.Equalf(t, uint64(j), proof.End, "start %d, end %d", i, j)
+			require.Truef(t, proof.Verify(snapshots[i], snapshots[j]), "start %d, end %d", i, j)
+		}
 	}
 
 }
