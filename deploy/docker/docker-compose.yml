@@ -20,7 +20,7 @@ services:
       "--gossip-addr", "qed_server_0:8400",
       "--node-id", "server0",
       "--private-key-path", "/var/tmp/qed_ed25519",
-      "--raft-path", "/var/tmp/qed0/wal",
+      "--raft-path", "/var/tmp/qed0/raft",
       "--db-path", "/var/tmp/qed0/db",
       "--log", "info",
     ]

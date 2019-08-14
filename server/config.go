@@ -80,7 +80,7 @@ type Config struct {
 
 	// TLS server cerificate key
 	SSLCertificateKey string
-	
+
 	// DB WAL TTL
 	DbWalTtl time.Duration
 }
@@ -101,7 +101,7 @@ func DefaultConfig() *Config {
 		GossipAddr:        "127.0.0.1:8400",
 		GossipJoinAddr:    []string{},
 		DBPath:            currentDir + "/db",
-		RaftPath:          currentDir + "/wal",
+		RaftPath:          currentDir + "/raft",
 		EnableTLS:         false,
 		EnableProfiling:   false,
 		ProfilingAddr:     "127.0.0.1:6060",
