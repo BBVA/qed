@@ -1,11 +1,10 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"github.com/bbva/qed/log"
 )
 
 func AwaitTermSignal(closeFn func() error) {
@@ -16,7 +15,7 @@ func AwaitTermSignal(closeFn func() error) {
 
 	// block main and wait for a signal
 	sig := <-signals
-	log.Infof("Signal received: %v", sig)
+	fmt.Printf("Signal received: %v\n", sig)
 
 	closeFn()
 

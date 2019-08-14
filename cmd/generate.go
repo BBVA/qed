@@ -18,8 +18,9 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"os"
 
-	"github.com/bbva/qed/log"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 )
@@ -59,7 +60,8 @@ func generateConfig() context.Context {
 
 	err := gpflag.ParseTo(conf, generateCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("generate.config"), conf)
 }

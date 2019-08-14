@@ -22,10 +22,9 @@ package hyper
 import (
 	"sync"
 
-	"github.com/bbva/qed/log"
-
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
@@ -40,10 +39,16 @@ type HyperTree struct {
 	defaultHashes    []hashing.Digest
 	batchLoader      batchLoader
 
+	log log2.Logger
+
 	sync.RWMutex
 }
 
 func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache) *HyperTree {
+	return NewHyperTreeWithLogger(hasherF, store, cache, log2.L())
+}
+
+func NewHyperTreeWithLogger(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache, logger log2.Logger) *HyperTree {
 
 	hasher := hasherF()
 	numBits := hasher.Len()
@@ -56,7 +61,8 @@ func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cach
 		hasher:           hasher,
 		cacheHeightLimit: cacheHeightLimit,
 		defaultHashes:    make([]hashing.Digest, numBits),
-		batchLoader:      NewDefaultBatchLoader(store, cache, cacheHeightLimit),
+		batchLoader:      NewDefaultBatchLoaderWithLogger(store, cache, cacheHeightLimit, logger.Named("loader")),
+		log:              logger,
 	}
 
 	tree.defaultHashes[0] = tree.hasher.Do([]byte{0x0}, []byte{0x0})
@@ -77,7 +83,7 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 	t.Lock()
 	defer t.Unlock()
 
-	//log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
+	//t.log.Tracef("Adding new event digest %x with version %d", eventDigest, version)
 
 	versionAsBytes := util.Uint64AsBytes(version)
 
@@ -91,7 +97,10 @@ func (t *HyperTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Dig
 		Mutations:      make([]*storage.Mutation, 0),
 	}
 
-	rh := ops.Pop().Interpret(ops, ctx)
+	rh, err := ops.Pop().Interpret(ops, ctx)
+	if err != nil {
+		t.log.Fatalf("Invalid operation: %v", err)
+	}
 
 	return rh, ctx.Mutations, nil
 }
@@ -120,7 +129,10 @@ func (t *HyperTree) AddBulk(eventDigests []hashing.Digest, initialVersion uint64
 		Mutations:      make([]*storage.Mutation, 0),
 	}
 
-	rh := ops.Pop().Interpret(ops, ctx)
+	rh, err := ops.Pop().Interpret(ops, ctx)
+	if err != nil {
+		t.log.Fatalf("Invalid operation: %v", err)
+	}
 
 	return rh, ctx.Mutations, nil
 }
@@ -132,7 +144,7 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 	t.Lock()
 	defer t.Unlock()
 
-	//log.Debugf("Proving membership for index %d", eventDigest)
+	//t.log.Tracef("Proving membership for index %d", eventDigest)
 
 	// build a stack of operations and then interpret it to generate the audit path
 	ops := pruneToFind(eventDigest, t.batchLoader)
@@ -144,7 +156,10 @@ func (t *HyperTree) QueryMembership(eventDigest hashing.Digest) (proof *QueryPro
 		AuditPath:      make(AuditPath, 0),
 	}
 
-	ops.Pop().Interpret(ops, ctx)
+	_, err = ops.Pop().Interpret(ops, ctx)
+	if err != nil {
+		t.log.Fatalf("Invalid operation: %v", err)
+	}
 
 	// ctx.Value is nil if the digest does not exist
 	return NewQueryProof(eventDigest, ctx.Value, ctx.AuditPath, t.hasherF()), nil
@@ -157,7 +172,7 @@ func (t *HyperTree) RebuildCache() {
 	defer t.Unlock()
 
 	// warm up cache
-	log.Info("Warming up hyper cache...")
+	t.log.Info("Warming up hyper cache...")
 
 	indexes := make([][]byte, 0)
 
@@ -177,6 +192,7 @@ func (t *HyperTree) RebuildCache() {
 	// if there are no elements, we start with a clean
 	// cache
 	if len(indexes) == 0 {
+		t.log.Info("Warming up finished: empty cache")
 		return
 	}
 
@@ -187,8 +203,12 @@ func (t *HyperTree) RebuildCache() {
 		RecoveryHeight: t.cacheHeightLimit + 4,
 		DefaultHashes:  t.defaultHashes,
 	}
-	ops.Pop().Interpret(ops, ctx)
+	_, err := ops.Pop().Interpret(ops, ctx)
+	if err != nil {
+		t.log.Fatalf("Invalid operation: %v", err)
+	}
 
+	t.log.Info("Warming up finished")
 }
 
 // Close function resets all hyper tree stuff.

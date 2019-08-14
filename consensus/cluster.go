@@ -30,7 +30,7 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
@@ -115,12 +115,18 @@ type RaftNode struct {
 	metrics     *raftNodeMetrics     // Raft node metrics.
 	raftMetrics *raftInternalMetrics // Raft internal metrics.
 
+	log log2.Logger
+
 	sync.Mutex
 	closed bool
 	done   chan struct{}
 }
 
 func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot) (*RaftNode, error) {
+	return NewRaftNodeWithLogger(opts, store, snapshotsCh, log2.L())
+}
+
+func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot, logger log2.Logger) (*RaftNode, error) {
 
 	// We try to resolve the raft addr to avoid binding to hostnames
 	// because Raft library does not support FQDNs
@@ -141,6 +147,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	node := &RaftNode{
 		info:         info,
 		snapshotsCh:  snapshotsCh,
+		log:          logger,
 		applyTimeout: opts.RaftApplyTimeout,
 		done:         make(chan struct{}),
 	}
@@ -166,13 +173,13 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	node.hasherF = hasherF
 
 	// Instantiate balloon FSM
-	node.balloon, err = balloon.NewBalloon(store, hasherF)
+	node.balloon, err = balloon.NewBalloonWithLogger(store, hasherF, node.log.Named("balloon"))
 	if err != nil {
 		return nil, err
 	}
 	err = node.loadState()
 	if err != nil {
-		log.Infof("There was an error recovering the FSM state!!")
+		node.log.Error("There was an error recovering the FSM state!!")
 		return nil, err
 	}
 
@@ -194,25 +201,25 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 	conf.SnapshotThreshold = opts.SnapshotThreshold
 	conf.LocalID = raft.ServerID(opts.NodeID)
 
-	if log.GetLoggerLevel() == log.SILENT {
-		conf.Logger = hclog.NewNullLogger()
+	conf.LogLevel = "error"
+	if opts.RaftLogging {
+		conf.Logger = log2.NewHclogAdapter(node.log.Named("raft"))
 	} else {
-		hclog.DefaultLevel = hclog.Error
-		conf.Logger = hclog.New(&hclog.LoggerOptions{
-			Level: hclog.LevelFromString(log.GetLoggerLevel()),
-		})
+		conf.Logger = hclog.NewNullLogger()
 	}
 
 	node.raftConfig = conf
 
-	node.transport, err = NewCMuxTCPTransportWithLogger(node, 3, 10*time.Second, log.GetLogger())
+	node.transport, err = NewCMuxTCPTransportWithLogger(node, 3, 10*time.Second, node.log) // TODO export params
 	if err != nil {
 		return nil, err
 	}
 
 	// create the snapshot store. This allows the Raft to truncate the log.
 	// The library creates a folder to store the snapshots in.
-	node.snapshots, err = raft.NewFileSnapshotStoreWithLogger(opts.RaftLogPath, opts.LogSnapshots, log.GetLogger())
+	node.snapshots, err = raft.NewFileSnapshotStoreWithLogger(opts.RaftLogPath, opts.LogSnapshots, node.log.StdLogger(&log2.StdLoggerOptions{
+		InferLevels: true,
+	}))
 	if err != nil {
 		return nil, fmt.Errorf("file snapshot store: %s", err)
 	}
@@ -236,27 +243,27 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 		return nil, err
 	}
 	if existingState {
-		log.Debugf("Loaded existing state for Raft.")
+		node.log.Debug("Loaded existing state for Raft.")
 	} else {
-		log.Debugf("No existing state found for Raft.")
+		node.log.Debug("No existing state found for Raft.")
 		// Bootstrap if there is no previous state and we are starting this node as
 		// a seed or a cluster configuration is provided.
 		if opts.Bootstrap {
-			log.Info("Bootstraping cluster...")
+			node.log.Info("Bootstraping cluster...")
 			if err := node.bootstrapCluster(); err != nil {
 				node.Close(true)
 				return nil, err
 			}
-			log.Info("Cluster successfully bootstraped.")
+			node.log.Info("Cluster successfully bootstraped.")
 		} else {
-			log.Info("Attempting to join the cluster.")
+			node.log.Info("Attempting to join the cluster.")
 			// Attempt to join the cluster if we're not bootstraping.
 			err := node.attemptToJoinCluster(opts.Seeds)
 			if err != nil {
 				node.Close(true)
 				return nil, fmt.Errorf("failed to join Raft cluster: %v", err)
 			}
-			log.Info("Join operation finished successfully.")
+			node.log.Info("Join operation finished successfully.")
 		}
 	}
 
@@ -355,7 +362,7 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 		return nil, ErrNotLeader
 	}
 
-	log.Infof("received join request for remote node %s at %s", req.NodeId, req.RaftAddr)
+	n.log.Infof("received join request for remote node %s at %s", req.NodeId, req.RaftAddr)
 
 	// Add the node as a voter. This is idempotent. No-op if the request
 	// came from ourselves.
@@ -422,7 +429,7 @@ func (n *RaftNode) leaderId() (string, error) {
 
 	configFuture := n.raft.GetConfiguration()
 	if err := configFuture.Error(); err != nil {
-		log.Infof("failed to get raft configuration: %v", err)
+		n.log.Infof("failed to get raft configuration: %v", err)
 		return "", err
 	}
 	for _, srv := range configFuture.Configuration().Servers {

@@ -34,7 +34,6 @@ import (
 	"github.com/bbva/qed/testutils/spec"
 	"github.com/pkg/errors"
 
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/stretchr/testify/assert"
 )
@@ -77,8 +76,6 @@ func setupClient(t *testing.T, urls []string) *HTTPClient {
 
 func TestCallPrimaryWorking(t *testing.T) {
 
-	log.SetLogger("TestCallPrimaryWorking", log.SILENT)
-
 	var numRequests int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
 		numRequests++
@@ -108,8 +105,6 @@ func TestCallPrimaryWorking(t *testing.T) {
 
 // Having 1 single node returning "Internal Server error" make the request fails.
 func TestCallPrimaryFails(t *testing.T) {
-
-	log.SetLogger("TestCallPrimaryFails", log.SILENT)
 
 	var numRequests int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
@@ -141,8 +136,6 @@ func TestCallPrimaryFails(t *testing.T) {
 // Having 1 single and unreachable node make the request fails.
 func TestCallPrimaryUnreachable(t *testing.T) {
 
-	log.SetLogger("TestCallPrimaryUnreachable", log.INFO)
-
 	var numRequests int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
 		numRequests++
@@ -170,8 +163,6 @@ func TestCallPrimaryUnreachable(t *testing.T) {
 // "discovery" option enabled, the request fails.
 // Healthchecks (enabled here) does not change primary.
 func TestCallPrimaryUnreachableWithHealthChecks(t *testing.T) {
-
-	log.SetLogger("TestCallPrimaryUnreachableWithHealthChecks", log.SILENT)
 
 	var alreadyRetried bool
 
@@ -218,8 +209,6 @@ func TestCallPrimaryUnreachableWithHealthChecks(t *testing.T) {
 // "discovery" option enabled, there should be a leader election and the
 // request should go to the new primary.
 func TestCallPrimaryUnreachableWithDiscovery(t *testing.T) {
-
-	log.SetLogger("TestCallPrimaryUnreachableWithDiscovery", log.SILENT)
 
 	var numRequests int
 	var alreadyRetried bool
@@ -305,8 +294,6 @@ func TestCallPrimaryUnreachableWithDiscovery(t *testing.T) {
 // Actually HealthCheck does nothing, since the nodes never get recovered in this test.
 func TestCallPrimaryUnreachableWithDiscoveryAndHealtChecks(t *testing.T) {
 
-	log.SetLogger("TestCallPrimaryUnreachableWithDiscoveryAndHealtChecks", log.SILENT)
-
 	var alreadyRetried bool
 
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
@@ -389,8 +376,6 @@ func TestCallPrimaryUnreachableWithDiscoveryAndHealtChecks(t *testing.T) {
 
 func TestCallAnyPrimaryFails(t *testing.T) {
 
-	log.SetLogger("TestCallAnyPrimaryFails", log.SILENT)
-
 	var numRequests int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
 		numRequests++
@@ -427,8 +412,6 @@ func TestCallAnyPrimaryFails(t *testing.T) {
 
 func TestCallAnyAllFail(t *testing.T) {
 
-	log.SetLogger("TestCallAnyAllFail", log.SILENT)
-
 	var numRequests int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
 		numRequests++
@@ -457,8 +440,6 @@ func TestCallAnyAllFail(t *testing.T) {
 }
 
 func TestHealthCheck(t *testing.T) {
-
-	log.SetLogger("TestHealthCheck", log.SILENT)
 
 	var numRequests int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
@@ -499,8 +480,6 @@ func TestHealthCheck(t *testing.T) {
 }
 
 func TestPeriodicHealthCheck(t *testing.T) {
-
-	log.SetLogger("TestPeriodicHealthCheck", log.SILENT)
 
 	var numChecks int
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
@@ -550,8 +529,6 @@ func TestPeriodicHealthCheck(t *testing.T) {
 }
 
 func TestManualDiscoveryPrimaryLost(t *testing.T) {
-
-	log.SetLogger("TestDiscoverPrimaryLost", log.SILENT)
 
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
 		if req.Host == "primary.foo" {
@@ -607,8 +584,6 @@ func TestManualDiscoveryPrimaryLost(t *testing.T) {
 }
 
 func TestAutoDiscoveryPrimaryLost(t *testing.T) {
-
-	log.SetLogger("TestDiscoverPrimaryLost", log.SILENT)
 
 	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
 		if req.Host == "primary.foo" {
@@ -667,8 +642,6 @@ func buildResponse(status int, body string) *http.Response {
 
 func TestAddSuccess(t *testing.T) {
 
-	log.SetLogger("TestAddSuccess", log.SILENT)
-
 	event := "Hello world!"
 	snap := &protocol.Snapshot{
 		HistoryDigest: []byte("history"),
@@ -688,8 +661,6 @@ func TestAddSuccess(t *testing.T) {
 }
 
 func TestAddBulkSuccess(t *testing.T) {
-
-	log.SetLogger("TestAddBulkSuccess", log.SILENT)
 
 	eventBulk := []string{"This is event 1", "This is event 2"}
 	bulk := []*protocol.Snapshot{
@@ -719,8 +690,6 @@ func TestAddBulkSuccess(t *testing.T) {
 
 func TestAddWithServerFailure(t *testing.T) {
 
-	log.SetLogger("TestAddWithServerFailure", log.SILENT)
-
 	serverURL, tearDown := setupServer(nil)
 	defer tearDown()
 	client := setupClient(t, []string{serverURL})
@@ -731,8 +700,6 @@ func TestAddWithServerFailure(t *testing.T) {
 }
 
 func TestMembership(t *testing.T) {
-
-	log.SetLogger("TestMembership", log.SILENT)
 
 	event := []byte{0x0}
 	version := uint64(0)
@@ -767,8 +734,6 @@ func TestMembership(t *testing.T) {
 
 func TestMembershipDigest(t *testing.T) {
 
-	log.SetLogger("TestMembershipDigest", log.SILENT)
-
 	eventDigest := hashing.Digest([]byte{0x0})
 	version := uint64(0)
 
@@ -802,8 +767,6 @@ func TestMembershipDigest(t *testing.T) {
 
 func TestMembershipWithServerFailure(t *testing.T) {
 
-	log.SetLogger("TestMembershipWithServerFailure", log.SILENT)
-
 	serverURL, tearDown := setupServer(nil)
 	defer tearDown()
 	client := setupClient(t, []string{serverURL})
@@ -815,8 +778,6 @@ func TestMembershipWithServerFailure(t *testing.T) {
 }
 
 func TestIncremental(t *testing.T) {
-
-	log.SetLogger("TestIncremental", log.SILENT)
 
 	start := uint64(2)
 	end := uint64(8)
@@ -850,8 +811,6 @@ func TestIncremental(t *testing.T) {
 }
 
 func TestIncrementalWithServerFailure(t *testing.T) {
-
-	log.SetLogger("TestIncrementalWithServerFailure", log.SILENT)
 
 	serverURL, tearDown := setupServer(nil)
 	defer tearDown()
@@ -947,8 +906,6 @@ func TestIncrementalVerify(t *testing.T) {
 }
 
 func TestMembershipAutoVerify(t *testing.T) {
-
-	log.SetLogger("TestMembershipAutoVerify", log.SILENT)
 
 	eventDigest := hashing.Digest([]byte{0x0})
 	version := uint64(0)

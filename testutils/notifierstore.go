@@ -15,10 +15,24 @@
 
 package main
 
-import "github.com/bbva/qed/testutils/notifierstore"
+import (
+	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/testutils/notifierstore"
+)
 
 func main() {
-	s := notifierstore.NewService()
+
+	// create main logger
+	logOpts := &log2.LoggerOptions{
+		Name:            "qed",
+		IncludeLocation: true,
+		Level:           log2.Warn,
+		Output:          log2.DefaultOutput,
+		TimeFormat:      log2.DefaultTimeFormat,
+	}
+	logger := log2.New(logOpts)
+
+	s := notifierstore.NewServiceWithLogger(logger)
 	foreground := true
 	s.Start(foreground)
 }

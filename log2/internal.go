@@ -27,6 +27,7 @@ type internalLogger struct {
 	name       string
 	caller     bool
 	timeFormat string
+	level      Level
 
 	// This is a pointer so that it's shared by any derived loggers, since
 	// those derived loggers share the bufio.Writer as well.
@@ -35,19 +36,37 @@ type internalLogger struct {
 }
 
 func (l *internalLogger) Named(name string) Logger {
-	subLogger := *l
-	if subLogger.name != "" {
-		subLogger.name = subLogger.name + "." + name
-	} else {
-		subLogger.name = name
+	newName := l.name
+	if newName != "" {
+		newName = newName + "." + name
 	}
-	return &subLogger
+	return New(&LoggerOptions{
+		Name:            newName,
+		Level:           l.level,
+		Output:          l.writer.out,
+		TimeFormat:      l.timeFormat,
+		IncludeLocation: l.caller,
+	})
 }
 
 func (l *internalLogger) ResetNamed(name string) Logger {
-	rl := *l
-	rl.name = name
-	return &rl
+	return New(&LoggerOptions{
+		Name:            name,
+		Level:           l.level,
+		Output:          l.writer.out,
+		TimeFormat:      l.timeFormat,
+		IncludeLocation: l.caller,
+	})
+}
+
+func (l *internalLogger) WithLevel(level Level) Logger {
+	return New(&LoggerOptions{
+		Name:            l.name,
+		Level:           level,
+		Output:          l.writer.out,
+		TimeFormat:      l.timeFormat,
+		IncludeLocation: l.caller,
+	})
 }
 
 func (l *internalLogger) StdLogger(opts *StdLoggerOptions) *log.Logger {
@@ -58,8 +77,15 @@ func (l *internalLogger) StdLogger(opts *StdLoggerOptions) *log.Logger {
 }
 
 func (l *internalLogger) StdWriter(opts *StdLoggerOptions) io.Writer {
+	logger := New(&LoggerOptions{
+		Name:            l.name,
+		Level:           l.level,
+		Output:          l.writer.out,
+		TimeFormat:      l.timeFormat,
+		IncludeLocation: l.caller,
+	})
 	return &stdLogAdapter{
-		log:         l,
+		log:         logger,
 		inferLevels: opts.InferLevels,
 		forceLevel:  opts.ForceLevel,
 	}
@@ -186,21 +212,21 @@ func (l *internalLogger) Errorf(format string, args ...interface{}) {
 }
 
 func (l *internalLogger) Fatal(msg string) {
-	l.log(Error, msg)
+	l.log(Fatal, msg)
 	os.Exit(1)
 }
 
 func (l *internalLogger) Fatalf(format string, args ...interface{}) {
-	l.logf(Error, format, args...)
+	l.logf(Fatal, format, args...)
 	os.Exit(1)
 }
 
 func (l *internalLogger) Panic(msg string) {
-	l.log(Error, msg)
+	l.log(Fatal, msg)
 	panic(msg)
 }
 
 func (l *internalLogger) Panicf(format string, args ...interface{}) {
-	l.logf(Error, format, args...)
+	l.logf(Fatal, format, args...)
 	panic(fmt.Sprintf(format, args...))
 }

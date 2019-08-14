@@ -26,7 +26,6 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/rocksdb"
 	"github.com/bbva/qed/testutils/rand"
@@ -37,8 +36,6 @@ func TestRestoreFromBackup(t *testing.T) {
 	before, after := newServerSetup(0, false)
 	let, report := spec.New()
 	defer func() { t.Logf(report()) }()
-
-	log.SetLogger("", log.SILENT)
 
 	event := rand.RandomString(10)
 	var snapshot *protocol.Snapshot

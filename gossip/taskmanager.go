@@ -19,7 +19,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -82,8 +82,8 @@ func DefaultSimpleTasksManagerConfig() *SimpleTasksManagerConfig {
 	}
 }
 
-func NewSimpleTasksManagerFromConfig(c *SimpleTasksManagerConfig) *SimpleTasksManager {
-	return NewSimpleTasksManager(c.Interval, c.MaxTasks)
+func NewSimpleTasksManagerFromConfig(c *SimpleTasksManagerConfig, logger log2.Logger) *SimpleTasksManager {
+	return NewSimpleTasksManagerWithLogger(c.Interval, c.MaxTasks, logger)
 }
 
 // Simple implementation of a task manager used
@@ -93,9 +93,10 @@ type SimpleTasksManager struct {
 	quitCh   chan bool
 	ticker   *time.Ticker
 	maxTasks int
+	log      log2.Logger
 }
 
-// NewTasksManager returns a new TasksManager and its task
+// NewSimpleTasksManager returns a new TasksManager and its task
 // channel. The execution loop will try to execute up to maxTasks tasks
 // each interval. Also the channel has maxTasks capacity.
 func NewSimpleTasksManager(i time.Duration, max int) *SimpleTasksManager {
@@ -104,6 +105,20 @@ func NewSimpleTasksManager(i time.Duration, max int) *SimpleTasksManager {
 		quitCh:   make(chan bool),
 		ticker:   time.NewTicker(i),
 		maxTasks: max,
+		log:      log2.L(),
+	}
+}
+
+// NewSimpleTasksManagerWithLogger returns a new TasksManager and its task
+// channel. The execution loop will try to execute up to maxTasks tasks
+// each interval. Also the channel has maxTasks capacity.
+func NewSimpleTasksManagerWithLogger(i time.Duration, max int, l log2.Logger) *SimpleTasksManager {
+	return &SimpleTasksManager{
+		taskCh:   make(chan Task, max),
+		quitCh:   make(chan bool),
+		ticker:   time.NewTicker(i),
+		maxTasks: max,
+		log:      l,
 	}
 }
 
@@ -155,7 +170,7 @@ func (t *SimpleTasksManager) dispatchTasks() {
 			go func() {
 				err := task()
 				if err != nil {
-					log.Infof("Task manager got an error from a task: %v", err)
+					t.log.Infof("Task manager got an error from a task: %v", err)
 				}
 			}()
 			count++
@@ -172,6 +187,15 @@ func (t *SimpleTasksManager) dispatchTasks() {
 // for testing purposes. Its intented to be used with the
 // BatchSnapshot processor
 type PrinterFactory struct {
+	log log2.Logger
+}
+
+func NewPrinterFactory(l log2.Logger) *PrinterFactory {
+	logger := l
+	if logger == nil {
+		logger = log2.L()
+	}
+	return &PrinterFactory{log: logger}
 }
 
 func (p PrinterFactory) Metrics() []prometheus.Collector {
@@ -180,10 +204,10 @@ func (p PrinterFactory) Metrics() []prometheus.Collector {
 
 func (p PrinterFactory) New(ctx context.Context) Task {
 	// a := ctx.Value("agent").(Agent)
-	log.Infof("PrinterFactory creating new Task!")
+	p.log.Info("Creating new Task!")
 	b := ctx.Value("batch").(*protocol.BatchSnapshots)
 	return func() error {
-		log.Debugf("Printer Task: agent received batch: %+v\n", b)
+		p.log.Debugf("Printer Task: agent received batch: %+v\n", b)
 		return nil
 	}
 }

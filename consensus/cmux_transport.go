@@ -19,11 +19,11 @@ package consensus
 import (
 	"errors"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/bbva/qed/log2"
 	"github.com/hashicorp/raft"
 	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
@@ -61,10 +61,12 @@ func NewCMuxTCPTransportWithLogger(
 	node *RaftNode,
 	maxPool int,
 	timeout time.Duration,
-	logger *log.Logger,
+	logger log2.Logger,
 ) (*raft.NetworkTransport, error) {
 	return newTCPTransport(node, func(stream raft.StreamLayer) *raft.NetworkTransport {
-		return raft.NewNetworkTransportWithLogger(stream, maxPool, timeout, logger)
+		return raft.NewNetworkTransportWithLogger(stream, maxPool, timeout, logger.StdLogger(&log2.StdLoggerOptions{
+			InferLevels: true,
+		}))
 	})
 }
 

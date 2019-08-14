@@ -23,8 +23,6 @@ import (
 	"net/http"
 
 	"github.com/spf13/cobra"
-
-	"github.com/bbva/qed/log"
 )
 
 var backupCreateCmd *cobra.Command = &cobra.Command{
@@ -42,7 +40,6 @@ func init() {
 func runBackupCreate(cmd *cobra.Command, args []string) error {
 
 	config := backupCtx.Value(k("backup.config")).(*BackupConfig)
-	log.SetLogger("backup", config.Log)
 
 	_, err := createBackup(config)
 	if err != nil {
@@ -68,7 +65,7 @@ func createBackup(config *BackupConfig) ([]byte, error) {
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Infof("Request error: %v\n", err)
+		fmt.Printf("Request error: %v\n", err)
 		return nil, err
 	}
 

@@ -18,11 +18,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
 	"github.com/octago/sflags/gen/gpflag"
@@ -100,7 +101,8 @@ func configAuditor() context.Context {
 	conf := newAuditorConfig()
 	err := gpflag.ParseTo(conf, agentAuditorCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse auditor flags: %v\n", err)
+		os.Exit(1)
 	}
 
 	ctx := context.WithValue(agentCtx, k("auditor.config"), conf)
@@ -112,7 +114,15 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 	agentConfig := agentAuditorCtx.Value(k("agent.config")).(*gossip.Config)
 	conf := agentAuditorCtx.Value(k("auditor.config")).(*auditorConfig)
 
-	log.SetLogger("auditor", agentConfig.Log)
+	// create main logger
+	logOpts := &log2.LoggerOptions{
+		Name:            "qed.auditor",
+		IncludeLocation: true,
+		Level:           log2.LevelFromString(agentConfig.Log),
+		Output:          log2.DefaultOutput,
+		TimeFormat:      log2.DefaultTimeFormat,
+	}
+	logger := log2.New(logOpts)
 
 	// URL parse
 	err := checkAuditorParams(conf)
@@ -120,20 +130,21 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, logger.Named("agent.notifier"))
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
 		return err
 	}
-	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, logger.Named("agent.task-manager"))
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
 
-	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier)
+	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier, logger.Named("agent"))
 	if err != nil {
 		return err
 	}
 
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{membershipFactory{}})
+	memF := membershipFactory{logger.Named("agent.membership-factory")}
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{memF}, logger.Named("agent.processor"))
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 
@@ -165,7 +176,9 @@ func checkAuditorParams(conf *auditorConfig) error {
 	return nil
 }
 
-type membershipFactory struct{}
+type membershipFactory struct {
+	log log2.Logger
+}
 
 func (m membershipFactory) Metrics() []prometheus.Collector {
 	return []prometheus.Collector{
@@ -191,7 +204,7 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 		// TODO Get hasher via negotiation between agent and QED
 		proof, err := a.Qed.MembershipDigest(s.Snapshot.EventDigest, &s.Snapshot.Version)
 		if err != nil {
-			log.Infof("Auditor is unable to get membership proof from QED server: %v", err)
+			i.log.Infof("Auditor is unable to get membership proof from QED server: %v", err)
 
 			switch fmt.Sprintf("%T", err) {
 			case "*errors.errorString":
@@ -205,7 +218,7 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 
 		storedSnap, err := a.SnapshotStore.GetSnapshot(proof.CurrentVersion)
 		if err != nil {
-			log.Infof("Unable to get snapshot with version %d from storage: %v", proof.CurrentVersion, err)
+			i.log.Infof("Unable to get snapshot with version %d from storage: %v", proof.CurrentVersion, err)
 			return err
 		}
 
@@ -222,10 +235,10 @@ func (i membershipFactory) New(ctx context.Context) gossip.Task {
 		}
 		if !ok {
 			_ = a.Notifier.Alert(fmt.Sprintf("Unable to verify snapshot %v", s.Snapshot))
-			log.Infof("Unable to verify snapshot %v", s.Snapshot)
+			i.log.Infof("Unable to verify snapshot %v", s.Snapshot)
 		}
 
-		log.Infof("Snapshot %v has been verified by QED", s.Snapshot)
+		i.log.Infof("Snapshot %v has been verified by QED", s.Snapshot)
 		return nil
 	}
 }

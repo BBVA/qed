@@ -20,7 +20,6 @@ import (
 	"bytes"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 )
 
 type AuditPath map[string]hashing.Digest
@@ -54,8 +53,6 @@ func NewQueryProof(key, value []byte, auditPath AuditPath, hasher hashing.Hasher
 // false otherwise.
 func (p QueryProof) Verify(key []byte, expectedRootHash hashing.Digest) (valid bool) {
 
-	log.Debugf("Verifying query proof for key %x", p.Key)
-
 	if len(p.AuditPath) == 0 {
 		// an empty audit path (empty tree) shows non-membersip for any key
 		return false
@@ -67,7 +64,10 @@ func (p QueryProof) Verify(key []byte, expectedRootHash hashing.Digest) (valid b
 		Hasher:    p.hasher,
 		AuditPath: p.AuditPath,
 	}
-	recomputed := ops.Pop().Interpret(ops, ctx)
+	recomputed, err := ops.Pop().Interpret(ops, ctx)
+	if err != nil {
+		panic(err)
+	}
 
 	return bytes.Equal(key, p.Key) && bytes.Equal(recomputed, expectedRootHash)
 

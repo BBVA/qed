@@ -32,7 +32,7 @@ import (
 	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/util"
 )
 
@@ -54,6 +54,8 @@ type Workload struct {
 	httpServer         *http.Server
 	metricsServer      *http.Server
 	prometheusRegistry *prometheus.Registry
+
+	log log2.Logger
 }
 
 type Plan [][]Config
@@ -74,6 +76,8 @@ type Attack struct {
 	config  Config
 	client  *client.HTTPClient
 	senChan chan Task
+
+	log log2.Logger
 }
 
 type Task struct {
@@ -81,6 +85,13 @@ type Task struct {
 
 	events              []string
 	version, start, end uint64
+}
+
+func NewWorkload(conf Config, logger log2.Logger) *Workload {
+	return &Workload{
+		Config: conf,
+		log:    logger,
+	}
 }
 
 func (workload *Workload) Start(APIMode bool) {
@@ -91,11 +102,11 @@ func (workload *Workload) Start(APIMode bool) {
 		workload.RunOnce()
 	}
 
-	log.Debug("Stopping workload, about to exit...")
+	workload.log.Debug("Stopping workload, about to exit...")
 }
 
 func (workload *Workload) RunOnce() {
-	newAttack(workload.Config)
+	newAttack(workload.Config, workload.log.Named("attack"))
 }
 
 func (workload *Workload) MergeConf(newConf Config) Config {
@@ -124,7 +135,7 @@ func (workload *Workload) Serve() {
 			return
 		}
 
-		newAttack(workload.MergeConf(newConf))
+		newAttack(workload.MergeConf(newConf), workload.log.Named("attack"))
 	})
 
 	mux.HandleFunc("/plan", func(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +157,7 @@ func (workload *Workload) Serve() {
 			for _, conf := range batch {
 				wg.Add(1)
 				go func(conf Config) {
-					newAttack(workload.MergeConf(conf))
+					newAttack(workload.MergeConf(conf), workload.log.Named("attack"))
 					wg.Done()
 				}(conf)
 
@@ -160,21 +171,21 @@ func (workload *Workload) Serve() {
 	Register(r)
 	workload.prometheusRegistry = r
 	metricsMux := metricshttp.NewMetricsHTTP(r)
-	log.Debug("	* Starting workload Metrics server at :17700")
+	workload.log.Debug("	* Starting workload Metrics server at :17700")
 	workload.metricsServer = &http.Server{Addr: ":17700", Handler: metricsMux}
 
 	go func() {
 		if err := workload.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start metrics HTTP server: %s", err)
+			workload.log.Errorf("Can't start metrics HTTP server: %s", err)
 		}
 	}()
 
 	// API server
 	workload.httpServer = &http.Server{Addr: ":7700", Handler: mux}
-	log.Debug("	* Starting workload HTTP server at :7700")
+	workload.log.Debug("	* Starting workload HTTP server at :7700")
 	go func() {
 		if err := workload.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start workload API HTTP server: %s", err)
+			workload.log.Errorf("Can't start workload API HTTP server: %s", err)
 		}
 	}()
 }
@@ -183,13 +194,13 @@ func (workload *Workload) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	log.Debug("Stopping metrics server...")
+	workload.log.Debug("Stopping metrics server...")
 	err := workload.metricsServer.Shutdown(ctx)
 	if err != nil {
 		return err
 	}
 
-	log.Debug("Stopping HTTP server...")
+	workload.log.Debug("Stopping HTTP server...")
 	err = workload.httpServer.Shutdown(ctx)
 	if err != nil {
 		return err
@@ -198,7 +209,7 @@ func (workload *Workload) Stop() error {
 	return nil
 }
 
-func newAttack(conf Config) {
+func newAttack(conf Config, logger log2.Logger) {
 	// QED client
 	transport := http.DefaultTransport.(*http.Transport)
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: conf.Insecure}
@@ -219,7 +230,7 @@ func newAttack(conf Config) {
 	)
 
 	if err != nil {
-		log.Errorf("New attack create HTTP Client: %s", err)
+		logger.Errorf("New attack create HTTP Client: %s", err)
 	}
 	if conf.Kind != "bulk" {
 		// TODO: this is a hack to avoid executing bulks when kind is add.
@@ -231,10 +242,11 @@ func newAttack(conf Config) {
 		config:         conf,
 		kind:           kind(conf.Kind),
 		balloonVersion: uint64(conf.NumRequests + conf.Offset - 1),
+		log:            logger,
 	}
 
 	if err := attack.client.Ping(); err != nil {
-		log.Errorf("New attack ping: %s", err)
+		attack.log.Errorf("New attack ping: %s", err)
 	}
 
 	attack.Run()
@@ -250,37 +262,37 @@ func (a *Attack) Run() {
 			for {
 				task, ok := <-a.senChan
 				if !ok {
-					log.Debugf("!!! close: %d", rID)
+					a.log.Debugf("!!! close: %d", rID)
 					wg.Done()
 					return
 				}
 
 				switch task.kind {
 				case add:
-					log.Debugf("Adding: %s", task.events[0])
+					a.log.Debugf("Adding: %s", task.events[0])
 					_, err := a.client.Add(task.events[0])
 					if err != nil {
 						workloadEventAddFail.Inc()
-						log.Debugf("Error adding event: version %d. Error: %s", task.version, err)
+						a.log.Debugf("Error adding event: version %d. Error: %s", task.version, err)
 					} else {
 						workloadEventAdd.Inc()
 					}
 				case bulk:
 					bulkSize := len(task.events)
-					log.Debugf("Inserting bulk: version %d, size %d, first event: %s", task.version, bulkSize, task.events[0])
+					a.log.Debugf("Inserting bulk: version %d, size %d, first event: %s", task.version, bulkSize, task.events[0])
 					_, err := a.client.AddBulk(task.events)
 					if err != nil {
 						workloadEventAddFail.Add(float64(bulkSize))
-						log.Debugf("Error inserting bulk: version %d, size %d. Error: %s", task.version, bulkSize, err)
+						a.log.Debugf("Error inserting bulk: version %d, size %d. Error: %s", task.version, bulkSize, err)
 					} else {
 						workloadEventAdd.Add(float64(bulkSize))
 					}
 				case membership:
-					log.Debugf("Querying membership: event %s", task.events[0])
+					a.log.Debugf("Querying membership: event %s", task.events[0])
 					_, _ = a.client.Membership([]byte(task.events[0]), &task.version)
 					workloadQueryMembership.Inc()
 				case incremental:
-					log.Debugf("Querying incremental: start %d, end %d", task.start, task.end)
+					a.log.Debugf("Querying incremental: start %d, end %d", task.start, task.end)
 					_, _ = a.client.Incremental(task.start, task.end)
 					workloadQueryIncremental.Inc()
 				}

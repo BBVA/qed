@@ -90,7 +90,6 @@ func DefaultConfig() *Config {
 	currentDir := getCurrentDir()
 
 	return &Config{
-		Log:               "info",
 		APIKey:            "",
 		NodeID:            hostname,
 		HTTPAddr:          "127.0.0.1:8800",
@@ -108,7 +107,7 @@ func DefaultConfig() *Config {
 		SSLCertificate:    "",
 		SSLCertificateKey: "",
 		PrivateKeyPath:    "",
-		DbWalTtl: 0,
+		DbWalTtl:          0,
 	}
 }
 

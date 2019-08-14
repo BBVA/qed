@@ -20,11 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/rocksdb"
 )
 
@@ -37,9 +37,6 @@ type RestoreConfig struct {
 
 	// Path to restore a backup.
 	RestorePath string `desc:"Path to restore a backup"`
-
-	// Log level
-	Log string `desc:"Set log level to info, error or debug"`
 }
 
 func defaultRestoreConfig() *RestoreConfig {
@@ -70,7 +67,8 @@ func configRestore() context.Context {
 
 	err := gpflag.ParseTo(conf, restoreCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("restore.config"), conf)
 }

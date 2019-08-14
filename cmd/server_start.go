@@ -17,12 +17,11 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/util"
 )
@@ -42,38 +41,48 @@ func runServerStart(cmd *cobra.Command, args []string) error {
 
 	conf := serverCtx.Value(k("server.config")).(*server.Config)
 
+	// create main logger
+	logOpts := &log2.LoggerOptions{
+		Name:            "qed",
+		IncludeLocation: true,
+		Level:           log2.LevelFromString(conf.Log),
+		Output:          log2.DefaultOutput,
+		TimeFormat:      log2.DefaultTimeFormat,
+	}
+	logger := log2.New(logOpts)
+
 	// URL parse
 	err = checkServerParams(conf)
 	if err != nil {
-		return err
+		logger.Fatalf("Wrong parameters: %v", err)
 	}
 
 	if conf.SSLCertificate != "" && conf.SSLCertificateKey != "" {
 		if _, err := os.Stat(conf.SSLCertificate); os.IsNotExist(err) {
-			log.Infof("Can't find certificate .crt file: %v", err)
+			logger.Fatalf("Can't find certificate .crt file: %v", err)
 		} else if _, err := os.Stat(conf.SSLCertificateKey); os.IsNotExist(err) {
-			log.Infof("Can't find certificate .key file: %v", err)
+			logger.Fatalf("Can't find certificate .key file: %v", err)
 		} else {
-			log.Info("EnabledTLS")
+			logger.Info("TLS enabled")
 			conf.EnableTLS = true
 		}
 	}
 
-	log.SetLogger("server", conf.Log)
-	fmt.Printf("CONF: %+v\n", conf)
-	srv, err := server.NewServer(conf)
+	logger.Infof("Server configuration: \n%+v", conf)
+
+	srv, err := server.NewServerWithLogger(conf, logger.Named("server"))
 	if err != nil {
-		log.Fatalf("Can't start QED server: %v", err)
+		logger.Fatalf("Can't create QED server: %v", err)
 	}
 
 	err = srv.Start()
 	if err != nil {
-		log.Fatalf("Can't start QED server: %v", err)
+		logger.Fatalf("Can't start QED server: %v", err)
 	}
 
 	util.AwaitTermSignal(srv.Stop)
 
-	log.Debug("Stopping server, about to exit...")
+	logger.Info("Stopping server, about to exit...")
 
 	return nil
 }

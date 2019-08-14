@@ -18,7 +18,7 @@ package gossip
 import (
 	"sync"
 
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 )
 
 // A Subscriber to agent gossip message queues
@@ -45,6 +45,7 @@ type Subscribers []chan *Message
 // gossip Messages
 type MessageBus struct {
 	pool [MAXMESSAGEID]Subscribers
+	log  log2.Logger
 	rm   sync.RWMutex
 }
 
@@ -61,7 +62,7 @@ func (eb *MessageBus) Publish(msg *Message) error {
 	eb.rm.RLock()
 	defer eb.rm.RUnlock()
 	if chans := eb.pool[msg.Kind]; len(chans) > 0 {
-		log.Debugf("Agent message bus publising message to %d subscribers", len(chans))
+		eb.log.Debugf("Agent message bus publising message to %d subscribers", len(chans))
 		channels := append(chans[:0:0], chans...)
 		go func(msg *Message, subscribers Subscribers) {
 			for _, s := range subscribers {
@@ -70,7 +71,7 @@ func (eb *MessageBus) Publish(msg *Message) error {
 		}(msg, channels)
 		return nil
 	}
-	log.Debugf("Agent message bus publising message: no subscribers for message kind %d ", msg.Kind)
+	eb.log.Debugf("Agent message bus publising message: no subscribers for message kind %d ", msg.Kind)
 	return NoSubscribersFound
 }
 

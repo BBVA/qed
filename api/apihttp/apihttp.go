@@ -26,7 +26,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/protocol"
 )
 
@@ -565,19 +565,19 @@ func GetReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWrite
 
 // LogHandler Logs the Http Status for a request into fileHandler and returns a
 // httphandler function which is a wrapper to log the requests.
-func LogHandler(handle http.Handler) http.HandlerFunc {
+func LogHandler(handle http.Handler, logger log2.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
 		start := time.Now()
 		writer := statusWriter{w, 0, 0}
 		handle.ServeHTTP(&writer, request)
 		latency := time.Now().Sub(start)
 
-		log.Debugf("Request: lat %d %+v", latency, request)
+		logger.Debugf("Request: lat %d %+v", latency, request)
 		if writer.status >= 400 && writer.status < 500 {
-			log.Infof("Bad Request: %d %+v", latency, request)
+			logger.Infof("Bad Request: %d %+v", latency, request)
 		}
 		if writer.status >= 500 {
-			log.Infof("Server error: %d %+v", latency, request)
+			logger.Infof("Server error: %d %+v", latency, request)
 		}
 	}
 }

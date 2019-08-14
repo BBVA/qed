@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/assert"
 )
@@ -128,8 +127,6 @@ func TestPruneToInsert(t *testing.T) {
 }
 
 func BenchmarkPruneToInsert(b *testing.B) {
-
-	log.SetLogger("BenchmarkPruneToInsert", log.SILENT)
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {

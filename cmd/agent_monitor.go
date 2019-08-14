@@ -18,13 +18,14 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync/atomic"
 	"time"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
 	"github.com/octago/sflags/gen/gpflag"
@@ -104,7 +105,8 @@ func configMonitor() context.Context {
 	conf := newMonitorConfig()
 	err := gpflag.ParseTo(conf, agentMonitorCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse monitor flags: %v\n", err)
+		os.Exit(1)
 	}
 
 	ctx := context.WithValue(agentCtx, k("monitor.config"), conf)
@@ -116,7 +118,15 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 	agentConfig := agentMonitorCtx.Value(k("agent.config")).(*gossip.Config)
 	conf := agentMonitorCtx.Value(k("monitor.config")).(*monitorConfig)
 
-	log.SetLogger("monitor", agentConfig.Log)
+	// create main logger
+	logOpts := &log2.LoggerOptions{
+		Name:            "qed.monitor",
+		IncludeLocation: true,
+		Level:           log2.LevelFromString(agentConfig.Log),
+		Output:          log2.DefaultOutput,
+		TimeFormat:      log2.DefaultTimeFormat,
+	}
+	logger := log2.New(logOpts)
 
 	// URL parse
 	err := checkMonitorParams(conf)
@@ -124,23 +134,24 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, logger.Named("agent.notifier"))
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
 		return err
 	}
-	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, logger.Named("agent.task-manager"))
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
 
-	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier)
+	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier, logger.Named("agent"))
 	if err != nil {
 		return err
 	}
 
-	lagf := newLagFactory(1 * time.Second)
+	lagf := newLagFactory(1*time.Second, logger.Named("agent.lag-factory"))
 	lagf.start()
+	incF := incrementalFactory{logger.Named("agent.incremental-factory")}
 	defer lagf.stop()
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{incrementalFactory{}, lagf})
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{incF, lagf}, logger.Named("agent.processor"))
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 
@@ -171,7 +182,9 @@ func checkMonitorParams(conf *monitorConfig) error {
 	return nil
 }
 
-type incrementalFactory struct{}
+type incrementalFactory struct {
+	log log2.Logger
+}
 
 func (i incrementalFactory) Metrics() []prometheus.Collector {
 	return []prometheus.Collector{
@@ -197,20 +210,20 @@ func (i incrementalFactory) New(ctx context.Context) gossip.Task {
 		if err != nil {
 			QedMonitorGetIncrementalProofErrTotal.Inc()
 			_ = a.Notifier.Alert(fmt.Sprintf("Monitor is unable to get incremental proof from QED server: %s", err.Error()))
-			log.Infof("Monitor is unable to get incremental proof from QED server: %s", err.Error())
+			i.log.Infof("Monitor is unable to get incremental proof from QED server: %s", err.Error())
 			return err
 		}
 
 		ok, err := a.Qed.IncrementalVerify(proof, &firstSnap, &lastSnap)
 		if err != nil {
-			log.Infof("Error verifying incremental proof: %v", err)
+			i.log.Infof("Error verifying incremental proof: %v", err)
 			return nil
 		}
 		if !ok {
 			_ = a.Notifier.Alert(fmt.Sprintf("Monitor is unable to verify incremental proof from %d to %d", firstSnap.Version, lastSnap.Version))
-			log.Infof("Monitor is unable to verify incremental proof from %d to %d", firstSnap.Version, lastSnap.Version)
+			i.log.Infof("Monitor is unable to verify incremental proof from %d to %d", firstSnap.Version, lastSnap.Version)
 		}
-		log.Debugf("Monitor verified a consistency proof between versions %d and %d: %v\n", firstSnap.Version, lastSnap.Version, ok)
+		i.log.Debugf("Monitor verified a consistency proof between versions %d and %d: %v\n", firstSnap.Version, lastSnap.Version, ok)
 		return nil
 	}
 }
@@ -221,12 +234,18 @@ type lagFactory struct {
 	counter     uint64
 	ticker      *time.Ticker
 	quit        chan struct{}
+	log         log2.Logger
 }
 
-func newLagFactory(t time.Duration) *lagFactory {
+func newLagFactory(t time.Duration, l log2.Logger) *lagFactory {
+	logger := l
+	if logger == nil {
+		logger = log2.L()
+	}
 	return &lagFactory{
 		ticker: time.NewTicker(t),
 		quit:   make(chan struct{}),
+		log:    logger,
 	}
 }
 
@@ -277,7 +296,7 @@ func (l *lagFactory) New(ctx context.Context) gossip.Task {
 		rate := atomic.LoadUint64(&l.rate)
 
 		if localLag > rate {
-			log.Infof("Gossip lag %d > Rate %d", localLag, rate)
+			l.log.Infof("Gossip lag %d > Rate %d", localLag, rate)
 		}
 
 		count, err := a.SnapshotStore.Count()
@@ -293,11 +312,11 @@ func (l *lagFactory) New(ctx context.Context) gossip.Task {
 		if storeLag > rate {
 			err := a.Notifier.Alert(fmt.Sprintf("Lag between gossip and snapshot store: %d", storeLag))
 			if err != nil {
-				log.Infof("LagTask had an error sending a notification: %v", err)
+				l.log.Infof("LagTask had an error sending a notification: %v", err)
 			}
-			log.Debugf("Lag between gossip and snapshot store: last seen version %d - store count %d  = %d", lastVersion, count, storeLag)
+			l.log.Debugf("Lag between gossip and snapshot store: last seen version %d - store count %d  = %d", lastVersion, count, storeLag)
 		}
-		log.Debugf("Lag status: Rate: %d Counter: %d, Local Lag: %d Store Lag: %d", rate, counter, localLag, storeLag)
+		l.log.Debugf("Lag status: Rate: %d Counter: %d, Local Lag: %d Store Lag: %d", rate, counter, localLag, storeLag)
 		return nil
 	}
 }

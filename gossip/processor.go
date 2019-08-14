@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/protocol"
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/prometheus/client_golang/prometheus"
@@ -50,15 +50,23 @@ type BatchProcessor struct {
 	quitCh  chan bool
 	ctx     context.Context
 	id      int
+	log     log2.Logger
 }
 
-func NewBatchProcessor(a *Agent, tf []TaskFactory) *BatchProcessor {
+func NewBatchProcessor(a *Agent, tf []TaskFactory, l log2.Logger) *BatchProcessor {
+
+	logger := l
+	if logger == nil {
+		logger = log2.L()
+	}
+
 	b := &BatchProcessor{
 		mh:     &codec.MsgpackHandle{},
 		a:      a,
 		tf:     tf,
 		quitCh: make(chan bool),
 		ctx:    context.WithValue(context.Background(), "agent", a),
+		log:    logger,
 	}
 
 	// register all tasks metrics
@@ -87,7 +95,7 @@ func (d *BatchProcessor) wasProcessed(b *protocol.BatchSnapshots) bool {
 	var buf bytes.Buffer
 	err := codec.NewEncoder(&buf, d.mh).Encode(b.Snapshots)
 	if err != nil {
-		log.Infof("Error encoding batchsnapshots to calculate its digest. Dropping batch.")
+		d.log.Infof("Error encoding batchsnapshots to calculate its digest. Dropping batch.")
 		return false
 	}
 	bb := buf.Bytes()
@@ -114,28 +122,28 @@ func (d *BatchProcessor) Subscribe(id int, ch <-chan *Message) {
 			case msg := <-ch:
 				// if the message is not a batch, ignore it
 				if msg.Kind != BatchMessageType {
-					log.Debugf("BatchProcessor got an unknown message from agent")
+					d.log.Debug("BatchProcessor got an unknown message from agent")
 					continue
 				}
 
 				batch := new(protocol.BatchSnapshots)
 				err := batch.Decode(msg.Payload)
 				if err != nil {
-					log.Infof("BatchProcessor unable to decode batch!. Dropping message.")
+					d.log.Info("BatchProcessor unable to decode batch!. Dropping message.")
 					continue
 				}
 
 				if d.wasProcessed(batch) {
-					log.Debugf("BatchProcessor got an already processed message from agent")
+					d.log.Debug("BatchProcessor got an already processed message from agent")
 					continue
 				}
 
 				ctx := context.WithValue(d.ctx, "batch", batch)
 				for _, t := range d.tf {
-					log.Debugf("Batch processor creating a new task")
+					d.log.Debug("Batch processor creating a new task")
 					err := d.a.Tasks.Add(t.New(ctx))
 					if err != nil {
-						log.Infof("BatchProcessor was unable to enqueue new task becasue %v", err)
+						d.log.Infof("BatchProcessor was unable to enqueue new task becasue %v", err)
 					}
 				}
 

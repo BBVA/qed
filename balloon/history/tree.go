@@ -22,6 +22,7 @@ package history
 import (
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/storage"
 )
 
@@ -30,9 +31,15 @@ type HistoryTree struct {
 	hasher     hashing.Hasher
 	writeCache cache.ModifiableCache
 	readCache  cache.Cache
+
+	log log2.Logger
 }
 
 func NewHistoryTree(hasherF func() hashing.Hasher, store storage.Store, cacheSize uint16) *HistoryTree {
+	return NewHistoryTreeWithLogger(hasherF, store, cacheSize, log2.L())
+}
+
+func NewHistoryTreeWithLogger(hasherF func() hashing.Hasher, store storage.Store, cacheSize uint16, logger log2.Logger) *HistoryTree {
 
 	// create cache for Adding
 	writeCache := cache.NewLruReadThroughCache(storage.HistoryTable, store, cacheSize)
@@ -45,6 +52,7 @@ func NewHistoryTree(hasherF func() hashing.Hasher, store storage.Store, cacheSiz
 		hasher:     hasherF(),
 		writeCache: writeCache,
 		readCache:  readCache,
+		log:        logger,
 	}
 }
 
@@ -53,7 +61,7 @@ func NewHistoryTree(hasherF func() hashing.Hasher, store storage.Store, cacheSiz
 // with the storage mutations to be done at balloon level.
 func (t *HistoryTree) Add(eventDigest hashing.Digest, version uint64) (hashing.Digest, []*storage.Mutation, error) {
 
-	// log.Debugf("Adding new event digest %x with version %d", eventDigest, version)
+	// t.log.Tracef("Adding new event digest %x with version %d", eventDigest, version)
 
 	// build a visitable pruned tree and then visit it to generate the root hash
 	visitor := newInsertVisitor(t.hasher, t.writeCache, storage.HistoryTable)
@@ -82,7 +90,7 @@ func (t *HistoryTree) AddBulk(eventDigests []hashing.Digest, initialVersion uint
 // version. It builds an audit-path visitor to build the proof.
 func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, error) {
 
-	//log.Debugf("Proving membership for index %d with version %d", index, version)
+	//t.log.Tracef("Proving membership for index %d with version %d", index, version)
 
 	// build a visitable pruned tree and then visit it to collect the audit path
 	visitor := newAuditPathVisitor(t.hasherF(), t.readCache)
@@ -100,7 +108,7 @@ func (t *HistoryTree) ProveMembership(index, version uint64) (*MembershipProof, 
 // It builds an audit-path visitor to build the proof.
 func (t *HistoryTree) ProveConsistency(start, end uint64) (*IncrementalProof, error) {
 
-	//log.Debugf("Proving consistency between versions %d and %d", start, end)
+	//t.log.Tracef("Proving consistency between versions %d and %d", start, end)
 
 	// build a visitable pruned tree and then visit it to collect the audit path
 	visitor := newAuditPathVisitor(t.hasherF(), t.readCache)

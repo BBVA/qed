@@ -22,7 +22,7 @@ import (
 
 	"github.com/bbva/qed/crypto/sign"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,9 +53,14 @@ type Sender struct {
 	TTL        int
 	signer     sign.Signer
 	quitCh     chan bool
+	log        log2.Logger
 }
 
 func NewSender(a *gossip.Agent, s sign.Signer, size, ttl, n int) *Sender {
+	return NewSenderWithLogger(a, s, size, ttl, n, log2.Default())
+}
+
+func NewSenderWithLogger(a *gossip.Agent, s sign.Signer, size, ttl, n int, logger log2.Logger) *Sender {
 	return &Sender{
 		agent:      a,
 		Interval:   100 * time.Millisecond,
@@ -64,6 +69,7 @@ func NewSender(a *gossip.Agent, s sign.Signer, size, ttl, n int) *Sender {
 		TTL:        ttl,
 		signer:     s,
 		quitCh:     make(chan bool),
+		log:        logger,
 	}
 }
 
@@ -72,7 +78,7 @@ func NewSender(a *gossip.Agent, s sign.Signer, size, ttl, n int) *Sender {
 func (s Sender) Start(ch chan *protocol.Snapshot) {
 	QedSenderInstancesCount.Inc()
 	for i := 0; i < s.NumSenders; i++ {
-		log.Debugf("Starting sender %d", i)
+		s.log.Debugf("Starting sender %d", i)
 		go s.batcher(i, ch)
 	}
 }
@@ -104,7 +110,7 @@ func (s Sender) batcher(id int, ch chan *protocol.Snapshot) {
 			if len(batch.Snapshots) == s.BatchSize {
 				payload, err := batch.Encode()
 				if err != nil {
-					log.Infof("Error encoding batch, dropping it")
+					s.log.Warn("Error encoding batch, dropping it")
 					continue
 				}
 
@@ -119,7 +125,7 @@ func (s Sender) batcher(id int, ch chan *protocol.Snapshot) {
 			}
 			ss, err := s.doSign(snap)
 			if err != nil {
-				log.Errorf("Failed signing message: %v", err)
+				s.log.Warnf("Failed signing message: %v", err)
 			}
 			batch.Snapshots = append(batch.Snapshots, ss)
 		case <-time.After(s.Interval):
@@ -128,7 +134,7 @@ func (s Sender) batcher(id int, ch chan *protocol.Snapshot) {
 			if len(batch.Snapshots) > 0 {
 				payload, err := batch.Encode()
 				if err != nil {
-					log.Infof("Error encoding batch, dropping it")
+					s.log.Warn("Error encoding batch, dropping it")
 					continue
 				}
 				s.agent.Out.Publish(&gossip.Message{
@@ -153,7 +159,7 @@ func (s Sender) Stop() {
 func (s *Sender) doSign(snapshot *protocol.Snapshot) (*protocol.SignedSnapshot, error) {
 	signature, err := s.signer.Sign([]byte(fmt.Sprintf("%v", snapshot)))
 	if err != nil {
-		log.Info("Publisher: error signing snapshot")
+		s.log.Error("Publisher: error signing snapshot")
 		return nil, err
 	}
 	return &protocol.SignedSnapshot{Snapshot: snapshot, Signature: signature}, nil
