@@ -25,7 +25,7 @@
         state: absent
       with_items:
         - /var/qed/db 
-        - /var/qed/wal
+        - /var/qed/raft
   tags:
     - clean
 

@@ -31,7 +31,7 @@ LEADER_CONFIG+=('--mgmt-addr 127.0.0.1:870${i}')
 LEADER_CONFIG+=('--node-id server${i}')
 LEADER_CONFIG+=('--private-key-path /var/tmp/qed_ed25519')
 LEADER_CONFIG+=('--raft-addr 127.0.0.1:850${i}')
-LEADER_CONFIG+=('--raft-path /var/tmp/qed${i}/wal')
+LEADER_CONFIG+=('--raft-path /var/tmp/qed${i}/raft')
 
 FOLLOWER_CONFIG=("${LEADER_CONFIG[@]}")
 FOLLOWER_CONFIG+=('--raft-join-addr 127.0.0.1:8500')

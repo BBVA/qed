@@ -34,7 +34,7 @@ $QED_HOME/qed server start \
 --gossip-join-addr "{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:8400" \
 {% endfor %}
 {% endif %}
---raft-path /var/qed/wal
+--raft-path /var/qed/raft
 {% endif %}
 
 {% if 'role_monitor' in group_names %}

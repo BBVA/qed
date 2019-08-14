@@ -484,7 +484,7 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 //  "MetricsAddr": 			"127.0.0.1:8600",
 //  "RaftJoinAddr": 		"[]",
 //  "DBPath": 				"/var/tmp/db",
-//  "RaftPath": 			"/var/tmp/wal",
+//  "RaftPath": 			"/var/tmp/raft",
 //  "GossipAddr":		 	"127.0.0.1:8400",
 //  "GossipJoinAddr": 		"[]",
 //  "PrivateKeyPath": 		"/var/tmp",
