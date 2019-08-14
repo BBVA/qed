@@ -21,7 +21,6 @@ import (
 	"context"
 	io "io"
 
-	"github.com/bbva/qed/log"
 	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
 )
@@ -33,7 +32,6 @@ type fsmSnapshot struct {
 
 // Persist writes the snapshot to the given sink.
 func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
-	log.Debugf("Persisting snapshot with ID: %s", sink.ID())
 	err := func() error {
 		data, err := f.encode()
 		if err != nil {
@@ -52,9 +50,7 @@ func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 }
 
 // Release is invoked when we are finished with the snapshot.
-func (f *fsmSnapshot) Release() {
-	log.Debug("Snapshot created.")
-}
+func (f *fsmSnapshot) Release() {}
 
 func (f *fsmSnapshot) encode() ([]byte, error) {
 	return encodeMsgPack(f)

@@ -25,7 +25,6 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
 )
@@ -80,7 +79,7 @@ func (s *fsmState) shouldApply(f *fsmState) bool {
 func (n *RaftNode) loadState() error {
 	kvstate, err := n.db.Get(storage.FSMStateTable, storage.FSMStateTableKey)
 	if err == storage.ErrKeyNotFound {
-		log.Infof("Unable to find previous state: assuming a clean instance")
+		n.log.Infof("Unable to find previous state: assuming a clean instance")
 		n.state = new(fsmState)
 		return nil
 	}
@@ -199,7 +198,7 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 
 	default:
 		// ignore
-		log.Infof("Unknown command: %v", cmd.id)
+		n.log.Warnf("Unknown command: %v", cmd.id)
 		return nil
 
 	}
@@ -209,7 +208,7 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 // change is committed. It takes the index at which the configuration was
 // written and the configuration value.
 func (n *RaftNode) StoreConfiguration(index uint64, config raft.Configuration) {
-	log.Debugf("Node [%s] - Configuration changed on index [%d]: %+v", n.info.NodeId, index, config)
+	n.log.Debugf("Node [%s] - Configuration changed on index [%d]: %+v", n.info.NodeId, index, config)
 }
 
 // Snapshot returns a snapshot of the key-value store. The caller must ensure that
@@ -217,14 +216,14 @@ func (n *RaftNode) StoreConfiguration(index uint64, config raft.Configuration) {
 // guarantees that this function will not be called concurrently with Apply.
 func (n *RaftNode) Snapshot() (raft.FSMSnapshot, error) {
 	lastSeqNum := n.db.LastWALSequenceNumber()
-	log.Debugf("Generating snapshot until seqNum: %d (balloon version %d)", lastSeqNum, n.balloon.Version())
+	n.log.Debugf("Generating snapshot until seqNum: %d (balloon version %d)", lastSeqNum, n.balloon.Version())
 	return &fsmSnapshot{lastSeqNum, n.balloon.Version()}, nil
 }
 
 // Restore restores the node to a previous state.
 func (n *RaftNode) Restore(rc io.ReadCloser) error {
 
-	log.Infof("Recovering from snapshot (last applied version: %d)...", n.state.BalloonVersion)
+	n.log.Infof("Recovering from snapshot (last applied version: %d)...", n.state.BalloonVersion)
 
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(rc); err != nil {
@@ -252,7 +251,7 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 					return false, nil
 				}
 				if metadata.PreviousVersion > lastAppliedVersion {
-					log.Infof("Gap found between the last applied version [%d] and the new transaction version [%d]. Backup needed to recover.", lastAppliedVersion, metadata.PreviousVersion)
+					n.log.Errorf("Gap found between the last applied version [%d] and the new transaction version [%d]. Backup needed to recover.", lastAppliedVersion, metadata.PreviousVersion)
 					return false, errors.New("Gap found between versions")
 				}
 				if metadata.NewVersion < lastAppliedVersion {
@@ -276,7 +275,7 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 	n.loadState()
 	n.balloon.RefreshVersion()
 
-	log.Infof("Recovering finished, new version: %d", n.state.BalloonVersion)
+	n.log.Infof("Recovering finished, new version: %d", n.state.BalloonVersion)
 
 	return nil
 }
@@ -286,12 +285,12 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 	resp := new(fsmResponse)
 	snapshotBulk, mutations, err := n.balloon.AddBulk(hashes)
 	if err != nil {
-		panic(fmt.Sprintf("Unable to add bulk: %v", err))
+		n.log.Panicf("Unable to add bulk: %v", err)
 	}
 
 	stateBuff, err := state.encode()
 	if err != nil {
-		panic(fmt.Sprintf("Unable to encode state: %v", err))
+		n.log.Panicf("Unable to encode state: %v", err)
 	}
 	mutations = append(mutations, storage.NewMutation(storage.FSMStateTable, storage.FSMStateTableKey, stateBuff))
 
@@ -301,12 +300,12 @@ func (n *RaftNode) applyAdd(hashes []hashing.Digest, state *fsmState) *fsmRespon
 	}
 	metaBytes, err := meta.encode()
 	if err != nil {
-		panic(fmt.Sprintf("Unable to encode version metadata: %v", err))
+		n.log.Panicf("Unable to encode version metadata: %v", err)
 	}
 
 	err = n.db.Mutate(mutations, metaBytes)
 	if err != nil {
-		panic(fmt.Sprintf("Unable to mutate database: %v", err))
+		n.log.Panicf("Unable to mutate database: %v", err)
 	}
 	n.state = state
 	resp.val = snapshotBulk

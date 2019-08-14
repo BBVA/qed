@@ -8,95 +8,95 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-// Hclog2Logger implements Hashicorp's hclog.Logger interface using QED's Logger.
+// HclogAdapter implements Hashicorp's hclog.Logger interface using QED's Logger.
 // It's a workaround for raft system. Hashicorp's Raft doesn't support other
 // logger than hclog. This logger implements only methods used by Raft.
-type Hclog2Logger struct {
+type HclogAdapter struct {
 	log Logger
 }
 
-func NewHclog2Logger(log Logger) *Hclog2Logger {
-	return &Hclog2Logger{log: log}
+func NewHclogAdapter(log Logger) *HclogAdapter {
+	return &HclogAdapter{log: log}
 }
 
 // Trace implementation
-func (l Hclog2Logger) Trace(msg string, args ...interface{}) {
+func (l HclogAdapter) Trace(msg string, args ...interface{}) {
 	l.log.Tracef("%s: %v", msg, argsToString(args...))
 }
 
 // Debug implementation
-func (l Hclog2Logger) Debug(msg string, args ...interface{}) {
+func (l HclogAdapter) Debug(msg string, args ...interface{}) {
 	l.log.Debugf("%s: %v", msg, argsToString(args...))
 }
 
 // Info implementation
-func (l Hclog2Logger) Info(msg string, args ...interface{}) {
+func (l HclogAdapter) Info(msg string, args ...interface{}) {
 	l.log.Infof("%s: %v", msg, argsToString(args...))
 }
 
 // Warn implementation
-func (l Hclog2Logger) Warn(msg string, args ...interface{}) {
+func (l HclogAdapter) Warn(msg string, args ...interface{}) {
 	l.log.Warnf("%s: %v", msg, argsToString(args...))
 }
 
 // Error implementation
-func (l Hclog2Logger) Error(msg string, args ...interface{}) {
+func (l HclogAdapter) Error(msg string, args ...interface{}) {
 	l.log.Errorf("%s: %v", msg, argsToString(args...))
 }
 
 // IsTrace implementation.
-func (l Hclog2Logger) IsTrace() bool {
+func (l HclogAdapter) IsTrace() bool {
 	_, ok := l.log.(*traceLogger)
 	return ok
 }
 
 // IsDebug implementation.
-func (l Hclog2Logger) IsDebug() bool {
+func (l HclogAdapter) IsDebug() bool {
 	_, ok := l.log.(*debugLogger)
 	return ok
 }
 
 // IsInfo implementation.
-func (l Hclog2Logger) IsInfo() bool {
+func (l HclogAdapter) IsInfo() bool {
 	_, ok := l.log.(*infoLogger)
 	return ok
 }
 
 // IsWarn implementation.
-func (l Hclog2Logger) IsWarn() bool {
+func (l HclogAdapter) IsWarn() bool {
 	_, ok := l.log.(*warnLogger)
 	return ok
 }
 
 // IsError implementation.
-func (l Hclog2Logger) IsError() bool {
+func (l HclogAdapter) IsError() bool {
 	_, ok := l.log.(*errorLogger)
 	return ok
 }
 
 // With implementation.
-func (l Hclog2Logger) With(args ...interface{}) hclog.Logger {
+func (l HclogAdapter) With(args ...interface{}) hclog.Logger {
 	// no need to implement that as Raft doesn't use this method.
 	return l
 }
 
 // Named implementation.
-func (l Hclog2Logger) Named(name string) hclog.Logger {
-	return Hclog2Logger{log: l.log.Named(name)}
+func (l HclogAdapter) Named(name string) hclog.Logger {
+	return HclogAdapter{log: l.log.Named(name)}
 }
 
 // ResetNamed implementation.
-func (l Hclog2Logger) ResetNamed(name string) hclog.Logger {
-	return Hclog2Logger{log: l.log.ResetNamed(name)}
+func (l HclogAdapter) ResetNamed(name string) hclog.Logger {
+	return HclogAdapter{log: l.log.ResetNamed(name)}
 }
 
 // SetLevel implementation.
-func (l Hclog2Logger) SetLevel(level hclog.Level) {
-	// no need to implement that as Raft doesn't use this method.
+func (l HclogAdapter) SetLevel(level hclog.Level) {
+	l.log = l.log.WithLevel(Level(level))
 }
 
 // StandardLogger implementation.
-func (l Hclog2Logger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
+func (l HclogAdapter) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Logger {
 	return l.log.StdLogger(&StdLoggerOptions{
 		InferLevels: opts.InferLevels,
 		ForceLevel:  Level(opts.ForceLevel),
@@ -104,7 +104,7 @@ func (l Hclog2Logger) StandardLogger(opts *hclog.StandardLoggerOptions) *log.Log
 }
 
 // StandardWriter implementation
-func (l Hclog2Logger) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer {
+func (l HclogAdapter) StandardWriter(opts *hclog.StandardLoggerOptions) io.Writer {
 	return l.log.StdWriter(&StdLoggerOptions{
 		InferLevels: opts.InferLevels,
 		ForceLevel:  Level(opts.ForceLevel),

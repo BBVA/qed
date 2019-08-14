@@ -19,7 +19,6 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -361,8 +360,6 @@ func TestPruneToCheckConsistency(t *testing.T) {
 
 func BenchmarkPruneToFindConsistent(b *testing.B) {
 
-	log.SetLogger("BenchmarkPruneToFindConsistent", log.SILENT)
-
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
 		pruned := pruneToFindConsistent(0, i)
@@ -372,8 +369,6 @@ func BenchmarkPruneToFindConsistent(b *testing.B) {
 }
 
 func BenchmarkPruneToCheckConsistency(b *testing.B) {
-
-	log.SetLogger("BenchmarkPruneToCheckConsistency", log.SILENT)
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {

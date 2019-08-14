@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/spec"
 )
 
@@ -147,7 +146,6 @@ func TestStartCluster(t *testing.T) {
 		a2()
 		t.Logf(report())
 	}()
-	log.SetLogger("e2e", log.SILENT)
 
 	let(t, "Start three servers", func(t *testing.T) {
 		_, err := b0()

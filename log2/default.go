@@ -18,21 +18,19 @@ var (
 	DefaultOutput io.Writer = os.Stderr
 
 	// DefaultLevel is used as the default log level.
-	DefaultLevel = Info
-
-	// DefaultOptions is used to create a default logger.
-	// Once the logger is created, these options are ignored,
-	// so set them as soon as the process starts.
-	DefaultOptions = &LoggerOptions{
-		Level:  DefaultLevel,
-		Output: DefaultOutput,
-	}
+	DefaultLevel = Off
 )
 
+// Default is used to create a default logger.
+// Once the logger is created, these options are ignored,
+// so set them as soon as the process starts.
 func Default() Logger {
 	defLock.Do(func() {
 		if defLogger == nil {
-			defLogger = New(DefaultOptions)
+			defLogger = New(&LoggerOptions{
+				Level:  DefaultLevel,
+				Output: DefaultOutput,
+			})
 		}
 	})
 	return defLogger

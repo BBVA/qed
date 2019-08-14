@@ -17,7 +17,7 @@
 package hyper
 
 import (
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/storage"
@@ -32,6 +32,8 @@ type defaultBatchLoader struct {
 	cacheHeightLimit uint16
 	cache            cache.Cache
 	store            storage.Store
+
+	log log2.Logger
 }
 
 func NewDefaultBatchLoader(store storage.Store, cache cache.Cache, cacheHeightLimit uint16) *defaultBatchLoader {
@@ -39,6 +41,16 @@ func NewDefaultBatchLoader(store storage.Store, cache cache.Cache, cacheHeightLi
 		cacheHeightLimit: cacheHeightLimit,
 		cache:            cache,
 		store:            store,
+		log:              log2.L(),
+	}
+}
+
+func NewDefaultBatchLoaderWithLogger(store storage.Store, cache cache.Cache, cacheHeightLimit uint16, logger log2.Logger) *defaultBatchLoader {
+	return &defaultBatchLoader{
+		cacheHeightLimit: cacheHeightLimit,
+		cache:            cache,
+		store:            store,
+		log:              logger,
 	}
 }
 
@@ -64,7 +76,7 @@ func (l defaultBatchLoader) loadBatchFromStore(pos position) *batchNode {
 		if err == storage.ErrKeyNotFound {
 			return newEmptyBatchNode(len(pos.Index))
 		}
-		log.Fatalf("Oops, something went wrong. Unable to load batch: %v", err)
+		l.log.Fatalf("Oops, something went wrong. Unable to load batch: %v", err)
 	}
 	batch := parseBatchNode(len(pos.Index), kv.Value)
 	return batch

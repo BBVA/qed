@@ -30,7 +30,7 @@ import (
 	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/sign"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage/rocks"
@@ -51,10 +51,17 @@ type Server struct {
 	sender             *Sender
 	agent              *gossip.Agent
 	snapshotsCh        chan *protocol.Snapshot
+	log                log2.Logger
 }
 
 // NewServer creates a new Server based on the parameters it receives.
 func NewServer(conf *Config) (*Server, error) {
+	return NewServerWithLogger(conf, log2.Default())
+}
+
+// NewServerWithLogger creates a new Server based on the parameters it receives and
+// configures a logger.
+func NewServerWithLogger(conf *Config, logger log2.Logger) (*Server, error) {
 
 	bootstrap := false
 	if len(conf.RaftJoinAddr) <= 0 {
@@ -64,14 +71,15 @@ func NewServer(conf *Config) (*Server, error) {
 	server := &Server{
 		conf:      conf,
 		bootstrap: bootstrap,
+		log:       logger,
 	}
 
-	log.Infof("ensuring directory at %s exists", conf.DBPath)
+	logger.Infof("Ensuring directory at %s exists", conf.DBPath)
 	if err := os.MkdirAll(conf.DBPath, 0755); err != nil {
 		return nil, err
 	}
 
-	log.Infof("ensuring directory at %s exists", conf.RaftPath)
+	logger.Infof("Ensuring directory at %s exists", conf.RaftPath)
 	if err := os.MkdirAll(conf.RaftPath, 0755); err != nil {
 		return nil, err
 	}
@@ -94,10 +102,10 @@ func NewServer(conf *Config) (*Server, error) {
 	// Create profiling server
 	if server.conf.EnableProfiling {
 		go func() {
-			log.Debug("	* Starting QED Profiling server in addr: ", server.conf.ProfilingAddr)
+			logger.Infof("\t* Starting QED Profiling server in addr: %s", server.conf.ProfilingAddr)
 			err := http.ListenAndServe(server.conf.ProfilingAddr, nil)
 			if err != http.ErrServerClosed {
-				log.Errorf("Can't start QED Profiling Server: %s", err)
+				logger.Fatalf("Can't start QED Profiling Server: %v", err)
 			}
 		}()
 	}
@@ -108,7 +116,7 @@ func NewServer(conf *Config) (*Server, error) {
 	config.Role = "server"
 	config.NodeName = conf.NodeID
 
-	server.agent, err = gossip.NewAgentFromConfig(config)
+	server.agent, err = gossip.NewAgentFromConfigWithLogger(config, server.log.Named("sender.agent"))
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +125,7 @@ func NewServer(conf *Config) (*Server, error) {
 	server.snapshotsCh = make(chan *protocol.Snapshot, 1<<16)
 
 	// Create sender
-	server.sender = NewSender(server.agent, server.signer, 500, 2, 3)
+	server.sender = NewSenderWithLogger(server.agent, server.signer, 500, 2, 3, server.log.Named("sender"))
 
 	// Create RaftBalloon
 	clusterOpts := consensus.DefaultClusteringOptions()
@@ -127,10 +135,11 @@ func NewServer(conf *Config) (*Server, error) {
 	clusterOpts.RaftLogPath = conf.RaftPath
 	clusterOpts.MgmtAddr = conf.MgmtAddr
 	clusterOpts.Bootstrap = bootstrap
+	clusterOpts.RaftLogging = true
 	if !bootstrap {
 		clusterOpts.Seeds = conf.RaftJoinAddr
 	}
-	server.raftNode, err = consensus.NewRaftNode(clusterOpts, store, server.snapshotsCh)
+	server.raftNode, err = consensus.NewRaftNodeWithLogger(clusterOpts, store, server.snapshotsCh, server.log.Named("cluster"))
 	if err != nil {
 		return nil, err
 	}
@@ -138,14 +147,14 @@ func NewServer(conf *Config) (*Server, error) {
 	// Create http endpoints
 	httpMux := apihttp.NewApiHttp(server.raftNode)
 	if conf.EnableTLS {
-		server.httpServer = newTLSServer(conf.HTTPAddr, httpMux)
+		server.httpServer = newTLSServer(conf.HTTPAddr, httpMux, logger.Named("api"))
 	} else {
-		server.httpServer = newHTTPServer(conf.HTTPAddr, httpMux)
+		server.httpServer = newHTTPServer(conf.HTTPAddr, httpMux, logger.Named("api"))
 	}
 
 	// Create management endpoints
 	mgmtMux := mgmthttp.NewMgmtHttp(server.raftNode)
-	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux)
+	server.mgmtServer = newHTTPServer(conf.MgmtAddr, mgmtMux, logger.Named("mgmt"))
 
 	// register qed metrics
 	server.metrics = newServerMetrics()
@@ -161,88 +170,101 @@ func NewServer(conf *Config) (*Server, error) {
 // Start will start the server in a non-blockable fashion.
 func (s *Server) Start() error {
 	s.metrics.Instances.Inc()
-	log.Infof("Starting QED server %s\n", s.conf.NodeID)
+	s.log.Infof("Starting QED server. Node ID: %s", s.conf.NodeID)
 
 	metadata := map[string]string{}
 	metadata["HTTPAddr"] = s.conf.HTTPAddr
 
-	log.Debugf("	* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
-	s.metricsServer.Start()
+	s.log.Infof("\t* Starting metrics HTTP server in addr: %s", s.conf.MetricsAddr)
+	go func() {
+		if err := s.metricsServer.Start(); err != http.ErrServerClosed {
+			s.log.Fatalf("Can't start metrics HTTP server: %s", err)
+		}
+	}()
+
+	// TODO remove goroutines
 
 	if s.conf.EnableTLS {
 		go func() {
-			log.Debug("	* Starting QED API HTTPS server in addr: ", s.conf.HTTPAddr)
+			s.log.Infof("\t* Starting QED API HTTPS server in addr: %s", s.conf.HTTPAddr)
 			err := s.httpServer.ListenAndServeTLS(
 				s.conf.SSLCertificate,
 				s.conf.SSLCertificateKey,
 			)
 			if err != http.ErrServerClosed {
-				log.Errorf("Can't start QED API HTTP Server: %s", err)
+				s.log.Fatalf("Can't start QED API HTTP Server: %v", err) // TODO should we return error instead of exiting?
 			}
 		}()
 	} else {
 		go func() {
-			log.Debug("	* Starting QED API HTTP server in addr: ", s.conf.HTTPAddr)
+			s.log.Infof("\t* Starting QED API HTTP server in addr: %s", s.conf.HTTPAddr)
 			if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-				log.Errorf("Can't start QED API HTTP Server: %s", err)
+				s.log.Fatalf("Can't start QED API HTTP Server: %v", err)
 			}
 		}()
 	}
 
 	go func() {
-		log.Debug("	* Starting QED MGMT HTTP server in addr: ", s.conf.MgmtAddr)
+		s.log.Infof("\t* Starting QED MGMT HTTP server in addr: %s", s.conf.MgmtAddr)
 		if err := s.mgmtServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start QED MGMT HTTP Server: %s", err)
+			s.log.Fatalf("Can't start QED MGMT HTTP Server: %v", err)
 		}
 	}()
 
-	log.Debugf(" ready on %s and %s\n", s.conf.HTTPAddr, s.conf.MgmtAddr)
-
+	s.log.Info("Starting QED agent...")
 	s.agent.Start()
+
+	s.log.Info("Starting snapshots sender...")
 	s.sender.Start(s.snapshotsCh)
 
-	return s.raftNode.WaitForLeader(3 * time.Second)
+	if err := s.raftNode.WaitForLeader(5 * time.Second); err != nil {
+		return err
+	}
+
+	s.log.Infof("Server ready on %s and %s", s.conf.HTTPAddr, s.conf.MgmtAddr)
+
+	return nil
 }
 
 // Stop will close all the channels from the mux servers.
 func (s *Server) Stop() error {
 	s.metrics.Instances.Dec()
-	log.Infof("\nShutting down QED server %s", s.conf.NodeID)
+	s.log.Infof("Shutting down QED server. Node ID: %s", s.conf.NodeID)
 
-	log.Debugf("Metrics enabled: stopping server...")
+	s.log.Info("Metrics enabled: stopping server...")
 	s.metricsServer.Shutdown()
 
-	log.Debugf("Stopping MGMT server...")
+	s.log.Info("Stopping MGMT server...")
 	if err := s.mgmtServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-		log.Error(err)
+		s.log.Errorf("Unable to stop MGMT server: %v", err)
 		return err
 	}
 
-	log.Debugf("Stopping API HTTP server...")
+	s.log.Info("Stopping API HTTP server...")
 	if err := s.httpServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-		log.Error(err)
+		s.log.Errorf("Unable to stop API HTTP server: %v", err)
 		return err
 	}
 
-	log.Debugf("Closing QED sender...")
+	s.log.Info("Closing QED sender...")
 	s.sender.Stop()
 
-	log.Debugf("Stopping QED agent...")
+	s.log.Info("Stopping QED agent...")
 	if err := s.agent.Shutdown(); err != nil {
-		log.Error(err)
+		s.log.Errorf("Unable to stop agent %v", err)
 		return err
 	}
 
-	log.Debugf("Stopping RAFT server...")
+	s.log.Info("Stopping RAFT node...")
 	err := s.raftNode.Close(true)
 	if err != nil {
-		log.Error(err)
+		s.log.Errorf("Unable to stop raft node: %v", err)
 		return err
 	}
 
 	close(s.snapshotsCh)
 
-	log.Debugf("Done. Exiting...\n")
+	s.log.Info("Done. Exiting...")
 	return nil
 }
 
@@ -252,7 +274,7 @@ func (s *Server) RegisterMetrics(registry metrics.Registry) {
 	}
 }
 
-func newTLSServer(addr string, mux *http.ServeMux) *http.Server {
+func newTLSServer(addr string, mux *http.ServeMux, logger log2.Logger) *http.Server {
 
 	cfg := &tls.Config{
 		MinVersion: tls.VersionTLS12,
@@ -272,23 +294,16 @@ func newTLSServer(addr string, mux *http.ServeMux) *http.Server {
 
 	return &http.Server{
 		Addr:         addr,
-		Handler:      apihttp.LogHandler(mux),
+		Handler:      apihttp.LogHandler(mux, logger),
 		TLSConfig:    cfg,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
 }
 
-func newHTTPServer(addr string, mux *http.ServeMux) *http.Server {
-	var handler http.Handler
-	if mux != nil {
-		handler = apihttp.LogHandler(mux)
-	} else {
-		handler = nil
-	}
-
+func newHTTPServer(addr string, mux *http.ServeMux, logger log2.Logger) *http.Server {
 	return &http.Server{
 		Addr:    addr,
-		Handler: handler,
+		Handler: apihttp.LogHandler(mux, logger),
 	}
 }

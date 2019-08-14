@@ -26,7 +26,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 )
 
@@ -45,7 +44,6 @@ func init() {
 func runBackupList(cmd *cobra.Command, args []string) error {
 
 	config := backupCtx.Value(k("backup.config")).(*BackupConfig)
-	log.SetLogger("backup", config.Log)
 
 	listBackupsInfo, err := listBackups(config)
 	if err != nil {
@@ -74,7 +72,7 @@ func listBackups(config *BackupConfig) ([]protocol.BackupInfo, error) {
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Infof("Request error: %v\n", err)
+		fmt.Printf("Request error: %v\n", err)
 		return nil, err
 	}
 

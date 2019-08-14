@@ -28,6 +28,7 @@ import (
 	"github.com/bbva/qed/balloon/history"
 	"github.com/bbva/qed/balloon/hyper"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
@@ -45,16 +46,25 @@ type Balloon struct {
 
 	historyTree *history.HistoryTree
 	hyperTree   *hyper.HyperTree
+<<<<<<< HEAD
 	sync.RWMutex
+=======
+
+	log log2.Logger
+>>>>>>> Integrate new logger
+}
+
+func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
+	return NewBalloonWithLogger(store, hasherF, log2.L())
 }
 
 // NewBalloon function instanciates a balloon given a storage and a hasher function.
-func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, error) {
+func NewBalloonWithLogger(store storage.Store, hasherF func() hashing.Hasher, logger log2.Logger) (*Balloon, error) {
 
 	// create trees
-	historyTree := history.NewHistoryTree(hasherF, store, 300)
+	historyTree := history.NewHistoryTreeWithLogger(hasherF, store, 300, logger.Named("history"))
 	batchCache := hyper.NewBatchCache(hyper.DefaultBatchLevels)
-	hyperTree := hyper.NewHyperTree(hasherF, store, batchCache)
+	hyperTree := hyper.NewHyperTreeWithLogger(hasherF, store, batchCache, logger.Named("hyper"))
 
 	balloon := &Balloon{
 		version:     0,
@@ -62,6 +72,7 @@ func NewBalloon(store storage.Store, hasherF func() hashing.Hasher) (*Balloon, e
 		store:       store,
 		historyTree: historyTree,
 		hyperTree:   hyperTree,
+		log:         logger,
 	}
 
 	// update version

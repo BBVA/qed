@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
 )
 
@@ -76,8 +75,6 @@ func NewMembershipProof(index, version uint64, auditPath AuditPath, hasher hashi
 // Verify verifies a membership proof
 func (p MembershipProof) Verify(eventDigest []byte, expectedRootHash hashing.Digest) (correct bool) {
 
-	log.Debugf("Verifying membership proof for index %d and version %d", p.Index, p.Version)
-
 	// build a visitable pruned tree and then visit it to recompute root hash
 	visitor := newComputeHashVisitor(p.hasher, p.AuditPath)
 	recomputed := pruneToVerify(p.Index, p.Version, eventDigest).Accept(visitor)
@@ -101,8 +98,6 @@ func NewIncrementalProof(start, end uint64, auditPath AuditPath, hasher hashing.
 }
 
 func (p IncrementalProof) Verify(startDigest, endDigest hashing.Digest) (correct bool) {
-
-	log.Debugf("Verifying incremental proof between versions %d and %d", p.StartVersion, p.EndVersion)
 
 	// build two visitable pruned trees and then visit them to recompute root hash
 	visitor := newComputeHashVisitor(p.hasher, p.AuditPath)

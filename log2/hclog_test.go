@@ -7,7 +7,7 @@ import (
 )
 
 func TestHclog2LoggerImplementsInterfaces(t *testing.T) {
-	var logger interface{} = NewHclog2Logger(L())
+	var logger interface{} = NewHclogAdapter(L())
 	if _, ok := logger.(hclog.Logger); !ok {
 		t.Fatalf("logger does not implement hclog.Logger")
 	}

@@ -74,6 +74,8 @@ func (s *stdLogAdapter) pickLevel(str string) (Level, string) {
 		return Warn, strings.TrimSpace(str[7:])
 	case strings.HasPrefix(str, "[ERROR]"):
 		return Error, strings.TrimSpace(str[7:])
+	case strings.HasPrefix(str, "[ERR]"):
+		return Error, strings.TrimSpace(str[5:])
 	case strings.HasPrefix(str, "[FATAL]"):
 		return Fatal, strings.TrimSpace(str[7:])
 	default:

@@ -30,7 +30,7 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/bbva/qed/protocol"
 )
 
@@ -48,6 +48,7 @@ type HTTPClient struct {
 	healthCheckInterval time.Duration
 	discoveryEnabled    bool
 	hasherF             func() hashing.Hasher
+	log                 log2.Logger
 
 	mu                sync.RWMutex // guards the next block
 	running           bool
@@ -99,6 +100,7 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string, snapshotStoreUR
 		maxRetries:          0,
 		retrier:             NewNoRequestRetrier(httpClient),
 		hasherF:             hashing.NewSha256Hasher,
+		log:                 log2.L(),
 	}
 
 	client.topology.Update(urls[0], urls[1:]...)
@@ -112,6 +114,16 @@ func NewHTTPClientFromConfig(conf *Config) (*HTTPClient, error) {
 	if err != nil {
 		return nil, err
 	}
+	return NewHTTPClient(options...)
+}
+
+// NewHTTPClientFromConfigWithLogger initializes a client from a configuration.
+func NewHTTPClientFromConfigWithLogger(conf *Config, logger log2.Logger) (*HTTPClient, error) {
+	options, err := configToOptions(conf)
+	if err != nil {
+		return nil, err
+	}
+	options = append(options, SetLogger(logger))
 	return NewHTTPClient(options...)
 }
 
@@ -135,6 +147,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 		maxRetries:          DefaultMaxRetries,
 		healthCheckStopCh:   make(chan bool),
 		discoveryStopCh:     make(chan bool),
+		log:                 log2.L(),
 	}
 	// Run the options on the client
 	for _, option := range options {
@@ -149,7 +162,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 	if client.discoveryEnabled {
 		// try to discover the cluster topology initially
 		if err := client.discover(); err != nil {
-			log.Infof("Unable to get QED topology, we will try it later: %v", err)
+			client.log.Infof("Unable to get QED topology, we will try it later: %v", err)
 		}
 	}
 
@@ -160,7 +173,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 
 	// Ensure that we have at least one endpoint, the primary, available
 	if !client.topology.HasActivePrimary() {
-		log.Infof("QED does not have a primary node or it is down, we will try it later.")
+		client.log.Infof("QED does not have a primary node or it is down, we will try it later.")
 	}
 
 	// if t.discoveryEnabled {
@@ -190,7 +203,7 @@ func (c *HTTPClient) Close() {
 	}
 	c.mu.RUnlock()
 
-	log.Info("Closing QED client...")
+	c.log.Info("Closing QED client...")
 
 	close(c.healthCheckStopCh)
 	close(c.discoveryStopCh)
@@ -202,7 +215,7 @@ func (c *HTTPClient) Close() {
 	c.running = false
 	c.mu.Unlock()
 
-	log.Info("QED client closed")
+	c.log.Info("QED client closed")
 
 }
 
@@ -219,7 +232,7 @@ func (c *HTTPClient) setRetrier(maxRetries int) error {
 			ticks[i] = 1000
 		}
 		backoff := NewSimpleBackoff(ticks...)
-		c.retrier = NewBackoffRequestRetrier(c.httpClient, c.maxRetries, backoff)
+		c.retrier = NewBackoffRequestRetrierWithLogger(c.httpClient, c.maxRetries, backoff, c.log.Named("retrier"))
 	}
 	return nil
 }
@@ -319,9 +332,9 @@ func (c *HTTPClient) doReq(method string, endpoint *endpoint, path string, data 
 	// Get response
 	resp, err := c.retrier.DoReq(req)
 	if err != nil {
-		log.Infof("Request error: %v\n", err)
+		c.log.Infof("Request error: %v\n", err)
 		endpoint.MarkAsDead()
-		log.Infof("%s is dead\n", endpoint)
+		c.log.Infof("%s is dead\n", endpoint)
 		return nil, err
 	}
 
@@ -370,7 +383,7 @@ func (c *HTTPClient) clusterHealthCheck(timeout time.Duration) {
 
 			resp, err := c.httpClient.Do(req.WithContext(ctx))
 			if err != nil {
-				log.Infof("%s is dead", endpoint.URL())
+				c.log.Infof("%s is dead", endpoint.URL())
 				endpoint.MarkAsDead()
 				return
 			}
@@ -382,7 +395,7 @@ func (c *HTTPClient) clusterHealthCheck(timeout time.Duration) {
 				if status >= 200 && status < 300 {
 					endpoint.MarkAsAlive()
 				} else {
-					log.Infof("%s is dead [status=%d]", endpoint.URL(), status)
+					c.log.Infof("%s is dead [status=%d]", endpoint.URL(), status)
 					endpoint.MarkAsDead()
 				}
 			}
@@ -577,7 +590,7 @@ func (c *HTTPClient) MembershipAutoVerify(eventDigest hashing.Digest, version *u
 	// Get membership proof
 	proof, err := c.MembershipDigest(eventDigest, version)
 	if err != nil {
-		log.Info("Error getting membership proof: %s", err)
+		c.log.Infof("Error getting membership proof: %s", err)
 		return false, err
 	}
 
@@ -591,7 +604,7 @@ func (c *HTTPClient) MembershipAutoVerify(eventDigest hashing.Digest, version *u
 
 	s, err := c.GetSnapshot(proof.QueryVersion)
 	if err != nil {
-		log.Info("Error getting snapshot from snapshot store: %s", err)
+		c.log.Infof("Error getting snapshot from snapshot store: %s", err)
 		return false, err
 	}
 
@@ -601,7 +614,7 @@ func (c *HTTPClient) MembershipAutoVerify(eventDigest hashing.Digest, version *u
 	if proof.CurrentVersion != proof.ActualVersion {
 		s, err := c.GetSnapshot(proof.CurrentVersion)
 		if err != nil {
-			log.Info("Error getting snapshot from snapshot store: %s", err)
+			c.log.Infof("Error getting snapshot from snapshot store: %s", err)
 			return false, err
 		}
 		snapshot.HyperDigest = s.HyperDigest
@@ -682,7 +695,7 @@ func (c *HTTPClient) IncrementalAutoVerify(
 	}
 	s, err := c.GetSnapshot(start)
 	if err != nil {
-		log.Info("Error getting snapshot from snapshot store: %s", err)
+		c.log.Infof("Error getting snapshot from snapshot store: %s", err)
 		return false, err
 	}
 	startSnapshot.HistoryDigest = s.HistoryDigest
@@ -695,7 +708,7 @@ func (c *HTTPClient) IncrementalAutoVerify(
 	}
 	s, err = c.GetSnapshot(end)
 	if err != nil {
-		log.Info("Error getting snapshot from snapshot store: %s", err)
+		c.log.Infof("Error getting snapshot from snapshot store: %s", err)
 		return false, err
 	}
 	endSnapshot.HistoryDigest = s.HistoryDigest

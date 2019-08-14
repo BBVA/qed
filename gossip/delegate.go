@@ -16,7 +16,7 @@
 package gossip
 
 import (
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -26,39 +26,51 @@ import (
 // This allows you to reason about ordering.
 type eventDelegate struct {
 	agent *Agent
+	log   log2.Logger
 }
 
 // NotifyJoin is invoked when a node is detected to have joined.
 func (e *eventDelegate) NotifyJoin(n *memberlist.Node) {
-	peer := ParsePeer(n)
+	peer, err := ParsePeer(n)
+	if err != nil {
+		e.log.Fatalf("Cannot parse peer: %v", err)
+	}
 	peer.Status = AgentStatusAlive
 	_ = e.agent.topology.Update(peer)
-	log.Debugf("member joined: %+v ", peer)
+	e.log.Debugf("member joined: %+v ", peer)
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 func (e *eventDelegate) NotifyLeave(n *memberlist.Node) {
-	peer := ParsePeer(n)
+	peer, err := ParsePeer(n)
+	if err != nil {
+		e.log.Fatalf("Cannot parse peer: %v", err)
+	}
 	_ = e.agent.topology.Delete(peer)
-	log.Debugf("member left:  %+v", peer)
+	e.log.Debugf("member left:  %+v", peer)
 }
 
 // NotifyUpdate is invoked when a node is detected to have
 // updated, usually involving the meta data.
 func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
 	// ignore
-	peer := ParsePeer(n)
+	peer, err := ParsePeer(n)
+	if err != nil {
+		e.log.Fatalf("Cannot parse peer: %v", err)
+	}
 	_ = e.agent.topology.Update(peer)
-	log.Debugf("member updated: %+v ", peer)
+	e.log.Debugf("member updated: %+v ", peer)
 }
 
 type agentDelegate struct {
 	agent *Agent
+	log   log2.Logger
 }
 
-func newAgentDelegate(agent *Agent) *agentDelegate {
+func newAgentDelegate(agent *Agent, logger log2.Logger) *agentDelegate {
 	return &agentDelegate{
 		agent: agent,
+		log:   logger,
 	}
 }
 
@@ -68,7 +80,7 @@ func newAgentDelegate(agent *Agent) *agentDelegate {
 func (d *agentDelegate) NodeMeta(limit int) []byte {
 	meta, err := d.agent.Self.Meta.Encode()
 	if err != nil {
-		log.Fatalf("Unable to encode node metadata: %v", err)
+		d.log.Fatalf("Unable to encode node metadata: %v", err)
 	}
 	return meta
 }
@@ -81,7 +93,7 @@ func (d *agentDelegate) NotifyMsg(msg []byte) {
 	m := &Message{}
 	err := m.Decode(msg)
 	if err != nil {
-		log.Infof("Agent Deletage unable to decode gossip message!: %v", err)
+		d.log.Warnf("Unable to decode gossip message!: %v", err)
 	}
 	_ = d.agent.In.Publish(m)
 }

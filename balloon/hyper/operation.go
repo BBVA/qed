@@ -17,9 +17,10 @@
 package hyper
 
 import (
+	"fmt"
+
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
@@ -50,7 +51,7 @@ const (
 	noOpCode
 )
 
-type interpreter func(ops *operationsStack, c *pruningContext) hashing.Digest
+type interpreter func(ops *operationsStack, c *pruningContext) (hashing.Digest, error)
 
 type operation struct {
 	Code      operationCode
@@ -62,8 +63,8 @@ func leafHash(pos position, value []byte) *operation {
 	return &operation{
 		Code: leafHashCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			return c.Hasher.Salted(pos.Bytes(), value)
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			return c.Hasher.Salted(pos.Bytes(), value), nil
 		},
 	}
 }
@@ -72,10 +73,16 @@ func innerHash(pos position) *operation {
 	return &operation{
 		Code: innerHashCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			leftHash := ops.Pop().Interpret(ops, c)
-			rightHash := ops.Pop().Interpret(ops, c)
-			return c.Hasher.Salted(pos.Bytes(), leftHash, rightHash)
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			leftHash, err := ops.Pop().Interpret(ops, c)
+			if err != nil {
+				return nil, err
+			}
+			rightHash, err := ops.Pop().Interpret(ops, c)
+			if err != nil {
+				return nil, err
+			}
+			return c.Hasher.Salted(pos.Bytes(), leftHash, rightHash), nil
 		},
 	}
 }
@@ -84,10 +91,13 @@ func updateBatchNode(pos position, idx int8, batch *batchNode) *operation {
 	return &operation{
 		Code: updateBatchNodeCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			hash := ops.Pop().Interpret(ops, c)
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			hash, err := ops.Pop().Interpret(ops, c)
+			if err != nil {
+				return nil, err
+			}
 			batch.AddHashAt(idx, hash)
-			return hash
+			return hash, nil
 		},
 	}
 }
@@ -96,10 +106,13 @@ func updateBatchShortcut(pos position, idx int8, batch *batchNode, key, value []
 	return &operation{
 		Code: updateBatchShortcutCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			hash := ops.Pop().Interpret(ops, c)
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			hash, err := ops.Pop().Interpret(ops, c)
+			if err != nil {
+				return nil, err
+			}
 			batch.AddLeafAt(idx, hash, key, value)
-			return hash
+			return hash, nil
 		},
 	}
 }
@@ -108,8 +121,8 @@ func getDefaultHash(pos position) *operation {
 	return &operation{
 		Code: getDefaultHashCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			return c.DefaultHashes[pos.Height]
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			return c.DefaultHashes[pos.Height], nil
 		},
 	}
 }
@@ -118,8 +131,8 @@ func getProvidedHash(pos position, idx int8, batch *batchNode) *operation {
 	return &operation{
 		Code: getProvidedHashCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			return batch.GetElementAt(idx)
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			return batch.GetElementAt(idx), nil
 		},
 	}
 }
@@ -128,16 +141,19 @@ func putInCache(pos position, batch *batchNode) *operation {
 	return &operation{
 		Code: putInCacheCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
 
-			hash := ops.Pop().Interpret(ops, c)
+			hash, err := ops.Pop().Interpret(ops, c)
+			if err != nil {
+				return nil, err
+			}
 			key := pos.Bytes()
 			val := batch.Serialize()
 			c.Cache.Put(key, val)
 			if pos.Height == c.RecoveryHeight {
 				c.Mutations = append(c.Mutations, storage.NewMutation(storage.HyperCacheTable, key, val))
 			}
-			return hash
+			return hash, nil
 		},
 	}
 }
@@ -146,10 +162,13 @@ func mutateBatch(pos position, batch *batchNode) *operation {
 	return &operation{
 		Code: mutateBatchCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			hash := ops.Pop().Interpret(ops, c)
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			hash, err := ops.Pop().Interpret(ops, c)
+			if err != nil {
+				return nil, err
+			}
 			c.Mutations = append(c.Mutations, storage.NewMutation(storage.HyperTable, pos.Bytes(), batch.Serialize()))
-			return hash
+			return hash, nil
 		},
 	}
 }
@@ -158,10 +177,13 @@ func collectValue(pos position, value []byte) *operation {
 	return &operation{
 		Code: collectValueCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			hash := ops.Pop().Interpret(ops, c)
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			hash, err := ops.Pop().Interpret(ops, c)
+			if err != nil {
+				return nil, err
+			}
 			c.Value = value
-			return hash
+			return hash, nil
 		},
 	}
 }
@@ -170,10 +192,13 @@ func collectHash(pos position) *operation {
 	return &operation{
 		Code: collectHashCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			hash := ops.Pop().Interpret(ops, c)
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			hash, err := ops.Pop().Interpret(ops, c)
+			if err != nil {
+				return nil, err
+			}
 			c.AuditPath[pos.StringId()] = hash
-			return hash
+			return hash, nil
 		},
 	}
 }
@@ -182,12 +207,12 @@ func getFromPath(pos position) *operation {
 	return &operation{
 		Code: getFromPathCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
 			hash, ok := c.AuditPath.Get(pos)
 			if !ok {
-				log.Fatalf("Oops, something went wrong. Invalid position in audit path")
+				return nil, fmt.Errorf("Oops, something went wrong. Invalid position [%v] in audit path", pos)
 			}
-			return hash
+			return hash, nil
 		},
 	}
 }
@@ -196,8 +221,8 @@ func noOp(pos position) *operation {
 	return &operation{
 		Code: noOpCode,
 		Pos:  pos,
-		Interpret: func(ops *operationsStack, c *pruningContext) hashing.Digest {
-			return nil
+		Interpret: func(ops *operationsStack, c *pruningContext) (hashing.Digest, error) {
+			return nil, nil
 		},
 	}
 }

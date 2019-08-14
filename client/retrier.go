@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 )
 
 var (
@@ -81,6 +81,7 @@ type BackoffRequestRetrier struct {
 	*http.Client
 	maxRetries int
 	backoff    Backoff
+	log        log2.Logger
 }
 
 // NewBackoffRequestRetrier returns a retrier that uses the given backoff strategy.
@@ -89,6 +90,17 @@ func NewBackoffRequestRetrier(httpClient *http.Client, maxRetries int, backoff B
 		Client:     httpClient,
 		maxRetries: maxRetries,
 		backoff:    backoff,
+		log:        log2.L(),
+	}
+}
+
+// NewBackoffRequestRetrierWithLogger returns a retrier that uses the given backoff strategy.
+func NewBackoffRequestRetrierWithLogger(httpClient *http.Client, maxRetries int, backoff Backoff, logger log2.Logger) *BackoffRequestRetrier {
+	return &BackoffRequestRetrier{
+		Client:     httpClient,
+		maxRetries: maxRetries,
+		backoff:    backoff,
+		log:        logger,
 	}
 }
 
@@ -120,7 +132,7 @@ func (r *BackoffRequestRetrier) DoReq(req *RetriableRequest) (*http.Response, er
 			code = resp.StatusCode
 		}
 		if err != nil {
-			log.Infof("%s %s request failed: %v", req.Method, req.URL, err)
+			r.log.Infof("%s %s request failed: %v", req.Method, req.URL, err)
 		}
 
 		// Check the response code. We retry on 500-range responses to allow
@@ -145,7 +157,7 @@ func (r *BackoffRequestRetrier) DoReq(req *RetriableRequest) (*http.Response, er
 			// drain body
 			_, err := io.Copy(ioutil.Discard, io.LimitReader(resp.Body, respReadLimit))
 			if err != nil {
-				log.Infof("Error reading response body: %v", err)
+				r.log.Infof("Error reading response body: %v", err)
 			}
 		}
 
@@ -158,7 +170,7 @@ func (r *BackoffRequestRetrier) DoReq(req *RetriableRequest) (*http.Response, er
 		if code > 0 {
 			desc = fmt.Sprintf("%s (status: %d)", desc, code)
 		}
-		log.Infof("%s: retrying in %s (%d left)", desc, wait, remain)
+		r.log.Infof("%s: retrying in %s (%d left)", desc, wait, remain)
 
 		time.Sleep(wait)
 

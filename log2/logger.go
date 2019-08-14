@@ -37,6 +37,29 @@ const (
 	Trace
 )
 
+func (l Level) String() string {
+	switch l {
+	case NotSet:
+		return "unknown"
+	case Off:
+		return "off"
+	case Fatal:
+		return "fatal"
+	case Error:
+		return "error"
+	case Warn:
+		return "warn"
+	case Info:
+		return "info"
+	case Debug:
+		return "debug"
+	case Trace:
+		return "trace"
+	default:
+		return "unknown"
+	}
+}
+
 // LevelFromString returns a Level type for the named log level, or
 // "NotSet" if the level passed as argument is invalid.
 func LevelFromString(level string) Level {
@@ -77,8 +100,16 @@ type Logger interface {
 	Panic(msg string)
 	Panicf(format string, args ...interface{})
 
+	// Create a logger that will prepend the given name on front of all
+	// messages. If the logger has a previously set name, the new value
+	// will be the appended to it.
 	Named(name string) Logger
+
+	// Create a logger that will prepend the given name on front of all
+	// messages. It overrides any previously set name.
 	ResetNamed(name string) Logger
+
+	WithLevel(level Level) Logger
 
 	// StdLogger returns a logger implementation that conforms to the
 	// stdlib log.Logger interface. This allows packages that expect
@@ -157,6 +188,7 @@ func New(opts *LoggerOptions) Logger {
 		name:       opts.Name,
 		caller:     opts.IncludeLocation,
 		timeFormat: opts.TimeFormat,
+		level:      opts.Level,
 		mutex:      mutex,
 		writer:     newWriter(output),
 	}

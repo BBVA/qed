@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	"github.com/bbva/qed/testutils/rand"
 	storage_utils "github.com/bbva/qed/testutils/storage"
@@ -34,8 +33,6 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
@@ -60,8 +57,6 @@ func TestAdd(t *testing.T) {
 
 }
 func TestAddBulk(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
@@ -101,8 +96,6 @@ func TestAddBulk(t *testing.T) {
 }
 
 func TestQueryMembershipConsistency(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	testCases := []struct {
 		key     []byte
@@ -148,8 +141,6 @@ func TestQueryMembershipConsistency(t *testing.T) {
 
 func TestQueryMembership(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	testCases := []struct {
 		key    []byte
 		exists bool
@@ -189,8 +180,6 @@ func TestQueryMembership(t *testing.T) {
 }
 
 func TestQueryConsistencyProof(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	testCases := []struct {
 		additions, start, end uint64
@@ -237,8 +226,6 @@ func TestConsistencyProofVerify(t *testing.T) {
 
 func TestAddQueryAndVerify(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.1")
 	defer closeF()
 
@@ -263,8 +250,6 @@ func TestAddQueryAndVerify(t *testing.T) {
 }
 
 func TestCacheWarmingUp(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/ballon_test.db")
 	defer closeF()
@@ -305,8 +290,6 @@ func TestCacheWarmingUp(t *testing.T) {
 
 func TestGenIncrementalAndVerify(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.3")
 	defer closeF()
 
@@ -334,8 +317,6 @@ func TestGenIncrementalAndVerify(t *testing.T) {
 }
 
 func TestAddBulkAndQuery(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.6")
 	defer closeF()
@@ -371,8 +352,6 @@ func TestAddBulkAndQuery(t *testing.T) {
 
 func TestAddAndQuery(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.7")
 	defer closeF()
 
@@ -402,8 +381,6 @@ func TestAddAndQuery(t *testing.T) {
 }
 
 func TestAddAndQueryConsistency(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/balloon.test.7")
 	defer closeF()
@@ -439,8 +416,6 @@ func TestAddAndQueryConsistency(t *testing.T) {
 
 func BenchmarkAddRocksDB(b *testing.B) {
 
-	log.SetLogger(b.Name(), log.SILENT)
-
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/balloon_bench.db")
 	defer closeF()
 
@@ -464,8 +439,6 @@ func BenchmarkAddRocksDB(b *testing.B) {
 }
 
 func BenchmarkAddBulkRocksDB(b *testing.B) {
-
-	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/balloon_bench.db")
 	defer closeF()
@@ -499,8 +472,8 @@ func BenchmarkAddBulkRocksDB(b *testing.B) {
 	}
 }
 func BenchmarkQueryRocksDB(b *testing.B) {
+
 	var events [][]byte
-	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/ballon_bench.db")
 	defer closeF()
@@ -526,8 +499,8 @@ func BenchmarkQueryRocksDB(b *testing.B) {
 }
 
 func BenchmarkQueryRocksDBParallel(b *testing.B) {
+
 	var events [][]byte
-	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/ballon_bench.db")
 	defer closeF()

@@ -19,7 +19,6 @@ package consensus
 import (
 	"fmt"
 
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
@@ -35,19 +34,19 @@ func (n *RaftNode) CreateBackup() error {
 	if err != nil {
 		return err
 	}
-	log.Debugf("Generating backup until version: %d", v-1)
+	n.log.Debugf("Generating backup until version: %d", v-1)
 
 	return nil
 }
 
 // DeleteBackup function is a passthough to store's equivalent funcion.
 func (n *RaftNode) DeleteBackup(backupID uint32) error {
-	log.Debugf("Deleting backup %d", backupID)
+	n.log.Debugf("Deleting backup %d", backupID)
 	return n.db.DeleteBackup(backupID)
 }
 
 // BackupsInfo function is a passthough to store's equivalent funcion.
 func (n *RaftNode) ListBackups() []*storage.BackupInfo {
-	log.Debugf("Retrieving backups information")
+	n.log.Debugf("Retrieving backups information")
 	return n.db.GetBackupsInfo()
 }

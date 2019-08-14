@@ -20,10 +20,11 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"os"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/log"
+	"github.com/bbva/qed/log2"
 	"github.com/octago/sflags/gen/gpflag"
 
 	"github.com/spf13/cobra"
@@ -57,7 +58,8 @@ func configClientIncremental() context.Context {
 
 	err := gpflag.ParseTo(conf, clientIncrementalCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("client.incremental.params"), conf)
 }
@@ -71,7 +73,17 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 
 	clientConfig := clientCtx.Value(k("client.config")).(*client.Config)
 
-	client, err := client.NewHTTPClientFromConfig(clientConfig)
+	// create main logger
+	logOpts := &log2.LoggerOptions{
+		Name:            "qed.client",
+		IncludeLocation: true,
+		Level:           log2.LevelFromString(clientConfig.Log),
+		Output:          log2.DefaultOutput,
+		TimeFormat:      log2.DefaultTimeFormat,
+	}
+	logger := log2.New(logOpts)
+
+	client, err := client.NewHTTPClientFromConfigWithLogger(clientConfig, logger)
 	if err != nil {
 		return err
 	}
