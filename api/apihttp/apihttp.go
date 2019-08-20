@@ -99,6 +99,8 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 // and no body.
 func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
+	HealthCheckRequest.Inc()
+	defer HealthCheckRequest.Dec()
 	// Make sure we can only be called with an HTTP POST request.
 	if r.Method != "HEAD" {
 		w.Header().Set("Allow", "HEAD")
@@ -126,6 +128,8 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 func Add(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
+		AddRequest.Inc()
+		defer AddRequest.Dec()
 		// Make sure we can only be called with an HTTP POST request.
 		w, r, err = PostReqSanitizer(w, r)
 		if err != nil {
@@ -185,6 +189,8 @@ func Add(api ClientApi) http.HandlerFunc {
 func AddBulk(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var err error
+		AddBulkRequest.Inc()
+		defer AddBulkRequest.Dec()
 		// Make sure we can only be called with an HTTP POST request.
 		w, r, err = PostReqSanitizer(w, r)
 		if err != nil {
