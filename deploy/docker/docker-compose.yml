@@ -34,6 +34,7 @@ services:
     entrypoint: [
       "qed", "agent", "publisher",
       "--bind-addr", "publisher:8100",
+      "--advertise-addr", "publisher:8100",
       "--metrics-addr", "publisher:18100",
       "--start-join", "qed_server_0:8400",
       "--notifier-endpoint", "http://snapshotstore:8888/alert",
@@ -51,3 +52,17 @@ services:
       - "8888:8888"   # API HTTP
     entrypoint:
       - /usr/local/bin/storage
+
+  grafana:
+    image: grafana/grafana:6.3.3
+    volumes: 
+      - ../provision/files/grafana:/etc/grafana/provisioning/
+    ports: 
+      - "3000:3000"
+
+  prometheus:
+    image: prom/prometheus:v2.6.0
+    volumes:
+      - ./conf/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
