@@ -29,7 +29,7 @@
   shell: >
     {{ item }}
   with_items:
-    - docker build -t qed/build --build-arg QED_REPO={{qed_repo}} --build-arg QED_REPO_BRANCH={{qed_repo_branch}} ../../
+    - docker build -t qed/build:latest --build-arg QED_REPO={{qed_repo}} --build-arg QED_REPO_BRANCH={{qed_repo_branch}} ../../
     - docker run -d --name qed qed/build:latest
     - docker cp qed:/usr/local/bin/. config_files/bin
     - docker rm -vf qed
@@ -39,7 +39,10 @@
   shell: >
     {{ item }}
   with_items:
-    - docker build -t qed/build ../../
+    # To force rebuild change BUILD_META value.
+    # We use this BUILD_META to avoid using old cached Docker layers if the
+    # build is executed outside Ansible with qed/build:latest tag.
+    - docker build -t qed/build:latest --build-arg BUILD_META=ansible ../../
     - docker run -d --name qed qed/build:latest
     - docker cp qed:/usr/local/bin/. config_files/bin
     - docker rm -vf qed
