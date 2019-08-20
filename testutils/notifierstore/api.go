@@ -72,6 +72,12 @@ var (
 			Help: "Number of events stored.",
 		},
 	)
+	QedStoreRequest = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_store_requests",
+			Help: "Number of current requests.",
+		},
+	)
 
 	metricsList = []prometheus.Collector{
 		QedStoreInstancesCount,
@@ -79,6 +85,7 @@ var (
 		QedStoreSnapshotsRetrievedTotal,
 		QedStoreAlertsGeneratedTotal,
 		QedStoreEventsStoredTotal,
+		QedStoreRequest,
 	}
 
 	registerMetrics sync.Once
@@ -138,6 +145,8 @@ func (s *snapStore) Put(b *protocol.BatchSnapshots) error {
 		s.data.Set(key, val, 0)
 		log.Debugf("snapStore(): saved snapshot with version ", snap.Snapshot.Version)
 		QedStoreEventsStoredTotal.Inc()
+		QedStoreRequest.Inc()
+		defer QedStoreRequest.Dec()
 	}
 	return nil
 }

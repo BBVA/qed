@@ -149,6 +149,7 @@ func NewServer(conf *Config) (*Server, error) {
 
 	// register qed metrics
 	server.metrics = newServerMetrics()
+	apihttp.RegisterMetrics(server.metricsServer)
 	server.RegisterMetrics(server.metricsServer)
 	store.RegisterMetrics(server.metricsServer)
 	server.raftNode.RegisterMetrics(server.metricsServer)
