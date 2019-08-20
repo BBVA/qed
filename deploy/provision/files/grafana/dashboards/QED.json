@@ -1287,7 +1287,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_api_http_health_check_requests+qed_api_http_add_requests+qed_api_http_add_bulk_requests+qed_api_http_membership_requests+qed_api_http_digest_menbership_requests+qed_api_http_incremental_requests+qed_api_http_info_requests+qed_api_http_info_shards_requests) by (job)",
+          "expr": "sum(qed_api_http_health_check_requests+qed_api_http_add_requests+qed_api_http_add_bulk_requests+qed_api_http_membership_requests+qed_api_http_digest_membership_requests+qed_api_http_incremental_requests+qed_api_http_info_requests+qed_api_http_info_shards_requests) by (job)",
           "format": "time_series",
           "hide": false,
           "instant": false,
