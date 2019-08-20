@@ -242,6 +242,8 @@ func AddBulk(api ClientApi) http.HandlerFunc {
 // }
 func Membership(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		MembershipRequest.Inc()
+		defer MembershipRequest.Dec()
 		var proof *balloon.MembershipProof
 		var err error
 
@@ -307,6 +309,9 @@ func Membership(api ClientApi) http.HandlerFunc {
 // }
 func DigestMembership(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		DigestMembershipRequest.Inc()
+		defer DigestMembershipRequest.Dec()
+
 		var proof *balloon.MembershipProof
 		var err error
 
@@ -366,6 +371,9 @@ func DigestMembership(api ClientApi) http.HandlerFunc {
 //   }
 func Incremental(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		IncrementalRequest.Inc()
+		defer IncrementalRequest.Dec()
+
 		var err error
 		// Make sure we can only be called with an HTTP POST request.
 		w, r, err = PostReqSanitizer(w, r)
@@ -423,6 +431,9 @@ func Incremental(api ClientApi) http.HandlerFunc {
 // }
 func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		InfoShardsRequest.Inc()
+		defer InfoShardsRequest.Dec()
+
 		var err error
 		// Make sure we can only be called with an HTTP GET request.
 		w, _, err = GetReqSanitizer(w, r)
@@ -502,6 +513,8 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 // }
 func InfoHandler(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		InfoRequest.Inc()
+		defer InfoRequest.Dec()
 		var err error
 
 		// Make sure we can only be called with an HTTP GET request.
