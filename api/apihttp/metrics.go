@@ -68,7 +68,7 @@ var (
 		prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: subSystem,
-			Name:      "digest_menbership_requests",
+			Name:      "digest_membership_requests",
 			Help:      "Number of HTTP Digest Membreship requests.",
 		},
 	)
