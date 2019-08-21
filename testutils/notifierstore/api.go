@@ -75,7 +75,7 @@ var (
 	)
 	QedStorePutRequest = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "qed_store_requests",
+			Name: "qed_store_put_requests",
 			Help: "Number of current Put requests.",
 		},
 	)
