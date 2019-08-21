@@ -73,6 +73,10 @@ scrape_configs:
     scrape_interval: 10s
     static_configs:
       - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:9100']
+  - job_name: 'workload{{loop.index0}}-Service'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['{{ hostvars[host]['ansible_eth0']['ipv4']['address'] }}:17700']
 {% endfor %}
 {% if groups['role_storage'] is defined %}
 {% for host in groups['role_storage'] %}
