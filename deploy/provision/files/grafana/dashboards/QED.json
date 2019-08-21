@@ -1346,6 +1346,26 @@
           "intervalFactor": 1,
           "legendFormat": "{{job}} Incremental",
           "refId": "F"
+        },
+        {
+          "expr": "sum(qed_store_put_requests) by (job)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{job}} Put",
+          "refId": "F"
+        },
+        {
+          "expr": "sum(qed_store_get_requests) by (job)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{job}} Get",
+          "refId": "F"
         }
       ],
       "thresholds": [],
