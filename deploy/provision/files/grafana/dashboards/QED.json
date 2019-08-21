@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 2,
-  "iteration": 1566315472356,
+  "iteration": 1566375688221,
   "links": [],
   "panels": [
     {
@@ -1259,10 +1259,11 @@
       },
       "id": 59,
       "legend": {
+        "alignAsTable": false,
         "avg": false,
         "current": false,
         "hideEmpty": false,
-        "hideZero": false,
+        "hideZero": true,
         "max": false,
         "min": false,
         "show": true,
@@ -1287,14 +1288,64 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(qed_api_http_health_check_requests+qed_api_http_add_requests+qed_api_http_add_bulk_requests+qed_api_http_membership_requests+qed_api_http_digest_membership_requests+qed_api_http_incremental_requests+qed_api_http_info_requests+qed_api_http_info_shards_requests) by (job)",
+          "expr": "sum(qed_api_http_add_bulk_requests) by (job)",
           "format": "time_series",
           "hide": false,
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{job}}",
+          "legendFormat": "{{job}} Add Bulk",
           "refId": "A"
+        },
+        {
+          "expr": "sum(qed_api_http_add_requests) by (job)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{job}} Add",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(qed_api_http_membership_requests) by (job)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{job}} Membership",
+          "refId": "C"
+        },
+        {
+          "expr": "sum(qed_api_http_health_check_requests) by (job)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{job}} HealthCheck",
+          "refId": "D"
+        },
+        {
+          "expr": "sum(qed_api_http_digest_membership_requests) by (job)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{job}} Digest Membership",
+          "refId": "E"
+        },
+        {
+          "expr": "sum(qed_api_http_incremental_requests) by (job)",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{job}} Incremental",
+          "refId": "F"
         }
       ],
       "thresholds": [],
@@ -2493,8 +2544,8 @@
       "valueName": "delta"
     }
   ],
-  "refresh": "",
-  "schemaVersion": 19,
+  "refresh": "10s",
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -2550,7 +2601,7 @@
     ]
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -2581,5 +2632,5 @@
   "timezone": "",
   "title": "QED",
   "uid": "rjPFfGuik",
-  "version": 1
+  "version": 2
 }
