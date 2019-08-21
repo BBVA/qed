@@ -1355,7 +1355,7 @@
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{job}} Put",
-          "refId": "F"
+          "refId": "G"
         },
         {
           "expr": "sum(qed_store_get_requests) by (job)",
@@ -1365,7 +1365,7 @@
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{job}} Get",
-          "refId": "F"
+          "refId": "H"
         }
       ],
       "thresholds": [],
