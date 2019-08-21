@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/coocood/freecache"
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,10 +73,16 @@ var (
 			Help: "Number of events stored.",
 		},
 	)
-	QedStoreRequest = prometheus.NewGauge(
+	QedStorePutRequest = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "qed_store_requests",
-			Help: "Number of current requests.",
+			Help: "Number of current Put requests.",
+		},
+	)
+	QedStoreGetRequest = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "qed_store_get_requests",
+			Help: "Number of current Get requests.",
 		},
 	)
 
@@ -85,7 +92,8 @@ var (
 		QedStoreSnapshotsRetrievedTotal,
 		QedStoreAlertsGeneratedTotal,
 		QedStoreEventsStoredTotal,
-		QedStoreRequest,
+		QedStoreGetRequest,
+		QedStorePutRequest,
 	}
 
 	registerMetrics sync.Once
@@ -126,17 +134,20 @@ func (a *alertStore) GetAll() []string {
 }
 
 type snapStore struct {
-	data *freecache.Cache
+	data  *freecache.Cache
+	count *uint64
 }
 
 func newSnapStore() *snapStore {
 	return &snapStore{
-		data: freecache.NewCache(2 << 30),
+		data:  freecache.NewCache(2 << 30),
+		count: new(uint64),
 	}
 }
 
 func (s *snapStore) Put(b *protocol.BatchSnapshots) error {
 	for _, snap := range b.Snapshots {
+		atomic.AddUint64(s.count, 1)
 		key := util.Uint64AsBytes(snap.Snapshot.Version)
 		val, err := snap.Encode()
 		if err != nil {
@@ -145,8 +156,6 @@ func (s *snapStore) Put(b *protocol.BatchSnapshots) error {
 		s.data.Set(key, val, 0)
 		log.Debugf("snapStore(): saved snapshot with version ", snap.Snapshot.Version)
 		QedStoreEventsStoredTotal.Inc()
-		QedStoreRequest.Inc()
-		defer QedStoreRequest.Dec()
 	}
 	return nil
 }
@@ -166,7 +175,7 @@ func (s *snapStore) Get(version uint64) (*protocol.SignedSnapshot, error) {
 }
 
 func (s *snapStore) Count() uint64 {
-	return uint64(s.data.EntryCount())
+	return *s.count
 }
 
 type Service struct {
@@ -258,6 +267,8 @@ func (s *Service) Shutdown() {
 
 func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		QedStorePutRequest.Inc()
+		defer QedStorePutRequest.Dec()
 		if r.Method == "POST" {
 			QedStoreBatchesStoredTotal.Inc()
 			// Decode batch to get signed snapshots and batch version.
@@ -288,6 +299,8 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 
 func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		QedStoreGetRequest.Inc()
+		defer QedStoreGetRequest.Dec()
 		if r.Method == "GET" {
 			QedStoreSnapshotsRetrievedTotal.Inc()
 			q := r.URL.Query()
