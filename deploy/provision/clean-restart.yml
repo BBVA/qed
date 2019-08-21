@@ -36,11 +36,84 @@
   vars_files:
     - vars.yml
   tasks:
+    - name: Stop all services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - qed
+        - exporter
+    
+- hosts: "{{ groups['name_qed-0'] }}"
+  remote_user: ec2-user
+  gather_facts: true
+  become: true
+  vars_files:
+    - vars.yml
+  tasks:
     - name: Restart all services
       systemd:
         name: "{{ item }}"
         state: restarted
-      with_items:
+      loop:
+        - qed
+        - exporter
+    - name: wait for raised api port
+      wait_for:
+        port: 8800
+        host: "{{ansible_hostname}}"
+    - name: wait for raised mgmt port
+      wait_for:
+        port: 8700
+        host: "{{ansible_hostname}}"
+    - name: wait for raised me5trics port
+      wait_for:
+        port: 8600
+        host: "{{ansible_hostname}}"
+  tags:
+    - restart
+    - start-qed
+- hosts: "{{ groups['name_qed-1'] }}"
+  remote_user: ec2-user
+  gather_facts: true
+  become: true
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Restart all services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - qed
+        - exporter
+    - name: wait for raised api port
+      wait_for:
+        port: 8800
+        host: "{{ansible_hostname}}"
+    - name: wait for raised mgmt port
+      wait_for:
+        port: 8700
+        host: "{{ansible_hostname}}"
+    - name: wait for raised me5trics port
+      wait_for:
+        port: 8600
+        host: "{{ansible_hostname}}"
+  tags:
+    - restart
+    - start-qed
+- hosts: "{{ groups['name_qed-2'] }}"
+  remote_user: ec2-user
+  gather_facts: true
+  become: true
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Restart all services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+      loop:
         - qed
         - exporter
     - name: wait for raised api port
