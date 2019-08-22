@@ -3,9 +3,8 @@
 storage
 !storage
 **deploy
-**workload
 **prometheus
-**/.git
+.git/modules
 **/.terraform
 c-deps/jemalloc
 c-deps/libs

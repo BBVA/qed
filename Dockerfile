@@ -32,23 +32,18 @@ RUN git clone --depth 1 -b ${BRANCH} ${REPO} .  &&\
     ./builddeps.sh
 
 FROM golang:1.12.5
-# Allow cloning custom repo & branch for testing
-ARG QED_REPO=https://github.com/bbva/qed.git
-ARG QED_REPO_BRANCH=master
 ARG BUILD_META=rc1
 
 ENV GO111MODULE=on
 ENV CGO_LDFLAGS_ALLOW='.*'
-ENV REPO=${QED_REPO}
-ENV BRANCH=${QED_REPO_BRANCH}
 
 WORKDIR /go/src/github.com/bbva/qed
 
 # Copy C deps form builder container
 COPY --from=0 /go/src/github.com/bbva/qed/c-deps /tmp/c-deps
 
-# This step acts as cache to avoid recompiling when Go code changes.
-RUN git clone --depth 1 -b ${BRANCH} ${REPO} .
+# Copy current source
+COPY ./ .
 
 # Download QED dependencies
 RUN go mod download
