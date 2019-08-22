@@ -58,7 +58,14 @@ RUN rm -rf c-deps    &&\
     mv /tmp/c-deps .
 
 # Build QED, Storage binary
-RUN go build -o /usr/local/bin/qed                                   &&\
+RUN export BUILD_TAG=$(git rev-parse --abbrev-ref HEAD)           &&\
+    export BUILD_COMMIT=$(git rev-parse HEAD)                     &&\
+    export BUILD_DATE=$(date --utc +'%Y/%m/%dT%XUTC')             &&\
+    go build -ldflags="-s -w                                        \
+    -X github.com/bbva/qed/build.tag=${BUILD_TAG}                   \
+    -X github.com/bbva/qed/build.rev=${BUILD_COMMIT}                \
+    -X github.com/bbva/qed/build.utcTime=${BUILD_DATE}"             \
+    -o /usr/local/bin/qed                                         &&\
     go build -o /usr/local/bin/storage testutils/notifierstore.go
 
 # Clean
