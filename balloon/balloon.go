@@ -45,6 +45,7 @@ type Balloon struct {
 
 	historyTree *history.HistoryTree
 	hyperTree   *hyper.HyperTree
+	sync.RWMutex
 }
 
 // NewBalloon function instanciates a balloon given a storage and a hasher function.
@@ -169,7 +170,7 @@ func (p IncrementalProof) Verify(snapshotStart, snapshotEnd *Snapshot) bool {
 }
 
 // Version function returns the current (last) balloon version.
-func (b Balloon) Version() uint64 {
+func (b *Balloon) Version() uint64 {
 	return b.version
 }
 
@@ -192,7 +193,8 @@ func (b *Balloon) RefreshVersion() error {
 // with these insertions results, and returns the snapshot along with certain mutations to
 // do to the persistent storage.
 func (b *Balloon) Add(eventDigest hashing.Digest) (*Snapshot, []*storage.Mutation, error) {
-
+	b.Lock()
+	defer b.Unlock()
 	// Get version
 	version := b.version
 	b.version++
@@ -237,7 +239,8 @@ func (b *Balloon) Add(eventDigest hashing.Digest) (*Snapshot, []*storage.Mutatio
 // array of snapshots with these insertions results, and returns the array of snapshots along
 // with certain mutations to do to the persistent storage.
 func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*storage.Mutation, error) {
-
+	b.Lock()
+	defer b.Unlock()
 	// Get version
 	initialVersion := b.version
 	b.version += uint64(len(eventBulkDigest))
@@ -284,8 +287,9 @@ func (b *Balloon) AddBulk(eventBulkDigest []hashing.Digest) ([]*Snapshot, []*sto
 // QueryDigestMembership function is used when an event digest is given to ask for a membership proof
 // against a certain balloon version.
 // It asks the hyper tree for this proof and returns the proof if there is no error.
-func (b Balloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
-
+func (b *Balloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, version uint64) (*MembershipProof, error) {
+	b.RLock()
+	defer b.RUnlock()
 	var proof MembershipProof
 	var err error
 	proof.Hasher = b.hasherF()
@@ -332,7 +336,7 @@ func (b Balloon) QueryDigestMembershipConsistency(keyDigest hashing.Digest, vers
 
 // QueryMembership function is used when an event is given to ask for a membership proof against a
 // certain balloon version. It just hashes the event and ask QueryDigestMembershipConsistency.
-func (b Balloon) QueryMembershipConsistency(event []byte, version uint64) (*MembershipProof, error) {
+func (b *Balloon) QueryMembershipConsistency(event []byte, version uint64) (*MembershipProof, error) {
 	// We need a new instance of the hasher because the b.hasher cannot be
 	// used concurrently, and we support concurrent queries
 	hasher := b.hasherF()
@@ -342,8 +346,9 @@ func (b Balloon) QueryMembershipConsistency(event []byte, version uint64) (*Memb
 // QueryDigestMembership function is used when an event digest is given to ask for a membership proof
 // against the latest balloon version.
 // It asks the hyper tree for this proof and returns the proof if there is no error.
-func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest) (*MembershipProof, error) {
-
+func (b *Balloon) QueryDigestMembership(keyDigest hashing.Digest) (*MembershipProof, error) {
+	b.RLock()
+	defer b.RUnlock()
 	var proof MembershipProof
 	var err error
 	proof.Hasher = b.hasherF()
@@ -386,7 +391,7 @@ func (b Balloon) QueryDigestMembership(keyDigest hashing.Digest) (*MembershipPro
 
 // QueryMembership function is used when an event is given to ask for a membership proof against the
 // latest balloon version. It just hashes the event and ask QueryDigestMembership.
-func (b Balloon) QueryMembership(event []byte) (*MembershipProof, error) {
+func (b *Balloon) QueryMembership(event []byte) (*MembershipProof, error) {
 	// We need a new instance of the hasher because the b.hasher cannot be
 	// used concurrently, and we support concurrent queries
 	hasher := b.hasherF()
@@ -395,8 +400,9 @@ func (b Balloon) QueryMembership(event []byte) (*MembershipProof, error) {
 
 // QueryConsistency function asks the history tree for an incremental proof, and returns
 // the proof if there is no error. Previously, it checks that the given parameters are correct.
-func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
-
+func (b *Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) {
+	b.RLock()
+	defer b.RUnlock()
 	var proof IncrementalProof
 
 	if start >= b.version || end >= b.version || start > end {
@@ -418,6 +424,8 @@ func (b Balloon) QueryConsistency(start, end uint64) (*IncrementalProof, error) 
 
 // Close function closes both history and hyper trees, and restarts balloon version.
 func (b *Balloon) Close() {
+	b.Lock()
+	defer b.Unlock()
 	b.historyTree.Close()
 	b.hyperTree.Close()
 	b.historyTree = nil
