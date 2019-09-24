@@ -99,6 +99,7 @@
     - dashboards/Cache.json
     - dashboards/RocksDBTables.json
     - dashboards/Workload.json
+    - dashboards/Raft.json
   register: grafana_config
 
 - name: Restart Grafana
