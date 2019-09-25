@@ -111,8 +111,9 @@ type RaftNode struct {
 	state       *fsmState
 	snapshotsCh chan *protocol.Snapshot // channel to publish snapshots
 
-	hasherF func() hashing.Hasher
-	metrics *raftNodeMetrics // Raft node metrics.
+	hasherF     func() hashing.Hasher
+	metrics     *raftNodeMetrics     // Raft node metrics.
+	raftMetrics *raftInternalMetrics // Raft internal metrics.
 
 	sync.Mutex
 	closed bool
@@ -226,6 +227,7 @@ func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsC
 
 	// register metrics
 	node.metrics = newRaftNodeMetrics(node)
+	node.raftMetrics = newRaftInternalMetrics(node.raft)
 
 	// check existing state
 	existingState, err := raft.HasExistingState(logStore, node.raftLog, node.snapshots)
@@ -390,6 +392,7 @@ func (n *RaftNode) RegisterMetrics(registry metrics.Registry) {
 		n.raftLog.RegisterMetrics(registry)
 	}
 	registry.MustRegister(n.metrics.collectors()...)
+	registry.MustRegister(n.raftMetrics.collectors()...)
 }
 
 func (n *RaftNode) bootstrapCluster() error {
