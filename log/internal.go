@@ -39,6 +39,8 @@ func (l *internalLogger) Named(name string) Logger {
 	newName := l.name
 	if newName != "" {
 		newName = newName + "." + name
+	} else {
+		newName = name
 	}
 	return New(&LoggerOptions{
 		Name:            newName,

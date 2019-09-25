@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -100,7 +101,51 @@ func TestLogger(t *testing.T) {
 		str = str[strings.IndexByte(str, ' ')+1:]
 
 		// This test will break if you move this around, it's line dependent
-		require.Equal(t, "[INFO]  log/logger_test.go:97: test: this is a test\n", str)
+		require.Equal(t, "[INFO]  log/logger_test.go:98: test: this is a test\n", str)
 
 	})
+
+	t.Run("prefixes the name", func(t *testing.T) {
+
+		var buf bytes.Buffer
+
+		logger := New(&LoggerOptions{
+			Output: &buf,
+			Level:  Info,
+		})
+
+		logger.Info("this is a test")
+		str := buf.String()
+		str = str[strings.IndexByte(str, ' ')+1:]
+		require.Equal(t, "[INFO]  this is a test\n", str)
+
+		buf.Reset()
+
+		sublogger := logger.Named("sublogger")
+		sublogger.Info("this is a test")
+		str = buf.String()
+		str = str[strings.IndexByte(str, ' ')+1:]
+		require.Equal(t, "[INFO]  sublogger: this is a test\n", str)
+
+	})
+
+	t.Run("set another time format", func(t *testing.T) {
+
+		var buf bytes.Buffer
+
+		logger := New(&LoggerOptions{
+			Output:     &buf,
+			Level:      Info,
+			TimeFormat: time.Kitchen,
+		})
+
+		logger.Info("this is a test")
+
+		str := buf.String()
+		dataIndex := strings.IndexByte(str, ' ')
+
+		require.Equal(t, str[:dataIndex], time.Now().Format(time.Kitchen))
+
+	})
+
 }
