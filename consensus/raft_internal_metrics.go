@@ -41,8 +41,8 @@ type raftInternalMetrics struct {
 
 func newRaftInternalMetrics(raft *raft.Raft) *raftInternalMetrics {
 	return &raftInternalMetrics{
-		LastLogIndex: prometheus.NewCounterFunc(
-			prometheus.CounterOpts{
+		LastLogIndex: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
 				Namespace: raftNamespace,
 				Subsystem: raftSubSystem,
 				Name:      "last_log_index",
@@ -54,8 +54,8 @@ func newRaftInternalMetrics(raft *raft.Raft) *raftInternalMetrics {
 				return index
 			},
 		),
-		LastLogTerm: prometheus.NewCounterFunc(
-			prometheus.CounterOpts{
+		LastLogTerm: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
 				Namespace: raftNamespace,
 				Subsystem: raftSubSystem,
 				Name:      "last_log_term",
@@ -67,8 +67,8 @@ func newRaftInternalMetrics(raft *raft.Raft) *raftInternalMetrics {
 				return term
 			},
 		),
-		CommitIndex: prometheus.NewCounterFunc(
-			prometheus.CounterOpts{
+		CommitIndex: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
 				Namespace: raftNamespace,
 				Subsystem: raftSubSystem,
 				Name:      "commit_index",
@@ -80,8 +80,8 @@ func newRaftInternalMetrics(raft *raft.Raft) *raftInternalMetrics {
 				return index
 			},
 		),
-		AppliedIndex: prometheus.NewCounterFunc(
-			prometheus.CounterOpts{
+		AppliedIndex: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
 				Namespace: raftNamespace,
 				Subsystem: raftSubSystem,
 				Name:      "applied_index",
@@ -106,8 +106,8 @@ func newRaftInternalMetrics(raft *raft.Raft) *raftInternalMetrics {
 				return pending
 			},
 		),
-		LastSnapshotIndex: prometheus.NewCounterFunc(
-			prometheus.CounterOpts{
+		LastSnapshotIndex: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
 				Namespace: raftNamespace,
 				Subsystem: raftSubSystem,
 				Name:      "last_snapshot_index",
@@ -119,8 +119,8 @@ func newRaftInternalMetrics(raft *raft.Raft) *raftInternalMetrics {
 				return index
 			},
 		),
-		LastSnapshotTerm: prometheus.NewCounterFunc(
-			prometheus.CounterOpts{
+		LastSnapshotTerm: prometheus.NewGaugeFunc(
+			prometheus.GaugeOpts{
 				Namespace: raftNamespace,
 				Subsystem: raftSubSystem,
 				Name:      "last_snapshot_term",
