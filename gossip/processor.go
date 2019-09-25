@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/hashicorp/go-msgpack/codec"
 	"github.com/prometheus/client_golang/prometheus"
@@ -50,14 +50,14 @@ type BatchProcessor struct {
 	quitCh  chan bool
 	ctx     context.Context
 	id      int
-	log     log2.Logger
+	log     log.Logger
 }
 
-func NewBatchProcessor(a *Agent, tf []TaskFactory, l log2.Logger) *BatchProcessor {
+func NewBatchProcessor(a *Agent, tf []TaskFactory, l log.Logger) *BatchProcessor {
 
 	logger := l
 	if logger == nil {
-		logger = log2.L()
+		logger = log.L()
 	}
 
 	b := &BatchProcessor{

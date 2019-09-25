@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/hashicorp/memberlist"
 	"github.com/prometheus/client_golang/prometheus"
@@ -110,7 +110,7 @@ type Agent struct {
 	Tasks TasksManager
 
 	// Logger
-	log log2.Logger
+	log log.Logger
 }
 
 // NewAgentFromConfig creates new agent from a configuration object.
@@ -127,7 +127,7 @@ func NewAgentFromConfig(conf *Config) (agent *Agent, err error) {
 // NewAgentFromConfigWithLogger creates new agent from a configuration object.
 // It does not create external clients like QED, SnapshotStore or Notifier, nor
 // a task manager.
-func NewAgentFromConfigWithLogger(conf *Config, l log2.Logger) (agent *Agent, err error) {
+func NewAgentFromConfigWithLogger(conf *Config, l log.Logger) (agent *Agent, err error) {
 	options, err := configToOptions(conf)
 	if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func NewAgentFromConfigWithLogger(conf *Config, l log2.Logger) (agent *Agent, er
 
 // NewDefaultAgent returns a new agent with all the APIs initialized and
 // with a cache of size bytes.
-func NewDefaultAgent(conf *Config, qed *client.HTTPClient, s SnapshotStore, t TasksManager, n Notifier, l log2.Logger) (*Agent, error) {
+func NewDefaultAgent(conf *Config, qed *client.HTTPClient, s SnapshotStore, t TasksManager, n Notifier, l log.Logger) (*Agent, error) {
 	options, err := configToOptions(conf)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func NewAgent(options ...AgentOptionF) (*Agent, error) {
 	agent := &Agent{
 		quitCh:   make(chan bool),
 		topology: NewTopology(),
-		log:      log2.L(),
+		log:      log.L(),
 	}
 
 	// Run the options on the client
@@ -191,7 +191,7 @@ func NewAgent(options ...AgentOptionF) (*Agent, error) {
 	agent.config.MemberlistConfig.AdvertiseAddr = advertiseIP
 	agent.config.MemberlistConfig.AdvertisePort = advertisePort
 	agent.config.MemberlistConfig.Name = agent.config.NodeName
-	agent.config.MemberlistConfig.Logger = agent.log.StdLogger(&log2.StdLoggerOptions{InferLevels: true})
+	agent.config.MemberlistConfig.Logger = agent.log.StdLogger(&log.StdLoggerOptions{InferLevels: true})
 
 	// Configure delegates
 	agent.config.MemberlistConfig.Delegate = newAgentDelegate(agent, agent.log)

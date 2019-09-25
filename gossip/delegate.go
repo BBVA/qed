@@ -16,7 +16,7 @@
 package gossip
 
 import (
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -26,7 +26,7 @@ import (
 // This allows you to reason about ordering.
 type eventDelegate struct {
 	agent *Agent
-	log   log2.Logger
+	log   log.Logger
 }
 
 // NotifyJoin is invoked when a node is detected to have joined.
@@ -64,10 +64,10 @@ func (e *eventDelegate) NotifyUpdate(n *memberlist.Node) {
 
 type agentDelegate struct {
 	agent *Agent
-	log   log2.Logger
+	log   log.Logger
 }
 
-func newAgentDelegate(agent *Agent, logger log2.Logger) *agentDelegate {
+func newAgentDelegate(agent *Agent, logger log.Logger) *agentDelegate {
 	return &agentDelegate{
 		agent: agent,
 		log:   logger,

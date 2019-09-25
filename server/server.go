@@ -30,7 +30,7 @@ import (
 	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/sign"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage/rocks"
@@ -51,17 +51,17 @@ type Server struct {
 	sender             *Sender
 	agent              *gossip.Agent
 	snapshotsCh        chan *protocol.Snapshot
-	log                log2.Logger
+	log                log.Logger
 }
 
 // NewServer creates a new Server based on the parameters it receives.
 func NewServer(conf *Config) (*Server, error) {
-	return NewServerWithLogger(conf, log2.Default())
+	return NewServerWithLogger(conf, log.Default())
 }
 
 // NewServerWithLogger creates a new Server based on the parameters it receives and
 // configures a logger.
-func NewServerWithLogger(conf *Config, logger log2.Logger) (*Server, error) {
+func NewServerWithLogger(conf *Config, logger log.Logger) (*Server, error) {
 
 	bootstrap := false
 	if len(conf.RaftJoinAddr) <= 0 {
@@ -274,7 +274,7 @@ func (s *Server) RegisterMetrics(registry metrics.Registry) {
 	}
 }
 
-func newTLSServer(addr string, mux *http.ServeMux, logger log2.Logger) *http.Server {
+func newTLSServer(addr string, mux *http.ServeMux, logger log.Logger) *http.Server {
 
 	cfg := &tls.Config{
 		MinVersion: tls.VersionTLS12,
@@ -301,7 +301,7 @@ func newTLSServer(addr string, mux *http.ServeMux, logger log2.Logger) *http.Ser
 
 }
 
-func newHTTPServer(addr string, mux *http.ServeMux, logger log2.Logger) *http.Server {
+func newHTTPServer(addr string, mux *http.ServeMux, logger log.Logger) *http.Server {
 	return &http.Server{
 		Addr:    addr,
 		Handler: apihttp.LogHandler(mux, logger),

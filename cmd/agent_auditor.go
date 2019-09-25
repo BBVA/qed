@@ -23,7 +23,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
 	"github.com/octago/sflags/gen/gpflag"
@@ -115,14 +115,14 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 	conf := agentAuditorCtx.Value(k("auditor.config")).(*auditorConfig)
 
 	// create main logger
-	logOpts := &log2.LoggerOptions{
+	logOpts := &log.LoggerOptions{
 		Name:            "qed.auditor",
 		IncludeLocation: true,
-		Level:           log2.LevelFromString(agentConfig.Log),
-		Output:          log2.DefaultOutput,
-		TimeFormat:      log2.DefaultTimeFormat,
+		Level:           log.LevelFromString(agentConfig.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log2.New(logOpts)
+	logger := log.New(logOpts)
 
 	// URL parse
 	err := checkAuditorParams(conf)
@@ -177,7 +177,7 @@ func checkAuditorParams(conf *auditorConfig) error {
 }
 
 type membershipFactory struct {
-	log log2.Logger
+	log log.Logger
 }
 
 func (m membershipFactory) Metrics() []prometheus.Collector {

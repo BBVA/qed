@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -43,7 +43,7 @@ func TestBatchProcessorLoop(t *testing.T) {
 	a, err := NewAgentFromConfig(conf)
 	require.NoError(t, err, "Error creating agent!")
 
-	p := NewBatchProcessor(a, nil, log2.L())
+	p := NewBatchProcessor(a, nil, log.L())
 	a.In.Subscribe(BatchMessageType, p, 1)
 	defer p.Stop()
 
@@ -86,7 +86,7 @@ func TestBatchProcessorWasProcessed(t *testing.T) {
 	a, err := NewAgentFromConfig(conf)
 	require.NoError(t, err, "Error creating agent!")
 
-	p := NewBatchProcessor(a, nil, log2.L())
+	p := NewBatchProcessor(a, nil, log.L())
 	a.In.Subscribe(BatchMessageType, p, 0)
 	defer p.Stop()
 
@@ -140,7 +140,7 @@ func TestBatchProcessorRegisterMetrics(t *testing.T) {
 	// all services
 	time.Sleep(3 * time.Second)
 
-	p := NewBatchProcessor(a, []TaskFactory{&fakeTaskFactory{}}, log2.L())
+	p := NewBatchProcessor(a, []TaskFactory{&fakeTaskFactory{}}, log.L())
 	a.In.Subscribe(BatchMessageType, p, 0)
 	defer p.Stop()
 

@@ -21,7 +21,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/util"
 )
@@ -42,14 +42,14 @@ func runServerStart(cmd *cobra.Command, args []string) error {
 	conf := serverCtx.Value(k("server.config")).(*server.Config)
 
 	// create main logger
-	logOpts := &log2.LoggerOptions{
+	logOpts := &log.LoggerOptions{
 		Name:            "qed",
 		IncludeLocation: true,
-		Level:           log2.LevelFromString(conf.Log),
-		Output:          log2.DefaultOutput,
-		TimeFormat:      log2.DefaultTimeFormat,
+		Level:           log.LevelFromString(conf.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log2.New(logOpts)
+	logger := log.New(logOpts)
 
 	// URL parse
 	err = checkServerParams(conf)

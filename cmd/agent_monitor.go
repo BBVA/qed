@@ -25,7 +25,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
 	"github.com/octago/sflags/gen/gpflag"
@@ -119,14 +119,14 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 	conf := agentMonitorCtx.Value(k("monitor.config")).(*monitorConfig)
 
 	// create main logger
-	logOpts := &log2.LoggerOptions{
+	logOpts := &log.LoggerOptions{
 		Name:            "qed.monitor",
 		IncludeLocation: true,
-		Level:           log2.LevelFromString(agentConfig.Log),
-		Output:          log2.DefaultOutput,
-		TimeFormat:      log2.DefaultTimeFormat,
+		Level:           log.LevelFromString(agentConfig.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log2.New(logOpts)
+	logger := log.New(logOpts)
 
 	// URL parse
 	err := checkMonitorParams(conf)
@@ -183,7 +183,7 @@ func checkMonitorParams(conf *monitorConfig) error {
 }
 
 type incrementalFactory struct {
-	log log2.Logger
+	log log.Logger
 }
 
 func (i incrementalFactory) Metrics() []prometheus.Collector {
@@ -234,13 +234,13 @@ type lagFactory struct {
 	counter     uint64
 	ticker      *time.Ticker
 	quit        chan struct{}
-	log         log2.Logger
+	log         log.Logger
 }
 
-func newLagFactory(t time.Duration, l log2.Logger) *lagFactory {
+func newLagFactory(t time.Duration, l log.Logger) *lagFactory {
 	logger := l
 	if logger == nil {
-		logger = log2.L()
+		logger = log.L()
 	}
 	return &lagFactory{
 		ticker: time.NewTicker(t),

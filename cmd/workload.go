@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/workload"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
@@ -60,14 +60,14 @@ func runWorkload(cmd *cobra.Command, args []string) error {
 	config := workloadCtx.Value(k("workload.config")).(*workload.Config)
 
 	// create main logger
-	logOpts := &log2.LoggerOptions{
+	logOpts := &log.LoggerOptions{
 		Name:            "qed",
 		IncludeLocation: true,
-		Level:           log2.LevelFromString(config.Log),
-		Output:          log2.DefaultOutput,
-		TimeFormat:      log2.DefaultTimeFormat,
+		Level:           log.LevelFromString(config.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log2.New(logOpts)
+	logger := log.New(logOpts)
 
 	workload := workload.NewWorkload(*config, logger)
 

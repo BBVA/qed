@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/coocood/freecache"
 )
@@ -166,11 +166,11 @@ func SetNotifier(n Notifier) AgentOptionF {
 	}
 }
 
-func SetLogger(l log2.Logger) AgentOptionF {
+func SetLogger(l log.Logger) AgentOptionF {
 	return func(a *Agent) error {
 		a.log = l
 		if a.log == nil {
-			a.log = log2.L()
+			a.log = log.L()
 		}
 		return nil
 	}

@@ -30,7 +30,7 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 )
 
@@ -48,7 +48,7 @@ type HTTPClient struct {
 	healthCheckInterval time.Duration
 	discoveryEnabled    bool
 	hasherF             func() hashing.Hasher
-	log                 log2.Logger
+	log                 log.Logger
 
 	mu                sync.RWMutex // guards the next block
 	running           bool
@@ -100,7 +100,7 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string, snapshotStoreUR
 		maxRetries:          0,
 		retrier:             NewNoRequestRetrier(httpClient),
 		hasherF:             hashing.NewSha256Hasher,
-		log:                 log2.L(),
+		log:                 log.L(),
 	}
 
 	client.topology.Update(urls[0], urls[1:]...)
@@ -118,7 +118,7 @@ func NewHTTPClientFromConfig(conf *Config) (*HTTPClient, error) {
 }
 
 // NewHTTPClientFromConfigWithLogger initializes a client from a configuration.
-func NewHTTPClientFromConfigWithLogger(conf *Config, logger log2.Logger) (*HTTPClient, error) {
+func NewHTTPClientFromConfigWithLogger(conf *Config, logger log.Logger) (*HTTPClient, error) {
 	options, err := configToOptions(conf)
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 		maxRetries:          DefaultMaxRetries,
 		healthCheckStopCh:   make(chan bool),
 		discoveryStopCh:     make(chan bool),
-		log:                 log2.L(),
+		log:                 log.L(),
 	}
 	// Run the options on the client
 	for _, option := range options {

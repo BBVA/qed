@@ -30,7 +30,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/bbva/qed/api/metricshttp"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/util"
 )
@@ -136,18 +136,18 @@ func (a *alertStore) GetAll() []string {
 type snapStore struct {
 	data  *freecache.Cache
 	count *uint64
-	log   log2.Logger
+	log   log.Logger
 }
 
 func newSnapStore() *snapStore {
 	return &snapStore{
 		data:  freecache.NewCache(2 << 30),
 		count: new(uint64),
-		log:   log2.L(),
+		log:   log.L(),
 	}
 }
 
-func newSnapStoreWithLogger(l log2.Logger) *snapStore {
+func newSnapStoreWithLogger(l log.Logger) *snapStore {
 	return &snapStore{
 		data: freecache.NewCache(2 << 30),
 		log:  l,
@@ -195,7 +195,7 @@ type Service struct {
 	prometheusRegistry *prometheus.Registry
 	httpServer         *http.Server
 
-	log log2.Logger
+	log log.Logger
 
 	quitCh chan bool
 }
@@ -205,11 +205,11 @@ func NewService() *Service {
 		snaps:  newSnapStore(),
 		alerts: newAlertStore(),
 		quitCh: make(chan bool),
-		log:    log2.L(),
+		log:    log.L(),
 	}
 }
 
-func NewServiceWithLogger(l log2.Logger) *Service {
+func NewServiceWithLogger(l log.Logger) *Service {
 	return &Service{
 		snaps:  newSnapStoreWithLogger(l.Named("snapshot-store")),
 		alerts: newAlertStore(),

@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/api/metricshttp"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -44,7 +44,7 @@ type Server struct {
 	server   *http.Server
 	registry *prometheus.Registry
 
-	log log2.Logger
+	log log.Logger
 }
 
 // Create new metrics server. Do not listen to the given address until

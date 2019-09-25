@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 )
 
 type k int
@@ -34,7 +34,7 @@ const (
 	requestIDKey k = 0
 )
 
-func newHttpServer(listenAddr string, router *http.ServeMux, logger log2.Logger) *http.Server {
+func newHttpServer(listenAddr string, router *http.ServeMux, logger log.Logger) *http.Server {
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
@@ -42,14 +42,14 @@ func newHttpServer(listenAddr string, router *http.ServeMux, logger log2.Logger)
 	return &http.Server{
 		Addr:         listenAddr,
 		Handler:      tracing(nextRequestID)(logging(logger)(router)),
-		ErrorLog:     logger.StdLogger(&log2.StdLoggerOptions{InferLevels: true}),
+		ErrorLog:     logger.StdLogger(&log.StdLoggerOptions{InferLevels: true}),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  15 * time.Second,
 	}
 }
 
-func logging(logger log2.Logger) func(http.Handler) http.Handler {
+func logging(logger log.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
