@@ -22,7 +22,7 @@ package history
 import (
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 )
 
@@ -32,14 +32,14 @@ type HistoryTree struct {
 	writeCache cache.ModifiableCache
 	readCache  cache.Cache
 
-	log log2.Logger
+	log log.Logger
 }
 
 func NewHistoryTree(hasherF func() hashing.Hasher, store storage.Store, cacheSize uint16) *HistoryTree {
-	return NewHistoryTreeWithLogger(hasherF, store, cacheSize, log2.L())
+	return NewHistoryTreeWithLogger(hasherF, store, cacheSize, log.L())
 }
 
-func NewHistoryTreeWithLogger(hasherF func() hashing.Hasher, store storage.Store, cacheSize uint16, logger log2.Logger) *HistoryTree {
+func NewHistoryTreeWithLogger(hasherF func() hashing.Hasher, store storage.Store, cacheSize uint16, logger log.Logger) *HistoryTree {
 
 	// create cache for Adding
 	writeCache := cache.NewLruReadThroughCache(storage.HistoryTable, store, cacheSize)

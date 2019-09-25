@@ -1,4 +1,4 @@
-package log2
+package log
 
 import (
 	"bytes"
@@ -100,7 +100,7 @@ func TestLogger(t *testing.T) {
 		str = str[strings.IndexByte(str, ' ')+1:]
 
 		// This test will break if you move this around, it's line dependent
-		require.Equal(t, "[INFO]  log2/logger_test.go:97: test: this is a test\n", str)
+		require.Equal(t, "[INFO]  log/logger_test.go:97: test: this is a test\n", str)
 
 	})
 }

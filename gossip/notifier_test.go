@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +41,7 @@ func TestDefaultAlert(t *testing.T) {
 	defer server.Close()
 	conf := DefaultSimpleNotifierConfig()
 	conf.Endpoint = append(conf.Endpoint, server.URL)
-	notificator := NewSimpleNotifierFromConfig(conf, log2.L())
+	notificator := NewSimpleNotifierFromConfig(conf, log.L())
 
 	notificator.Start()
 	defer notificator.Stop()

@@ -22,7 +22,7 @@ import (
 
 	"github.com/bbva/qed/crypto/sign"
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,14 +53,14 @@ type Sender struct {
 	TTL        int
 	signer     sign.Signer
 	quitCh     chan bool
-	log        log2.Logger
+	log        log.Logger
 }
 
 func NewSender(a *gossip.Agent, s sign.Signer, size, ttl, n int) *Sender {
-	return NewSenderWithLogger(a, s, size, ttl, n, log2.Default())
+	return NewSenderWithLogger(a, s, size, ttl, n, log.Default())
 }
 
-func NewSenderWithLogger(a *gossip.Agent, s sign.Signer, size, ttl, n int, logger log2.Logger) *Sender {
+func NewSenderWithLogger(a *gossip.Agent, s sign.Signer, size, ttl, n int, logger log.Logger) *Sender {
 	return &Sender{
 		agent:      a,
 		Interval:   100 * time.Millisecond,

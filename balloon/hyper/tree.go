@@ -24,7 +24,7 @@ import (
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 	"github.com/bbva/qed/util"
 )
@@ -39,16 +39,16 @@ type HyperTree struct {
 	defaultHashes    []hashing.Digest
 	batchLoader      batchLoader
 
-	log log2.Logger
+	log log.Logger
 
 	sync.RWMutex
 }
 
 func NewHyperTree(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache) *HyperTree {
-	return NewHyperTreeWithLogger(hasherF, store, cache, log2.L())
+	return NewHyperTreeWithLogger(hasherF, store, cache, log.L())
 }
 
-func NewHyperTreeWithLogger(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache, logger log2.Logger) *HyperTree {
+func NewHyperTreeWithLogger(hasherF func() hashing.Hasher, store storage.Store, cache cache.ModifiableCache, logger log.Logger) *HyperTree {
 
 	hasher := hasherF()
 	numBits := hasher.Len()

@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 )
 
 // Notifies string messages to external services.
@@ -56,7 +56,7 @@ func DefaultSimpleNotifierConfig() *SimpleNotifierConfig {
 }
 
 // Returns a SimpleNotifier pointer configured with configuration c.
-func NewSimpleNotifierFromConfig(c *SimpleNotifierConfig, logger log2.Logger) *SimpleNotifier {
+func NewSimpleNotifierFromConfig(c *SimpleNotifierConfig, logger log.Logger) *SimpleNotifier {
 	return NewSimpleNotifier(c.Endpoint, c.QueueSize, c.DialTimeout, c.ReadTimeout, logger)
 }
 
@@ -70,7 +70,7 @@ type SimpleNotifier struct {
 	endpoint      []string
 	notifications chan string
 	quitCh        chan bool
-	log           log2.Logger
+	log           log.Logger
 }
 
 // Returns a new default notififier client configured
@@ -79,18 +79,18 @@ type SimpleNotifier struct {
 //   queueTimeout is the time to wait for the queue to accept a new message
 //   dialTimeout is the time to wait for dial to the notifications server
 //   readTimeout is the time to wait for the notifications server response
-func NewSimpleNotifier(endpoint []string, size int, dialTimeout, readTimeout time.Duration, logger log2.Logger) *SimpleNotifier {
+func NewSimpleNotifier(endpoint []string, size int, dialTimeout, readTimeout time.Duration, logger log.Logger) *SimpleNotifier {
 
-	log := logger
-	if log == nil {
-		log = log2.L()
+	newLogger := logger
+	if newLogger == nil {
+		newLogger = log.L()
 	}
 
 	d := SimpleNotifier{
 		notifications: make(chan string, size),
 		quitCh:        make(chan bool),
 		endpoint:      endpoint,
-		log:           log,
+		log:           newLogger,
 	}
 
 	d.client = &http.Client{

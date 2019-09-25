@@ -30,7 +30,7 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage"
@@ -115,7 +115,7 @@ type RaftNode struct {
 	metrics     *raftNodeMetrics     // Raft node metrics.
 	raftMetrics *raftInternalMetrics // Raft internal metrics.
 
-	log log2.Logger
+	log log.Logger
 
 	sync.Mutex
 	closed bool
@@ -123,10 +123,10 @@ type RaftNode struct {
 }
 
 func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot) (*RaftNode, error) {
-	return NewRaftNodeWithLogger(opts, store, snapshotsCh, log2.L())
+	return NewRaftNodeWithLogger(opts, store, snapshotsCh, log.L())
 }
 
-func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot, logger log2.Logger) (*RaftNode, error) {
+func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot, logger log.Logger) (*RaftNode, error) {
 
 	// We try to resolve the raft addr to avoid binding to hostnames
 	// because Raft library does not support FQDNs
@@ -203,7 +203,7 @@ func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, 
 
 	conf.LogLevel = "error"
 	if opts.RaftLogging {
-		conf.Logger = log2.NewHclogAdapter(node.log.Named("raft"))
+		conf.Logger = log.NewHclogAdapter(node.log.Named("raft"))
 	} else {
 		conf.Logger = hclog.NewNullLogger()
 	}
@@ -217,7 +217,7 @@ func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, 
 
 	// create the snapshot store. This allows the Raft to truncate the log.
 	// The library creates a folder to store the snapshots in.
-	node.snapshots, err = raft.NewFileSnapshotStoreWithLogger(opts.RaftLogPath, opts.LogSnapshots, node.log.StdLogger(&log2.StdLoggerOptions{
+	node.snapshots, err = raft.NewFileSnapshotStoreWithLogger(opts.RaftLogPath, opts.LogSnapshots, node.log.StdLogger(&log.StdLoggerOptions{
 		InferLevels: true,
 	}))
 	if err != nil {

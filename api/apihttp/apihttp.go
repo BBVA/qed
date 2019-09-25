@@ -26,7 +26,7 @@ import (
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 )
 
@@ -565,7 +565,7 @@ func GetReqSanitizer(w http.ResponseWriter, r *http.Request) (http.ResponseWrite
 
 // LogHandler Logs the Http Status for a request into fileHandler and returns a
 // httphandler function which is a wrapper to log the requests.
-func LogHandler(handle http.Handler, logger log2.Logger) http.HandlerFunc {
+func LogHandler(handle http.Handler, logger log.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, request *http.Request) {
 		start := time.Now()
 		writer := statusWriter{w, 0, 0}

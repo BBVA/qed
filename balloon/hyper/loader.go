@@ -17,7 +17,7 @@
 package hyper
 
 import (
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/storage"
@@ -33,7 +33,7 @@ type defaultBatchLoader struct {
 	cache            cache.Cache
 	store            storage.Store
 
-	log log2.Logger
+	log log.Logger
 }
 
 func NewDefaultBatchLoader(store storage.Store, cache cache.Cache, cacheHeightLimit uint16) *defaultBatchLoader {
@@ -41,11 +41,11 @@ func NewDefaultBatchLoader(store storage.Store, cache cache.Cache, cacheHeightLi
 		cacheHeightLimit: cacheHeightLimit,
 		cache:            cache,
 		store:            store,
-		log:              log2.L(),
+		log:              log.L(),
 	}
 }
 
-func NewDefaultBatchLoaderWithLogger(store storage.Store, cache cache.Cache, cacheHeightLimit uint16, logger log2.Logger) *defaultBatchLoader {
+func NewDefaultBatchLoaderWithLogger(store storage.Store, cache cache.Cache, cacheHeightLimit uint16, logger log.Logger) *defaultBatchLoader {
 	return &defaultBatchLoader{
 		cacheHeightLimit: cacheHeightLimit,
 		cache:            cache,

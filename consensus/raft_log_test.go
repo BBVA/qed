@@ -75,7 +75,7 @@ func TestRaftLogFirstIndex(t *testing.T) {
 	// Set a fake raft log
 	logs := []*raft.Log{
 		fakeRaftLog(1, "log1"),
-		fakeRaftLog(2, "log2"),
+		fakeRaftLog(2, "log"),
 		fakeRaftLog(3, "log3"),
 	}
 	require.NoError(t, store.StoreLogs(logs))
@@ -100,7 +100,7 @@ func TestRaftLogLastIndex(t *testing.T) {
 	// create a set of fake raft logs
 	logs := []*raft.Log{
 		fakeRaftLog(1, "log1"),
-		fakeRaftLog(2, "log2"),
+		fakeRaftLog(2, "log"),
 		fakeRaftLog(3, "log3"),
 	}
 	require.NoError(t, store.StoreLogs(logs))
@@ -129,7 +129,7 @@ func TestRaftLogGetLog(t *testing.T) {
 	// Set a mock raft log
 	logs := []*raft.Log{
 		fakeRaftLog(1, "log1"),
-		fakeRaftLog(2, "log2"),
+		fakeRaftLog(2, "log"),
 		fakeRaftLog(3, "log3"),
 	}
 	require.NoError(t, store.StoreLogs(logs))
@@ -171,7 +171,7 @@ func TestRaftLogSetLogs(t *testing.T) {
 	// Create a set of logs
 	logs := []*raft.Log{
 		fakeRaftLog(1, "log1"),
-		fakeRaftLog(2, "log2"),
+		fakeRaftLog(2, "log"),
 	}
 
 	// Attempt to store the logs
@@ -194,9 +194,9 @@ func TestRaftLogDeleteRange(t *testing.T) {
 
 	// Create a set of logs
 	log1 := fakeRaftLog(1, "log1")
-	log2 := fakeRaftLog(2, "log2")
+	log := fakeRaftLog(2, "log")
 	log3 := fakeRaftLog(3, "log3")
-	logs := []*raft.Log{log1, log2, log3}
+	logs := []*raft.Log{log1, log, log3}
 
 	// Attempt to store the logs
 	require.NoError(t, store.StoreLogs(logs))

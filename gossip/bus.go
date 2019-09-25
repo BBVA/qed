@@ -18,7 +18,7 @@ package gossip
 import (
 	"sync"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 )
 
 // A Subscriber to agent gossip message queues
@@ -45,7 +45,7 @@ type Subscribers []chan *Message
 // gossip Messages
 type MessageBus struct {
 	pool [MAXMESSAGEID]Subscribers
-	log  log2.Logger
+	log  log.Logger
 	rm   sync.RWMutex
 }
 

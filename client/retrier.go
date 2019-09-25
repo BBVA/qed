@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 )
 
 var (
@@ -81,7 +81,7 @@ type BackoffRequestRetrier struct {
 	*http.Client
 	maxRetries int
 	backoff    Backoff
-	log        log2.Logger
+	log        log.Logger
 }
 
 // NewBackoffRequestRetrier returns a retrier that uses the given backoff strategy.
@@ -90,12 +90,12 @@ func NewBackoffRequestRetrier(httpClient *http.Client, maxRetries int, backoff B
 		Client:     httpClient,
 		maxRetries: maxRetries,
 		backoff:    backoff,
-		log:        log2.L(),
+		log:        log.L(),
 	}
 }
 
 // NewBackoffRequestRetrierWithLogger returns a retrier that uses the given backoff strategy.
-func NewBackoffRequestRetrierWithLogger(httpClient *http.Client, maxRetries int, backoff Backoff, logger log2.Logger) *BackoffRequestRetrier {
+func NewBackoffRequestRetrierWithLogger(httpClient *http.Client, maxRetries int, backoff Backoff, logger log.Logger) *BackoffRequestRetrier {
 	return &BackoffRequestRetrier{
 		Client:     httpClient,
 		maxRetries: maxRetries,

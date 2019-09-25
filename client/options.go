@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 )
 
 // HTTPClientOptionF is a function that configures an HTTPClient.
@@ -172,11 +172,11 @@ func SetHasherFunction(hasherF func() hashing.Hasher) HTTPClientOptionF {
 	}
 }
 
-func SetLogger(logger log2.Logger) HTTPClientOptionF {
+func SetLogger(logger log.Logger) HTTPClientOptionF {
 	return func(c *HTTPClient) error {
 		c.log = logger
 		if c.log == nil {
-			c.log = log2.L()
+			c.log = log.L()
 		}
 		return nil
 	}

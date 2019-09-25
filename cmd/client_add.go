@@ -22,7 +22,7 @@ import (
 	"os"
 
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 )
@@ -68,14 +68,14 @@ func runClientAdd(cmd *cobra.Command, args []string) error {
 	config := clientCtx.Value(k("client.config")).(*client.Config)
 
 	// create main logger
-	logOpts := &log2.LoggerOptions{
+	logOpts := &log.LoggerOptions{
 		Name:            "qed.client",
 		IncludeLocation: true,
-		Level:           log2.LevelFromString(config.Log),
-		Output:          log2.DefaultOutput,
-		TimeFormat:      log2.DefaultTimeFormat,
+		Level:           log.LevelFromString(config.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log2.New(logOpts)
+	logger := log.New(logOpts)
 
 	client, err := client.NewHTTPClientFromConfigWithLogger(config, logger)
 	if err != nil {

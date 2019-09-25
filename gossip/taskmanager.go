@@ -19,7 +19,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -82,7 +82,7 @@ func DefaultSimpleTasksManagerConfig() *SimpleTasksManagerConfig {
 	}
 }
 
-func NewSimpleTasksManagerFromConfig(c *SimpleTasksManagerConfig, logger log2.Logger) *SimpleTasksManager {
+func NewSimpleTasksManagerFromConfig(c *SimpleTasksManagerConfig, logger log.Logger) *SimpleTasksManager {
 	return NewSimpleTasksManagerWithLogger(c.Interval, c.MaxTasks, logger)
 }
 
@@ -93,7 +93,7 @@ type SimpleTasksManager struct {
 	quitCh   chan bool
 	ticker   *time.Ticker
 	maxTasks int
-	log      log2.Logger
+	log      log.Logger
 }
 
 // NewSimpleTasksManager returns a new TasksManager and its task
@@ -105,14 +105,14 @@ func NewSimpleTasksManager(i time.Duration, max int) *SimpleTasksManager {
 		quitCh:   make(chan bool),
 		ticker:   time.NewTicker(i),
 		maxTasks: max,
-		log:      log2.L(),
+		log:      log.L(),
 	}
 }
 
 // NewSimpleTasksManagerWithLogger returns a new TasksManager and its task
 // channel. The execution loop will try to execute up to maxTasks tasks
 // each interval. Also the channel has maxTasks capacity.
-func NewSimpleTasksManagerWithLogger(i time.Duration, max int, l log2.Logger) *SimpleTasksManager {
+func NewSimpleTasksManagerWithLogger(i time.Duration, max int, l log.Logger) *SimpleTasksManager {
 	return &SimpleTasksManager{
 		taskCh:   make(chan Task, max),
 		quitCh:   make(chan bool),
@@ -187,13 +187,13 @@ func (t *SimpleTasksManager) dispatchTasks() {
 // for testing purposes. Its intented to be used with the
 // BatchSnapshot processor
 type PrinterFactory struct {
-	log log2.Logger
+	log log.Logger
 }
 
-func NewPrinterFactory(l log2.Logger) *PrinterFactory {
+func NewPrinterFactory(l log.Logger) *PrinterFactory {
 	logger := l
 	if logger == nil {
-		logger = log2.L()
+		logger = log.L()
 	}
 	return &PrinterFactory{log: logger}
 }

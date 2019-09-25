@@ -1,4 +1,4 @@
-package log2
+package log
 
 import (
 	"bytes"
@@ -47,7 +47,7 @@ func TestStdLogAdapter(t *testing.T) {
 		str := buf.String()
 		str = str[strings.IndexByte(str, ' ')+1:]
 
-		require.Equal(t, "[INFO]  test: this is a test\n", str)
+		require.Equal(t, "", str)
 	})
 
 	t.Run("infer level", func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestStdLogAdapter(t *testing.T) {
 
 		logger := New(&LoggerOptions{
 			Name:   "test",
-			Level:  Error,
+			Level:  Info,
 			Output: &buf,
 		})
 

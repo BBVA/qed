@@ -32,7 +32,7 @@ import (
 	"github.com/bbva/qed/api/metricshttp"
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log2"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
 )
 
@@ -55,7 +55,7 @@ type Workload struct {
 	metricsServer      *http.Server
 	prometheusRegistry *prometheus.Registry
 
-	log log2.Logger
+	log log.Logger
 }
 
 type Plan [][]Config
@@ -77,7 +77,7 @@ type Attack struct {
 	client  *client.HTTPClient
 	senChan chan Task
 
-	log log2.Logger
+	log log.Logger
 }
 
 type Task struct {
@@ -87,7 +87,7 @@ type Task struct {
 	version, start, end uint64
 }
 
-func NewWorkload(conf Config, logger log2.Logger) *Workload {
+func NewWorkload(conf Config, logger log.Logger) *Workload {
 	return &Workload{
 		Config: conf,
 		log:    logger,
@@ -209,7 +209,7 @@ func (workload *Workload) Stop() error {
 	return nil
 }
 
-func newAttack(conf Config, logger log2.Logger) {
+func newAttack(conf Config, logger log.Logger) {
 	// QED client
 	transport := http.DefaultTransport.(*http.Transport)
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: conf.Insecure}
