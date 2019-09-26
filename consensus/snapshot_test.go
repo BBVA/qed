@@ -22,15 +22,12 @@ import (
 	"time"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/rocks"
 	utilrand "github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/require"
 )
 
 func TestSnapshot(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	node, clean, err := newSeed(t.Name(), 1)
@@ -64,7 +61,6 @@ func TestSnapshot(t *testing.T) {
 
 func TestRestoreSingleNode(t *testing.T) {
 	// t.Skip()
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	node, clean0, err := newSeed(t.Name(), 1)
@@ -113,8 +109,6 @@ func TestRestoreSingleNode(t *testing.T) {
 }
 
 func TestRestoreFromLeaderWAL(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	node1, clean1, err := newSeed(t.Name(), 1)
@@ -193,7 +187,6 @@ func TestRestoreFromLeaderWAL(t *testing.T) {
 
 func TestRestoreFromLeaderSnapshot(t *testing.T) {
 	// t.Skip()
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	node1, clean1, err := newSeed(t.Name(), 1)
@@ -276,8 +269,6 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 
 func TestRestoreNewNodeFromLeader(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	// start only one seed
 	node1, clean1, err := newSeed(t.Name(), 1)
 	require.NoError(t, err)
@@ -355,8 +346,6 @@ func TestRestoreFailureDueToGap(t *testing.T) {
 
 	t.Skip()
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	// start only one seed
 	opts := DefaultClusteringOptions()
 	opts.NodeID = fmt.Sprintf("%s_%d", t.Name(), 1)
@@ -398,8 +387,6 @@ func TestRestoreFailureDueToGap(t *testing.T) {
 }
 
 func TestRestoreNewNodeFromChangedLeader(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	node1, clean1, err := newSeed(t.Name(), 1)
@@ -469,8 +456,6 @@ func TestRestoreNewNodeFromChangedLeader(t *testing.T) {
 }
 
 func TestRestoreOldNodeFromChangedLeader(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	node1, clean1, err := newSeed(t.Name(), 1)

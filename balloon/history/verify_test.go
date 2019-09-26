@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/stretchr/testify/assert"
 )
@@ -221,8 +220,6 @@ func TestPruneToVerifyIncrementalEnd(t *testing.T) {
 
 func BenchmarkPruneToVerify(b *testing.B) {
 
-	log.SetLogger("BenchmarkPruneToVerify", log.SILENT)
-
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
 		pruned := pruneToVerify(0, i, rand.Bytes(32))
@@ -232,8 +229,6 @@ func BenchmarkPruneToVerify(b *testing.B) {
 }
 
 func BenchmarkPruneToVerifyConsistent(b *testing.B) {
-
-	log.SetLogger("BenchmarkPruneToVerify", log.SILENT)
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
@@ -245,8 +240,6 @@ func BenchmarkPruneToVerifyConsistent(b *testing.B) {
 
 func BenchmarkPruneToVerifyIncrementalEnd(b *testing.B) {
 
-	log.SetLogger("BenchmarkPruneToVerifyIncrementalEnd", log.SILENT)
-
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {
 		pruned := pruneToVerifyIncrementalEnd(0, i)
@@ -256,8 +249,6 @@ func BenchmarkPruneToVerifyIncrementalEnd(b *testing.B) {
 }
 
 func BenchmarkPruneToVerifyIncrementalStart(b *testing.B) {
-
-	log.SetLogger("BenchmarkPruneToVerifyIncrementalStart", log.SILENT)
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {

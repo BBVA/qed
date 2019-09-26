@@ -20,14 +20,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/bbva/qed/log"
 )
 
 func TestBackup(t *testing.T) {
 	var err error
-	log.SetLogger(t.Name(), log.SILENT)
-
 	// New raft node
 	raftNode, clean, err := newSeed(t.Name(), 0)
 	require.NoError(t, err)
@@ -51,7 +47,6 @@ func TestBackup(t *testing.T) {
 
 func TestDeleteBackup(t *testing.T) {
 	var err error
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// New raft node
 	raftNode, clean, err := newSeed(t.Name(), 1)

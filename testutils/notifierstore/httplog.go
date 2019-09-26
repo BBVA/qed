@@ -22,9 +22,10 @@ package notifierstore
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/bbva/qed/log"
 )
 
 type k int
@@ -33,7 +34,7 @@ const (
 	requestIDKey k = 0
 )
 
-func newHttpServer(listenAddr string, router *http.ServeMux, logger *log.Logger) *http.Server {
+func newHttpServer(listenAddr string, router *http.ServeMux, logger log.Logger) *http.Server {
 	nextRequestID := func() string {
 		return fmt.Sprintf("%d", time.Now().UnixNano())
 	}
@@ -41,14 +42,14 @@ func newHttpServer(listenAddr string, router *http.ServeMux, logger *log.Logger)
 	return &http.Server{
 		Addr:         listenAddr,
 		Handler:      tracing(nextRequestID)(logging(logger)(router)),
-		ErrorLog:     logger,
+		ErrorLog:     logger.StdLogger(&log.StdLoggerOptions{InferLevels: true}),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  15 * time.Second,
 	}
 }
 
-func logging(logger *log.Logger) func(http.Handler) http.Handler {
+func logging(logger log.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
@@ -56,7 +57,7 @@ func logging(logger *log.Logger) func(http.Handler) http.Handler {
 				if !ok {
 					requestID = "unknown"
 				}
-				logger.Println(requestID, r.Method, r.URL, r.RemoteAddr, r.UserAgent())
+				logger.Infof("%s %s %s %s %s", requestID, r.Method, r.URL, r.RemoteAddr, r.UserAgent())
 			}()
 			next.ServeHTTP(w, r)
 		})

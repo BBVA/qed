@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
@@ -49,7 +50,9 @@ func configClientGet() context.Context {
 
 	err := gpflag.ParseTo(conf, clientGetCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
+		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("client.get.params"), conf)
 }
@@ -61,9 +64,18 @@ func runClientGet(cmd *cobra.Command, args []string) error {
 	//TO DO: Check if "version" is set in params. Default value = 0, so it works.
 
 	config := clientCtx.Value(k("client.config")).(*client.Config)
-	log.SetLogger("client", config.Log)
 
-	client, err := client.NewHTTPClientFromConfig(config)
+	// create main logger
+	logOpts := &log.LoggerOptions{
+		Name:            "qed",
+		IncludeLocation: true,
+		Level:           log.LevelFromString(config.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
+	}
+	log.SetDefault(log.New(logOpts))
+
+	client, err := client.NewHTTPClientFromConfigWithLogger(config, log.L().Named("client"))
 	if err != nil {
 		return err
 	}
@@ -73,7 +85,7 @@ func runClientGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("\nRetreived snapshot with values:\n\n")
+	fmt.Printf("\nRetrieved snapshot with values:\n\n")
 	fmt.Printf(" EventDigest: %x\n", snapshot.EventDigest)
 	fmt.Printf(" HyperDigest: %x\n", snapshot.HyperDigest)
 	fmt.Printf(" HistoryDigest: %x\n", snapshot.HistoryDigest)

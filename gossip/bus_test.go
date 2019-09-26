@@ -19,6 +19,7 @@ package gossip
 import (
 	"testing"
 
+	"github.com/bbva/qed/log"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +34,7 @@ func (ts *testSubscriber) Subscribe(id int, ch <-chan *Message) {
 }
 
 func TestMessageBus(t *testing.T) {
-	var mb MessageBus
+	mb := &MessageBus{log: log.L()}
 	var ts testSubscriber
 	m1 := &Message{
 		Kind:    BatchMessageType,

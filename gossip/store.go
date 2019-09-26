@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 
 	"github.com/bbva/qed/util"
@@ -27,7 +26,7 @@ type SnapshotStore interface {
 	Count() (uint64, error)
 }
 
-// Implements access to a snapshot store
+// RestSnapshotStore implements access to a snapshot store
 // in a http rest service.
 // The process of sending the notifications is
 // asynchronous, so a start and stop method is
@@ -78,7 +77,7 @@ func NewRestSnapshotStore(endpoint []string, dialTimeout, readTimeout time.Durat
 	}
 }
 
-// Stores a batch int he store
+// Stores a batch int the store
 func (r *RestSnapshotStore) PutBatch(b *protocol.BatchSnapshots) error {
 	buf, err := b.Encode()
 	if err != nil {
@@ -86,7 +85,7 @@ func (r *RestSnapshotStore) PutBatch(b *protocol.BatchSnapshots) error {
 	}
 	n := len(r.endpoint)
 	if n == 0 {
-		log.Errorf("No endpoint configured for snapshot store!")
+		return fmt.Errorf("No endpoint configured for snapshot store!")
 	}
 	url := r.endpoint[0]
 	if n > 1 {

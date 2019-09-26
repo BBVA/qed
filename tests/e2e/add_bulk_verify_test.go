@@ -22,16 +22,15 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/testutils/rand"
 	"github.com/bbva/qed/testutils/spec"
 )
 
 func TestAddBulkAndVerify(t *testing.T) {
+
 	before, after := newServerSetup(0, false)
 	let, report := spec.New()
-	log.SetLogger("e2e", log.ERROR)
 
 	events := []string{
 		rand.RandomString(10),

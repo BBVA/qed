@@ -18,8 +18,8 @@ package gossip
 import (
 	"bytes"
 
-	"github.com/bbva/qed/log"
 	"github.com/hashicorp/go-msgpack/codec"
+	"github.com/pkg/errors"
 )
 
 // Agent metadata
@@ -31,8 +31,7 @@ func (a *Meta) Encode() ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := codec.NewEncoder(&buf, &codec.MsgpackHandle{})
 	if err := encoder.Encode(a); err != nil {
-		log.Errorf("Failed to encode agent metadata: %v", err)
-		return nil, err
+		return nil, errors.Wrap(err, "Failed to encode agent metadata")
 	}
 	return buf.Bytes(), nil
 }
@@ -41,8 +40,7 @@ func (a *Meta) Decode(buf []byte) error {
 	reader := bytes.NewReader(buf)
 	decoder := codec.NewDecoder(reader, &codec.MsgpackHandle{})
 	if err := decoder.Decode(a); err != nil {
-		log.Errorf("Failed to decode agent metadata: %v", err)
-		return err
+		return errors.Wrap(err, "Failed to decode agent metadata")
 	}
 	return nil
 }

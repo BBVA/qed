@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/rand"
 	utilrand "github.com/bbva/qed/testutils/rand"
 	"github.com/hashicorp/raft"
@@ -29,8 +28,6 @@ import (
 )
 
 func TestApplyAdd(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	node, clean, err := newSeed(t.Name(), 1)
@@ -74,8 +71,6 @@ func TestApplyAdd(t *testing.T) {
 
 func BenchmarkApplyAdd(b *testing.B) {
 
-	log.SetLogger(b.Name(), log.SILENT)
-
 	// start only one seed
 	node, clean, err := newSeed(b.Name(), 1)
 	require.NoError(b, err)
@@ -100,8 +95,6 @@ func BenchmarkApplyAdd(b *testing.B) {
 }
 
 func BenchmarkRaftAdd(b *testing.B) {
-
-	log.SetLogger(b.Name(), log.SILENT)
 
 	node, clean, err := newSeed(b.Name(), 1)
 	require.NoError(b, err)

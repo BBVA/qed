@@ -17,7 +17,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -42,38 +41,48 @@ func runServerStart(cmd *cobra.Command, args []string) error {
 
 	conf := serverCtx.Value(k("server.config")).(*server.Config)
 
+	// create main logger
+	logOpts := &log.LoggerOptions{
+		Name:            "qed",
+		IncludeLocation: true,
+		Level:           log.LevelFromString(conf.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
+	}
+	log.SetDefault(log.New(logOpts))
+
 	// URL parse
 	err = checkServerParams(conf)
 	if err != nil {
-		return err
+		log.L().Fatalf("Wrong parameters: %v", err)
 	}
 
 	if conf.SSLCertificate != "" && conf.SSLCertificateKey != "" {
 		if _, err := os.Stat(conf.SSLCertificate); os.IsNotExist(err) {
-			log.Infof("Can't find certificate .crt file: %v", err)
+			log.L().Fatalf("Can't find certificate .crt file: %v", err)
 		} else if _, err := os.Stat(conf.SSLCertificateKey); os.IsNotExist(err) {
-			log.Infof("Can't find certificate .key file: %v", err)
+			log.L().Fatalf("Can't find certificate .key file: %v", err)
 		} else {
-			log.Info("EnabledTLS")
+			log.L().Info("TLS enabled")
 			conf.EnableTLS = true
 		}
 	}
 
-	log.SetLogger("server", conf.Log)
-	fmt.Printf("CONF: %+v\n", conf)
-	srv, err := server.NewServer(conf)
+	log.L().Infof("Server configuration: \n%+v", conf)
+
+	srv, err := server.NewServerWithLogger(conf, log.L().Named("server"))
 	if err != nil {
-		log.Fatalf("Can't start QED server: %v", err)
+		log.L().Fatalf("Can't create QED server: %v", err)
 	}
 
 	err = srv.Start()
 	if err != nil {
-		log.Fatalf("Can't start QED server: %v", err)
+		log.L().Fatalf("Can't start QED server: %v", err)
 	}
 
 	util.AwaitTermSignal(srv.Stop)
 
-	log.Debug("Stopping server, about to exit...")
+	log.L().Info("Stopping server, about to exit...")
 
 	return nil
 }

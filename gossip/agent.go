@@ -22,6 +22,7 @@ package gossip
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
@@ -107,9 +108,12 @@ type Agent struct {
 
 	//Client to a task manager service
 	Tasks TasksManager
+
+	// Logger
+	log log.Logger
 }
 
-// Creates new agent from a configuration object
+// NewAgentFromConfig creates new agent from a configuration object.
 // It does not create external clients like QED, SnapshotStore or Notifier, nor
 // a task manager.
 func NewAgentFromConfig(conf *Config) (agent *Agent, err error) {
@@ -120,15 +124,26 @@ func NewAgentFromConfig(conf *Config) (agent *Agent, err error) {
 	return NewAgent(options...)
 }
 
-// Returns a new agent with all the APIs initialized and
-// with a cache of size bytes.
-func NewDefaultAgent(conf *Config, qed *client.HTTPClient, s SnapshotStore, t TasksManager, n Notifier) (*Agent, error) {
+// NewAgentFromConfigWithLogger creates new agent from a configuration object.
+// It does not create external clients like QED, SnapshotStore or Notifier, nor
+// a task manager.
+func NewAgentFromConfigWithLogger(conf *Config, l log.Logger) (agent *Agent, err error) {
 	options, err := configToOptions(conf)
 	if err != nil {
 		return nil, err
 	}
-	options = append(options, SetQEDClient(qed), SetSnapshotStore(s), SetTasksManager(t), SetNotifier(n))
+	options = append(options, SetLogger(l))
+	return NewAgent(options...)
+}
 
+// NewDefaultAgent returns a new agent with all the APIs initialized and
+// with a cache of size bytes.
+func NewDefaultAgent(conf *Config, qed *client.HTTPClient, s SnapshotStore, t TasksManager, n Notifier, l log.Logger) (*Agent, error) {
+	options, err := configToOptions(conf)
+	if err != nil {
+		return nil, err
+	}
+	options = append(options, SetQEDClient(qed), SetSnapshotStore(s), SetTasksManager(t), SetNotifier(n), SetLogger(l))
 	return NewAgent(options...)
 }
 
@@ -142,6 +157,7 @@ func NewAgent(options ...AgentOptionF) (*Agent, error) {
 	agent := &Agent{
 		quitCh:   make(chan bool),
 		topology: NewTopology(),
+		log:      log.L(),
 	}
 
 	// Run the options on the client
@@ -150,6 +166,10 @@ func NewAgent(options ...AgentOptionF) (*Agent, error) {
 			return nil, err
 		}
 	}
+
+	// Set message buses
+	agent.In = MessageBus{log: agent.log.Named("bus")}
+	agent.Out = MessageBus{log: agent.log.Named("bus")}
 
 	bindIP, bindPort, err := agent.config.AddrParts(agent.config.BindAddr)
 	if err != nil {
@@ -171,11 +191,11 @@ func NewAgent(options ...AgentOptionF) (*Agent, error) {
 	agent.config.MemberlistConfig.AdvertiseAddr = advertiseIP
 	agent.config.MemberlistConfig.AdvertisePort = advertisePort
 	agent.config.MemberlistConfig.Name = agent.config.NodeName
-	agent.config.MemberlistConfig.Logger = log.GetLogger()
+	agent.config.MemberlistConfig.Logger = agent.log.StdLogger(&log.StdLoggerOptions{InferLevels: true})
 
 	// Configure delegates
-	agent.config.MemberlistConfig.Delegate = newAgentDelegate(agent)
-	agent.config.MemberlistConfig.Events = &eventDelegate{agent}
+	agent.config.MemberlistConfig.Delegate = newAgentDelegate(agent, agent.log)
+	agent.config.MemberlistConfig.Events = &eventDelegate{agent, agent.log}
 
 	agent.Self = NewPeer(agent.config.NodeName, advertiseIP, uint16(advertisePort), agent.config.Role)
 
@@ -188,30 +208,37 @@ func (a *Agent) Start() {
 	var err error
 
 	if a.metrics != nil {
-		log.Infof("Starting agent metrics server")
-		a.metrics.Start()
+		a.log.Infof("Starting agent metrics server")
+		go func() {
+			if err := a.metrics.Start(); err != http.ErrServerClosed {
+				a.log.Fatalf("Can't start metrics HTTP server: %s", err)
+			}
+		}()
 	}
 
 	if a.Tasks != nil {
-		log.Infof("Starting task mamanger loop")
+		a.log.Infof("Starting task mamanger loop")
 		a.Tasks.Start()
 	}
 
 	if a.Notifier != nil {
-		log.Infof("Starting notifier mamanger loop")
+		a.log.Infof("Starting notifier mamanger loop")
 		a.Notifier.Start()
 	}
 
-	log.Infof("Starting memberlist gossip netwotk")
+	a.log.Infof("Starting memberlist gossip netwotk")
 	a.gossip, err = memberlist.Create(a.config.MemberlistConfig)
 	if err != nil {
-		log.Infof("Error creating the memberlist network; %v", err)
+		a.log.Infof("Error creating the memberlist network; %v", err)
 		return
 	}
 
 	// Print local member info
-	a.Self = ParsePeer(a.gossip.LocalNode())
-	log.Infof("Local member %+v", a.Self)
+	a.Self, err = ParsePeer(a.gossip.LocalNode())
+	if err != nil {
+		a.log.Fatalf("Cannot parse peer: %v", err)
+	}
+	a.log.Infof("Local member %+v", a.Self)
 
 	// Set broadcast queue
 	a.broadcasts = &memberlist.TransmitLimitedQueue{
@@ -222,16 +249,15 @@ func (a *Agent) Start() {
 	}
 
 	if len(a.config.StartJoin) > 0 {
-		log.Infof("Trying to joing gossip network with peers %v", a.config.StartJoin)
+		a.log.Infof("Trying to joing gossip network with peers %v", a.config.StartJoin)
 		n, err := a.Join(a.config.StartJoin)
 		if n == 0 || err != nil {
-			log.Errorf("Unable to join gossip network because %v", err)
-			return
+			a.log.Fatalf("Unable to join gossip network because %v", err)
 		}
-		log.Infof("Joined gossip network with %d peers", n)
+		a.log.Infof("Joined gossip network with %d peers", n)
 	}
 
-	log.Infof("Starting agent sender loop")
+	a.log.Infof("Starting agent sender loop")
 	a.sender()
 }
 
@@ -278,7 +304,7 @@ func (a *Agent) sender() {
 					wg.Add(1)
 					go func() {
 						defer wg.Done()
-						log.Debugf("Agent sender loop: sending msg!")
+						a.log.Debugf("Agent sender loop: sending msg!")
 						a.Send(msg)
 					}()
 					if counter >= a.config.MaxSenders {
@@ -305,12 +331,12 @@ func (a *Agent) Send(msg *Message) {
 	msg.TTL--
 	wire, err := msg.Encode()
 	if err != nil {
-		log.Infof("Agent Send unable to encode message to gossip it")
+		a.log.Infof("Agent Send unable to encode message to gossip it")
 		return
 	}
 	msg.From = a.Self
 	for _, dst := range a.route(msg.From) {
-		log.Debugf("Sending batch to %+v\n", dst.Name)
+		a.log.Debugf("Sending batch to %+v\n", dst.Name)
 		_ = a.gossip.SendReliable(dst, wire)
 	}
 }
@@ -400,7 +426,7 @@ func (a *Agent) Leave() error {
 //
 // It is safe to call this method multiple times.
 func (a *Agent) Shutdown() error {
-	log.Infof("Shutting down agent %s", a.config.NodeName)
+	a.log.Infof("Shutting down agent %s", a.config.NodeName)
 	a.stateLock.Lock()
 	defer a.stateLock.Unlock()
 
@@ -409,7 +435,7 @@ func (a *Agent) Shutdown() error {
 	}
 
 	if a.Self.Status != AgentStatusLeft {
-		log.Info("agent: Shutdown without a Leave")
+		a.log.Info("agent: Shutdown without a Leave")
 	}
 
 	a.Self.Status = AgentStatusShutdown

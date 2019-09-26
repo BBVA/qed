@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	"io/ioutil"
 
-	"github.com/bbva/qed/log"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -36,7 +35,6 @@ func NewEd25519SignerKeysFile(path string) (string, string, error) {
 
 	err := ioutil.WriteFile(outPriv, privKey, 0644)
 	if err != nil {
-		log.Fatal(err)
 		return outPub, outPriv, err
 	}
 	_ = ioutil.WriteFile(outPub, pubKey, 0644)

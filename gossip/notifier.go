@@ -56,8 +56,8 @@ func DefaultSimpleNotifierConfig() *SimpleNotifierConfig {
 }
 
 // Returns a SimpleNotifier pointer configured with configuration c.
-func NewSimpleNotifierFromConfig(c *SimpleNotifierConfig) *SimpleNotifier {
-	return NewSimpleNotifier(c.Endpoint, c.QueueSize, c.DialTimeout, c.ReadTimeout)
+func NewSimpleNotifierFromConfig(c *SimpleNotifierConfig, logger log.Logger) *SimpleNotifier {
+	return NewSimpleNotifier(c.Endpoint, c.QueueSize, c.DialTimeout, c.ReadTimeout, logger)
 }
 
 // Implements the default notification service
@@ -70,6 +70,7 @@ type SimpleNotifier struct {
 	endpoint      []string
 	notifications chan string
 	quitCh        chan bool
+	log           log.Logger
 }
 
 // Returns a new default notififier client configured
@@ -78,11 +79,18 @@ type SimpleNotifier struct {
 //   queueTimeout is the time to wait for the queue to accept a new message
 //   dialTimeout is the time to wait for dial to the notifications server
 //   readTimeout is the time to wait for the notifications server response
-func NewSimpleNotifier(endpoint []string, size int, dialTimeout, readTimeout time.Duration) *SimpleNotifier {
+func NewSimpleNotifier(endpoint []string, size int, dialTimeout, readTimeout time.Duration, logger log.Logger) *SimpleNotifier {
+
+	newLogger := logger
+	if newLogger == nil {
+		newLogger = log.L()
+	}
+
 	d := SimpleNotifier{
 		notifications: make(chan string, size),
 		quitCh:        make(chan bool),
 		endpoint:      endpoint,
+		log:           newLogger,
 	}
 
 	d.client = &http.Client{
@@ -125,13 +133,13 @@ func (n *SimpleNotifier) Start() {
 
 				resp, err := n.client.Post(url, "application/json", bytes.NewBufferString(msg))
 				if err != nil {
-					log.Infof("Agent had an error sending the alert %v because %v ", msg, err)
+					n.log.Infof("Agent had an error sending the alert %v because %v ", msg, err)
 					continue
 				}
 				defer resp.Body.Close()
 				_, err = io.Copy(ioutil.Discard, resp.Body)
 				if err != nil {
-					log.Infof("Agent had the error %v when reading the response from the alert %v ", err, msg)
+					n.log.Infof("Agent had the error %v when reading the response from the alert %v ", err, msg)
 				}
 			case <-n.quitCh:
 				return

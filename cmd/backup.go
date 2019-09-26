@@ -18,19 +18,16 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
-
-	"github.com/bbva/qed/log"
 )
 
 type BackupConfig struct {
 	// Endpoint [host:port] to ask for QED management APIs.
 	Endpoint string `desc:"QED Log service management endpoint http://ip:port"`
-
-	// Log level
-	Log string `desc:"Set log level to info, error or debug"`
 
 	// ApiKey to query the server endpoint.
 	APIKey string `desc:"Set API Key to talk to QED Log service"`
@@ -63,7 +60,9 @@ func configBackup() context.Context {
 
 	err := gpflag.ParseTo(conf, backupCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
+		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("backup.config"), conf)
 }

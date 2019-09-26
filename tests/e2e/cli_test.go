@@ -22,7 +22,6 @@ import (
 	"strings"
 	"testing"
 
-	// "github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/spec"
 )
 

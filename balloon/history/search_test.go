@@ -19,7 +19,6 @@ package history
 import (
 	"testing"
 
-	"github.com/bbva/qed/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -117,8 +116,6 @@ func TestPruneToFind(t *testing.T) {
 }
 
 func BenchmarkPruneToFind(b *testing.B) {
-
-	log.SetLogger("BenchmarkPruneToFind", log.SILENT)
 
 	b.ResetTimer()
 	for i := uint64(0); i < uint64(b.N); i++ {

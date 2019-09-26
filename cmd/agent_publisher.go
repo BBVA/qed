@@ -18,6 +18,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
@@ -86,7 +87,8 @@ func configPublisher() context.Context {
 	conf := newPublisherConfig()
 	err := gpflag.ParseTo(conf, agentPublisherCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse publisher flags: %v\n", err)
+		os.Exit(1)
 	}
 
 	ctx := context.WithValue(agentCtx, k("publisher.config"), conf)
@@ -98,7 +100,15 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 	agentConfig := agentCtx.Value(k("agent.config")).(*gossip.Config)
 	conf := agentPublisherCtx.Value(k("publisher.config")).(*publisherConfig)
 
-	log.SetLogger("publisher", agentConfig.Log)
+	// create main logger
+	logOpts := &log.LoggerOptions{
+		Name:            "qed.publisher",
+		IncludeLocation: true,
+		Level:           log.LevelFromString(agentConfig.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
+	}
+	log.SetDefault(log.New(logOpts))
 
 	// URL parse
 	err := checkPublisherParams(conf)
@@ -106,16 +116,17 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier)
-	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks)
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, log.L().Named("agent.notifier"))
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, log.L().Named("agent.task-manager"))
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
 
-	agent, err := gossip.NewDefaultAgent(agentConfig, nil, store, tm, notifier)
+	agent, err := gossip.NewDefaultAgent(agentConfig, nil, store, tm, notifier, log.L().Named("agent"))
 	if err != nil {
 		return err
 	}
 
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{publisherFactory{}})
+	pubF := publisherFactory{log.L().Named("agent.publisher-factory")}
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{pubF}, log.L().Named("agent.processor"))
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 
@@ -139,6 +150,7 @@ func checkPublisherParams(conf *publisherConfig) error {
 }
 
 type publisherFactory struct {
+	log log.Logger
 }
 
 func (p publisherFactory) Metrics() []prometheus.Collector {
@@ -154,7 +166,7 @@ var errorNoSnapshots error = fmt.Errorf("No snapshots were found on this batch!!
 
 func (p publisherFactory) New(ctx context.Context) gossip.Task {
 	QedPublisherBatchesReceivedTotal.Inc()
-	log.Infof("PublisherFactory creating new Task!")
+	p.log.Infof("PublisherFactory creating new Task!")
 	a := ctx.Value("agent").(*gossip.Agent)
 	b := ctx.Value("batch").(*protocol.BatchSnapshots)
 
@@ -167,7 +179,7 @@ func (p publisherFactory) New(ctx context.Context) gossip.Task {
 		for _, signedSnap := range b.Snapshots {
 			_, err := a.Cache.Get(signedSnap.Signature)
 			if err != nil {
-				log.Debugf("PublishingTask: add snapshot to be published")
+				p.log.Debugf("PublishingTask: add snapshot to be published")
 				_ = a.Cache.Set(signedSnap.Signature, []byte{0x0}, 0)
 				batch.Snapshots = append(batch.Snapshots, signedSnap)
 			}
@@ -176,7 +188,7 @@ func (p publisherFactory) New(ctx context.Context) gossip.Task {
 		if len(batch.Snapshots) < 1 {
 			return errorNoSnapshots
 		}
-		log.Debugf("Sending batch to snapshot store: %+v", batch)
+		p.log.Debugf("Sending batch to snapshot store: %+v", batch)
 		return a.SnapshotStore.PutBatch(batch)
 	}
 }

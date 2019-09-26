@@ -19,8 +19,8 @@ import (
 	"math/rand"
 	"net"
 
-	"github.com/bbva/qed/log"
 	"github.com/hashicorp/memberlist"
+	"github.com/pkg/errors"
 )
 
 // Status is the state of the Agent instance.
@@ -83,18 +83,18 @@ func NewPeer(name, addr string, port uint16, role string) *Peer {
 }
 
 // Builds a new peer from the memberlist.Node data
-func ParsePeer(node *memberlist.Node) *Peer {
+func ParsePeer(node *memberlist.Node) (*Peer, error) {
 	var meta Meta
 	err := meta.Decode(node.Meta)
 	if err != nil {
-		log.Errorf("Error parsing peer: unable to decode meta. %v", err)
+		return nil, errors.Wrap(err, "Error parsing peer: unable to decode meta")
 	}
 	return &Peer{
 		Name: node.Name,
 		Addr: node.Addr,
 		Port: node.Port,
 		Meta: meta,
-	}
+	}, nil
 }
 
 // Implements a list of peers

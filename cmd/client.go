@@ -18,12 +18,13 @@ package cmd
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 
 	"github.com/bbva/qed/client"
-	"github.com/bbva/qed/log"
 )
 
 var clientCmd *cobra.Command = &cobra.Command{
@@ -46,7 +47,9 @@ func configClient() context.Context {
 
 	err := gpflag.ParseTo(conf, clientCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
+		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("client.config"), conf)
 }

@@ -20,14 +20,11 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/util"
 	"github.com/stretchr/testify/require"
 )
 
 func TestBatchCache(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	hasher := hashing.NewSha256Hasher()
 	cache := NewBatchCache(1)
