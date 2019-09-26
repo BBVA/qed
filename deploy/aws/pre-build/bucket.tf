@@ -14,11 +14,11 @@
    limitations under the License.
 */
 terraform {
-  required_version = ">= 0.11.11"
+  required_version = ">= 0.12.9"
 }
 
 provider "aws" {
-  version = ">= 1.56.0, < 2.0"
+  version = ">= 2.7.0"
   region  = "eu-west-1"
   profile = "${var.aws_profile}"
 }
@@ -47,7 +47,7 @@ resource "aws_s3_bucket" "terraform-qed-cluster" {
     }
   }
 
-  tags {
+  tags = {
     Name = "S3 Remote Terraform State Store"
   }
 }

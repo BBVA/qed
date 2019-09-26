@@ -1,7 +1,13 @@
 output "private_ip" {
-  value = "${aws_instance.inmemory-storage.private_ip}"
+  value = [
+    for instance in aws_instance.inmemory-storage:
+    instance.private_ip
+  ]
 }
 
 output "public_ip" {
-  value = "${aws_instance.inmemory-storage.public_ip}"
+  value = [
+    for instance in aws_instance.inmemory-storage:
+    instance.public_ip
+  ]
 }

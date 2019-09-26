@@ -24,114 +24,116 @@ data "aws_iam_policy_document" "CloudWatchLogsFullAccess-assume-role-policy" {
 }
 
 resource "aws_iam_role" "CloudWatchLogsFullAccess" {
-  name               = "CloudWatchLogsFullAccess-${terraform.workspace}"
+  name                 = "CloudWatchLogsFullAccess-${terraform.workspace}"
   permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/PermissionsBoundariesBBVA"
-  assume_role_policy = "${data.aws_iam_policy_document.CloudWatchLogsFullAccess-assume-role-policy.json}"
+  assume_role_policy   = data.aws_iam_policy_document.CloudWatchLogsFullAccess-assume-role-policy.json
 }
 
 resource "aws_iam_role_policy_attachment" "CloudWatchLogsFullAccess-attach" {
-  role       = "${aws_iam_role.CloudWatchLogsFullAccess.name}"
+  role       = aws_iam_role.CloudWatchLogsFullAccess.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 resource "aws_iam_instance_profile" "qed-profile" {
   name = "qed-profile-${terraform.workspace}"
-  role = "${aws_iam_role.CloudWatchLogsFullAccess.name}"
+  role = aws_iam_role.CloudWatchLogsFullAccess.name
 }
 
 module "qed" {
-  source = "./modules/qed"
-  count  = 3
+  source    = "./modules/qed"
+  instances = 3
 
   name                   = "qed"
   instance_type          = "z1d.xlarge"
-  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  iam_instance_profile   = aws_iam_instance_profile.qed-profile.name
   volume_size            = "20"
-  vpc_security_group_ids = "${aws_security_group.qed.id}"
-  subnet_id              = "${aws_subnet.qed.id}"
-  key_name               = "${aws_key_pair.qed.key_name}"
-  key_path               = "${var.keypath}"
+  vpc_security_group_ids = aws_security_group.qed.id
+  subnet_id              = aws_subnet.qed.id
+  key_name               = aws_key_pair.qed.key_name
+  key_path               = var.keypath
 }
+
 module "inmemory-storage" {
   source = "./modules/inmemory_storage"
 
   name                   = "inmemory-storage"
   instance_type          = "r5.large"
-  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  iam_instance_profile   = aws_iam_instance_profile.qed-profile.name
   volume_size            = "20"
-  vpc_security_group_ids = "${aws_security_group.qed.id}"
-  subnet_id              = "${aws_subnet.qed.id}"
-  key_name               = "${aws_key_pair.qed.key_name}"
-  key_path               = "${var.keypath}"
+  vpc_security_group_ids = aws_security_group.qed.id
+  subnet_id              = aws_subnet.qed.id
+  key_name               = aws_key_pair.qed.key_name
+  key_path               = var.keypath
 }
 
 module "agent-publisher" {
-  source = "./modules/agent"
-  count  = 1
+  source    = "./modules/agent"
+  instances = 1
 
   role                   = "publisher"
   name                   = "agent-publisher"
   instance_type          = "m5.large"
-  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  iam_instance_profile   = aws_iam_instance_profile.qed-profile.name
   volume_size            = "20"
-  vpc_security_group_ids = "${aws_security_group.qed.id}"
-  subnet_id              = "${aws_subnet.qed.id}"
-  key_name               = "${aws_key_pair.qed.key_name}"
-  key_path               = "${var.keypath}"
+  vpc_security_group_ids = aws_security_group.qed.id
+  subnet_id              = aws_subnet.qed.id
+  key_name               = aws_key_pair.qed.key_name
+  key_path               = var.keypath
 }
 
 module "agent-monitor" {
-  source = "./modules/agent"
-  count  = 1
+  source    = "./modules/agent"
+  instances = 1
 
   role                   = "monitor"
   name                   = "agent-monitor"
   instance_type          = "m5.large"
-  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  iam_instance_profile   = aws_iam_instance_profile.qed-profile.name
   volume_size            = "20"
-  vpc_security_group_ids = "${aws_security_group.qed.id}"
-  subnet_id              = "${aws_subnet.qed.id}"
-  key_name               = "${aws_key_pair.qed.key_name}"
-  key_path               = "${var.keypath}"
+  vpc_security_group_ids = aws_security_group.qed.id
+  subnet_id              = aws_subnet.qed.id
+  key_name               = aws_key_pair.qed.key_name
+  key_path               = var.keypath
 }
 
 module "agent-auditor" {
-  source = "./modules/agent"
-  count  = 1
+  source    = "./modules/agent"
+  instances = 1
 
   role                   = "auditor"
   name                   = "agent-auditor"
   instance_type          = "m5.large"
-  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  iam_instance_profile   = aws_iam_instance_profile.qed-profile.name
   volume_size            = "20"
-  vpc_security_group_ids = "${aws_security_group.qed.id}"
-  subnet_id              = "${aws_subnet.qed.id}"
-  key_name               = "${aws_key_pair.qed.key_name}"
-  key_path               = "${var.keypath}"
+  vpc_security_group_ids = aws_security_group.qed.id
+  subnet_id              = aws_subnet.qed.id
+  key_name               = aws_key_pair.qed.key_name
+  key_path               = var.keypath
 }
 
 module "prometheus" {
   source = "./modules/prometheus"
 
   instance_type          = "m5.large"
-  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  iam_instance_profile   = aws_iam_instance_profile.qed-profile.name
   volume_size            = "20"
-  vpc_security_group_ids = "${aws_security_group.prometheus.id}"
-  subnet_id              = "${aws_subnet.qed.id}"
-  key_name               = "${aws_key_pair.qed.key_name}"
-  key_path               = "${var.keypath}"
+  vpc_security_group_ids = aws_security_group.prometheus.id
+  subnet_id              = aws_subnet.qed.id
+  key_name               = aws_key_pair.qed.key_name
+  key_path               = var.keypath
 }
 
 module "workload" {
   source = "./modules/workload"
 
   instance_type          = "m5.large"
-  iam_instance_profile   = "${aws_iam_instance_profile.qed-profile.name}"
+  iam_instance_profile   = aws_iam_instance_profile.qed-profile.name
   volume_size            = "20"
-  vpc_security_group_ids = "${aws_security_group.qed.id}"
-  subnet_id              = "${aws_subnet.qed.id}"
-  key_name               = "${aws_key_pair.qed.key_name}"
-  key_path               = "${var.keypath}"
-  endpoint               = "${module.qed.private_ip[0]}"
+  vpc_security_group_ids = aws_security_group.qed.id
+  subnet_id              = aws_subnet.qed.id
+  key_name               = aws_key_pair.qed.key_name
+  key_path               = var.keypath
+  endpoint               = module.qed.*.private_ip[0]
   num_requests           = 10000000
 }
+

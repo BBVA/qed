@@ -24,11 +24,13 @@ WORKDIR /go/src/github.com/bbva/qed
 # Install deps.
 RUN apt update -qq && apt install -qq -y autoconf cmake
 
-# Build C deps. 
+# Download C deps. 
 RUN echo Cloning repo: ${REPO} with branch: ${BRANCH}
 RUN git clone --depth 1 -b ${BRANCH} ${REPO} .  &&\
-    git submodule update --init --recursive     &&\
-    cd c-deps                                   &&\
+    git submodule update --init --recursive
+
+# Build C deps. 
+RUN cd c-deps       &&\
     ./builddeps.sh
 
 FROM golang:1.12.5
