@@ -362,7 +362,42 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 		return nil, ErrNotLeader
 	}
 
-	n.log.Infof("received join request for remote node %s at %s", req.NodeId, req.RaftAddr)
+	n.log.Infof("received join request for remote node %q at %q", req.NodeId, req.RaftAddr)
+
+	configFuture := n.raft.GetConfiguration()
+	if err := configFuture.Error(); err != nil {
+		n.log.Errorf("failed to get raft servers configuration: %s", err)
+		return nil, err
+	}
+
+	for _, srv := range configFuture.Configuration().Servers {
+		// If a node already exists with either the joining node's ID or address,
+		// that node may need to be removed from the config first.
+		if srv.ID == raft.ServerID(req.NodeId) || srv.Address == raft.ServerAddress(req.RaftAddr) {
+			// However if *both* the ID and the address are the same, then nothing -- not even
+			// a join operation -- is needed.
+			if srv.Address == raft.ServerAddress(req.RaftAddr) && srv.ID == raft.ServerID(req.NodeId) {
+				n.log.Infof("node %s at %s already member of cluster, ignoring join request", req.NodeId, req.RaftAddr)
+				return new(RaftJoinResponse), nil
+			}
+			n.log.Infof("New node already exists with either the same joining node ID or address: %q [%s]", req.NodeId, req.RaftAddr)
+			future := n.raft.RemoveServer(srv.ID, 0, 0)
+			n.log.Infof("Attempt to remove previous server with ID %q", srv.ID)
+			if srv.Address == raft.ServerAddress(req.RaftAddr) {
+				if err := future.Error(); err != nil {
+					n.log.Warnf("Unable to remove existing server with duplicate address %q: %s", srv.Address, err)
+					return nil, fmt.Errorf("error removing existing server with duplicate address %q: %s", srv.Address, err)
+				}
+				n.log.Infof("removed server with duplicate address %q", srv.Address)
+			} else {
+				if err := future.Error(); err != nil {
+					n.log.Warnf("Unable to remove existing server with duplicate node ID %q: %s", srv.ID, err)
+					return nil, fmt.Errorf("error removing existing server with duplicate node ID %q: %s", srv.ID, err)
+				}
+				n.log.Infof("removed server with duplicate ID %q", srv.ID)
+			}
+		}
+	}
 
 	// Add the node as a voter. This is idempotent. No-op if the request
 	// came from ourselves.
@@ -375,8 +410,10 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 }
 
 func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
+	var err error
 	for _, addr := range addrs {
-		conn, err := grpc.Dial(addr, grpc.WithInsecure())
+		var conn *grpc.ClientConn
+		conn, err = grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
 			return err
 		}
@@ -390,6 +427,7 @@ func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
 			return nil
 		}
 	}
+	n.log.Errorf("Error when joining the cluster: %v", err)
 	return ErrCannotJoin
 }
 
