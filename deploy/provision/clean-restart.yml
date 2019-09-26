@@ -149,7 +149,7 @@
     - restart
     - start-agents
 
-- hosts: inmemory-storage
+- hosts: role_storage
   remote_user: ec2-user
   become: true
   vars_files:
@@ -166,7 +166,7 @@
     - restart
     - start-storage
 
-- hosts: workload
+- hosts: role_workload
   remote_user: ec2-user
   gather_facts: true
   become: true
@@ -188,7 +188,7 @@
     - restart
     - start-storage
 
-- hosts: prometheus
+- hosts: role_prometheus
   remote_user: ec2-user
   become: true
   vars_files:

@@ -86,7 +86,7 @@
   tags:
     - install
 
-- hosts: workload
+- hosts: role_workload
   remote_user: ec2-user
   become: true
   vars_files:
@@ -97,7 +97,7 @@
     - install
     - workload
 
-- hosts: inmemory-storage
+- hosts: role_storage
   remote_user: ec2-user
   become: true
   vars_files:
@@ -107,7 +107,7 @@
   tags:
     - install
 
-- hosts: prometheus
+- hosts: role_prometheus
   remote_user: ec2-user
   become: true
   vars_files:

@@ -42,7 +42,7 @@ variable "path" {
   default = "/var/tmp/qed"
 }
 
-variable "count" {
+variable "instances" {
   default = 1
 }
 

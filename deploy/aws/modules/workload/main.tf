@@ -14,6 +14,7 @@
 
 data "aws_ami" "amazon_linux" {
   most_recent = true
+  owners = ["amazon"]
 
   filter {
     name   = "name"
@@ -37,12 +38,12 @@ resource "aws_instance" "workload" {
   associate_public_ip_address = true
   key_name                    = "${var.key_name}"
 
-  root_block_device = [{
+  root_block_device {
     volume_type = "gp2"
     volume_size = "${var.volume_size}"
-  }]
+  }
 
-  tags {
+  tags = {
     Name = "qed-workload"
     Role = "${var.role}"
     DAM_OnOff = "NO"

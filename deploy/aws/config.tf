@@ -16,7 +16,7 @@
 
 # Bucket config must be here: https://github.com/hashicorp/terraform/issues/13589
 terraform {
-  required_version = ">= 0.11.11"
+  required_version = ">= 0.12.0"
 
   backend "s3" {
     bucket = "terraform-qed-cluster"
@@ -26,8 +26,8 @@ terraform {
 }
 
 provider "aws" {
-  version = ">= 1.56.0, < 2.0"
-  profile = "${var.aws_profile}"
+  version = ">= 2.7.0"
+  profile = var.aws_profile
 }
 
 provider "http" {
@@ -37,3 +37,4 @@ provider "http" {
 provider "null" {
   version = "~> 2.0"
 }
+

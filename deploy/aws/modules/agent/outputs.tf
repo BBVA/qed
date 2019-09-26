@@ -1,7 +1,13 @@
 output "private_ip" {
-  value = "${aws_instance.qed-agent.*.private_ip}"
+  value = [
+    for instance in aws_instance.qed-agent:
+    instance.private_ip
+  ]
 }
 
 output "public_ip" {
-  value = "${aws_instance.qed-agent.*.public_ip}"
+  value = [
+    for instance in aws_instance.qed-agent:
+    instance.public_ip
+  ]
 }

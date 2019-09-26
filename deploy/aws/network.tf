@@ -17,11 +17,12 @@ data "http" "ip" {
   url = "http://icanhazip.com"
 }
 
-data "aws_caller_identity" "current" {}
+data "aws_caller_identity" "current" {
+}
 
 resource "aws_vpc" "qed" {
   enable_dns_hostnames = true
-  cidr_block           = "${var.vpc_cidr}"
+  cidr_block           = var.vpc_cidr
 
   tags = {
     Name = "QED-${terraform.workspace}"
@@ -29,29 +30,27 @@ resource "aws_vpc" "qed" {
 }
 
 resource "aws_subnet" "qed" {
-  vpc_id                  = "${aws_vpc.qed.id}"
-  cidr_block              = "${var.public_subnet_cidr}"
+  vpc_id                  = aws_vpc.qed.id
+  cidr_block              = var.public_subnet_cidr
   map_public_ip_on_launch = true
 
   tags = {
     Name = "QED-${terraform.workspace}"
   }
-
 }
 
 resource "aws_internet_gateway" "qed" {
-  vpc_id = "${aws_vpc.qed.id}"
+  vpc_id = aws_vpc.qed.id
 
   tags = {
     Name = "QED-${terraform.workspace}"
   }
-
 }
 
 resource "aws_route" "qed" {
-  route_table_id         = "${aws_vpc.qed.default_route_table_id}"
+  route_table_id         = aws_vpc.qed.default_route_table_id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = "${aws_internet_gateway.qed.id}"
+  gateway_id             = aws_internet_gateway.qed.id
 }
 
 resource "aws_vpc_dhcp_options" "qed" {
@@ -61,12 +60,11 @@ resource "aws_vpc_dhcp_options" "qed" {
   tags = {
     Name = "QED-${terraform.workspace}"
   }
-
 }
 
 resource "aws_vpc_dhcp_options_association" "qed" {
-  vpc_id          = "${aws_vpc.qed.id}"
-  dhcp_options_id = "${aws_vpc_dhcp_options.qed.id}"
+  vpc_id          = aws_vpc.qed.id
+  dhcp_options_id = aws_vpc_dhcp_options.qed.id
 }
 
 resource "aws_cloudwatch_log_group" "qed" {
@@ -74,9 +72,9 @@ resource "aws_cloudwatch_log_group" "qed" {
 }
 
 resource "aws_iam_role" "qed" {
-  name = "qed-${terraform.workspace}"
+  name                 = "qed-${terraform.workspace}"
   permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/PermissionsBoundariesBBVA"
-  assume_role_policy = <<EOF
+  assume_role_policy   = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -91,47 +89,48 @@ resource "aws_iam_role" "qed" {
   ]
 }
 EOF
+
 }
 
 resource "aws_iam_role_policy_attachment" "qed" {
-  role       = "${aws_iam_role.qed.name}"
+  role       = aws_iam_role.qed.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
 resource "aws_flow_log" "qed" {
-  log_destination = "${aws_cloudwatch_log_group.qed.arn}"
-  iam_role_arn    = "${aws_iam_role.qed.arn}"
-  vpc_id          = "${aws_vpc.qed.id}"
+  log_destination = aws_cloudwatch_log_group.qed.arn
+  iam_role_arn    = aws_iam_role.qed.arn
+  vpc_id          = aws_vpc.qed.id
   traffic_type    = "ALL"
 }
 
 resource "aws_key_pair" "qed" {
   key_name   = "qed-${terraform.workspace}"
-  public_key = "${file("${var.keypath}.pub")}"
+  public_key = file("${var.keypath}.pub")
 }
 
 # Create the Security Group
 resource "aws_security_group" "qed" {
-  vpc_id       = "${aws_vpc.qed.id}"
+  vpc_id      = aws_vpc.qed.id
   name        = "qed-${terraform.workspace}"
   description = "Security group for QED usage"
   ingress {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
   }
   ingress {
-      from_port   = 8800
-      to_port     = 8800
-      protocol    = "tcp"
-      cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
+    from_port   = 8800
+    to_port     = 8800
+    protocol    = "tcp"
+    cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
   }
   ingress {
-      from_port   = 8888
-      to_port     = 8888
-      protocol    = "tcp"
-      cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
+    from_port   = 8888
+    to_port     = 8888
+    protocol    = "tcp"
+    cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
   }
   ingress {
     from_port   = 8600
@@ -157,17 +156,17 @@ resource "aws_security_group" "qed" {
     protocol    = "tcp"
     cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
   }
-  ingress  {
-      from_port    = 0
-      to_port      = 65535
-      protocol     = "tcp"
-      self         = true
+  ingress {
+    from_port = 0
+    to_port   = 65535
+    protocol  = "tcp"
+    self      = true
   }
   ingress {
-      from_port        = 0
-      to_port          = 65535
-      protocol         = "tcp"
-      security_groups  = ["${aws_security_group.prometheus.id}"]
+    from_port       = 0
+    to_port         = 65535
+    protocol        = "tcp"
+    security_groups = [aws_security_group.prometheus.id]
   }
 
   egress {
@@ -176,51 +175,54 @@ resource "aws_security_group" "qed" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags {
-    Name = "qed-${terraform.workspace}"
-    Workspace = "${terraform.workspace}"
+  tags = {
+    Name      = "qed-${terraform.workspace}"
+    Workspace = terraform.workspace
   }
 }
 
 resource "aws_security_group" "prometheus" {
-  vpc_id       = "${aws_vpc.qed.id}"
+  vpc_id      = aws_vpc.qed.id
   name        = "prometheus-${terraform.workspace}"
   description = "Security group for QED usage"
 
   ingress {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
   }
+
   # Prometheus metrics
   ingress {
-      from_port   = 9090          
-      to_port     = 9090
-      protocol    = "tcp"
-      cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
-    }
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
+  }
+
   # Grafana
   ingress {
-      from_port   = 3000
-      to_port     = 3000
-      protocol    = "tcp"
-      cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["${chomp(data.http.ip.body)}/32"]
   }
-  ingress  {
-      from_port    = 0
-      to_port      = 65535
-      protocol     = "tcp"
-      self         = true
+  ingress {
+    from_port = 0
+    to_port   = 65535
+    protocol  = "tcp"
+    self      = true
   }
   egress {
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
-  tags {
-    Name = "prometheus-${terraform.workspace}"
-    Workspace = "${terraform.workspace}"
+  tags = {
+    Name      = "prometheus-${terraform.workspace}"
+    Workspace = terraform.workspace
   }
 }
+
