@@ -43,13 +43,6 @@ typedef struct rocksdb_histogram_data_t rocksdb_histogram_data_t;
 
 extern rocksdb_statistics_t* rocksdb_create_statistics();
 
-/* returns 0 on success, -1 otherwise */
-extern int rocksdb_property_int_cf(
-    rocksdb_t* db, rocksdb_column_family_handle_t* column_family,
-    const char* propname, uint64_t *out_val);
-
-/* Options */
-
 extern void rocksdb_options_set_atomic_flush(
     rocksdb_options_t*, unsigned char);
 
