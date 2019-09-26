@@ -51,6 +51,7 @@ func configClientGet() context.Context {
 	err := gpflag.ParseTo(conf, clientGetCmd.PersistentFlags())
 	if err != nil {
 		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
 		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("client.get.params"), conf)

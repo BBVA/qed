@@ -183,6 +183,7 @@ func bugConfig() context.Context {
 	err := gpflag.ParseTo(conf, bugCmd.PersistentFlags())
 	if err != nil {
 		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
 		os.Exit(1)
 	}
 

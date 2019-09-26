@@ -35,6 +35,7 @@ func workloadConfig() context.Context {
 	err := gpflag.ParseTo(conf, workloadCmd.PersistentFlags())
 	if err != nil {
 		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
 		os.Exit(1)
 	}
 
