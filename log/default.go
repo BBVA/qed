@@ -36,12 +36,15 @@ func Default() Logger {
 	return defLogger
 }
 
+// L is a short alias for Default()
 func L() Logger {
 	return Default()
 }
 
-func SetDefault(log Logger) Logger {
-	prev := defLogger
+// SetDefault the default logger to be returned by
+// Default() and L(). This method is expected to
+// be called early in the program to setup a default
+// logger.
+func SetDefault(log Logger) {
 	defLogger = log
-	return prev
 }

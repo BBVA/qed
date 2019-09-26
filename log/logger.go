@@ -16,27 +16,39 @@ const (
 	NotSet Level = iota
 
 	// Off is intended to avoid tracing any action.
+	// This is the hightest possible rank.
 	Off
 
-	// Fatal
+	// Fatal designates very severe errors that lead
+	// the application to abort (e.g. data corruption, failures
+	// to join the cluster...).
 	Fatal
 
-	// Error
+	// Error designates rare error events that might still allow
+	// the application to continue running (e.g. losts of contact
+	// with peers...).
 	Error
 
-	// Warn
+	// Warn designates potentially harmful situations (e.g. encoding
+	// errors, unknown message types...).
 	Warn
 
-	// Info
+	// Info designates informational messages that hightlight the
+	// main progress of the application at coarse-grained level.
+	// It should be used to document main state changes in the application
+	// (e.g. bootstrap, shutdown, main cluster operations...).
 	Info
 
-	// Debug
+	// Debug designates fine-grained informational events that are
+	// useful to debug the application. Don't use it in production.
 	Debug
 
-	// Trace
+	// Trace designates a even finer-grained informational events
+	// than Debug level. Don't use it in production.
 	Trace
 )
 
+// String returns a string representation of the level
 func (l Level) String() string {
 	switch l {
 	case NotSet:
@@ -84,31 +96,58 @@ func LevelFromString(level string) Level {
 	}
 }
 
+// Logger describes the interface that must be implemented
+// by all loggers.
 type Logger interface {
+	// Trace emits a message at the TRACE level.
 	Trace(msg string)
+	// Tracef formats a message according to a format specifier
+	// and emits it at the TRACE level.
 	Tracef(format string, args ...interface{})
+	// Debug emits a message at the DEBUG level.
 	Debug(msg string)
+	// Debugf formats a message according to a format specifier
+	// and emits it at the DEBUG level.
 	Debugf(format string, args ...interface{})
+	// Info emits a message at the INFO level.
 	Info(msg string)
+	// Infof formats a message according to a format specifier
+	// and emits it at the INFO level.
 	Infof(format string, args ...interface{})
+	// Warn emits a message at the WARN level.
 	Warn(msg string)
+	// Warnf formats a message according to a format specifier
+	// and emits it at the WARN level.
 	Warnf(format string, args ...interface{})
+	// Error emits a message at the ERROR level.
 	Error(msg string)
+	// Errorf formats a message according to a format specifier
+	// and emits it at the ERROR level.
 	Errorf(format string, args ...interface{})
+	// Fatal emits a message at the FATAL level
+	// and exits the application (os.Exit(1)).
 	Fatal(msg string)
+	// Fatalf formats a message according to a format specifier,
+	// emits it at the FATAL level and exits the application
+	// (os.Exit(1)).
 	Fatalf(format string, args ...interface{})
+	// Panic emits a message at the FATAL level
+	// and panics.
 	Panic(msg string)
+	// Panicf formats a message according to a format specifier,
+	// emits it at the FATAL level and panics.
 	Panicf(format string, args ...interface{})
 
-	// Create a logger that will prepend the given name on front of all
+	// Creates a logger that will prepend the given name on front of all
 	// messages. If the logger has a previously set name, the new value
 	// will be the appended to it.
 	Named(name string) Logger
 
-	// Create a logger that will prepend the given name on front of all
+	// Creates a logger that will prepend the given name on front of all
 	// messages. It overrides any previously set name.
 	ResetNamed(name string) Logger
 
+	// WithLevel creates a logger with the given level changed.
 	WithLevel(level Level) Logger
 
 	// StdLogger returns a logger implementation that conforms to the
@@ -159,6 +198,8 @@ type StdLoggerOptions struct {
 	ForceLevel Level
 }
 
+// New returns a new logger configured with
+// the given options.
 func New(opts *LoggerOptions) Logger {
 	if opts == nil {
 		opts = &LoggerOptions{}
