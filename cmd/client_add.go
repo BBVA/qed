@@ -69,15 +69,15 @@ func runClientAdd(cmd *cobra.Command, args []string) error {
 
 	// create main logger
 	logOpts := &log.LoggerOptions{
-		Name:            "qed.client",
+		Name:            "qed",
 		IncludeLocation: true,
 		Level:           log.LevelFromString(config.Log),
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
-	client, err := client.NewHTTPClientFromConfigWithLogger(config, logger)
+	client, err := client.NewHTTPClientFromConfigWithLogger(config, log.L().Named("client"))
 	if err != nil {
 		return err
 	}

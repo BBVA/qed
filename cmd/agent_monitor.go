@@ -126,7 +126,7 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
 	// URL parse
 	err := checkMonitorParams(conf)
@@ -134,24 +134,24 @@ func runAgentMonitor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, logger.Named("agent.notifier"))
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, log.L().Named("agent.notifier"))
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
 		return err
 	}
-	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, logger.Named("agent.task-manager"))
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, log.L().Named("agent.task-manager"))
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
 
-	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier, logger.Named("agent"))
+	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier, log.L().Named("agent"))
 	if err != nil {
 		return err
 	}
 
-	lagf := newLagFactory(1*time.Second, logger.Named("agent.lag-factory"))
+	lagf := newLagFactory(1*time.Second, log.L().Named("agent.lag-factory"))
 	lagf.start()
-	incF := incrementalFactory{logger.Named("agent.incremental-factory")}
+	incF := incrementalFactory{log.L().Named("agent.incremental-factory")}
 	defer lagf.stop()
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{incF, lagf}, logger.Named("agent.processor"))
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{incF, lagf}, log.L().Named("agent.processor"))
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 

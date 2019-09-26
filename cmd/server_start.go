@@ -49,40 +49,40 @@ func runServerStart(cmd *cobra.Command, args []string) error {
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
 	// URL parse
 	err = checkServerParams(conf)
 	if err != nil {
-		logger.Fatalf("Wrong parameters: %v", err)
+		log.L().Fatalf("Wrong parameters: %v", err)
 	}
 
 	if conf.SSLCertificate != "" && conf.SSLCertificateKey != "" {
 		if _, err := os.Stat(conf.SSLCertificate); os.IsNotExist(err) {
-			logger.Fatalf("Can't find certificate .crt file: %v", err)
+			log.L().Fatalf("Can't find certificate .crt file: %v", err)
 		} else if _, err := os.Stat(conf.SSLCertificateKey); os.IsNotExist(err) {
-			logger.Fatalf("Can't find certificate .key file: %v", err)
+			log.L().Fatalf("Can't find certificate .key file: %v", err)
 		} else {
-			logger.Info("TLS enabled")
+			log.L().Info("TLS enabled")
 			conf.EnableTLS = true
 		}
 	}
 
-	logger.Infof("Server configuration: \n%+v", conf)
+	log.L().Infof("Server configuration: \n%+v", conf)
 
-	srv, err := server.NewServerWithLogger(conf, logger.Named("server"))
+	srv, err := server.NewServerWithLogger(conf, log.L().Named("server"))
 	if err != nil {
-		logger.Fatalf("Can't create QED server: %v", err)
+		log.L().Fatalf("Can't create QED server: %v", err)
 	}
 
 	err = srv.Start()
 	if err != nil {
-		logger.Fatalf("Can't start QED server: %v", err)
+		log.L().Fatalf("Can't start QED server: %v", err)
 	}
 
 	util.AwaitTermSignal(srv.Stop)
 
-	logger.Info("Stopping server, about to exit...")
+	log.L().Info("Stopping server, about to exit...")
 
 	return nil
 }

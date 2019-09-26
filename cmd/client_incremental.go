@@ -75,15 +75,15 @@ func runClientIncremental(cmd *cobra.Command, args []string) error {
 
 	// create main logger
 	logOpts := &log.LoggerOptions{
-		Name:            "qed.client",
+		Name:            "qed",
 		IncludeLocation: true,
 		Level:           log.LevelFromString(clientConfig.Log),
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
-	client, err := client.NewHTTPClientFromConfigWithLogger(clientConfig, logger)
+	client, err := client.NewHTTPClientFromConfigWithLogger(clientConfig, log.L().Named("client"))
 	if err != nil {
 		return err
 	}

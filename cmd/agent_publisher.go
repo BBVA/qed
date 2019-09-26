@@ -108,7 +108,7 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
 	// URL parse
 	err := checkPublisherParams(conf)
@@ -116,17 +116,17 @@ func runAgentPublisher(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, logger.Named("agent.notifier"))
-	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, logger.Named("agent.task-manager"))
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, log.L().Named("agent.notifier"))
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, log.L().Named("agent.task-manager"))
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
 
-	agent, err := gossip.NewDefaultAgent(agentConfig, nil, store, tm, notifier, logger.Named("agent"))
+	agent, err := gossip.NewDefaultAgent(agentConfig, nil, store, tm, notifier, log.L().Named("agent"))
 	if err != nil {
 		return err
 	}
 
-	pubF := publisherFactory{logger.Named("agent.publisher-factory")}
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{pubF}, logger.Named("agent.processor"))
+	pubF := publisherFactory{log.L().Named("agent.publisher-factory")}
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{pubF}, log.L().Named("agent.processor"))
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 
