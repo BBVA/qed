@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
-
-	"github.com/bbva/qed/log"
 )
 
 var backupDeleteCmd *cobra.Command = &cobra.Command{
@@ -50,7 +49,9 @@ func configBackupDelete() context.Context {
 
 	err := gpflag.ParseTo(conf, backupDeleteCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
+		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("backup.delete.params"), conf)
 }
@@ -59,7 +60,6 @@ func runBackupDelete(cmd *cobra.Command, args []string) error {
 	params := backupDeleteCtx.Value(k("backup.delete.params")).(*deleteParams)
 
 	config := backupCtx.Value(k("backup.config")).(*BackupConfig)
-	log.SetLogger("backup", config.Log)
 
 	_, err := deleteBackup(config, params.BackupID)
 	if err != nil {
@@ -84,7 +84,7 @@ func deleteBackup(config *BackupConfig, backupID uint32) ([]byte, error) {
 	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Infof("Request error: %v\n", err)
+		fmt.Printf("Request error: %v\n", err)
 		return nil, err
 	}
 

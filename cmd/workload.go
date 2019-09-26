@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/workload"
@@ -33,7 +34,9 @@ func workloadConfig() context.Context {
 
 	err := gpflag.ParseTo(conf, workloadCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
+		os.Exit(1)
 	}
 
 	return context.WithValue(Ctx, k("workload.config"), conf)
@@ -57,14 +60,22 @@ func init() {
 func runWorkload(cmd *cobra.Command, args []string) error {
 	config := workloadCtx.Value(k("workload.config")).(*workload.Config)
 
-	workload := workload.Workload{Config: *config}
+	// create main logger
+	logOpts := &log.LoggerOptions{
+		Name:            "qed",
+		IncludeLocation: true,
+		Level:           log.LevelFromString(config.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
+	}
+	log.SetDefault(log.New(logOpts))
 
-	log.SetLogger("workload", config.Log)
+	workload := workload.NewWorkload(*config, log.L().Named("workload"))
 
 	if workload.Config.Profiling {
 		go func() {
-			log.Info("	* Starting workload Profiling server at :6060")
-			log.Info(http.ListenAndServe(":6060", nil))
+			fmt.Println("	* Starting workload Profiling server at :6060")
+			fmt.Println(http.ListenAndServe(":6060", nil))
 		}()
 	}
 
@@ -73,7 +84,8 @@ func runWorkload(cmd *cobra.Command, args []string) error {
 	}
 
 	if !config.APIMode && config.Kind == "" {
-		log.Fatal("Argument `kind` is required")
+		fmt.Println("Argument `kind` is required")
+		os.Exit(1)
 	}
 
 	workload.Start(config.APIMode)

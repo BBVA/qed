@@ -18,8 +18,8 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
@@ -27,8 +27,8 @@ import (
 
 var serverCmd *cobra.Command = &cobra.Command{
 	Use:   "server",
-	Short: "Provices access to the QED log server commands",
-	Long: `QED serves provides a REST API to the QED Log. The API is documented
+	Short: "Provides access to the QED log server commands",
+	Long: `QED server provides a REST API to the QED Log. The API is documented
 elsewhere.`,
 	TraverseChildren: true,
 }
@@ -45,7 +45,7 @@ func configServer() context.Context {
 
 	err := gpflag.ParseTo(conf, serverCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		panic(fmt.Sprintf("Unable to parse server config: %v", err))
 	}
 	return context.WithValue(Ctx, k("server.config"), conf)
 }

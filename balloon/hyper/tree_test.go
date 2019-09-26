@@ -24,7 +24,6 @@ import (
 
 	"github.com/bbva/qed/balloon/cache"
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage"
 	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	"github.com/bbva/qed/testutils/rand"
@@ -35,8 +34,6 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	testCases := []struct {
 		eventDigest      hashing.Digest
@@ -70,8 +67,6 @@ func TestAdd(t *testing.T) {
 }
 
 func TestAddBulk(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	testCases := []struct {
 		eventDigests     []hashing.Digest
@@ -111,8 +106,6 @@ func TestAddBulk(t *testing.T) {
 }
 
 func TestConsistencyBetweenAddAndAddBulk(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	testCases := []struct {
 		eventDigests     []hashing.Digest
@@ -200,8 +193,6 @@ func TestConsistencyBetweenAddAndAddBulk(t *testing.T) {
 
 func TestProveMembership(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	testCases := []struct {
 		addedKeys         map[uint64]hashing.Digest
 		expectedAuditPath AuditPath
@@ -265,8 +256,6 @@ func TestProveMembership(t *testing.T) {
 
 func TestAddAndVerify(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	value := uint64(0)
 
 	testCases := []struct {
@@ -304,8 +293,6 @@ func TestAddAndVerify(t *testing.T) {
 }
 
 func TestDeterministicAdd(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	hasher := hashing.NewSha256Hasher()
 
@@ -362,8 +349,6 @@ func TestDeterministicAdd(t *testing.T) {
 
 func TestRebuildCache(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	store, closeF := storage_utils.OpenBPlusTreeStore()
 	defer closeF()
 	hasherF := hashing.NewSha256Hasher
@@ -390,8 +375,6 @@ func TestRebuildCache(t *testing.T) {
 }
 
 func TestAddAndQuery(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(t, "/var/tmp/hyper_tree_test.db")
 	defer closeF()
@@ -420,8 +403,6 @@ func TestAddAndQuery(t *testing.T) {
 
 func BenchmarkAdd(b *testing.B) {
 
-	log.SetLogger(b.Name(), log.SILENT)
-
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/hyper_tree_test.db")
 	defer closeF()
 
@@ -434,7 +415,7 @@ func BenchmarkAdd(b *testing.B) {
 	defer srvCloseF()
 
 	b.ResetTimer()
-	b.N = 1000000
+	b.N = 100000
 	for i := 0; i < b.N; i++ {
 		index := make([]byte, 8)
 		binary.LittleEndian.PutUint64(index, uint64(i))
@@ -448,8 +429,6 @@ func BenchmarkAdd(b *testing.B) {
 }
 
 func BenchmarkAddBulk(b *testing.B) {
-
-	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/hyper_tree_test.db")
 	defer closeF()
@@ -489,8 +468,6 @@ func BenchmarkAddBulk(b *testing.B) {
 }
 
 func BenchmarkRebuildCacheTime(b *testing.B) {
-
-	log.SetLogger(b.Name(), log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/hyper_tree_test.db")
 	defer closeF()

@@ -112,7 +112,8 @@ func TestVerifyInterpretation(t *testing.T) {
 			AuditPath:     c.auditPath,
 		}
 
-		rootHash := ops.Pop().Interpret(ops, ctx)
+		rootHash, err := ops.Pop().Interpret(ops, ctx)
+		assert.NoError(t, err)
 		assert.Equalf(t, c.expectedRootHash, rootHash, "The recomputed root hash should match for test case %d", i)
 
 	}

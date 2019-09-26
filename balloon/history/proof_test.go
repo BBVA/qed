@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -103,8 +102,6 @@ func TestParseAuditPath(t *testing.T) {
 }
 
 func TestVerifyMembershipProof(t *testing.T) {
-
-	log.SetLogger("TestVerifyMembershipProof", log.INFO)
 
 	testCases := []struct {
 		index, version uint64
@@ -328,8 +325,6 @@ func TestVerifyMembershipProof(t *testing.T) {
 }
 
 func TestVerifyIncrementalProof(t *testing.T) {
-
-	log.SetLogger("TestVerifyIncrementalProof", log.INFO)
 
 	testCases := []struct {
 		auditPath           AuditPath

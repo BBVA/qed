@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/bbva/qed/build"
-	"github.com/bbva/qed/log"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 )
@@ -183,7 +182,9 @@ func bugConfig() context.Context {
 
 	err := gpflag.ParseTo(conf, bugCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
+		os.Exit(1)
 	}
 
 	return context.WithValue(Ctx, k("bug.config"), conf)

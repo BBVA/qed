@@ -19,9 +19,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/bbva/qed/gossip"
-	"github.com/bbva/qed/log"
 	"github.com/octago/sflags/gen/gpflag"
 	"github.com/spf13/cobra"
 )
@@ -57,7 +57,8 @@ func configAgent() context.Context {
 	conf := gossip.DefaultConfig()
 	err := gpflag.ParseTo(conf, agentCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse agent flags: %v\n", err)
+		os.Exit(1)
 	}
 
 	return context.WithValue(Ctx, k("agent.config"), conf)

@@ -19,6 +19,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/log"
@@ -50,7 +51,9 @@ func configClientAdd() context.Context {
 
 	err := gpflag.ParseTo(conf, clientAddCmd.PersistentFlags())
 	if err != nil {
-		log.Fatalf("err: %v", err)
+		fmt.Printf("Cannot parse command flags: %v\n", err)
+		fmt.Println("Exiting...")
+		os.Exit(1)
 	}
 	return context.WithValue(Ctx, k("client.add.params"), conf)
 }
@@ -64,9 +67,18 @@ func runClientAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	config := clientCtx.Value(k("client.config")).(*client.Config)
-	log.SetLogger("client", config.Log)
 
-	client, err := client.NewHTTPClientFromConfig(config)
+	// create main logger
+	logOpts := &log.LoggerOptions{
+		Name:            "qed",
+		IncludeLocation: true,
+		Level:           log.LevelFromString(config.Log),
+		Output:          log.DefaultOutput,
+		TimeFormat:      log.DefaultTimeFormat,
+	}
+	log.SetDefault(log.New(logOpts))
+
+	client, err := client.NewHTTPClientFromConfigWithLogger(config, log.L().Named("client"))
 	if err != nil {
 		return err
 	}

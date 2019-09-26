@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bbva/qed/client"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/coocood/freecache"
 )
@@ -161,6 +162,16 @@ func SetSnapshotStore(store SnapshotStore) AgentOptionF {
 func SetNotifier(n Notifier) AgentOptionF {
 	return func(a *Agent) error {
 		a.Notifier = n
+		return nil
+	}
+}
+
+func SetLogger(l log.Logger) AgentOptionF {
+	return func(a *Agent) error {
+		a.log = l
+		if a.log == nil {
+			a.log = log.L()
+		}
 		return nil
 	}
 }

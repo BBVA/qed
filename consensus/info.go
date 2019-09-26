@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bbva/qed/log"
 	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
 )
@@ -51,7 +50,7 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 		return ci
 	}
 
-	servers := listServers(ctx, n.raft)
+	servers := n.listServers(ctx, n.raft)
 
 	var wg sync.WaitGroup
 	infoCh := make(chan *NodeInfo, len(servers))
@@ -64,7 +63,7 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 			defer wg.Done()
 			resp, err := grpcFetchInfo(ctx, addr)
 			if err != nil {
-				log.Infof("Error getting node info from %s: %v", addr, err)
+				n.log.Infof("Error getting node info from %s: %v", addr, err)
 				return
 			}
 			infoCh <- resp.NodeInfo
@@ -90,14 +89,14 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 
 }
 
-func listServers(ctx context.Context, r *raft.Raft) []raft.Server {
+func (n *RaftNode) listServers(ctx context.Context, r *raft.Raft) []raft.Server {
 	var list []raft.Server
 	done := make(chan struct{})
 
 	go func() {
 		configFuture := r.GetConfiguration()
 		if err := configFuture.Error(); err != nil {
-			log.Infof("Error getting configuration from raft: %v", err)
+			n.log.Infof("Error getting configuration from raft: %v", err)
 		}
 		list = configFuture.Configuration().Servers
 		close(done)

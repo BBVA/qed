@@ -22,15 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage/rocks"
 	"github.com/bbva/qed/testutils/spec"
 )
 
 func TestOpenAndCloseRaftNode(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	r, clean, err := newSeed(t.Name(), 1)
@@ -43,8 +40,6 @@ func TestOpenAndCloseRaftNode(t *testing.T) {
 }
 
 func TestRaftNodeIsLeader(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	r, clean, err := newSeed(t.Name(), 1)
@@ -61,8 +56,6 @@ func TestRaftNodeIsLeader(t *testing.T) {
 
 func TestRaftNodeNotLeader(t *testing.T) {
 
-	log.SetLogger(t.Name(), log.SILENT)
-
 	// start only one follower
 	_, clean, err := newFollower(t.Name(), 1)
 	spec.Error(t, err)
@@ -73,8 +66,6 @@ func TestRaftNodeNotLeader(t *testing.T) {
 }
 
 func TestRaftNodeClusterInfo(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start only one seed
 	r, clean, err := newSeed(t.Name(), 1)
@@ -96,8 +87,6 @@ func TestRaftNodeClusterInfo(t *testing.T) {
 }
 
 func TestMultiRaftNodeJoin(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
 	r0, clean0, err := newSeed(t.Name(), 0)
@@ -128,8 +117,6 @@ func TestMultiRaftNodeJoin(t *testing.T) {
 }
 
 func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
 	r0, clean0, err := newSeed(t.Name(), 0)
@@ -167,8 +154,6 @@ func TestMultiRaftNodesJoinNotLeader(t *testing.T) {
 }
 
 func TestMultRaftNodesReJoin(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
 	r0, clean0, err := newSeed(t.Name(), 0)
@@ -221,8 +206,6 @@ func TestMultRaftNodesReJoin(t *testing.T) {
 }
 
 func TestMultiRaftLeaveLeadership(t *testing.T) {
-
-	log.SetLogger(t.Name(), log.SILENT)
 
 	// start one seed
 	r0, clean0, err := newSeed(t.Name(), 0)

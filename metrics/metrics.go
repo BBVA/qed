@@ -43,6 +43,8 @@ type Registerer interface {
 type Server struct {
 	server   *http.Server
 	registry *prometheus.Registry
+
+	log log.Logger
 }
 
 // Create new metrics server. Do not listen to the given address until
@@ -59,12 +61,8 @@ func NewServer(addr string) *Server {
 }
 
 // Listens on the configured address and blocks until shutdown is called.
-func (m Server) Start() {
-	go func() {
-		if err := m.server.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start metrics HTTP server: %s", err)
-		}
-	}()
+func (m Server) Start() error {
+	return m.server.ListenAndServe()
 }
 
 // Shutdown gracefully shutdowns metrics http server waiting 5 seconds for

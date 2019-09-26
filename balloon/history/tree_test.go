@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/bbva/qed/crypto/hashing"
-	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/storage/bplus"
 	metrics_utils "github.com/bbva/qed/testutils/metrics"
 	"github.com/bbva/qed/testutils/rand"
@@ -30,8 +29,6 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-
-	log.SetLogger("TestAdd", log.INFO)
 
 	testCases := []struct {
 		eventDigest          hashing.Digest
@@ -107,8 +104,6 @@ func TestAdd(t *testing.T) {
 
 func TestAddBulk(t *testing.T) {
 
-	log.SetLogger("TestAddBulk", log.SILENT)
-
 	testCases := []struct {
 		eventDigests     []hashing.Digest
 		initialVersion   uint64
@@ -147,8 +142,6 @@ func TestAddBulk(t *testing.T) {
 }
 
 func TestProveMembership(t *testing.T) {
-
-	log.SetLogger("TestProveMembership", log.INFO)
 
 	testCases := []struct {
 		index, version    uint64
@@ -328,8 +321,6 @@ func TestProveMembership(t *testing.T) {
 
 func TestProveConsistency(t *testing.T) {
 
-	log.SetLogger("TestProveConsistency", log.INFO)
-
 	testCases := []struct {
 		eventDigest       hashing.Digest
 		expectedAuditPath AuditPath
@@ -440,8 +431,6 @@ func TestProveConsistency(t *testing.T) {
 
 func TestProveConsistencySameVersions(t *testing.T) {
 
-	log.SetLogger("TestProveConsistencySameVersions", log.INFO)
-
 	testCases := []struct {
 		index             uint64
 		eventDigest       hashing.Digest
@@ -514,8 +503,6 @@ func max(x, y int) int {
 
 func BenchmarkAdd(b *testing.B) {
 
-	log.SetLogger("BenchmarkAdd", log.SILENT)
-
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/history_tree_test.db")
 	defer closeF()
 
@@ -537,8 +524,6 @@ func BenchmarkAdd(b *testing.B) {
 }
 
 func BenchmarkAddBulk(b *testing.B) {
-
-	log.SetLogger("BenchmarkAddBulk", log.SILENT)
 
 	store, closeF := storage_utils.OpenRocksDBStore(b, "/var/tmp/history_tree_test.db")
 	defer closeF()

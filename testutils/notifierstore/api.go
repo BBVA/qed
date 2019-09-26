@@ -136,12 +136,21 @@ func (a *alertStore) GetAll() []string {
 type snapStore struct {
 	data  *freecache.Cache
 	count *uint64
+	log   log.Logger
 }
 
 func newSnapStore() *snapStore {
 	return &snapStore{
 		data:  freecache.NewCache(2 << 30),
 		count: new(uint64),
+		log:   log.L(),
+	}
+}
+
+func newSnapStoreWithLogger(l log.Logger) *snapStore {
+	return &snapStore{
+		data: freecache.NewCache(2 << 30),
+		log:  l,
 	}
 }
 
@@ -154,7 +163,7 @@ func (s *snapStore) Put(b *protocol.BatchSnapshots) error {
 			return err
 		}
 		s.data.Set(key, val, 0)
-		log.Debugf("snapStore(): saved snapshot with version ", snap.Snapshot.Version)
+		s.log.Debugf("snapStore(): saved snapshot with version ", snap.Snapshot.Version)
 		QedStoreEventsStoredTotal.Inc()
 	}
 	return nil
@@ -186,6 +195,8 @@ type Service struct {
 	prometheusRegistry *prometheus.Registry
 	httpServer         *http.Server
 
+	log log.Logger
+
 	quitCh chan bool
 }
 
@@ -194,6 +205,16 @@ func NewService() *Service {
 		snaps:  newSnapStore(),
 		alerts: newAlertStore(),
 		quitCh: make(chan bool),
+		log:    log.L(),
+	}
+}
+
+func NewServiceWithLogger(l log.Logger) *Service {
+	return &Service{
+		snaps:  newSnapStoreWithLogger(l.Named("snapshot-store")),
+		alerts: newAlertStore(),
+		quitCh: make(chan bool),
+		log:    l,
 	}
 }
 
@@ -209,9 +230,9 @@ func (s *Service) Start(foreground bool) {
 	QedStoreInstancesCount.Inc()
 
 	go func() {
-		log.Debugf("	* Starting metrics HTTP server ")
+		s.log.Debugf("	* Starting metrics HTTP server ")
 		if err := s.metricsServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Errorf("Can't start metrics HTTP server: %s", err)
+			s.log.Errorf("Can't start metrics HTTP server: %s", err)
 		}
 	}()
 
@@ -222,15 +243,15 @@ func (s *Service) Start(foreground bool) {
 	router.HandleFunc("/snapshot", s.getSnapshotHandler())
 	router.HandleFunc("/alert", s.alertHandler())
 
-	s.httpServer = newHttpServer(":8888", router, log.GetLogger())
+	s.httpServer = newHttpServer(":8888", router, s.log)
 
-	fmt.Println("Starting test service...")
+	s.log.Info("Starting test service...")
 
 	go func() {
 		for {
 			select {
 			case <-s.quitCh:
-				log.Debugf("\nShutting down the server...")
+				s.log.Debug("\nShutting down the server...")
 				_ = s.httpServer.Shutdown(context.Background())
 				return
 			}
@@ -239,12 +260,12 @@ func (s *Service) Start(foreground bool) {
 
 	if foreground {
 		if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatal(err)
+			s.log.Fatalf("Cannot open http server: %v", err)
 		}
 	} else {
 		go (func() {
 			if err := s.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-				log.Fatal(err)
+				s.log.Fatalf("Cannot open http server: %v", err)
 			}
 		})()
 	}
@@ -255,11 +276,11 @@ func (s *Service) Shutdown() {
 	// Metrics
 	QedStoreInstancesCount.Dec()
 
-	log.Debugf("Metrics enabled: stopping server...")
+	s.log.Debug("Metrics enabled: stopping server...")
 	if err := s.metricsServer.Shutdown(context.Background()); err != nil { // TODO include timeout instead nil
-		log.Error(err)
+		s.log.Fatalf("An error ocurred when shutting down metrics server: %v", err)
 	}
-	log.Debugf("Done.\n")
+	s.log.Debug("Done.\n")
 
 	s.quitCh <- true
 	close(s.quitCh)
@@ -275,18 +296,18 @@ func (s *Service) postBatchHandler() func(http.ResponseWriter, *http.Request) {
 			var b protocol.BatchSnapshots
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
-				log.Infof("test_service(POST /batch): %v", err)
+				s.log.Infof("test_service(POST /batch): %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			err = b.Decode(buf)
 			if err != nil {
-				log.Infof("test_service(POST /batch): %v", err)
+				s.log.Infof("test_service(POST /batch): %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			if len(b.Snapshots) < 1 {
-				log.Infof("test_service(POST /batch): Empty batch recevied!")
+				s.log.Infof("test_service(POST /batch): Empty batch recevied!")
 				http.Error(w, "Empty batch recevied!", http.StatusInternalServerError)
 				return
 			}
@@ -311,7 +332,7 @@ func (s *Service) getSnapshotHandler() func(http.ResponseWriter, *http.Request) 
 			}
 			b, err := s.snaps.Get(uint64(version))
 			if err != nil {
-				log.Infof("test_service(GET /snapshots?v=%d): not found becasue %v", version, err)
+				s.log.Infof("test_service(GET /snapshots?v=%d): not found because %v", version, err)
 				http.Error(w, fmt.Sprintf("Version not found: %v", version), http.StatusNotFound)
 				return
 			}
@@ -351,7 +372,7 @@ func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 		if r.Method == "GET" {
 			b, err := json.Marshal(s.alerts.GetAll())
 			if err != nil {
-				log.Infof("test_service(GET /alert) error decoding alerts because ", err)
+				s.log.Infof("test_service(GET /alert) error decoding alerts because ", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -365,7 +386,7 @@ func (s *Service) alertHandler() func(http.ResponseWriter, *http.Request) {
 
 			buf, err := ioutil.ReadAll(r.Body)
 			if err != nil {
-				log.Infof("test_service(GET /alert) error reading alerts because ", err)
+				s.log.Infof("test_service(GET /alert) error reading alerts because ", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
