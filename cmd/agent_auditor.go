@@ -122,7 +122,7 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
 	// URL parse
 	err := checkAuditorParams(conf)
@@ -130,21 +130,21 @@ func runAgentAuditor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, logger.Named("agent.notifier"))
+	notifier := gossip.NewSimpleNotifierFromConfig(conf.Notifier, log.L().Named("agent.notifier"))
 	qed, err := client.NewHTTPClientFromConfig(conf.Qed)
 	if err != nil {
 		return err
 	}
-	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, logger.Named("agent.task-manager"))
+	tm := gossip.NewSimpleTasksManagerFromConfig(conf.Tasks, log.L().Named("agent.task-manager"))
 	store := gossip.NewRestSnapshotStoreFromConfig(conf.Store)
 
-	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier, logger.Named("agent"))
+	agent, err := gossip.NewDefaultAgent(agentConfig, qed, store, tm, notifier, log.L().Named("agent"))
 	if err != nil {
 		return err
 	}
 
-	memF := membershipFactory{logger.Named("agent.membership-factory")}
-	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{memF}, logger.Named("agent.processor"))
+	memF := membershipFactory{log.L().Named("agent.membership-factory")}
+	bp := gossip.NewBatchProcessor(agent, []gossip.TaskFactory{memF}, log.L().Named("agent.processor"))
 	agent.In.Subscribe(gossip.BatchMessageType, bp, 255)
 	defer bp.Stop()
 

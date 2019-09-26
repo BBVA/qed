@@ -67,9 +67,9 @@ func runWorkload(cmd *cobra.Command, args []string) error {
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
-	workload := workload.NewWorkload(*config, logger)
+	workload := workload.NewWorkload(*config, log.L().Named("workload"))
 
 	if workload.Config.Profiling {
 		go func() {

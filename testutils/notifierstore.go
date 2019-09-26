@@ -30,9 +30,9 @@ func main() {
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
-	s := notifierstore.NewServiceWithLogger(logger)
+	s := notifierstore.NewServiceWithLogger(log.L())
 	foreground := true
 	s.Start(foreground)
 }

@@ -66,15 +66,15 @@ func runClientGet(cmd *cobra.Command, args []string) error {
 
 	// create main logger
 	logOpts := &log.LoggerOptions{
-		Name:            "qed.client",
+		Name:            "qed",
 		IncludeLocation: true,
 		Level:           log.LevelFromString(config.Log),
 		Output:          log.DefaultOutput,
 		TimeFormat:      log.DefaultTimeFormat,
 	}
-	logger := log.New(logOpts)
+	log.SetDefault(log.New(logOpts))
 
-	client, err := client.NewHTTPClientFromConfigWithLogger(config, logger)
+	client, err := client.NewHTTPClientFromConfigWithLogger(config, log.L().Named("client"))
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func runClientGet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("\nRetreived snapshot with values:\n\n")
+	fmt.Printf("\nRetrieved snapshot with values:\n\n")
 	fmt.Printf(" EventDigest: %x\n", snapshot.EventDigest)
 	fmt.Printf(" HyperDigest: %x\n", snapshot.HyperDigest)
 	fmt.Printf(" HistoryDigest: %x\n", snapshot.HistoryDigest)
