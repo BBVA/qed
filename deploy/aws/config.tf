@@ -16,7 +16,7 @@
 
 # Bucket config must be here: https://github.com/hashicorp/terraform/issues/13589
 terraform {
-  required_version = ">= 0.12.0"
+  required_version = ">= 0.12.9"
 
   backend "s3" {
     bucket = "terraform-qed-cluster"
