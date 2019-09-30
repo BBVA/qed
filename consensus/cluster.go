@@ -275,7 +275,7 @@ func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, 
 func (n *RaftNode) Close(wait bool) error {
 	n.Lock()
 
-	n.log.Info("RaftNode is cosing down")
+	n.log.Trace("RaftNode is cosing down")
 
 	if n.closed {
 		n.Unlock()
@@ -293,7 +293,7 @@ func (n *RaftNode) Close(wait bool) error {
 				return e.Error()
 			}
 		}
-		n.log.Info("RaftNode closed Raft")
+		n.log.Trace("RaftNode closed Raft")
 		n.raft = nil
 	}
 
@@ -301,7 +301,7 @@ func (n *RaftNode) Close(wait bool) error {
 		if err := n.transport.Close(); err != nil {
 			return err
 		}
-		n.log.Info("RaftNode closed transport")
+		n.log.Trace("RaftNode closed transport")
 		n.transport = nil
 	}
 
@@ -310,14 +310,14 @@ func (n *RaftNode) Close(wait bool) error {
 			return err
 		}
 		n.raftLog = nil
-		n.log.Info("RaftNode closed raft log")
+		n.log.Trace("RaftNode closed raft log")
 	}
 
 	// close fsm
 	if n.balloon != nil {
 		n.balloon.Close()
 		n.balloon = nil
-		n.log.Info("RaftNode closed balloon")
+		n.log.Trace("RaftNode closed balloon")
 	}
 
 	// close the database
@@ -326,10 +326,10 @@ func (n *RaftNode) Close(wait bool) error {
 			return err
 		}
 		n.db = nil
-		n.log.Info("RaftNode closed database")
+		n.log.Trace("RaftNode closed database")
 	}
 
-	n.log.Info("RaftNode completely stopped")
+	n.log.Info("RaftNode has stopped")
 	return nil
 }
 
