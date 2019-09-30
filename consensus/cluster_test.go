@@ -317,6 +317,7 @@ func newNode(opts *ClusteringOptions, rocksOpts *rocks.Options) (*RaftNode, clos
 		// metricsCloseF()
 		close(snapshotsCh)
 		if dir {
+			fmt.Println("CLEANING NODE", opts.NodeID)
 			os.RemoveAll(fmt.Sprintf("/var/tmp/cluster-test/node_%s", opts.NodeID))
 		}
 	}
@@ -338,7 +339,13 @@ func newNode(opts *ClusteringOptions, rocksOpts *rocks.Options) (*RaftNode, clos
 	}
 	opts.RaftLogPath = raftPath
 
-	node, err := NewRaftNodeWithLogger(opts, db, snapshotsCh, log.L().Named("cluster"))
+	logger := log.New(&log.LoggerOptions{
+		Name:   opts.NodeID,
+		Level:  log.Trace,
+		Output: log.DefaultOutput,
+	})
+	node, err := NewRaftNodeWithLogger(opts, db, snapshotsCh, logger)
+	// node, err := NewRaftNode(opts, db, snapshotsCh)
 	if err != nil {
 		return nil, cleanF, err
 	}

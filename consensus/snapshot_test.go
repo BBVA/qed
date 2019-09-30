@@ -235,11 +235,11 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 	require.NoError(t, node2.raft.Snapshot().Error())
 
 	// restart follower
-	node3, clean4, err := newFollower(t.Name(), 3)
+	node3, clean3, err = newFollower(t.Name(), 3)
 	require.NoError(t, err)
 	defer func() {
 		require.NoError(t, node3.Close(true))
-		clean4(true)
+		clean3(true)
 	}()
 
 	// check the number of nodes in the cluster
