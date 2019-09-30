@@ -2,6 +2,7 @@ package log
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 
@@ -15,33 +16,54 @@ type HclogAdapter struct {
 	log Logger
 }
 
+// NewHclogAdapter creates an HclogAdapter for a given logger.
 func NewHclogAdapter(log Logger) *HclogAdapter {
 	return &HclogAdapter{log: log}
 }
 
 // Trace implementation
 func (l HclogAdapter) Trace(msg string, args ...interface{}) {
-	l.log.Tracef("%s: %v", msg, argsToString(args...))
+	if len(args) > 0 {
+		l.log.Tracef("%s: %v", msg, argsToString(args...))
+	} else {
+		l.log.Trace(msg)
+	}
 }
 
 // Debug implementation
 func (l HclogAdapter) Debug(msg string, args ...interface{}) {
-	l.log.Debugf("%s: %v", msg, argsToString(args...))
+	if len(args) > 0 {
+		l.log.Debugf("%s: %v", msg, argsToString(args...))
+	} else {
+		l.log.Debug(msg)
+	}
 }
 
 // Info implementation
 func (l HclogAdapter) Info(msg string, args ...interface{}) {
-	l.log.Infof("%s: %v", msg, argsToString(args...))
+	if len(args) > 0 {
+		l.log.Infof("%s: %v", msg, argsToString(args...))
+	} else {
+		l.log.Info(msg)
+	}
 }
 
 // Warn implementation
 func (l HclogAdapter) Warn(msg string, args ...interface{}) {
-	l.log.Warnf("%s: %v", msg, argsToString(args...))
+	if len(args) > 0 {
+		l.log.Warnf("%s: %v", msg, argsToString(args...))
+	} else {
+		l.log.Warn(msg)
+	}
 }
 
 // Error implementation
 func (l HclogAdapter) Error(msg string, args ...interface{}) {
-	l.log.Errorf("%s: %v", msg, argsToString(args...))
+	if len(args) > 0 {
+		l.log.Errorf("%s: %v", msg, argsToString(args...))
+	} else {
+		l.log.Error(msg)
+	}
 }
 
 // IsTrace implementation.
@@ -114,9 +136,7 @@ func (l HclogAdapter) StandardWriter(opts *hclog.StandardLoggerOptions) io.Write
 func argsToString(args ...interface{}) string {
 	buf := bytes.Buffer{}
 	for i := 0; i < len(args); i += 2 {
-		buf.WriteString(args[i].(string))
-		buf.WriteByte('=')
-		buf.WriteString(args[i+1].(string))
+		buf.WriteString(fmt.Sprintf("%v=%v", args[i], args[i+1]))
 	}
 	return buf.String()
 }
