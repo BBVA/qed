@@ -188,13 +188,13 @@ func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, 
 	if opts.RaftHeartbeatTimeout != 0 {
 		conf.HeartbeatTimeout = opts.RaftHeartbeatTimeout
 	}
-	if opts.RaftHeartbeatTimeout != 0 {
+	if opts.RaftElectionTimeout != 0 {
 		conf.ElectionTimeout = opts.RaftElectionTimeout
 	}
-	if opts.RaftHeartbeatTimeout != 0 {
+	if opts.RaftLeaseTimeout != 0 {
 		conf.LeaderLeaseTimeout = opts.RaftLeaseTimeout
 	}
-	if opts.RaftHeartbeatTimeout != 0 {
+	if opts.RaftCommitTimeout != 0 {
 		conf.CommitTimeout = opts.RaftCommitTimeout
 	}
 	conf.TrailingLogs = opts.TrailingLogs
