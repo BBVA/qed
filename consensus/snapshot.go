@@ -19,8 +19,10 @@ package consensus
 import (
 	"bytes"
 	"context"
+	"errors"
 	io "io"
 
+	"github.com/bbva/qed/storage"
 	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
 )
@@ -122,10 +124,34 @@ func newChunkReader(conn *grpc.ClientConn, stream ClusterService_FetchSnapshotCl
 
 func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_FetchSnapshotServer) error {
 	chunker := &chunkWriter{srv: srv}
-	return n.db.FetchSnapshot(chunker, req.StartSeqNum, req.EndSeqNum)
+
+	validateF := func(lastAppliedVersion uint64) storage.ValidateF {
+		lastSnapshotAppliedVersion := lastAppliedVersion
+		return func(meta []byte) (bool, error) {
+			metadata := new(VersionMetadata)
+			err := decodeMsgPack(meta, metadata)
+			if err != nil {
+				return false, nil
+			}
+			if metadata.PreviousVersion > lastSnapshotAppliedVersion {
+				return false, errors.New("Gap found between versions")
+			}
+			if metadata.NewVersion < lastSnapshotAppliedVersion {
+				// apply only those who are ahead the version specified with the parameter.
+				return false, nil
+			}
+			if metadata.NewVersion == lastSnapshotAppliedVersion && lastSnapshotAppliedVersion != 0 {
+				return false, nil
+			}
+			lastSnapshotAppliedVersion = metadata.NewVersion
+			return true, nil
+		}
+	}
+
+	return n.db.FetchSnapshot(chunker, req.StartSeqNum, req.EndSeqNum, validateF(req.LastAppliedVersion))
 }
 
-func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.ReadCloser, error) {
+func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum, lastAppliedVersion uint64) (io.ReadCloser, error) {
 	leaderAddr := string(n.raft.Leader())
 	conn, err := grpc.Dial(leaderAddr, grpc.WithInsecure())
 	if err != nil {
@@ -134,8 +160,9 @@ func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum uint64) (io.ReadCloser, err
 
 	client := NewClusterServiceClient(conn)
 	stream, err := client.FetchSnapshot(context.Background(), &FetchSnapshotRequest{
-		StartSeqNum: n.db.LastWALSequenceNumber(),
-		EndSeqNum:   lastSeqNum})
+		LastAppliedVersion: lastAppliedVersion,
+		StartSeqNum:        n.db.LastWALSequenceNumber(),
+		EndSeqNum:          lastSeqNum})
 	if err != nil {
 		return nil, err
 	}

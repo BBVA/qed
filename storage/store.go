@@ -102,8 +102,8 @@ type ManagedStore interface {
 	GetBackupsInfo() []*BackupInfo
 	DeleteBackup(backupID uint32) error
 	RestoreFromBackup(backupID uint32, dbDir, walDir string) error
-	FetchSnapshot(w io.WriteCloser, since, until uint64) error
-	LoadSnapshot(r io.ReadCloser, validate ValidateF) error
+	FetchSnapshot(w io.WriteCloser, since, until uint64, validate ValidateF) error
+	LoadSnapshot(r io.ReadCloser) error
 	LastWALSequenceNumber() uint64
 	metrics.Registerer
 }

@@ -522,7 +522,12 @@ func (s *RocksDBStore) DeleteBackup(backupID uint32) error {
 // FetchSnapshot fetches all WAL transactions from the first available
 // seq_num to the last one specified in the lastSeqNum parameter, and dumps
 // them to the given writer.
-func (s *RocksDBStore) FetchSnapshot(w io.WriteCloser, since, until uint64) error {
+func (s *RocksDBStore) FetchSnapshot(w io.WriteCloser, since, until uint64, valid storage.ValidateF) error {
+
+	extractor := rocksdb.NewLogDataExtractor(s.path)
+	defer func() {
+		extractor.Destroy()
+	}()
 
 	it, err := s.db.GetUpdatesSince(since) // we start on the first available seq_num
 	if err != nil {
@@ -542,6 +547,16 @@ func (s *RocksDBStore) FetchSnapshot(w io.WriteCloser, since, until uint64) erro
 		if seqNum > until {
 			break
 		}
+
+		ok, err := valid(batch.GetLogData(extractor))
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			continue
+		}
+
 		data := batch.Data()
 		size := util.Uint64AsBytes(uint64(len(data)))
 		_, err = w.Write(append(size, data...))
@@ -579,15 +594,9 @@ func readChunk(r io.Reader) ([]byte, error) {
 // condition specified as parameter.
 // This method should be called on a database that is not running
 // any other concurrent transactions while it is running.
-func (s *RocksDBStore) LoadSnapshot(r io.ReadCloser, valid storage.ValidateF) error {
-
+func (s *RocksDBStore) LoadSnapshot(r io.ReadCloser) error {
+	defer r.Close()
 	wo := rocksdb.NewDefaultWriteOptions()
-
-	extractor := rocksdb.NewLogDataExtractor(s.path)
-	defer func() {
-		extractor.Destroy()
-		r.Close()
-	}()
 
 	for {
 		buff, err := readChunk(r)
@@ -601,21 +610,10 @@ func (s *RocksDBStore) LoadSnapshot(r io.ReadCloser, valid storage.ValidateF) er
 		batch := rocksdb.WriteBatchFrom(buff)
 		defer batch.Destroy()
 
-		blob := batch.GetLogData(extractor)
-
-		ok, err := valid(blob)
+		err = s.db.Write(wo, batch)
 		if err != nil {
-			return err
+			return nil
 		}
-
-		// apply only valid transactions
-		if ok {
-			err = s.db.Write(wo, batch)
-			if err != nil {
-				return nil
-			}
-		}
-
 	}
 
 	return nil

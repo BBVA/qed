@@ -41,8 +41,9 @@ message RaftJoinResponse {
 }
 
 message FetchSnapshotRequest {
-    uint64 startSeqNum = 1;
-    uint64 endSeqNum = 2;
+    uint64 lastAppliedVersion = 1;
+    uint64 startSeqNum = 2;
+    uint64 endSeqNum = 3;
 }
 
 message Chunk {

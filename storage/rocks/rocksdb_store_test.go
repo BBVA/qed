@@ -217,14 +217,14 @@ func TestFetchAndLoadSnapshot(t *testing.T) {
 
 	// fetch snapshot
 	ioBuf := new(bufCloser)
-	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until, func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= 0, nil // we start from the beginning
+	}))
 
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
-	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
-		return util.BytesAsUint64(meta) >= 0, nil // we start from the beginning
-	}))
+	require.NoError(t, restore.LoadSnapshot(ioBuf))
 
 	// check elements
 	for _, table := range tables {
@@ -267,14 +267,14 @@ func TestFetchAndLoadUntilSeqNum(t *testing.T) {
 
 	// fetch snapshot
 	ioBuf := new(bufCloser)
-	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until,func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= 0, nil // we start from the beginning
+	}))
 
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
-	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
-		return util.BytesAsUint64(meta) >= 0, nil // we start from the beginning
-	}))
+	require.NoError(t, restore.LoadSnapshot(ioBuf))
 
 	// check elements
 	reader := store.GetAll(storage.HistoryTable)
@@ -319,14 +319,14 @@ func TestFetchAndLoadSnapshotSinceVersion(t *testing.T) {
 
 	// fetch snapshot
 	ioBuf := new(bufCloser)
-	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until))
+	require.NoError(t, store.FetchSnapshot(ioBuf, 0, until, func(meta []byte) (bool, error) {
+		return util.BytesAsUint64(meta) >= lastVersion, nil // we start at the middle
+	}))
 
 	// load snapshot in another instance
 	restore, recloseF := openRocksDBStore(t)
 	defer recloseF()
-	require.NoError(t, restore.LoadSnapshot(ioBuf, func(meta []byte) (bool, error) {
-		return util.BytesAsUint64(meta) >= lastVersion, nil // we start at the middle
-	}))
+	require.NoError(t, restore.LoadSnapshot(ioBuf))
 
 	// check elements
 	reader := store.GetAll(storage.HistoryTable)
