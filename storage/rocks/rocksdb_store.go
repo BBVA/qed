@@ -595,7 +595,7 @@ func readChunk(r io.Reader) ([]byte, error) {
 // This method should be called on a database that is not running
 // any other concurrent transactions while it is running.
 func (s *RocksDBStore) LoadSnapshot(r io.ReadCloser) error {
-
+	defer r.Close()
 	wo := rocksdb.NewDefaultWriteOptions()
 
 	for {
