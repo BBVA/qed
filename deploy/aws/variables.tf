@@ -30,3 +30,4 @@ variable "public_subnet_cidr" {
   description = "CIDR of the public subnet"
   default     = "172.31.1.0/24"
 }
+

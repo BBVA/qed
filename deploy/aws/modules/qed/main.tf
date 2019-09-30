@@ -14,7 +14,7 @@
 
 data "aws_ami" "amazon_linux" {
   most_recent = true
-
+  owners = ["amazon"]
   filter {
     name   = "name"
     values = ["amzn2-ami-hvm-*-x86_64-gp2"]
@@ -27,7 +27,7 @@ data "aws_ami" "amazon_linux" {
 }
 
 resource "aws_instance" "qed-server" {
-  count                = "${var.count}"
+  count                = "${var.instances}"
   ami                  = "${data.aws_ami.amazon_linux.id}"
   instance_type        = "${var.instance_type}"
   iam_instance_profile = "${var.iam_instance_profile}"
@@ -37,19 +37,19 @@ resource "aws_instance" "qed-server" {
   associate_public_ip_address = true
   key_name                    = "${var.key_name}"
 
-  root_block_device = [{
+  root_block_device {
     volume_type = "gp2"
     volume_size = "${var.volume_size}"
-  }]
+  }
 
-  ebs_block_device = {
+  ebs_block_device {
     device_name           = "/dev/xvdc"
     volume_type           = "gp2"
     volume_size           = "${var.ebs_volume_size}"
     delete_on_termination = "true"
   }
 
-  tags {
+  tags = {
     Name = "${format("${var.name}-%01d", count.index)}"
     Role = "${var.role}"
     DAM_OnOff = "NO"

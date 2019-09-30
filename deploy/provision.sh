@@ -13,7 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-export TF_STATE=/tmp/terraform.tfstate
+# TF_STATE must be the realtive or absolute path to the terraform 
+# project directory. This is required due a lack decent multi version
+# tfstate support of the terraform-inventory library.
+# Issue: https://github.com/adammck/terraform-inventory/pull/114
+
+export TF_STATE=../aws
 
 if ! which terraform-inventory
 then
@@ -21,10 +26,7 @@ then
     exit 1
 fi
 
-echo "Pulling terraform remote state to: $TF_STATE"
-cd aws
-terraform state pull > $TF_STATE
-cd ../provision
+cd provision
 
 if [ -z "$@" ];
 then
