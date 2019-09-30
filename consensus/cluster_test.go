@@ -22,10 +22,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
 	"github.com/bbva/qed/storage/rocks"
 	"github.com/bbva/qed/testutils/spec"
 )
+
+func TestMain(m *testing.M) {
+	log.SetDefault(log.New(&log.LoggerOptions{
+		IncludeLocation: true,
+		Level:           log.Off,
+	}))
+	os.Exit(m.Run())
+}
 
 func TestOpenAndCloseRaftNode(t *testing.T) {
 
@@ -271,6 +280,10 @@ func newSeed(name string, id int) (*RaftNode, closeF, error) {
 	opts.Bootstrap = true
 	opts.SnapshotThreshold = 0
 	opts.TrailingLogs = 0
+	opts.RaftLogging = true
+	opts.RaftHeartbeatTimeout = 2000 * time.Millisecond
+	opts.RaftElectionTimeout = 2000 * time.Millisecond
+	opts.RaftLeaseTimeout = 2000 * time.Millisecond
 	rocksOpts := rocks.DefaultOptions()
 	return newNode(opts, rocksOpts)
 }
@@ -284,6 +297,10 @@ func newFollower(name string, id int, seeds ...string) (*RaftNode, closeF, error
 	opts.Bootstrap = false
 	opts.SnapshotThreshold = 0
 	opts.TrailingLogs = 0
+	opts.RaftLogging = true
+	opts.RaftHeartbeatTimeout = 2000 * time.Millisecond
+	opts.RaftElectionTimeout = 2000 * time.Millisecond
+	opts.RaftLeaseTimeout = 2000 * time.Millisecond
 	opts.Seeds = seeds
 	rocksOpts := rocks.DefaultOptions()
 	return newNode(opts, rocksOpts)
@@ -321,7 +338,7 @@ func newNode(opts *ClusteringOptions, rocksOpts *rocks.Options) (*RaftNode, clos
 	}
 	opts.RaftLogPath = raftPath
 
-	node, err := NewRaftNode(opts, db, snapshotsCh)
+	node, err := NewRaftNodeWithLogger(opts, db, snapshotsCh, log.L().Named("cluster"))
 	if err != nil {
 		return nil, cleanF, err
 	}
