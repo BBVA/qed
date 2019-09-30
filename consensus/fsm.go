@@ -243,7 +243,6 @@ func (n *RaftNode) Restore(rc io.ReadCloser) error {
 		}
 
 		if err := n.db.LoadSnapshot(reader); err != nil {
-
 			return err
 		}
 	}
