@@ -136,6 +136,9 @@ func NewServerWithLogger(conf *Config, logger log.Logger) (*Server, error) {
 	clusterOpts.MgmtAddr = conf.MgmtAddr
 	clusterOpts.Bootstrap = bootstrap
 	clusterOpts.RaftLogging = true
+	clusterOpts.RaftHeartbeatTimeout = conf.RaftHeartbeatTimeout
+	clusterOpts.RaftElectionTimeout = conf.RaftElectionTimeout
+	clusterOpts.RaftLeaseTimeout = conf.RaftLeaseTimeout
 	if !bootstrap {
 		clusterOpts.Seeds = conf.RaftJoinAddr
 	}

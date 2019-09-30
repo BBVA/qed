@@ -83,6 +83,12 @@ type Config struct {
 
 	// DB WAL TTL
 	DbWalTtl time.Duration
+
+	RaftHeartbeatTimeout time.Duration
+
+	RaftElectionTimeout time.Duration
+
+	RaftLeaseTimeout time.Duration
 }
 
 func DefaultConfig() *Config {
@@ -90,24 +96,27 @@ func DefaultConfig() *Config {
 	currentDir := getCurrentDir()
 
 	return &Config{
-		APIKey:            "",
-		NodeID:            hostname,
-		HTTPAddr:          "127.0.0.1:8800",
-		RaftAddr:          "127.0.0.1:8500",
-		MgmtAddr:          "127.0.0.1:8700",
-		MetricsAddr:       "127.0.0.1:8600",
-		RaftJoinAddr:      []string{},
-		GossipAddr:        "127.0.0.1:8400",
-		GossipJoinAddr:    []string{},
-		DBPath:            currentDir + "/db",
-		RaftPath:          currentDir + "/raft",
-		EnableTLS:         false,
-		EnableProfiling:   false,
-		ProfilingAddr:     "127.0.0.1:6060",
-		SSLCertificate:    "",
-		SSLCertificateKey: "",
-		PrivateKeyPath:    "",
-		DbWalTtl:          0,
+		APIKey:               "",
+		NodeID:               hostname,
+		HTTPAddr:             "127.0.0.1:8800",
+		RaftAddr:             "127.0.0.1:8500",
+		MgmtAddr:             "127.0.0.1:8700",
+		MetricsAddr:          "127.0.0.1:8600",
+		RaftJoinAddr:         []string{},
+		GossipAddr:           "127.0.0.1:8400",
+		GossipJoinAddr:       []string{},
+		DBPath:               currentDir + "/db",
+		RaftPath:             currentDir + "/raft",
+		EnableTLS:            false,
+		EnableProfiling:      false,
+		ProfilingAddr:        "127.0.0.1:6060",
+		SSLCertificate:       "",
+		SSLCertificateKey:    "",
+		PrivateKeyPath:       "",
+		DbWalTtl:             0,
+		RaftHeartbeatTimeout: 1000 * time.Millisecond,
+		RaftElectionTimeout:  1000 * time.Millisecond,
+		RaftLeaseTimeout:     1000 * time.Millisecond,
 	}
 }
 

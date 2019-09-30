@@ -29,6 +29,7 @@ import (
 	"github.com/bbva/qed/client"
 	"github.com/bbva/qed/crypto"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/server"
 	"github.com/bbva/qed/testutils/notifierstore"
 	"github.com/bbva/qed/testutils/scope"
@@ -121,6 +122,9 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 		conf.SSLCertificateKey = tlsPath + "/qed_key.pem"
 	}
 	conf.EnableTLS = tls
+	conf.RaftHeartbeatTimeout = 2000 * time.Millisecond
+	conf.RaftElectionTimeout = 2000 * time.Millisecond
+	conf.RaftLeaseTimeout = 2000 * time.Millisecond
 
 	return conf
 }
@@ -155,7 +159,7 @@ func newServerSetup(id int, tls bool) (func() (string, error), func() error) {
 
 		}
 
-		srv, err = server.NewServer(conf)
+		srv, err = server.NewServerWithLogger(conf, log.L().Named("server"))
 		if err != nil {
 			return "", err
 		}
@@ -191,9 +195,18 @@ func newQedClient(id int) (*client.HTTPClient, error) {
 		client.SetMaxRetries(5),
 		client.SetAttemptToReviveEndpoints(true),
 		client.SetHasherFunction(hashing.NewSha256Hasher),
+		client.SetLogger(log.L().Named("client")),
 	)
 	if err != nil {
 		return nil, err
 	}
 	return client, nil
+}
+
+func TestMain(m *testing.M) {
+	log.SetDefault(log.New(&log.LoggerOptions{
+		IncludeLocation: true,
+		Level:           log.Off,
+	}))
+	os.Exit(m.Run())
 }
