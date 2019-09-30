@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-set -e 
+set -e
 
 BASE=$(pwd)
 LIBS="$BASE/libs"
 mkdir -p $LIBS
 
 # build jemalloc
-if [ ! -f $LIBS/libjemalloc.a ]; then 
+if [ ! -f $LIBS/libjemalloc.a ]; then
 	cd jemalloc
 	bash autogen.sh
 	make -j8
@@ -18,7 +18,7 @@ fi
 cd $BASE
 
 # build snappy shared lib
-if [ ! -f $LIBS/libsnappy.a ]; then 
+if [ ! -f $LIBS/libsnappy.a ]; then
 	cd snappy
 	mkdir -p build
 	cd build
@@ -34,12 +34,12 @@ fi
 cd $BASE
 
 if [ ! -f $LIBS/librocksdb.a ]; then
-	# build rocksdb shared with those libraries 
+	# build rocksdb shared with those libraries
 	cd rocksdb
 	mkdir -p build
 	cd build
-
-	cmake -DWITH_GFLAGS=OFF  -DPORTABLE=ON \
+	export CXXFLAGS="-Wno-error=deprecated-copy -Wno-error=pessimizing-move"
+	cmake -DWITH_GFLAGS=OFF -DPORTABLE=ON \
 	-DWITH_SNAPPY=ON -DSNAPPY_LIBRARIES="$LIBS/libsnappy.a" -DSNAPPY_INCLUDE_DIR="$BASE/snappy" \
 	-DWITH_JEMALLOC=ON -DJEMALLOC_LIBRARIES="$LIBS/libjemalloc.a" -DJEMALLOC_INCLUDE_DIR="$BASE/jemalloc/include" \
 	-DCMAKE_BUILD_TYPE=Release -DUSE_RTTI=1 ../
