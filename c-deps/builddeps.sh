@@ -38,7 +38,6 @@ if [ ! -f $LIBS/librocksdb.a ]; then
 	cd rocksdb
 	mkdir -p build
 	cd build
-	export CXXFLAGS="-Wno-error=deprecated-copy -Wno-error=pessimizing-move"
 	cmake -DWITH_GFLAGS=OFF -DPORTABLE=ON \
 	-DWITH_SNAPPY=ON -DSNAPPY_LIBRARIES="$LIBS/libsnappy.a" -DSNAPPY_INCLUDE_DIR="$BASE/snappy" \
 	-DWITH_JEMALLOC=ON -DJEMALLOC_LIBRARIES="$LIBS/libjemalloc.a" -DJEMALLOC_INCLUDE_DIR="$BASE/jemalloc/include" \
