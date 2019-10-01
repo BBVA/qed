@@ -158,6 +158,10 @@ func (b fakeRaftBalloon) Backup() error {
 	return nil
 }
 
+func (b fakeRaftBalloon) IsLeader() bool {
+	return false
+}
+
 func (b fakeRaftBalloon) ListBackups() []*storage.BackupInfo {
 	return nil
 }
