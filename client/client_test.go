@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -31,12 +32,21 @@ import (
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/testutils/spec"
 	"github.com/pkg/errors"
 
 	"github.com/bbva/qed/protocol"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	log.SetDefault(log.New(&log.LoggerOptions{
+		IncludeLocation: true,
+		Level:           log.Off,
+	}))
+	os.Exit(m.Run())
+}
 
 func setupServer(input []byte) (string, func()) {
 	mux := http.NewServeMux()
