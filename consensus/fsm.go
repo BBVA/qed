@@ -48,7 +48,7 @@ func (m *VersionMetadata) decode(value []byte) error {
 }
 
 type fsmState struct {
-	Index, Term, BalloonVersion uint64
+	Index, BalloonVersion uint64
 }
 
 func (s *fsmState) encode() ([]byte, error) {
@@ -61,11 +61,7 @@ func (s *fsmState) decode(value []byte) error {
 
 func (s *fsmState) shouldApply(f *fsmState) bool {
 
-	if s.Term > f.Term {
-		return false
-	}
-
-	if s.Term == f.Term && s.Index >= f.Index && s.Index != 0 {
+	if s.Index >= f.Index && s.Index != 0 {
 		return false
 	}
 
@@ -190,7 +186,7 @@ func (n *RaftNode) Apply(l *raft.Log) interface{} {
 		if err := cmd.decode(&eventDigests); err != nil {
 			panic(fmt.Sprintf("Unable to decode command: %v", err))
 		}
-		newState := &fsmState{l.Index, l.Term, n.balloon.Version() + uint64(len(eventDigests)) - 1}
+		newState := &fsmState{l.Index, n.balloon.Version() + uint64(len(eventDigests)) - 1}
 		if n.state.shouldApply(newState) {
 			return n.applyAdd(eventDigests, newState)
 		}

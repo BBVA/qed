@@ -170,7 +170,7 @@ func TestRestoreFromLeaderWAL(t *testing.T) {
 	//wait for WAL replication
 	require.Truef(t,
 		retryTrue(20, 200*time.Millisecond, func() bool {
-			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+			return node1.state.Index == node3.state.Index
 		}), "WAL not in sync")
 
 	// take a snapshot to inspect its values
@@ -251,7 +251,7 @@ func TestRestoreFromLeaderSnapshot(t *testing.T) {
 	//wait for WAL replication
 	require.Truef(t,
 		retryTrue(20, 200*time.Millisecond, func() bool {
-			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+			return node1.state.Index == node3.state.Index
 		}), "WAL not in sync")
 
 	// take a snapshot to inspect its values
@@ -326,7 +326,7 @@ func TestRestoreNewNodeFromLeader(t *testing.T) {
 	// wait for WAL replication
 	require.Truef(t,
 		retryTrue(20, 200*time.Millisecond, func() bool {
-			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+			return node1.state.Index == node3.state.Index
 		}), "WAL not in sync")
 
 	// take a snapshot to inspect its values
@@ -439,7 +439,7 @@ func TestRestoreNewNodeFromChangedLeader(t *testing.T) {
 	// wait for WAL replication
 	require.Truef(t,
 		retryTrue(20, 200*time.Millisecond, func() bool {
-			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+			return node1.state.Index == node3.state.Index
 		}), "WAL not in sync")
 
 	// take a snapshot to inspect its values
@@ -488,7 +488,7 @@ func TestRestoreOldNodeFromChangedLeader(t *testing.T) {
 	// wait for WAL replication
 	require.Truef(t,
 		retryTrue(20, 200*time.Millisecond, func() bool {
-			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+			return node1.state.Index == node3.state.Index
 		}), "WAL not in sync")
 
 	// stop the follower
@@ -530,7 +530,7 @@ func TestRestoreOldNodeFromChangedLeader(t *testing.T) {
 	// wait for WAL replication
 	require.Truef(t,
 		retryTrue(20, 200*time.Millisecond, func() bool {
-			return node1.state.Term == node3.state.Term && node1.state.Index == node3.state.Index
+			return node1.state.Index == node3.state.Index
 		}), "WAL not in sync")
 
 	// take a snapshot to inspect its values
