@@ -56,6 +56,33 @@ type HTTPClient struct {
 	discoveryStopCh   chan bool // notify sniffer to stop, and notify back
 }
 
+func newCheckRedirect(client *HTTPClient) func(req *http.Request, via []*http.Request) error {
+	return func(req *http.Request, via []*http.Request) error {
+		var shards protocol.Shards
+		body, err := ioutil.ReadAll(req.Response.Body)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(body, &shards)
+		if err != nil {
+			return err
+		}
+
+		var primary string
+		secondaries := make([]string, 0)
+		for id, shard := range shards.Shards {
+			if id == shards.LeaderId {
+				primary = fmt.Sprintf("%s://%s", shards.URIScheme, shard.HTTPAddr)
+			} else {
+				secondaries = append(secondaries, fmt.Sprintf("%s://%s", shards.URIScheme, shard.HTTPAddr))
+			}
+		}
+		client.topology.Update(primary, secondaries...)
+		req.Host = req.URL.Host
+		return nil
+	}
+}
+
 // NewSimpleHTTPClient creates a new short-lived client thath can be
 // used in use cases where you need one client per request.
 //
@@ -103,6 +130,9 @@ func NewSimpleHTTPClient(httpClient *http.Client, urls []string, snapshotStoreUR
 		log:                 log.L(),
 	}
 
+	// updates topology with redirect body
+	client.httpClient.CheckRedirect = newCheckRedirect(client)
+
 	client.topology.Update(urls[0], urls[1:]...)
 
 	return client, nil
@@ -149,6 +179,10 @@ func NewHTTPClient(options ...HTTPClientOptionF) (*HTTPClient, error) {
 		discoveryStopCh:     make(chan bool),
 		log:                 log.L(),
 	}
+
+	// updates topology with redirect body
+	client.httpClient.CheckRedirect = newCheckRedirect(client)
+
 	// Run the options on the client
 	for _, option := range options {
 		if err := option(client); err != nil {

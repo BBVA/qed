@@ -29,8 +29,15 @@ func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // NewTestHttpClient returns *http.Client with Transport replaced to avoid making real calls
 func NewTestHttpClient(fn RoundTripFunc) *http.Client {
+
+	checkRedirect := func(req *http.Request, via []*http.Request) error {
+		req.Host = req.URL.Host
+		return nil
+	}
+
 	return &http.Client{
-		Transport: fn,
+		Transport:     fn,
+		CheckRedirect: checkRedirect,
 	}
 }
 

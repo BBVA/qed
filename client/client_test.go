@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -296,6 +297,99 @@ func TestCallPrimaryUnreachableWithDiscovery(t *testing.T) {
 	require.NoError(t, err, "The requests should not fail")
 	require.True(t, len(resp) > 0, "The response should not be empty")
 	require.Equal(t, 3, numRequests, "The number of requests should match")
+}
+
+// Having 2 nodes with the primary being a follower, and with
+// there should be an http redirect and the client should try
+// the leader automatically
+func TestCallPrimaryRedirect(t *testing.T) {
+
+	var priReqs, secReqs int
+
+	var info1, info2 protocol.Shards
+
+	info1 = protocol.Shards{
+		NodeId:    "primary1",
+		LeaderId:  "secondary1",
+		URIScheme: "http",
+		Shards: map[string]protocol.ShardDetail{
+			"primary1": protocol.ShardDetail{
+				NodeId:   "primary1",
+				HTTPAddr: "primary1.foo",
+			},
+			"secondary1": protocol.ShardDetail{
+				NodeId:   "secondary1",
+				HTTPAddr: "secondary1.foo",
+			},
+		},
+	}
+
+	info2 = protocol.Shards{
+		NodeId:    "secondary1",
+		LeaderId:  "secondary1",
+		URIScheme: "http",
+		Shards: map[string]protocol.ShardDetail{
+			"secondary1": protocol.ShardDetail{
+				NodeId:   "secondary1",
+				HTTPAddr: "secondary1.foo",
+			},
+		},
+	}
+
+	httpClient := NewTestHttpClient(func(req *http.Request) (*http.Response, error) {
+		if req.Host == "primary1.foo" {
+			body, _ := json.Marshal(info1)
+			if req.URL.Path == "/info/shards" {
+				priReqs++
+				return buildResponse(http.StatusOK, string(body)), nil
+			}
+
+			h := req.Header
+			u, _ := url.Parse("http://secondary1.foo")
+			h.Set("Location", u.String())
+
+			return &http.Response{
+				StatusCode: http.StatusMovedPermanently,
+				Body:       ioutil.NopCloser(bytes.NewBuffer(body)),
+				Header:     h,
+			}, nil
+		}
+		// on a redirect, all headers are empty, somehow, Host is also empty
+		//...will this work with virtual hosts?
+		if req.Host == "secondary1.foo" {
+			secReqs++
+			if req.URL.Path == "/info/shards" {
+				body, _ := json.Marshal(info2)
+				return buildResponse(http.StatusOK, string(body)), nil
+			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("OK")),
+				Header:     make(http.Header),
+			}, nil
+		}
+		return nil, errors.New("Unreachable")
+	})
+
+	client, err := NewHTTPClient(
+		SetHttpClient(httpClient),
+		SetAPIKey("my-awesome-api-key"),
+		SetURLs("http://primary1.foo", "http://secondary1.foo"),
+		SetReadPreference(PrimaryPreferred),
+		SetMaxRetries(0),
+		SetTopologyDiscovery(false),
+		SetHealthChecks(false),
+	)
+	require.NoError(t, err)
+
+	// Mark node as dead after NewHTTPClient to simulate a primary failure.
+	// client.topology.primary.MarkAsDead()
+
+	resp, err := client.callPrimary("GET", "/test", nil)
+	require.NoError(t, err, "The requests should not fail")
+	require.True(t, len(resp) > 0, "The response should not be empty")
+	require.Equal(t, 0, priReqs, "The number of requests should match to primary node")
+	require.Equal(t, 1, secReqs, "The number of requests should match to secondary node")
 }
 
 // Having 2 nodes with the primary being unreachable, and with

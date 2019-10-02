@@ -29,6 +29,7 @@ import (
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+	"github.com/hashicorp/raft"
 )
 
 type ClientApi interface {
@@ -147,30 +148,34 @@ func Add(api ClientApi) http.HandlerFunc {
 
 		// Wait for the response
 		response, err := api.Add(event.Event)
-		if err != nil {
-			if !api.IsLeader() {
-				var scheme protocol.Scheme
-				if r.TLS != nil {
-					scheme = protocol.Https
-				} else {
-					scheme = protocol.Http
-				}
+		switch err {
+		case nil:
+			break
+		case raft.ErrNotLeader:
+			fallthrough
+		case raft.ErrLeadershipLost:
+			var scheme protocol.Scheme
+			if r.TLS != nil {
+				scheme = protocol.Https
+			} else {
+				scheme = protocol.Http
+			}
 
-				shards, err := getShards(api, scheme)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusPreconditionFailed)
-					return
-				}
-				out, err := json.Marshal(shards)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(out)
-				http.Redirect(w, r, shards.Shards[shards.LeaderId].HTTPAddr, http.StatusMovedPermanently)
+			shards, err := getShards(api, scheme)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusPreconditionFailed)
 				return
 			}
+			out, err := json.Marshal(shards)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(out)
+			http.Redirect(w, r, shards.Shards[shards.LeaderId].HTTPAddr, http.StatusMovedPermanently)
+			return
+		default:
 			http.Error(w, err.Error(), http.StatusPreconditionFailed)
 			return
 		}
@@ -230,30 +235,34 @@ func AddBulk(api ClientApi) http.HandlerFunc {
 
 		// Wait for the response
 		snapshotBulk, err := api.AddBulk(eventBulk.Events)
-		if err != nil {
-			if !api.IsLeader() {
-				var scheme protocol.Scheme
-				if r.TLS != nil {
-					scheme = protocol.Https
-				} else {
-					scheme = protocol.Http
-				}
+		switch err {
+		case nil:
+			break
+		case raft.ErrNotLeader:
+			fallthrough
+		case raft.ErrLeadershipLost:
+			var scheme protocol.Scheme
+			if r.TLS != nil {
+				scheme = protocol.Https
+			} else {
+				scheme = protocol.Http
+			}
 
-				shards, err := getShards(api, scheme)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusPreconditionFailed)
-					return
-				}
-				out, err := json.Marshal(shards)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(out)
-				http.Redirect(w, r, shards.Shards[shards.LeaderId].HTTPAddr, http.StatusMovedPermanently)
+			shards, err := getShards(api, scheme)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusPreconditionFailed)
 				return
 			}
+			out, err := json.Marshal(shards)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(out)
+			http.Redirect(w, r, shards.Shards[shards.LeaderId].HTTPAddr, http.StatusMovedPermanently)
+			return
+		default:
 			http.Error(w, err.Error(), http.StatusPreconditionFailed)
 			return
 		}
