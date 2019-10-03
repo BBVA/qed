@@ -163,7 +163,7 @@ func Add(api ClientApi) http.HandlerFunc {
 
 			shards, err := getShards(api, scheme)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusPreconditionFailed)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			out, err := json.Marshal(shards)
@@ -250,7 +250,7 @@ func AddBulk(api ClientApi) http.HandlerFunc {
 
 			shards, err := getShards(api, scheme)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusPreconditionFailed)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			out, err := json.Marshal(shards)
