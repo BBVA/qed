@@ -21,6 +21,5 @@ reqs=$((10**10))
 ${QED} workload                        \
     --api-mode                         \
     --log debug                        \
-    --api-key key                      \
     --num-requests ${reqs}             \
     --endpoints "http://127.0.0.1:8800"

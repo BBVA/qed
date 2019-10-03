@@ -93,7 +93,6 @@ var (
 type Config struct {
 	// general conf
 	Endpoints []string `desc:"The endopoint to make the load"`
-	APIKey    string   `desc:"The key to use qed servers"`
 	Insecure  bool     `desc:"Allow self-signed TLS certificates"`
 	Log       string   `desc:"Set log level to info, error or debug"`
 

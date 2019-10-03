@@ -63,33 +63,16 @@ type HealthCheckResponse struct {
 func NewApiHttp(api ClientApi) *http.ServeMux {
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthcheck", AuthHandlerMiddleware(HealthCheckHandler))
-	mux.HandleFunc("/events", AuthHandlerMiddleware(Add(api)))
-	mux.HandleFunc("/events/bulk", AuthHandlerMiddleware(AddBulk(api)))
-	mux.HandleFunc("/proofs/membership", AuthHandlerMiddleware(Membership(api)))
-	mux.HandleFunc("/proofs/digest-membership", AuthHandlerMiddleware(DigestMembership(api)))
-	mux.HandleFunc("/proofs/incremental", AuthHandlerMiddleware(Incremental(api)))
-	mux.HandleFunc("/info", AuthHandlerMiddleware(InfoHandler(api)))
-	mux.HandleFunc("/info/shards", AuthHandlerMiddleware(InfoShardsHandler(api)))
+	mux.HandleFunc("/healthcheck", HealthCheckHandler())
+	mux.HandleFunc("/events", Add(api))
+	mux.HandleFunc("/events/bulk", AddBulk(api))
+	mux.HandleFunc("/proofs/membership", Membership(api))
+	mux.HandleFunc("/proofs/digest-membership", DigestMembership(api))
+	mux.HandleFunc("/proofs/incremental", Incremental(api))
+	mux.HandleFunc("/info", InfoHandler(api))
+	mux.HandleFunc("/info/shards", InfoShardsHandler(api))
 
 	return mux
-}
-
-// AuthHandlerMiddleware function is an HTTP handler wrapper that performs
-// simple authorization tasks. Currently only checks that Api-Key is present.
-//
-// If Api-Key is not present, it will raise a `http.StatusUnauthorized` errror.
-func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		// Check if Api-Key header is empty
-		if r.Header.Get("Api-Key") == "" {
-			http.Error(w, "Missing Api-Key header", http.StatusUnauthorized)
-			return
-		}
-
-		handler.ServeHTTP(w, r)
-	})
 }
 
 // HealthCheckHandler checks the system status and returns it accordinly.
@@ -100,20 +83,22 @@ func AuthHandlerMiddleware(handler http.HandlerFunc) http.HandlerFunc {
 //
 // If everything is alright, the HTTP response will have a 204 status code
 // and no body.
-func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+func HealthCheckHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-	HealthCheckRequest.Inc()
-	defer HealthCheckRequest.Dec()
-	// Make sure we can only be called with an HTTP POST request.
-	if r.Method != "HEAD" {
-		w.Header().Set("Allow", "HEAD")
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
+		HealthCheckRequest.Inc()
+		defer HealthCheckRequest.Dec()
+		// Make sure we can only be called with an HTTP POST request.
+		if r.Method != "HEAD" {
+			w.Header().Set("Allow", "HEAD")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+
+		// A very simple health check.
+		w.WriteHeader(http.StatusNoContent)
+
 	}
-
-	// A very simple health check.
-	w.WriteHeader(http.StatusNoContent)
-
 }
 
 // Add posts an event into the system:
@@ -555,7 +540,6 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 // The following statuses are expected:
 // If everything is alright, the HTTP status is 200 and the body contains:
 // {
-//  "APIKey": 				"my-key",
 //  "NodeID": 				"server0",
 //  "HTTPAddr": 			"127.0.0.1:8800",
 //  "RaftAddr": 			"127.0.0.1:8500",

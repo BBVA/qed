@@ -103,7 +103,6 @@ func setupStore(t *testing.T) (scope.TestF, scope.TestF) {
 func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server.Config {
 	hostname, _ := os.Hostname()
 	conf := server.DefaultConfig()
-	conf.APIKey = "APIKey"
 	conf.NodeID = fmt.Sprintf("%s-%d", hostname, id)
 	conf.HTTPAddr = fmt.Sprintf("127.0.0.1:880%d", id)
 	conf.MgmtAddr = fmt.Sprintf("127.0.0.1:870%d", id)

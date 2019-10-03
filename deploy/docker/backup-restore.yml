@@ -14,7 +14,6 @@ services:
       - "/tmp/backups:/var/tmp/qed0/db/backups"
     entrypoint: [
       "qed", "server", "start",
-      "--api-key", "my-key",
       "--http-addr", "qed_server_0:8800",
       "--mgmt-addr", "qed_server_0:8700",
       "--metrics-addr", "qed_server_0:8600",

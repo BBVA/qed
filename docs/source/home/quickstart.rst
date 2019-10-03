@@ -35,7 +35,6 @@ configured for that proposal.
 
     .. code-block:: shell
 
-          --api-key             string  Set API Key to talk to QED Log service (default "my-key")
           --endpoints           string  REST QED Log service endpoint list http://ip1:port1,http://ip2:port2...  (default [http://127.0.0.1:8800])
           --snapshot-store-url  string  REST Snapshot store service endpoint http://ip:port  (default "http://127.0.0.1:8888")
 
@@ -60,7 +59,7 @@ environment is as easy as:
     $ docker-compose up -d
 
 This simple environment comprises 3 services: **QED Log server**,
-**QED Publisher agent**, and **Snapshot store**. 
+**QED Publisher agent**, and **Snapshot store**.
 You should be able to list these 3 services by typing:
 
 .. code-block:: shell
