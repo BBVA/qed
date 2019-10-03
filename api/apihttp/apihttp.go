@@ -20,6 +20,7 @@ package apihttp
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/bbva/qed/crypto/hashing"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/protocol"
+	"github.com/hashicorp/raft"
 )
 
 type ClientApi interface {
@@ -40,6 +42,7 @@ type ClientApi interface {
 	QueryConsistency(start, end uint64) (*balloon.IncrementalProof, error)
 	ClusterInfo() *consensus.ClusterInfo
 	Info() *consensus.NodeInfo
+	IsLeader() bool
 }
 
 // HealthCheckResponse contains the response from HealthCheckHandler.
@@ -145,13 +148,39 @@ func Add(api ClientApi) http.HandlerFunc {
 
 		// Wait for the response
 		response, err := api.Add(event.Event)
-		if err != nil {
+		switch err {
+		case nil:
+			break
+		case raft.ErrNotLeader:
+			fallthrough
+		case raft.ErrLeadershipLost:
+			var scheme protocol.Scheme
+			if r.TLS != nil {
+				scheme = protocol.Https
+			} else {
+				scheme = protocol.Http
+			}
+
+			shards, err := getShards(api, scheme)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			out, err := json.Marshal(shards)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(out)
+			http.Redirect(w, r, shards.Shards[shards.LeaderId].HTTPAddr, http.StatusMovedPermanently)
+			return
+		default:
 			http.Error(w, err.Error(), http.StatusPreconditionFailed)
 			return
 		}
 
 		snapshot := protocol.Snapshot(*response)
-
 		out, err := json.Marshal(&snapshot)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -206,8 +235,34 @@ func AddBulk(api ClientApi) http.HandlerFunc {
 
 		// Wait for the response
 		snapshotBulk, err := api.AddBulk(eventBulk.Events)
+		switch err {
+		case nil:
+			break
+		case raft.ErrNotLeader:
+			fallthrough
+		case raft.ErrLeadershipLost:
+			var scheme protocol.Scheme
+			if r.TLS != nil {
+				scheme = protocol.Https
+			} else {
+				scheme = protocol.Http
+			}
 
-		if err != nil {
+			shards, err := getShards(api, scheme)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			out, err := json.Marshal(shards)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(out)
+			http.Redirect(w, r, shards.Shards[shards.LeaderId].HTTPAddr, http.StatusMovedPermanently)
+			return
+		default:
 			http.Error(w, err.Error(), http.StatusPreconditionFailed)
 			return
 		}
@@ -429,6 +484,35 @@ func Incremental(api ClientApi) http.HandlerFunc {
 //    }
 //   }
 // }
+
+func getShards(api ClientApi, scheme protocol.Scheme) (*protocol.Shards, error) {
+	clusterInfo := api.ClusterInfo()
+	if clusterInfo.LeaderId == "" {
+		return nil, fmt.Errorf("Leader not found!")
+	}
+
+	if len(clusterInfo.Nodes) == 0 {
+		return nil, fmt.Errorf("Nodes not found")
+	}
+
+	nodeInfo := api.Info()
+	shardDetails := make(map[string]protocol.ShardDetail)
+
+	for _, node := range clusterInfo.Nodes {
+		shardDetails[node.NodeId] = protocol.ShardDetail{
+			NodeId:   node.NodeId,
+			HTTPAddr: node.HttpAddr,
+		}
+	}
+
+	return &protocol.Shards{
+		NodeId:    nodeInfo.NodeId,
+		LeaderId:  clusterInfo.LeaderId,
+		URIScheme: scheme,
+		Shards:    shardDetails,
+	}, nil
+}
+
 func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		InfoShardsRequest.Inc()
@@ -441,40 +525,18 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 			return
 		}
 
-		var scheme string
+		var scheme protocol.Scheme
 		if r.TLS != nil {
-			scheme = "https"
+			scheme = protocol.Https
 		} else {
-			scheme = "http"
+			scheme = protocol.Http
 		}
-
-		clusterInfo := api.ClusterInfo()
-		if clusterInfo.LeaderId == "" {
-			http.Error(w, "Leader not found", http.StatusServiceUnavailable)
+		shards, err := getShards(api, scheme)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
 			return
 		}
 
-		if len(clusterInfo.Nodes) == 0 {
-			http.Error(w, "Nodes not found", http.StatusServiceUnavailable)
-			return
-		}
-
-		nodeInfo := api.Info()
-		shardDetails := make(map[string]protocol.ShardDetail)
-
-		for _, node := range clusterInfo.Nodes {
-			shardDetails[node.NodeId] = protocol.ShardDetail{
-				NodeId:   node.NodeId,
-				HTTPAddr: node.HttpAddr,
-			}
-		}
-
-		shards := &protocol.Shards{
-			NodeId:    nodeInfo.NodeId,
-			LeaderId:  clusterInfo.LeaderId,
-			URIScheme: protocol.Scheme(scheme),
-			Shards:    shardDetails,
-		}
 		out, err := json.Marshal(shards)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
