@@ -19,9 +19,11 @@ variables:
 
 steps:
 - script: |
+    # Remove go package to avoid duplicicity on version update
+    if [ -d '$(Agent.BuildDirectory)/go' ]; then echo "Removing $(Agent.BuildDirectory)/go" && rm -rf '$(Agent.BuildDirectory)/go';fi
     wget "https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.13.1.tar.gz"
     tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.13.1.tar.gz"
-  displayName: 'Install Go 1.13.1'
+  displayName: 'Clean install Go 1.13.1'
 
 - script: |
     mkdir -p '$(GOBIN)'
@@ -53,6 +55,10 @@ steps:
 - script: |
     '$(GOROOT)/bin/go' version
     '$(GOROOT)/bin/go' mod download
+  workingDirectory: '$(modulePath)'
+  displayName: 'Get dependencies'
+
+- script: |
     '$(GOROOT)/bin/go' test -v -coverprofile=coverage.txt -covermode=count ./... 2>&1 | tee coverage.out
     cat coverage.out | go-junit-report > report.xml
     '$(GOROOT)/bin/go' vet -composites=false ./...
@@ -62,7 +68,7 @@ steps:
     gocov-html < coverage.json > coverage/index.html    
     '$(GOROOT)/bin/go' clean -modcache
   workingDirectory: '$(modulePath)'
-  displayName: 'Get dependencies, then build'
+  displayName: 'Build and test'
 
 - task: PublishTestResults@2
   inputs:
@@ -75,6 +81,12 @@ steps:
     codeCoverageTool: Cobertura 
     summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
     reportDirectory: $(System.DefaultWorkingDirectory)/**/coverage
+
+- script: |
+    '$(GOROOT)/bin/go' clean -modcache
+  condition: always()
+  workingDirectory: '$(modulePath)'
+  displayName: 'Clean Go modules cache'
 
 - script: |
     ./goreleaser.sh
