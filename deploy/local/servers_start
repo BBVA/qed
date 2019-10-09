@@ -22,7 +22,6 @@ $QED generate signerkeys
 # Server options
 LEADER_CONFIG=()
 LEADER_CONFIG+=('--log debug')
-LEADER_CONFIG+=('--api-key key')
 LEADER_CONFIG+=('--db-path /var/tmp/qed${i}/db')
 LEADER_CONFIG+=('--gossip-addr 127.0.0.1:840${i}')
 LEADER_CONFIG+=('--http-addr 127.0.0.1:880${i}')

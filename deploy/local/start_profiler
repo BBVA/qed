@@ -30,7 +30,7 @@ check_profiling() {
 
 profiler_cmd() {
     ELAPSED=0
-    while curl -s -X POST http://${IP}:8800/healthcheck -H "Api-Key: "test_key"" 2>&1 > /dev/null ; do
+    while curl -s -X POST http://${IP}:8800/healthcheck  2>&1 > /dev/null ; do
         (BALLOON_VERSION=$(printf "%.0f\n" $(curl -s http://${IP}:8600/metrics|grep "qed_raft_balloon_version [0-9]"|cut -d' ' -f2))
         # Avoid empty version because preload process is not already started...
         : ${BALLOON_VERSION:=0}

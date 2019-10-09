@@ -79,10 +79,6 @@ func runWorkload(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
-	if err := checkAPIKey(config.APIKey); err != nil {
-		return fmt.Errorf("%v", err)
-	}
-
 	if !config.APIMode && config.Kind == "" {
 		fmt.Println("Argument `kind` is required")
 		os.Exit(1)

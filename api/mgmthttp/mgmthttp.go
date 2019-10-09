@@ -38,8 +38,8 @@ type MgmtApi interface {
 //	/backups -> List backups
 func NewMgmtHttp(api MgmtApi) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/backup", apihttp.AuthHandlerMiddleware(ManageBackup(api)))
-	mux.HandleFunc("/backups", apihttp.AuthHandlerMiddleware(ListBackups(api)))
+	mux.HandleFunc("/backup", ManageBackup(api))
+	mux.HandleFunc("/backups", ListBackups(api))
 	return mux
 }
 

@@ -19,7 +19,6 @@ export QED_HOME=/var/qed
 {% if 'role_qed' in group_names %}
 $QED_HOME/qed server start \
 --log info \
---api-key key \
 --db-path /var/qed/db \
 --gossip-addr "{{ ansible_eth0.ipv4.address }}:8400" \
 --http-addr "{{ ansible_eth0.ipv4.address }}:8800" \

@@ -27,9 +27,6 @@ type Config struct {
 	//Log level
 	Log string
 
-	// Unique identifier to allow connections
-	APIKey string
-
 	// Unique name for this node. It identifies itself both in raft and
 	// gossip clusters. If not set, fallback to hostname.
 	NodeID string
@@ -96,7 +93,6 @@ func DefaultConfig() *Config {
 	currentDir := getCurrentDir()
 
 	return &Config{
-		APIKey:               "",
 		NodeID:               hostname,
 		HTTPAddr:             "127.0.0.1:8800",
 		RaftAddr:             "127.0.0.1:8500",

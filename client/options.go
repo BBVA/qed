@@ -35,7 +35,6 @@ func configToOptions(conf *Config) ([]HTTPClientOptionF, error) {
 	if conf != nil {
 		options = []HTTPClientOptionF{
 			SetSnapshotStoreURL(conf.SnapshotStoreURL),
-			SetAPIKey(conf.APIKey),
 			SetReadPreference(conf.ReadPreference),
 			SetMaxRetries(conf.MaxRetries),
 			SetTopologyDiscovery(conf.EnableTopologyDiscovery),

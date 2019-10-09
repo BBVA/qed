@@ -12,7 +12,6 @@ services:
 #      - "6060:6060"   # Profiling
     entrypoint: [
       "qed", "server", "start",
-      "--api-key", "my-key",
       "--http-addr", "qed_server_0:8800",
       "--mgmt-addr", "qed_server_0:8700",
       "--metrics-addr", "qed_server_0:8600",
@@ -37,7 +36,6 @@ services:
 #      - "6061:6060"   # Profiling
     entrypoint: [
       "qed", "server", "start",
-      "--api-key", "my-key",
       "--http-addr", "qed_server_1:8800",
       "--mgmt-addr", "qed_server_1:8700",
       "--metrics-addr", "qed_server_1:8600",
@@ -65,7 +63,6 @@ services:
 #      - "6062:6060"   # Profiling
     entrypoint: [
       "qed", "server", "start",
-      "--api-key", "my-key",
       "--http-addr", "qed_server_2:8800",
       "--mgmt-addr", "qed_server_2:8700",
       "--metrics-addr", "qed_server_2:8600",

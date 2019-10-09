@@ -218,7 +218,6 @@ func newAttack(conf Config, logger log.Logger) {
 	client, err := client.NewHTTPClient(
 		client.SetHttpClient(httpClient),
 		client.SetURLs(conf.Endpoints[0], conf.Endpoints[1:]...),
-		client.SetAPIKey(conf.APIKey),
 		client.SetReadPreference(client.Any),
 		client.SetMaxRetries(1),
 		client.SetTopologyDiscovery(true),

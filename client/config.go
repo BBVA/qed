@@ -104,9 +104,6 @@ type Config struct {
 	// Snapshot store [host:port] to ask for QED published signed snapshots.
 	SnapshotStoreURL string `desc:"REST Snapshot store service endpoint http://ip:port "`
 
-	// ApiKey to query the server endpoint.
-	APIKey string `desc:"Set API Key to talk to QED Log service"`
-
 	// Insecure enables the verification of the server's certificate chain
 	// and host name, allowing MiTM vector attacks.
 	Insecure bool `desc:"Set it to true to disable the verification of the server's certificate chain"`
@@ -154,7 +151,6 @@ func DefaultConfig() *Config {
 	return &Config{
 		Endpoints:                []string{"http://127.0.0.1:8800"},
 		SnapshotStoreURL:         "http://127.0.0.1:8888",
-		APIKey:                   "my-key",
 		Insecure:                 DefaultInsecure,
 		Timeout:                  DefaultTimeout,
 		DialTimeout:              DefaultDialTimeout,
