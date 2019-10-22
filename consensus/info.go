@@ -23,6 +23,7 @@ import (
 
 	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 func (n *RaftNode) FetchNodeInfo(ctx context.Context, req *InfoRequest) (*InfoResponse, error) {
@@ -61,7 +62,7 @@ func (n *RaftNode) ClusterInfo() *ClusterInfo {
 
 		go func(addr string) {
 			defer wg.Done()
-			resp, err := grpcFetchInfo(ctx, addr)
+			resp, err := n.grpcFetchInfo(ctx, addr)
 			if err != nil {
 				n.log.Infof("Error getting node info from %s: %v", addr, err)
 				return
@@ -111,8 +112,17 @@ func (n *RaftNode) listServers(ctx context.Context, r *raft.Raft) []raft.Server 
 
 }
 
-func grpcFetchInfo(ctx context.Context, addr string) (*InfoResponse, error) {
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure())
+func (n *RaftNode) grpcFetchInfo(ctx context.Context, addr string) (*InfoResponse, error) {
+	conf, err := n.tlsConfigurator.OutgoingTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	var conn *grpc.ClientConn
+	if conf != nil {
+		conn, err = grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(credentials.NewTLS(conf)))
+	} else {
+		conn, err = grpc.DialContext(ctx, addr, grpc.WithInsecure())
+	}
 	if err != nil {
 		return nil, err
 	}

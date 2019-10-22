@@ -73,10 +73,19 @@ type Config struct {
 	ProfilingAddr string
 
 	// TLS server cerificate
-	SSLCertificate string
+	TLSCertPath string
 
 	// TLS server cerificate key
-	SSLCertificateKey string
+	TLSKeyPath string
+
+	// TLS CA cerificate
+	TLSCACertPath string `flag:"tls-ca-cert-path"`
+
+	// Enable TLS for RPC and GRPC connections
+	EnableRPCTLS bool `flag:"enable-rpc-tls"`
+
+	// Enable mutual TLS verification for RPC and GRPC connections
+	RPCTLSVerify bool `flag:"rpc-tls-verify"`
 
 	// DB WAL TTL
 	DbWalTtl time.Duration
@@ -106,8 +115,11 @@ func DefaultConfig() *Config {
 		EnableTLS:            false,
 		EnableProfiling:      false,
 		ProfilingAddr:        "127.0.0.1:6060",
-		SSLCertificate:       "",
-		SSLCertificateKey:    "",
+		TLSCertPath:          "",
+		TLSKeyPath:           "",
+		TLSCACertPath:        "",
+		EnableRPCTLS:         false,
+		RPCTLSVerify:         false,
 		PrivateKeyPath:       "",
 		DbWalTtl:             0,
 		RaftHeartbeatTimeout: 1000 * time.Millisecond,

@@ -25,6 +25,7 @@ import (
 	"github.com/bbva/qed/storage"
 	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type fsmSnapshot struct {
@@ -153,11 +154,19 @@ func (n *RaftNode) FetchSnapshot(req *FetchSnapshotRequest, srv ClusterService_F
 
 func (n *RaftNode) attemptToFetchSnapshot(lastSeqNum, lastAppliedVersion uint64) (io.ReadCloser, error) {
 	leaderAddr := string(n.raft.Leader())
-	conn, err := grpc.Dial(leaderAddr, grpc.WithInsecure())
+	conf, err := n.tlsConfigurator.OutgoingTLSConfig()
 	if err != nil {
 		return nil, err
 	}
-
+	var conn *grpc.ClientConn
+	if conf != nil {
+		conn, err = grpc.Dial(leaderAddr, grpc.WithTransportCredentials(credentials.NewTLS(conf)))
+	} else {
+		conn, err = grpc.Dial(leaderAddr, grpc.WithInsecure())
+	}
+	if err != nil {
+		return nil, err
+	}
 	client := NewClusterServiceClient(conn)
 	stream, err := client.FetchSnapshot(context.Background(), &FetchSnapshotRequest{
 		LastAppliedVersion: lastAppliedVersion,

@@ -27,9 +27,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/bbva/qed/balloon"
 	"github.com/bbva/qed/crypto/hashing"
+	"github.com/bbva/qed/crypto/tlsutil"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
 	"github.com/bbva/qed/protocol"
@@ -103,9 +105,10 @@ type RaftNode struct {
 	raftLog   *raftLog                // Underlying rocksdb-backed persistent log store
 	snapshots *raft.FileSnapshotStore // Persistent snapstop store
 
-	raft       *raft.Raft             // The consensus mechanism
-	transport  *raft.NetworkTransport // Raft network transport
-	raftConfig *raft.Config           // Config provides any necessary configuration for the Raft server.
+	raft            *raft.Raft             // The consensus mechanism
+	transport       *raft.NetworkTransport // Raft network transport
+	raftConfig      *raft.Config           // Config provides any necessary configuration for the Raft server.
+	tlsConfigurator *tlsutil.TLSConfigurator
 
 	balloon     *balloon.Balloon // Balloon's finite state machine
 	state       *fsmState
@@ -122,11 +125,11 @@ type RaftNode struct {
 	done   chan struct{}
 }
 
-func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot) (*RaftNode, error) {
-	return NewRaftNodeWithLogger(opts, store, snapshotsCh, log.L())
+func NewRaftNode(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot, tlsConfigurator *tlsutil.TLSConfigurator) (*RaftNode, error) {
+	return NewRaftNodeWithLogger(opts, store, snapshotsCh, tlsConfigurator, log.L())
 }
 
-func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot, logger log.Logger) (*RaftNode, error) {
+func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, snapshotsCh chan *protocol.Snapshot, tlsConfigurator *tlsutil.TLSConfigurator, logger log.Logger) (*RaftNode, error) {
 
 	// We try to resolve the raft addr to avoid binding to hostnames
 	// because Raft library does not support FQDNs
@@ -144,12 +147,18 @@ func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, 
 		MgmtAddr: opts.MgmtAddr,
 		HttpAddr: opts.HttpAddr,
 	}
+
+	if tlsConfigurator == nil {
+		tlsConfigurator = tlsutil.NewTLSConfigurator(&tlsutil.Config{})
+	}
+
 	node := &RaftNode{
-		info:         info,
-		snapshotsCh:  snapshotsCh,
-		log:          logger,
-		applyTimeout: opts.RaftApplyTimeout,
-		done:         make(chan struct{}),
+		info:            info,
+		snapshotsCh:     snapshotsCh,
+		log:             logger,
+		tlsConfigurator: tlsConfigurator,
+		applyTimeout:    opts.RaftApplyTimeout,
+		done:            make(chan struct{}),
 	}
 
 	// Create the log store
@@ -210,7 +219,9 @@ func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, 
 
 	node.raftConfig = conf
 
-	node.transport, err = NewCMuxTCPTransportWithLogger(node, 3, 10*time.Second, node.log) // TODO export params
+	node.transport, err = NewCMuxTCPTransportWithLogger(node.info.RaftAddr, 3, 10*time.Second, tlsConfigurator, func(srv *grpc.Server) {
+		srv.RegisterService(&_ClusterService_serviceDesc, node)
+	}, node.log.Named("transport")) // TODO export params
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +286,7 @@ func NewRaftNodeWithLogger(opts *ClusteringOptions, store storage.ManagedStore, 
 func (n *RaftNode) Close(wait bool) error {
 	n.Lock()
 
-	n.log.Trace("RaftNode is cosing down")
+	n.log.Trace("RaftNode is closing down")
 
 	if n.closed {
 		n.Unlock()
@@ -418,10 +429,17 @@ func (n *RaftNode) JoinCluster(ctx context.Context, req *RaftJoinRequest) (*Raft
 }
 
 func (n *RaftNode) attemptToJoinCluster(addrs []string) error {
-	var err error
+	conf, err := n.tlsConfigurator.OutgoingTLSConfig()
+	if err != nil {
+		return err
+	}
 	for _, addr := range addrs {
 		var conn *grpc.ClientConn
-		conn, err = grpc.Dial(addr, grpc.WithInsecure())
+		if conf != nil {
+			conn, err = grpc.Dial(addr, grpc.WithTransportCredentials(credentials.NewTLS(conf)))
+		} else {
+			conn, err = grpc.Dial(addr, grpc.WithInsecure())
+		}
 		if err != nil {
 			return err
 		}

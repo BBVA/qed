@@ -17,12 +17,15 @@
 package consensus
 
 import (
+	"crypto/tls"
 	"errors"
-	"io"
+	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/bbva/qed/crypto/tlsutil"
 	"github.com/bbva/qed/log"
 	"github.com/hashicorp/raft"
 	"github.com/soheilhy/cmux"
@@ -34,66 +37,48 @@ var (
 	errNotTCP          = errors.New("local address is not a TCP address")
 )
 
-// TCPStreamLayer implements StreamLayer interface for plain TCP.
-type TCPStreamLayer struct {
-	advertise  net.Addr
+// CMuxTCPStreamLayer implements StreamLayer interface for plain TCP.
+type CMuxTCPStreamLayer struct {
+	advertise net.Addr
+
 	mux        cmux.CMux
 	grpcServer *grpc.Server
 	listener   net.Listener
+	tlsConfig  *tlsutil.TLSConfigurator
+
+	// Tracks if we are closed
+	closed    bool
+	closeLock sync.Mutex
 }
 
-// NewCMuxTCPTransport returns a NetworkTransport that is built on top of
-// a TCP streaming transport layer.
-func NewCMuxTCPTransport(
-	node *RaftNode,
-	maxPool int,
-	timeout time.Duration,
-	logOutput io.Writer,
-) (*raft.NetworkTransport, error) {
-	return newTCPTransport(node, func(stream raft.StreamLayer) *raft.NetworkTransport {
-		return raft.NewNetworkTransport(stream, maxPool, timeout, logOutput)
-	})
-}
+// GRPCServiceRegister is a registering function for GRPC services.
+type GRPCServiceRegister func(*grpc.Server)
 
-// NewCMuxTCPTransportWithLogger returns a NetworkTransport that is built on top of
-// a TCP streaming transport layer, with log output going to the supplied Logger
-func NewCMuxTCPTransportWithLogger(
-	node *RaftNode,
-	maxPool int,
-	timeout time.Duration,
-	logger log.Logger,
-) (*raft.NetworkTransport, error) {
-	return newTCPTransport(node, func(stream raft.StreamLayer) *raft.NetworkTransport {
-		return raft.NewNetworkTransportWithLogger(stream, maxPool, timeout, logger.StdLogger(&log.StdLoggerOptions{
-			InferLevels: true,
-		}))
-	})
-}
+// NewCMuxTCPStreamLayer creates a CMuxTCPStreamLayer with the given parameters
+func NewCMuxTCPStreamLayer(bindAddr string, tlsC *tlsutil.TLSConfigurator, grpcServiceRegister GRPCServiceRegister) (*CMuxTCPStreamLayer, error) {
 
-// NewCMuxTCPTransportWithConfig returns a NetworkTransport that is built on top of
-// a TCP streaming transport layer, using the given config struct.
-func NewCMuxTCPTransportWithConfig(
-	node *RaftNode,
-	config *raft.NetworkTransportConfig,
-) (*raft.NetworkTransport, error) {
-	return newTCPTransport(node, func(stream raft.StreamLayer) *raft.NetworkTransport {
-		config.Stream = stream
-		return raft.NewNetworkTransportWithConfig(config)
-	})
-}
+	advertiseAddr, err := net.ResolveTCPAddr("tcp", bindAddr)
+	if err != nil {
+		return nil, err
+	}
 
-func newTCPTransport(node *RaftNode,
-	transportCreator func(stream raft.StreamLayer) *raft.NetworkTransport) (*raft.NetworkTransport, error) {
-
-	advertiseAddr, err := net.ResolveTCPAddr("tcp", node.info.RaftAddr)
+	// Get TLS config
+	if tlsC == nil {
+		tlsC = tlsutil.NewTLSConfigurator(&tlsutil.Config{})
+	}
+	tlsConf, err := tlsC.IncomingTLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
 	// Try to bind
-	list, err := net.Listen("tcp", node.info.RaftAddr)
+	list, err := net.Listen("tcp", bindAddr)
 	if err != nil {
 		return nil, err
+	}
+
+	if tlsConf != nil {
+		list = tls.NewListener(list, tlsConf)
 	}
 
 	// Create a cmux
@@ -101,13 +86,13 @@ func newTCPTransport(node *RaftNode,
 
 	// Match connections in order:
 	// First grpc, otherwise TCP
-	// grpcL := mux.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
 	grpcL := mux.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
 	tcpL := mux.Match(cmux.Any()) // Any means anything that is not yet matched.
 
 	// Create the protocol Server
-	grpcS := grpc.NewServer()
-	RegisterClusterServiceServer(grpcS, node)
+	var grpcS *grpc.Server
+	grpcS = grpc.NewServer()
+	grpcServiceRegister(grpcS)
 
 	// Use the muxed listeners for your servers
 	go grpcS.Serve(grpcL)
@@ -118,54 +103,120 @@ func newTCPTransport(node *RaftNode,
 		}
 	}()
 
-	// Create stream
-	stream := &TCPStreamLayer{
+	stream := &CMuxTCPStreamLayer{
 		advertise:  advertiseAddr,
+		tlsConfig:  tlsC,
 		mux:        mux,
-		grpcServer: grpcS,
 		listener:   tcpL,
+		grpcServer: grpcS,
 	}
 
 	// Verify that we have a usable advertise address
 	addr, ok := stream.Addr().(*net.TCPAddr)
 	if !ok {
-		list.Close()
+		stream.Close()
 		return nil, errNotTCP
 	}
 	if addr.IP.IsUnspecified() {
-		list.Close()
+		stream.Close()
 		return nil, errNotAdvertisable
 	}
 
-	// Create the network transport
-	trans := transportCreator(stream)
-	return trans, nil
+	return stream, nil
 }
 
 // Dial implements the StreamLayer interface.
-func (t *TCPStreamLayer) Dial(address raft.ServerAddress, timeout time.Duration) (net.Conn, error) {
-	return net.DialTimeout("tcp", string(address), timeout)
+func (l *CMuxTCPStreamLayer) Dial(address raft.ServerAddress, timeout time.Duration) (net.Conn, error) {
+	dialer := &net.Dialer{Timeout: timeout}
+	var err error
+	var conn net.Conn
+	conf, err := l.tlsConfig.OutgoingTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	if conf != nil {
+		conn, err = tls.DialWithDialer(dialer, "tcp", string(address), conf)
+		if err != nil {
+			return nil, err
+		}
+		conn, ok := conn.(*tls.Conn)
+		if ok {
+			err = conn.Handshake()
+			if err != nil {
+				defer conn.Close()
+				return nil, fmt.Errorf("handshake failed: %v", err)
+			}
+		}
+	} else {
+		conn, err = dialer.Dial("tcp", string(address))
+	}
+	return conn, err
 }
 
 // Accept implements the net.Listener interface.
-func (t *TCPStreamLayer) Accept() (c net.Conn, err error) {
-	return t.listener.Accept()
+func (l *CMuxTCPStreamLayer) Accept() (c net.Conn, err error) {
+	return l.listener.Accept()
 }
 
 // Close implements the net.Listener interface.
-func (t *TCPStreamLayer) Close() (err error) {
-	if err := t.listener.Close(); err != nil {
+func (l *CMuxTCPStreamLayer) Close() (err error) {
+	l.closeLock.Lock()
+	defer l.closeLock.Unlock()
+
+	if !l.closed {
+		l.closed = true
+	}
+
+	if err := l.listener.Close(); err != nil {
 		return err
 	}
-	t.grpcServer.GracefulStop()
+	l.grpcServer.GracefulStop()
 	return nil
 }
 
 // Addr implements the net.Listener interface.
-func (t *TCPStreamLayer) Addr() net.Addr {
+func (l *CMuxTCPStreamLayer) Addr() net.Addr {
 	// Use an advertise addr if provided
-	if t.advertise != nil {
-		return t.advertise
+	if l.advertise != nil {
+		return l.advertise
 	}
-	return t.listener.Addr()
+	return l.listener.Addr()
+}
+
+// NewCMuxTCPTransport returns a NetworkTransport that is built on top of
+// a TCP streaming transport layer.
+func NewCMuxTCPTransport(
+	bindAddr string,
+	maxPool int,
+	timeout time.Duration,
+	tls *tlsutil.TLSConfigurator,
+	grpcServiceRegister GRPCServiceRegister,
+) (*raft.NetworkTransport, error) {
+	return NewCMuxTCPTransportWithLogger(bindAddr, maxPool, timeout, tls, grpcServiceRegister, log.L())
+}
+
+// NewCMuxTCPTransportWithLogger returns a NetworkTransport that is built on top of
+// a TCP streaming transport layer, with log output going to the supplied Logger
+func NewCMuxTCPTransportWithLogger(
+	bindAddr string,
+	maxPool int,
+	timeout time.Duration,
+	tls *tlsutil.TLSConfigurator,
+	grpcServiceRegister GRPCServiceRegister,
+	logger log.Logger,
+) (*raft.NetworkTransport, error) {
+	stream, err := NewCMuxTCPStreamLayer(bindAddr, tls, grpcServiceRegister)
+	if err != nil {
+		return nil, err
+	}
+	config := &raft.NetworkTransportConfig{
+		Stream:  stream,
+		MaxPool: maxPool,
+		Timeout: timeout,
+		Logger: logger.StdLogger(&log.StdLoggerOptions{
+			InferLevels: true,
+		}),
+	}
+	return raft.NewNetworkTransportWithConfig(config), nil
 }

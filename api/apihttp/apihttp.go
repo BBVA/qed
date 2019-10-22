@@ -554,8 +554,8 @@ func InfoShardsHandler(api ClientApi) http.HandlerFunc {
 //  "EnableTLS": 			false,
 //  "EnableProfiling": 		false,
 //  "ProfilingAddr": 		"127.0.0.1:6060",
-//  "SSLCertificate": 		"/var/tmp/certs/my-cert",
-//  "SSLCertificateKey": 	"/var/tmp/certs",
+//  "TLSCertPath": 		"/var/tmp/certs/my-cert",
+//  "TLSKeyPath": 	"/var/tmp/certs",
 // }
 func InfoHandler(api ClientApi) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
