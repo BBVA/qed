@@ -130,15 +130,12 @@ func NewServerWithLogger(conf *Config, logger log.Logger) (*Server, error) {
 
 	// Create RPC TLS configurator
 	tlsConf := &tlsutil.Config{
-		UseTLS:       conf.EnableRPCTLS,
-		CertFilePath: conf.TLSCertPath,
-		KeyFilePath:  conf.TLSKeyPath,
-		CAFilePath:   conf.TLSCACertPath,
-	}
-	if conf.RPCTLSVerify {
-		tlsConf.VerifyIncoming = true
-		tlsConf.VerifyOutgoing = true
-		tlsConf.VerifyServerHostname = true
+		UseTLS:               conf.EnableRPCTLS,
+		CertFilePath:         conf.TLSCertPath,
+		KeyFilePath:          conf.TLSKeyPath,
+		CAFilePath:           conf.TLSCACertPath,
+		EnableMutualAuth:     conf.TLSMutualAuth,
+		VerifyServerHostname: conf.TLSVerifyServerHostname,
 	}
 	tlsConfigurator := tlsutil.NewTLSConfigurator(tlsConf)
 	if conf.EnableRPCTLS {

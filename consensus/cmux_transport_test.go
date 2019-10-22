@@ -110,8 +110,7 @@ func TestMutualTLSWithoutVerifying(t *testing.T) {
 	// configure TLS
 	tlsConf := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       false,
-		VerifyOutgoing:       false,
+		EnableMutualAuth:     false,
 		VerifyServerHostname: false,
 		CertFilePath:         certPath,
 		KeyFilePath:          keyPath,
@@ -195,8 +194,7 @@ func TestMutualTLSVerifyingWithWrongBothCA(t *testing.T) {
 	// create TLS
 	tlsConf1 := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       true,
-		VerifyOutgoing:       true,
+		EnableMutualAuth:     true,
 		VerifyServerHostname: false,
 		CertFilePath:         cert1Path,
 		KeyFilePath:          keyPath1,
@@ -204,8 +202,7 @@ func TestMutualTLSVerifyingWithWrongBothCA(t *testing.T) {
 	}
 	tlsConf2 := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       true,
-		VerifyOutgoing:       true,
+		EnableMutualAuth:     true,
 		VerifyServerHostname: false,
 		CertFilePath:         cert2Path,
 		KeyFilePath:          keyPath2,
@@ -301,8 +298,7 @@ func TestMutualTLSVerifyingWithWrongServerCA(t *testing.T) {
 	// create TLS
 	tlsConf1 := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       true,
-		VerifyOutgoing:       true,
+		EnableMutualAuth:     true,
 		VerifyServerHostname: true,
 		CertFilePath:         cert1Path,
 		KeyFilePath:          keyPath1,
@@ -310,8 +306,7 @@ func TestMutualTLSVerifyingWithWrongServerCA(t *testing.T) {
 	}
 	tlsConf2 := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       true,
-		VerifyOutgoing:       true,
+		EnableMutualAuth:     true,
 		VerifyServerHostname: true,
 		CertFilePath:         cert2Path,
 		KeyFilePath:          keyPath2,
@@ -404,8 +399,7 @@ func TestMutualTLSVerifyingWithWrongClientCA(t *testing.T) {
 	// create TLS
 	tlsConf1 := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       true,
-		VerifyOutgoing:       true,
+		EnableMutualAuth:     true,
 		VerifyServerHostname: true,
 		CertFilePath:         cert1Path,
 		KeyFilePath:          keyPath1,
@@ -413,8 +407,7 @@ func TestMutualTLSVerifyingWithWrongClientCA(t *testing.T) {
 	}
 	tlsConf2 := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       true,
-		VerifyOutgoing:       true,
+		EnableMutualAuth:     true,
 		VerifyServerHostname: true,
 		CertFilePath:         cert2Path,
 		KeyFilePath:          keyPath2,
@@ -512,8 +505,7 @@ func TestMutualTLSVerifying(t *testing.T) {
 	// create TLS
 	tlsConf1 := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       true,
-		VerifyOutgoing:       true,
+		EnableMutualAuth:     true,
 		VerifyServerHostname: true,
 		CertFilePath:         certPath1,
 		KeyFilePath:          keyPath1,
@@ -522,8 +514,7 @@ func TestMutualTLSVerifying(t *testing.T) {
 
 	tlsConf2 := &tlsutil.Config{
 		UseTLS:               true,
-		VerifyIncoming:       true,
-		VerifyOutgoing:       true,
+		EnableMutualAuth:     true,
 		VerifyServerHostname: true,
 		CertFilePath:         certPath2,
 		KeyFilePath:          keyPath2,

@@ -29,17 +29,12 @@ type Config struct {
 	// servers. This doesn't imply any verification, it only enables TLS if possible.
 	UseTLS bool
 
-	// VerifyIncoming is used to verify the authenticity of incoming connections.
-	// This means that TCP requests are forbidden, only allowing for TLS. TLS connecitons
-	// must match a provided certificate authority. This is used to verify authenticity
-	// of other QED nodes trying to connect to us.
-	VerifyIncoming bool
-
-	// VerifyOutgoing is used to force verification of the authenticity of outgoing connections.
-	// This means that TLS requests are used, and TCP requests are forbidden. TLS connections
-	// must match a provided certificate authority. This is used to verify authenticity of
-	// other QED nodes we are connecting to.
-	VerifyOutgoing bool
+	// EnableMutualAuth is used to verify the authenticity of incoming and outgoing
+	// connections. This means that TCP requests are forbidden, only allowing for TLS.
+	// TLS connections must match a provided certificate authority. This is used to
+	// verify authenticity of other QED nodes trying to connect to us and nodes
+	// we are connecting to.
+	EnableMutualAuth bool
 
 	// VerifyServerHostname is used to enable hostname verification of servers.
 	VerifyServerHostname bool
@@ -107,10 +102,10 @@ func (c *TLSConfigurator) OutgoingTLSConfig() (*tls.Config, error) {
 
 	// if VerifyServerHostname is true, that implies VerifyOutgoing
 	if c.conf.VerifyServerHostname {
-		c.conf.VerifyOutgoing = true
+		c.conf.EnableMutualAuth = true
 	}
 
-	if !c.conf.UseTLS && !c.conf.VerifyOutgoing {
+	if !c.conf.UseTLS && !c.conf.EnableMutualAuth {
 		return nil, nil
 	}
 
@@ -122,7 +117,7 @@ func (c *TLSConfigurator) OutgoingTLSConfig() (*tls.Config, error) {
 		conf.InsecureSkipVerify = false
 	}
 
-	if c.conf.VerifyOutgoing && c.conf.CAFilePath == "" {
+	if c.conf.EnableMutualAuth && c.conf.CAFilePath == "" {
 		return nil, fmt.Errorf("VerifyOutgoing set, and no CA certificate provided!")
 	}
 
@@ -177,7 +172,7 @@ func (c *TLSConfigurator) IncomingTLSConfig() (*tls.Config, error) {
 		conf.Certificates = []tls.Certificate{*cert}
 	}
 
-	if c.conf.VerifyIncoming {
+	if c.conf.EnableMutualAuth {
 		conf.ClientAuth = tls.RequireAndVerifyClientCert
 		conf.PreferServerCipherSuites = true
 		if c.conf.CAFilePath == "" {
