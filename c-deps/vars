@@ -1,0 +1,15 @@
+#! /usr/bin/env bash
+# OS specific settings
+
+Osname=$(uname)
+if [ "${Osname}" == "DragonFly" ]; then
+        # DragonFly BSD
+        JEMALLOC_ENABLE="OFF"
+        MAKE_CMD=gmake
+        MAXJOBS=$(sysctl -n hw.ncpu)
+else
+        # Linux, Darwin
+        MAKE_CMD=make
+        JEMALLOC_ENABLE="ON"
+        MAXJOBS=8
+fi

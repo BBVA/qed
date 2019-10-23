@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
+. ./vars
+
 for i in jemalloc snappy rocksdb
 do
-    make -C $i clean
+    ${MAKE_CMD} -C $i clean
 done
