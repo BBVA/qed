@@ -16,14 +16,17 @@
 GO111MODULE=on
 CGO_LDFLAGS_ALLOW='.*'
 
-Tag=$(git tag --points-at HEAD | grep v[0-9.0-9.0-9])
-FullCommit=$(git rev-parse HEAD)
+# Tries to identify a tag name and defaults to branch name if it fails
+Tag=$(git tag --points-at HEAD | grep "v[0-9]\.[0-9]\.[0-9]*")
+Tag=${Tag:-$(git rev-parse --abbrev-ref HEAD)}
 
-if [[ $(uname) == "Darwin" ]]
+# Assumes anything non-linux has date -u
+Osname=$(uname)
+if [ "${Osname}" == "Linux" ]
 then
-    Date=$(date -u +'%Y/%m/%dT%XUTC')
+    Date=(date --utc +'%Y/%m/%dT%XUTC')
 else
-    Date=$(date --utc +'%Y/%m/%dT%XUTC')
+    Date=$(date -u +'%Y/%m/%dT%XUTC')
 fi
 
 mkdir -p dist/qed
@@ -35,12 +38,21 @@ go build -ldflags="-s -w                            \
     -X github.com/bbva/qed/build.utcTime=${Date}"   \
     -o dist/qed/qed
 
+# Exit if go build fails
+if [ $? -ne 0 ]; then
+    echo Build process failed.
+    exit 1
+fi
+
 cp README.rst dist/qed/README.rst
 cp LICENSE dist/qed/LICENSE
 
 tar -C dist -zcvf qed-${Tag}-linux-amd64.tar.gz .
 mv qed-${Tag}-linux-amd64.tar.gz dist
-md5sum dist/qed-${Tag}-linux-amd64.tar.gz > dist/qed-${Tag}-checksum.txt
+
+# Use coreutils digest format but strip the '*' from the filename
+openssl md5 -r dist/qed-${Tag}-linux-amd64.tar.gz | \
+    sed 's/\*//' > dist/qed-${Tag}-checksum.txt
 
 if [ "$?" != 0 ]
 then
