@@ -304,18 +304,25 @@ func newTLSServer(addr string, mux *http.ServeMux, logger log.Logger) *http.Serv
 		},
 		PreferServerCipherSuites: true,
 		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
 		},
 	}
 
 	return &http.Server{
-		Addr:         addr,
-		Handler:      apihttp.LogHandler(mux, logger),
-		TLSConfig:    cfg,
-		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
+		Addr:      addr,
+		Handler:   apihttp.LogHandler(mux, logger),
+		TLSConfig: cfg,
+		ErrorLog: logger.StdLogger(&log.StdLoggerOptions{
+			ForceLevel: log.Error,
+		}),
 	}
 
 }
@@ -324,5 +331,8 @@ func newHTTPServer(addr string, mux *http.ServeMux, logger log.Logger) *http.Ser
 	return &http.Server{
 		Addr:    addr,
 		Handler: apihttp.LogHandler(mux, logger),
+		ErrorLog: logger.StdLogger(&log.StdLoggerOptions{
+			ForceLevel: log.Error,
+		}),
 	}
 }
