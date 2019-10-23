@@ -117,8 +117,8 @@ func configQedServer(id int, pathDB, signPath, tlsPath string, tls bool) *server
 	conf.RaftPath = pathDB + "/raft"
 	conf.PrivateKeyPath = signPath
 	if tls {
-		conf.SSLCertificate = tlsPath + "/qed_cert.pem"
-		conf.SSLCertificateKey = tlsPath + "/qed_key.pem"
+		conf.TLSCertPath = tlsPath + "/qed_cert.pem"
+		conf.TLSKeyPath = tlsPath + "/qed_key.pem"
 	}
 	conf.EnableTLS = tls
 	conf.RaftHeartbeatTimeout = 2000 * time.Millisecond

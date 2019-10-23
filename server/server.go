@@ -29,6 +29,7 @@ import (
 	"github.com/bbva/qed/api/mgmthttp"
 	"github.com/bbva/qed/consensus"
 	"github.com/bbva/qed/crypto/sign"
+	"github.com/bbva/qed/crypto/tlsutil"
 	"github.com/bbva/qed/gossip"
 	"github.com/bbva/qed/log"
 	"github.com/bbva/qed/metrics"
@@ -127,7 +128,21 @@ func NewServerWithLogger(conf *Config, logger log.Logger) (*Server, error) {
 	// Create sender
 	server.sender = NewSenderWithLogger(server.agent, server.signer, 500, 2, 3, server.log.Named("sender"))
 
-	// Create RaftBalloon
+	// Create RPC TLS configurator
+	tlsConf := &tlsutil.Config{
+		UseTLS:               conf.EnableRPCTLS,
+		CertFilePath:         conf.TLSCertPath,
+		KeyFilePath:          conf.TLSKeyPath,
+		CAFilePath:           conf.TLSCACertPath,
+		EnableMutualAuth:     conf.TLSMutualAuth,
+		VerifyServerHostname: conf.TLSVerifyServerHostname,
+	}
+	tlsConfigurator := tlsutil.NewTLSConfigurator(tlsConf)
+	if conf.EnableRPCTLS {
+		logger.Infof("TLS enabled for RPC connections")
+	}
+
+	// Create Raft node
 	clusterOpts := consensus.DefaultClusteringOptions()
 	clusterOpts.NodeID = conf.NodeID
 	clusterOpts.Addr = conf.RaftAddr
@@ -142,7 +157,8 @@ func NewServerWithLogger(conf *Config, logger log.Logger) (*Server, error) {
 	if !bootstrap {
 		clusterOpts.Seeds = conf.RaftJoinAddr
 	}
-	server.raftNode, err = consensus.NewRaftNodeWithLogger(clusterOpts, store, server.snapshotsCh, server.log.Named("cluster"))
+
+	server.raftNode, err = consensus.NewRaftNodeWithLogger(clusterOpts, store, server.snapshotsCh, tlsConfigurator, server.log.Named("cluster"))
 	if err != nil {
 		return nil, err
 	}
@@ -191,8 +207,8 @@ func (s *Server) Start() error {
 		go func() {
 			s.log.Infof("\t* Starting QED API HTTPS server in addr: %s", s.conf.HTTPAddr)
 			err := s.httpServer.ListenAndServeTLS(
-				s.conf.SSLCertificate,
-				s.conf.SSLCertificateKey,
+				s.conf.TLSCertPath,
+				s.conf.TLSKeyPath,
 			)
 			if err != http.ErrServerClosed {
 				s.log.Fatalf("Can't start QED API HTTP Server: %v", err) // TODO should we return error instead of exiting?
@@ -288,18 +304,25 @@ func newTLSServer(addr string, mux *http.ServeMux, logger log.Logger) *http.Serv
 		},
 		PreferServerCipherSuites: true,
 		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_RSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
 		},
 	}
 
 	return &http.Server{
-		Addr:         addr,
-		Handler:      apihttp.LogHandler(mux, logger),
-		TLSConfig:    cfg,
-		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
+		Addr:      addr,
+		Handler:   apihttp.LogHandler(mux, logger),
+		TLSConfig: cfg,
+		ErrorLog: logger.StdLogger(&log.StdLoggerOptions{
+			ForceLevel: log.Error,
+		}),
 	}
 
 }
@@ -308,5 +331,8 @@ func newHTTPServer(addr string, mux *http.ServeMux, logger log.Logger) *http.Ser
 	return &http.Server{
 		Addr:    addr,
 		Handler: apihttp.LogHandler(mux, logger),
+		ErrorLog: logger.StdLogger(&log.StdLoggerOptions{
+			ForceLevel: log.Error,
+		}),
 	}
 }

@@ -73,10 +73,22 @@ type Config struct {
 	ProfilingAddr string
 
 	// TLS server cerificate
-	SSLCertificate string
+	TLSCertPath string
 
 	// TLS server cerificate key
-	SSLCertificateKey string
+	TLSKeyPath string
+
+	// TLS CA cerificate
+	TLSCACertPath string `flag:"tls-ca-cert-path"`
+
+	// Enable TLS for RPC and GRPC connections
+	EnableRPCTLS bool `flag:"enable-rpc-tls"`
+
+	// Enable mutual TLS verification for RPC and GRPC connections
+	TLSMutualAuth bool `flag:"rpc-tls-verify"`
+
+	// TLSVerifyServerHostname enables server hostname verification
+	TLSVerifyServerHostname bool `flag:"tls-verify-server"`
 
 	// DB WAL TTL
 	DbWalTtl time.Duration
@@ -93,26 +105,30 @@ func DefaultConfig() *Config {
 	currentDir := getCurrentDir()
 
 	return &Config{
-		NodeID:               hostname,
-		HTTPAddr:             "127.0.0.1:8800",
-		RaftAddr:             "127.0.0.1:8500",
-		MgmtAddr:             "127.0.0.1:8700",
-		MetricsAddr:          "127.0.0.1:8600",
-		RaftJoinAddr:         []string{},
-		GossipAddr:           "127.0.0.1:8400",
-		GossipJoinAddr:       []string{},
-		DBPath:               currentDir + "/db",
-		RaftPath:             currentDir + "/raft",
-		EnableTLS:            false,
-		EnableProfiling:      false,
-		ProfilingAddr:        "127.0.0.1:6060",
-		SSLCertificate:       "",
-		SSLCertificateKey:    "",
-		PrivateKeyPath:       "",
-		DbWalTtl:             0,
-		RaftHeartbeatTimeout: 1000 * time.Millisecond,
-		RaftElectionTimeout:  1000 * time.Millisecond,
-		RaftLeaseTimeout:     1000 * time.Millisecond,
+		NodeID:                  hostname,
+		HTTPAddr:                "127.0.0.1:8800",
+		RaftAddr:                "127.0.0.1:8500",
+		MgmtAddr:                "127.0.0.1:8700",
+		MetricsAddr:             "127.0.0.1:8600",
+		RaftJoinAddr:            []string{},
+		GossipAddr:              "127.0.0.1:8400",
+		GossipJoinAddr:          []string{},
+		DBPath:                  currentDir + "/db",
+		RaftPath:                currentDir + "/raft",
+		EnableTLS:               false,
+		EnableProfiling:         false,
+		ProfilingAddr:           "127.0.0.1:6060",
+		TLSCertPath:             "",
+		TLSKeyPath:              "",
+		TLSCACertPath:           "",
+		EnableRPCTLS:            false,
+		TLSMutualAuth:           false,
+		TLSVerifyServerHostname: false,
+		PrivateKeyPath:          "",
+		DbWalTtl:                0,
+		RaftHeartbeatTimeout:    1000 * time.Millisecond,
+		RaftElectionTimeout:     1000 * time.Millisecond,
+		RaftLeaseTimeout:        1000 * time.Millisecond,
 	}
 }
 

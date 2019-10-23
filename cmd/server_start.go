@@ -57,14 +57,13 @@ func runServerStart(cmd *cobra.Command, args []string) error {
 		log.L().Fatalf("Wrong parameters: %v", err)
 	}
 
-	if conf.SSLCertificate != "" && conf.SSLCertificateKey != "" {
-		if _, err := os.Stat(conf.SSLCertificate); os.IsNotExist(err) {
+	if conf.EnableTLS && conf.TLSCertPath != "" && conf.TLSKeyPath != "" {
+		if _, err := os.Stat(conf.TLSCertPath); os.IsNotExist(err) {
 			log.L().Fatalf("Can't find certificate .crt file: %v", err)
-		} else if _, err := os.Stat(conf.SSLCertificateKey); os.IsNotExist(err) {
+		} else if _, err := os.Stat(conf.TLSKeyPath); os.IsNotExist(err) {
 			log.L().Fatalf("Can't find certificate .key file: %v", err)
 		} else {
 			log.L().Info("TLS enabled")
-			conf.EnableTLS = true
 		}
 	}
 

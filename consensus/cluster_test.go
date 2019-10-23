@@ -338,7 +338,7 @@ func newNode(opts *ClusteringOptions, rocksOpts *rocks.Options) (*RaftNode, clos
 	}
 	opts.RaftLogPath = raftPath
 
-	node, err := NewRaftNodeWithLogger(opts, db, snapshotsCh, log.L().Named(opts.NodeID))
+	node, err := NewRaftNodeWithLogger(opts, db, snapshotsCh, nil, log.L().Named(opts.NodeID))
 	// node, err := NewRaftNode(opts, db, snapshotsCh)
 	if err != nil {
 		return nil, cleanF, err
