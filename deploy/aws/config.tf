@@ -31,7 +31,7 @@ provider "aws" {
 }
 
 provider "http" {
-  version = ">= 1.0.1, < 2.0"
+  version = ">= 1.1.1, < 2.0"
 }
 
 provider "null" {
