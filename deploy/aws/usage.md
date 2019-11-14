@@ -4,7 +4,8 @@
 ## Requirements:
 * Python, Pip
 * AWS Cli (pip install awscli)
-* Terraform (go get github.com/hashicorp/terraform)
+* Terraform =+ 0.12 (go get github.com/hashicorp/terraform)
+* Terraform Inventory =+ 0.9 (go get github.com/adammck/terraform-inventory)
 
 ## Init 
 ```
