@@ -149,8 +149,9 @@ func newSnapStore() *snapStore {
 
 func newSnapStoreWithLogger(l log.Logger) *snapStore {
 	return &snapStore{
-		data: freecache.NewCache(2 << 30),
-		log:  l,
+		data:  freecache.NewCache(2 << 30),
+		count: new(uint64),
+		log:   l,
 	}
 }
 
