@@ -1,7 +1,15 @@
 ## UNRELEASED
 
+## 1.0.0-rc2 (December 10, 2019)
+
+FEATURES
+
+* server: Support TLS for Raft RPC and GRPC connections [[GH-180](https://github.com/BBVA/qed/pull/180)].
+
 IMPROVEMENTS
 
+* common: Bump Go version to 1.13.1 [[GH-179](https://github.com/BBVA/qed/pull/179)].
+* server: Redirect from non-leader servers [[GH-176](https://github.com/BBVA/qed/pull/176)].
 * server: Remove Raft's term checks when applying a new command [[GH-172](https://github.com/BBVA/qed/pull/172)].
 * server: Upgrade Rocksdb to version v6.2.4 [[GH-162](https://github.com/BBVA/qed/pull/162)].
 * server: Validate recovery snapshot before sending data to follower [[GH-171](https://github.com/BBVA/qed/pull/171)].
@@ -12,6 +20,7 @@ IMPROVEMENTS
 
 BUG FIXES
 
+* server: Remove broken API-Key feature [[GH-177](https://github.com/BBVA/qed/pull/177)].
 * server: Lock balloon operations to avoid race conditions [[GH-161](https://github.com/BBVA/qed/pull/161)].
 * server: Improve cluster join to manage new servers with duplicat ID or address [[GH-165](https://github.com/BBVA/qed/pull/165)].
 * tests: Fix timeouts problem with cluster and e2e tests [[GH-170](https://github.com/BBVA/qed/pull/170)].
