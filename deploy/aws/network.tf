@@ -67,13 +67,15 @@ resource "aws_vpc_dhcp_options_association" "qed" {
   dhcp_options_id = aws_vpc_dhcp_options.qed.id
 }
 
+# https://github.com/hashicorp/terraform/issues/14750
+# CloudWatch LogGroup is not removed because there are still live Log Flow streams.
 resource "aws_cloudwatch_log_group" "qed" {
   name = "qed-${terraform.workspace}"
 }
 
 resource "aws_iam_role" "qed" {
   name                 = "qed-${terraform.workspace}"
-  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/PermissionsBoundariesBBVA"
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/CoderPermissionsBoundaries"
   assume_role_policy   = <<EOF
 {
   "Version": "2012-10-17",

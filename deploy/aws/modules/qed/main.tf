@@ -27,32 +27,32 @@ data "aws_ami" "amazon_linux" {
 }
 
 resource "aws_instance" "qed-server" {
-  count                = "${var.instances}"
-  ami                  = "${data.aws_ami.amazon_linux.id}"
-  instance_type        = "${var.instance_type}"
-  iam_instance_profile = "${var.iam_instance_profile}"
+  count                = var.instances
+  ami                  = data.aws_ami.amazon_linux.id
+  instance_type        = var.instance_type
+  iam_instance_profile = var.iam_instance_profile
 
-  vpc_security_group_ids      = ["${var.vpc_security_group_ids}"]
-  subnet_id                   = "${var.subnet_id}"
+  vpc_security_group_ids      = [var.vpc_security_group_ids]
+  subnet_id                   = var.subnet_id
   associate_public_ip_address = true
-  key_name                    = "${var.key_name}"
+  key_name                    = var.key_name
 
   root_block_device {
     volume_type = "gp2"
-    volume_size = "${var.volume_size}"
+    volume_size = var.volume_size
   }
 
   ebs_block_device {
     device_name           = "/dev/xvdc"
     volume_type           = "gp2"
-    volume_size           = "${var.ebs_volume_size}"
+    volume_size           = var.ebs_volume_size
     delete_on_termination = "true"
   }
 
   tags = {
     Name = "${format("${var.name}-%01d", count.index)}"
-    Role = "${var.role}"
+    Role = var.role
     DAM_OnOff = "NO"
-    Workspace = "${terraform.workspace}"
+    Workspace = terraform.workspace
   }
 }

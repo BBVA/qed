@@ -25,7 +25,7 @@ data "aws_iam_policy_document" "CloudWatchLogsFullAccess-assume-role-policy" {
 
 resource "aws_iam_role" "CloudWatchLogsFullAccess" {
   name                 = "CloudWatchLogsFullAccess-${terraform.workspace}"
-  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/PermissionsBoundariesBBVA"
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/CoderPermissionsBoundaries"
   assume_role_policy   = data.aws_iam_policy_document.CloudWatchLogsFullAccess-assume-role-policy.json
 }
 

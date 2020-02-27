@@ -20,7 +20,7 @@ terraform {
 provider "aws" {
   version = ">= 2.7.0"
   region  = "eu-west-1"
-  profile = "${var.aws_profile}"
+  profile = var.aws_profile
 }
 
 resource "aws_kms_key" "bucket-key" {
