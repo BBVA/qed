@@ -2,6 +2,8 @@
 
 set -e
 
+. ./vars
+
 BASE=$(pwd)
 LIBS="$BASE/libs"
 mkdir -p $LIBS
@@ -10,7 +12,7 @@ mkdir -p $LIBS
 if [ ! -f $LIBS/libjemalloc.a ]; then
 	cd jemalloc
 	bash autogen.sh
-	make -j8
+	${MAKE_CMD} -j${MAXJOBS}
 	cp lib/libjemalloc.a ../libs
 	cd ../libs
 fi
@@ -24,7 +26,7 @@ if [ ! -f $LIBS/libsnappy.a ]; then
 	cd build
 	cmake ../
 	# sed -i.bak  s/BUILD_SHARED_LIBS:BOOL=OFF/BUILD_SHARED_LIBS:BOOL=ON/g CMakeCache.txt
-	make -j8
+	${MAKE_CMD} -j${MAXJOBS}
 
 	cp libsnappy.a ../../libs/
 	cp snappy-stubs-public.h ../
@@ -40,9 +42,9 @@ if [ ! -f $LIBS/librocksdb.a ]; then
 	cd build
 	cmake -DWITH_GFLAGS=OFF -DPORTABLE=ON \
 	-DWITH_SNAPPY=ON -DSNAPPY_LIBRARIES="$LIBS/libsnappy.a" -DSNAPPY_INCLUDE_DIR="$BASE/snappy" \
-	-DWITH_JEMALLOC=ON -DJEMALLOC_LIBRARIES="$LIBS/libjemalloc.a" -DJEMALLOC_INCLUDE_DIR="$BASE/jemalloc/include" \
+	-DWITH_JEMALLOC=${JEMALLOC_ENABLE} -DJEMALLOC_LIBRARIES="$LIBS/libjemalloc.a" -DJEMALLOC_INCLUDE_DIR="$BASE/jemalloc/include" \
 	-DCMAKE_BUILD_TYPE=Release -DUSE_RTTI=1 ../
-	make -j8 rocksdb
+	${MAKE_CMD} -j${MAXJOBS} rocksdb
 
 	cp librocksdb.a ../../libs
 fi

@@ -20,12 +20,12 @@ package rocksdb
 // #cgo CXXFLAGS: -std=c++11 -O3 -I${SRCDIR}/../c-deps/rocksdb/include
 // #cgo LDFLAGS: -L${SRCDIR}/../c-deps/libs
 // #cgo LDFLAGS: -lrocksdb
-// #cgo LDFLAGS: -ljemalloc
+// #cgo !dragonfly LDFLAGS: -ljemalloc
 // #cgo LDFLAGS: -lsnappy
 // #cgo LDFLAGS: -lstdc++
 // #cgo LDFLAGS: -ldl
 // #cgo LDFLAGS: -lpthread
 // #cgo LDFLAGS: -lm
 // #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup
-// #cgo !darwin LDFLAGS: -Wl,-unresolved_symbols=ignore-all -lrt
+// #cgo linux LDFLAGS: -Wl,-unresolved_symbols=ignore-all -lrt
 import "C"
